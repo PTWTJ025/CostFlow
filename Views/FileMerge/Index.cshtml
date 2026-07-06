@@ -19,7 +19,7 @@
                 </div>
                 
                 <!-- Upload Dropzone A -->
-                <div id="dropzone-a" class="border-2 border-dashed border-outline-variant rounded p-md flex flex-col items-center justify-center bg-white hover:bg-slate-50 transition-colors cursor-pointer min-h-[180px] text-center my-md">
+                <div id="dropzone-a" class="border-2 border-dashed border-outline-variant rounded p-md flex flex-col items-center justify-center bg-white hover:bg-slate-50 transition-colors cursor-pointer min-h-[180px] text-center my-md w-full shadow-sm">
                     <svg class="w-8 h-8 text-primary mb-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0 3 3m-3-3-3 3M6.75 19.5a4.5 4.5 0 0 1-1.41-8.775 a5.25 5.25 0 0 1 10.233-2.33 a3 3 0 0 1 3.758 3.848A3.752 3.752 0 0 1 18 19.5H6.75Z" />
                     </svg>
@@ -31,15 +31,15 @@
                 <input type="file" id="input-a" class="hidden" accept=".xlsx,.csv" />
                 
                 <!-- Status Box A -->
-                <div id="status-a" class="hidden text-center py-sm">
+                <div id="status-a" class="hidden border border-slate-200 rounded p-md flex flex-col items-center justify-center bg-white min-h-[180px] text-center my-md w-full shadow-sm">
                     <!-- Spinner State -->
-                    <div id="loading-a" class="hidden flex flex-col items-center">
-                        <div class="w-6 h-6 border-2 border-slate-200 border-t-primary rounded-full animate-spin mb-sm"></div>
-                        <span class="text-xs text-secondary font-medium">กำลังประมวลผล...</span>
+                    <div id="loading-a" class="hidden flex flex-col items-center justify-center my-auto">
+                        <span class="loader"></span>
+                        <span class="text-xs text-secondary font-medium">กำลังอัปโหลดและอ่านข้อมูลไฟล์...</span>
                     </div>
                     <!-- Success State -->
-                    <div id="success-a" class="hidden flex flex-col items-center">
-                        <div class="w-8 h-8 bg-green-50 text-green-600 rounded-full flex items-center justify-center border border-green-200/50 mb-xs">
+                    <div id="success-a" class="hidden flex flex-col items-center justify-center my-auto">
+                        <div class="w-8 h-8 bg-green-50 text-green-600 rounded-full flex items-center justify-center border border-green-200/50 mb-xs shadow-sm">
                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
                             </svg>
@@ -49,7 +49,7 @@
                         <button type="button" id="reset-a" class="text-[10px] text-primary underline mt-2 hover:text-primary/80">เปลี่ยนไฟล์</button>
                     </div>
                     <!-- Error State -->
-                    <div id="error-a" class="hidden flex flex-col items-center">
+                    <div id="error-a" class="hidden flex flex-col items-center justify-center my-auto">
                         <span class="text-xs text-error font-bold mb-1">โหลดไม่สำเร็จ</span>
                         <span class="text-[10px] text-secondary px-sm mb-2" id="errormsg-a"></span>
                         <button type="button" id="retry-a" class="text-[10px] text-primary underline hover:text-primary/80">ลองใหม่</button>
@@ -72,7 +72,7 @@
                 </div>
                 
                 <!-- Upload Dropzone B -->
-                <div id="dropzone-b" class="border-2 border-dashed border-outline-variant rounded p-md flex flex-col items-center justify-center bg-white hover:bg-slate-50 transition-colors cursor-pointer min-h-[180px] text-center my-md">
+                <div id="dropzone-b" class="border-2 border-dashed border-outline-variant rounded p-md flex flex-col items-center justify-center bg-white hover:bg-slate-50 transition-colors cursor-pointer min-h-[180px] text-center my-md w-full shadow-sm">
                     <svg class="w-8 h-8 text-primary mb-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0 3 3m-3-3-3 3M6.75 19.5a4.5 4.5 0 0 1-1.41-8.775 a5.25 5.25 0 0 1 10.233-2.33 a3 3 0 0 1 3.758 3.848A3.752 3.752 0 0 1 18 19.5H6.75Z" />
                     </svg>
@@ -84,15 +84,15 @@
                 <input type="file" id="input-b" class="hidden" accept=".xlsx,.csv" />
                 
                 <!-- Status Box B -->
-                <div id="status-b" class="hidden text-center py-sm">
+                <div id="status-b" class="hidden border border-slate-200 rounded p-md flex flex-col items-center justify-center bg-white min-h-[180px] text-center my-md w-full shadow-sm">
                     <!-- Spinner State -->
-                    <div id="loading-b" class="hidden flex flex-col items-center">
-                        <div class="w-6 h-6 border-2 border-slate-200 border-t-primary rounded-full animate-spin mb-sm"></div>
-                        <span class="text-xs text-secondary font-medium">กำลังประมวลผล...</span>
+                    <div id="loading-b" class="hidden flex flex-col items-center justify-center my-auto">
+                        <span class="loader"></span>
+                        <span class="text-xs text-secondary font-medium">กำลังอัปโหลดและอ่านข้อมูลไฟล์...</span>
                     </div>
                     <!-- Success State -->
-                    <div id="success-b" class="hidden flex flex-col items-center">
-                        <div class="w-8 h-8 bg-green-50 text-green-600 rounded-full flex items-center justify-center border border-green-200/50 mb-xs">
+                    <div id="success-b" class="hidden flex flex-col items-center justify-center my-auto">
+                        <div class="w-8 h-8 bg-green-50 text-green-600 rounded-full flex items-center justify-center border border-green-200/50 mb-xs shadow-sm">
                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
                             </svg>
@@ -102,7 +102,7 @@
                         <button type="button" id="reset-b" class="text-[10px] text-primary underline mt-2 hover:text-primary/80">เปลี่ยนไฟล์</button>
                     </div>
                     <!-- Error State -->
-                    <div id="error-b" class="hidden flex flex-col items-center">
+                    <div id="error-b" class="hidden flex flex-col items-center justify-center my-auto">
                         <span class="text-xs text-error font-bold mb-1">โหลดไม่สำเร็จ</span>
                         <span class="text-[10px] text-secondary px-sm mb-2" id="errormsg-b"></span>
                         <button type="button" id="retry-b" class="text-[10px] text-primary underline hover:text-primary/80">ลองใหม่</button>
@@ -162,11 +162,17 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // --- SETUP SLOT A ---
     dropzoneA.addEventListener("click", () => inputA.click());
-    dropzoneA.addEventListener("dragover", (e) => { e.preventDefault(); dropzoneA.classList.add("bg-slate-100"); });
-    dropzoneA.addEventListener("dragleave", (e) => { e.preventDefault(); dropzoneA.classList.remove("bg-slate-100"); });
+    dropzoneA.addEventListener("dragover", (e) => { 
+        e.preventDefault(); 
+        dropzoneA.classList.add("bg-sky-50", "border-primary", "scale-[1.01]", "shadow-md"); 
+    });
+    dropzoneA.addEventListener("dragleave", (e) => { 
+        e.preventDefault(); 
+        dropzoneA.classList.remove("bg-sky-50", "border-primary", "scale-[1.01]", "shadow-md"); 
+    });
     dropzoneA.addEventListener("drop", (e) => {
         e.preventDefault();
-        dropzoneA.classList.remove("bg-slate-100");
+        dropzoneA.classList.remove("bg-sky-50", "border-primary", "scale-[1.01]", "shadow-md");
         if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
             validateAndUpload(e.dataTransfer.files[0], 'A');
         }
@@ -179,11 +185,17 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // --- SETUP SLOT B ---
     dropzoneB.addEventListener("click", () => inputb.click());
-    dropzoneB.addEventListener("dragover", (e) => { e.preventDefault(); dropzoneB.classList.add("bg-slate-100"); });
-    dropzoneB.addEventListener("dragleave", (e) => { e.preventDefault(); dropzoneB.classList.remove("bg-slate-100"); });
+    dropzoneB.addEventListener("dragover", (e) => { 
+        e.preventDefault(); 
+        dropzoneB.classList.add("bg-sky-50", "border-primary", "scale-[1.01]", "shadow-md"); 
+    });
+    dropzoneB.addEventListener("dragleave", (e) => { 
+        e.preventDefault(); 
+        dropzoneB.classList.remove("bg-sky-50", "border-primary", "scale-[1.01]", "shadow-md"); 
+    });
     dropzoneB.addEventListener("drop", (e) => {
         e.preventDefault();
-        dropzoneB.classList.remove("bg-slate-100");
+        dropzoneB.classList.remove("bg-sky-50", "border-primary", "scale-[1.01]", "shadow-md");
         if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
             validateAndUpload(e.dataTransfer.files[0], 'B');
         }
@@ -338,8 +350,30 @@ document.addEventListener("DOMContentLoaded", function() {
     // Handle Merge Click
     mergeBtn.addEventListener("click", () => {
         if (sessionIdA && sessionIdB) {
-            // Redirect to merge action / step 2 wizard
-            window.location.href = `/FileMerge/ProcessMerge?sessionIdA=${sessionIdA}&sessionIdB=${sessionIdB}`;
+            mergeBtn.disabled = true;
+            mergeBtn.innerHTML = `
+                <span class="flex items-center gap-2">
+                    <svg class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    กำลังประมวลผลเปรียบเทียบ...
+                </span>
+            `;
+            let overlay = document.createElement("div");
+            overlay.className = "fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex flex-col items-center justify-center p-4";
+            overlay.innerHTML = `
+                <div class="bg-white rounded-lg p-6 max-w-sm w-full shadow-xl flex flex-col items-center text-center border border-slate-100">
+                    <span class="loader"></span>
+                    <h4 class="text-sm font-bold text-slate-800 mb-1">กำลังเปรียบเทียบข้อมูลไฟล์...</h4>
+                    <p class="text-xs text-slate-500">ระบบกำลังจับคู่รายการสั่งซื้อและแผนผลิตประจำสัปดาห์</p>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+
+            setTimeout(() => {
+                window.location.href = `/FileMerge/ProcessMerge?sessionIdA=${sessionIdA}&sessionIdB=${sessionIdB}`;
+            }, 600);
         }
     });
 

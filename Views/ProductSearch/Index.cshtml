@@ -138,6 +138,14 @@
                             <td colspan="9" class="py-lg text-slate-400 text-xs italic bg-slate-50/50">@(isEdit ? "ไม่มีรายการสั่งซื้อในแผ่นงานนี้" : "ยังไม่มีรายการสั่งซื้อในระบบแบบร่าง")</td>
                         </tr>
                     </tbody>
+                    <tfoot class="bg-slate-100/95 backdrop-blur sticky bottom-0 z-10 border-t-2 border-slate-300 font-bold text-slate-800">
+                        <tr>
+                            <td colspan="5" class="px-3 py-2.5 text-right uppercase text-xs">รวมทั้งสิ้น (<span id="cart-total-items-tfoot">0</span> รายการ):</td>
+                            <td class="px-2 py-2.5 font-mono text-primary text-base" id="cart-total-qty-tfoot">0</td>
+                            <td class="px-2 py-2.5 font-mono text-primary text-base" id="cart-total-amount-tfoot">฿0.00</td>
+                            <td colspan="2" class="px-2 py-2.5 text-left text-[11px] text-slate-500 font-normal truncate max-w-[180px]" id="cart-total-text-tfoot">(ศูนย์บาทถ้วน)</td>
+                        </tr>
+                    </tfoot>
                 </table>
             </div>
 
@@ -222,6 +230,15 @@ document.addEventListener("DOMContentLoaded", function() {
     // Basket memory storage
     let basket = [];
 
+    // Unsaved Changes Guard
+    window.addEventListener("beforeunload", function(e) {
+        if (basket.length > 0) {
+            e.preventDefault();
+            e.returnValue = "คุณมีรายการสั่งซื้อที่ยังไม่ได้บันทึก ต้องการออกจากหน้านี้หรือไม่?";
+            return e.returnValue;
+        }
+    });
+
     // If editing a saved batch, populate from server
     @if (ViewData["EditBatchId"] != null)
     {
@@ -232,11 +249,26 @@ document.addEventListener("DOMContentLoaded", function() {
         
         if (editOrders && editOrders.length > 0) {
             basket = editOrders;
-            // Update UI after variables initialization
-            setTimeout(() => {
-                updateCartUI();
-            }, 50);
+            setTimeout(() => { updateCartUI(); }, 50);
         }
+        </text>
+    }
+    else
+    {
+        <text>
+        try {
+            const savedDraft = localStorage.getItem("costflow_draft_orders");
+            if (savedDraft) {
+                const parsed = JSON.parse(savedDraft);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    basket = parsed;
+                    setTimeout(() => {
+                        updateCartUI();
+                        showToast("กู้คืนรายการสั่งซื้อแบบร่างที่ค้างอยู่จากหน่วยความจำเรียบร้อยแล้ว", "success");
+                    }, 100);
+                }
+            }
+        } catch (e) {}
         </text>
     }
 
@@ -475,6 +507,10 @@ document.addEventListener("DOMContentLoaded", function() {
     function updateCartUI() {
         cartBody.innerHTML = "";
         const cartTotalTextDisplay = document.getElementById("cart-total-text");
+        const cartTotalItemsTfoot = document.getElementById("cart-total-items-tfoot");
+        const cartTotalQtyTfoot = document.getElementById("cart-total-qty-tfoot");
+        const cartTotalAmountTfoot = document.getElementById("cart-total-amount-tfoot");
+        const cartTotalTextTfoot = document.getElementById("cart-total-text-tfoot");
         
         if (basket.length === 0) {
             cartBody.appendChild(emptyCartRow);
@@ -482,13 +518,20 @@ document.addEventListener("DOMContentLoaded", function() {
             cartTotalDisplay.textContent = "฿0.00";
             cartTotalDisplay.className = "font-headline-sm text-headline-sm font-black text-primary";
             if (cartTotalTextDisplay) cartTotalTextDisplay.textContent = "(ศูนย์บาทถ้วน)";
+            if (cartTotalItemsTfoot) cartTotalItemsTfoot.textContent = "0";
+            if (cartTotalQtyTfoot) cartTotalQtyTfoot.textContent = "0";
+            if (cartTotalAmountTfoot) cartTotalAmountTfoot.textContent = "฿0.00";
+            if (cartTotalTextTfoot) cartTotalTextTfoot.textContent = "(ศูนย์บาทถ้วน)";
+            try { localStorage.removeItem("costflow_draft_orders"); } catch(e) {}
             return;
         }
 
         let totalSum = 0;
+        let totalQty = 0;
 
         basket.forEach((item, index) => {
             totalSum += item.totalAmount;
+            totalQty += item.quantity;
             
             const tr = document.createElement("tr");
             tr.className = "hover:bg-slate-50/50 transition-colors";
@@ -522,11 +565,18 @@ document.addEventListener("DOMContentLoaded", function() {
         });
 
         cartTotalDisplay.textContent = formatCurrency(totalSum);
+        if (cartTotalItemsTfoot) cartTotalItemsTfoot.textContent = String(basket.length);
+        if (cartTotalQtyTfoot) cartTotalQtyTfoot.textContent = String(totalQty);
+        if (cartTotalAmountTfoot) cartTotalAmountTfoot.textContent = formatCurrency(totalSum);
+
         if (totalSum > 10000000) {
             cartTotalDisplay.className = "font-headline-sm text-headline-sm font-black text-rose-600 animate-pulse";
             cartTotalDisplay.title = "ยอดรวมเกินเกณฑ์กำหนด 10,000,000 บาท";
             if (cartTotalTextDisplay) {
                 cartTotalTextDisplay.innerHTML = `<span class="text-rose-600 font-bold">⚠️ ${formatBahtText(totalSum)} (ยอดสูงเกินเกณฑ์กำหนด 10 ล้านบาท)</span>`;
+            }
+            if (cartTotalTextTfoot) {
+                cartTotalTextTfoot.innerHTML = `<span class="text-rose-600 font-bold">⚠️ ${formatBahtText(totalSum)} (เกิน 10 ล้านบาท)</span>`;
             }
         } else {
             cartTotalDisplay.className = "font-headline-sm text-headline-sm font-black text-primary";
@@ -534,8 +584,13 @@ document.addEventListener("DOMContentLoaded", function() {
             if (cartTotalTextDisplay) {
                 cartTotalTextDisplay.textContent = formatBahtText(totalSum);
             }
+            if (cartTotalTextTfoot) {
+                cartTotalTextTfoot.textContent = formatBahtText(totalSum);
+            }
         }
         submitOrdersBtn.disabled = false;
+
+        try { localStorage.setItem("costflow_draft_orders", JSON.stringify(basket)); } catch(e) {}
     }
 
     // Clear Basket
