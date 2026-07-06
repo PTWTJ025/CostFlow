@@ -1,0 +1,643 @@
+@model List<CostFlow.Models.ProductPrice>
+@{
+    ViewData["Title"] = "ราคากลางอ้างอิง";
+    ViewData["HeaderTitle"] = "ราคากลางอ้างอิง (Reference Price Database)";
+
+    string search = (string)ViewData["Search"] ?? "";
+    int currentPage = (int)ViewData["Page"];
+    int totalPages = (int)ViewData["TotalPages"];
+    int totalCount = (int)ViewData["TotalCount"];
+    bool isAdmin = User.IsInRole("Admin");
+}
+
+<div class="flex-1 p-md md:p-lg lg:p-xl flex flex-col gap-lg max-w-[88vw] mx-auto w-full">
+    <!-- Search & Summary Card -->
+    <div class="bg-white rounded border border-outline-variant shadow-sm p-md md:p-lg lg:p-xl">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-md mb-lg">
+            <div>
+                <h3 class="font-headline-sm text-headline-sm text-on-surface mb-xs">ฐานข้อมูลราคากลางอ้างอิง</h3>
+                <p class="text-xs text-secondary">ตรวจสอบราคาเฉลี่ยต่อหน่วยและประวัตินำเข้าจากแหล่งจัดซื้อต่าง ๆ</p>
+            </div>
+            <div class="flex items-center gap-sm">
+                @if (isAdmin)
+                {
+                    <button onclick="openAddModal()" class="bg-primary hover:bg-primary/95 text-on-primary text-xs font-bold px-md py-2 rounded flex items-center gap-2 transition-colors shadow-sm">
+                        <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                        </svg>
+                        เพิ่มราคากลางใหม่
+                    </button>
+                }
+                <div class="bg-slate-50 border border-slate-200/60 rounded px-3 py-2 text-xs font-semibold text-slate-700">
+                    อะไหล่ทั้งหมดในระบบ: <span id="total-count-badge">@totalCount.ToString("N0")</span> รายการ
+                </div>
+            </div>
+        </div>
+
+        <!-- Search Form -->
+        <div class="flex gap-sm max-w-xl mb-lg">
+            <div class="relative flex-1">
+                <svg class="w-4 h-4 absolute left-3 top-3 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.602 10.602Z" />
+                </svg>
+                <input id="search-input" value="@search" class="w-full pl-9 pr-3 py-2 border border-outline-variant rounded text-xs focus:ring-1 focus:ring-primary focus:border-primary outline-none" placeholder="พิมพ์เพื่อค้นหาด้วยรหัสสินค้า หรือ ชื่อภาษาไทย/อังกฤษ ทันที..." type="text" autocomplete="off" />
+            </div>
+            <button id="clear-search-btn" class="px-md py-2 border border-slate-200 rounded text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors flex items-center hidden">
+                ล้างค่า
+            </button>
+        </div>
+
+        <!-- High-density Data Table -->
+        <div class="overflow-x-auto border border-outline-variant rounded mb-lg max-h-[500px] overflow-y-auto">
+            <table class="min-w-full divide-y divide-slate-200 text-center" id="price-table">
+                <thead class="bg-slate-100 sticky top-0 z-10">
+                    <tr>
+                        <th class="px-3 py-2.5 text-xs font-bold text-slate-500 uppercase tracking-wider w-[40px]">#</th>
+                        <th class="px-3 py-2.5 text-xs font-bold text-slate-500 uppercase tracking-wider">รหัสสินค้า</th>
+                        <th class="px-3 py-2.5 text-xs font-bold text-slate-500 uppercase tracking-wider text-left">ชื่อสินค้า / รายการอะไหล่</th>
+                        <th class="px-3 py-2.5 text-xs font-bold text-slate-500 uppercase tracking-wider">หน่วย</th>
+                        <th class="px-3 py-2.5 text-xs font-bold text-primary uppercase tracking-wider w-[120px]">ราคาต่อหน่วย</th>
+                        <th class="px-3 py-2.5 text-xs font-bold text-slate-500 uppercase tracking-wider">จำนวนรวมเบิก</th>
+                        <th class="px-3 py-2.5 text-xs font-bold text-slate-500 uppercase tracking-wider">มูลค่ารวมเบิก</th>
+                        <th class="px-3 py-2.5 text-xs font-bold text-slate-500 uppercase tracking-wider text-left max-w-[200px]">แหล่งข้อมูลประวัติสั่งซื้อ</th>
+                        @if (isAdmin)
+                        {
+                            <th class="px-3 py-2.5 text-xs font-bold text-slate-500 uppercase tracking-wider w-[110px]">จัดการ</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-slate-200 text-xs text-slate-800" id="table-body">
+                    @if (Model == null || !Model.Any())
+                    {
+                        <tr>
+                            <td colspan="@(isAdmin ? 9 : 8)" class="py-lg text-slate-400 text-xs italic bg-slate-50/50">ไม่พบข้อมูลราคากลางอ้างอิงตรงกับคำค้นหา</td>
+                        </tr>
+                    }
+                    else
+                    {
+                        int startIndex = (currentPage - 1) * 50;
+                        for (int i = 0; i < Model.Count; i++)
+                        {
+                            var item = Model[i];
+                            <tr class="hover:bg-slate-50/50 transition-colors"
+                                data-code="@item.ProductCode"
+                                data-name="@item.ProductName"
+                                data-unit="@item.Unit"
+                                data-price="@item.PricePerUnit"
+                                data-qty="@item.TotalQty"
+                                data-val="@item.TotalValue"
+                                data-sources="@item.Sources">
+                                <td class="px-3 py-2 text-slate-400 font-mono">@(startIndex + i + 1)</td>
+                                <td class="px-3 py-2 font-mono text-primary font-bold">@item.ProductCode</td>
+                                <td class="px-3 py-2 text-left max-w-[320px] truncate" title="@item.ProductName">@item.ProductName</td>
+                                <td class="px-3 py-2 text-slate-600">@item.Unit</td>
+                                <td class="px-3 py-2 font-mono font-bold text-primary bg-primary/5">฿@item.PricePerUnit.ToString("N2")</td>
+                                <td class="px-3 py-2 font-mono">@item.TotalQty.ToString("N0")</td>
+                                <td class="px-3 py-2 font-mono">฿@item.TotalValue.ToString("N2")</td>
+                                <td class="px-3 py-2 text-left text-slate-500 text-[11px] truncate max-w-[200px]" title="@item.Sources">@item.Sources</td>
+                                @if (isAdmin)
+                                {
+                                    <td class="px-3 py-2 flex items-center justify-center gap-1.5">
+                                        <button onclick="openEditModal(this)" class="text-primary hover:underline font-bold text-[11px] bg-slate-100 hover:bg-slate-200 px-1.5 py-0.5 rounded transition-all">แก้ไข</button>
+                                        <button onclick="deleteProductPrice('@item.ProductCode')" class="text-rose-600 hover:underline font-bold text-[11px] bg-rose-50 hover:bg-rose-100 px-1.5 py-0.5 rounded transition-all">ลบ</button>
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination Controls Wrapper -->
+        <div id="pagination-wrapper">
+            @if (totalPages > 1)
+            {
+                <div class="flex justify-between items-center pt-md border-t border-slate-100 text-xs" id="pagination-container">
+                    <div class="text-secondary" id="page-info">
+                        หน้า @currentPage จากทั้งหมด @totalPages หน้า (แสดงผลทีละ 50 รายการ)
+                    </div>
+                    
+                    <div class="flex gap-xs" id="page-buttons">
+                        <!-- Prev Button -->
+                        @if (currentPage > 1)
+                        {
+                            <button data-page="@(currentPage - 1)" class="px-3 py-1.5 border border-slate-200 rounded font-semibold text-slate-700 hover:bg-slate-50 transition-colors page-nav-btn">
+                                ก่อนหน้า
+                            </button>
+                        }
+                        else
+                        {
+                            <span class="px-3 py-1.5 border border-slate-100 rounded text-slate-300 cursor-not-allowed">
+                                ก่อนหน้า
+                            </span>
+                        }
+
+                        <!-- Page numbers -->
+                        @for (int p = Math.Max(1, currentPage - 2); p <= Math.Min(totalPages, currentPage + 2); p++)
+                        {
+                            if (p == currentPage)
+                            {
+                                <span class="px-3 py-1.5 bg-primary text-on-primary font-bold rounded">@p</span>
+                            }
+                            else
+                            {
+                                <button data-page="@p" class="px-3 py-1.5 border border-slate-200 rounded font-semibold text-slate-700 hover:bg-slate-50 transition-colors page-nav-btn">@p</button>
+                            }
+                        }
+
+                        <!-- Next Button -->
+                        @if (currentPage < totalPages)
+                        {
+                            <button data-page="@(currentPage + 1)" class="px-3 py-1.5 border border-slate-200 rounded font-semibold text-slate-700 hover:bg-slate-50 transition-colors page-nav-btn">
+                                ถัดไป
+                            </button>
+                        }
+                        else
+                        {
+                            <span class="px-3 py-1.5 border border-slate-100 rounded text-slate-300 cursor-not-allowed">
+                                ถัดไป
+                            </span>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Modal Form สำหรับ เพิ่ม/แก้ไข ราคากลาง (เฉพาะ Admin) -->
+@if (isAdmin)
+{
+    <div id="crud-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm transition-opacity duration-300 opacity-0 pointer-events-none">
+        <div class="bg-white border border-slate-200 rounded-lg shadow-xl max-w-md w-full mx-md transform translate-y-4 transition-transform duration-300">
+            <!-- Modal Header -->
+            <div class="px-lg py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-lg">
+                <h4 id="modal-title" class="font-bold text-slate-800 text-sm">เพิ่มราคากลางใหม่</h4>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600">
+                    <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            
+            <!-- Modal Form -->
+            <form id="modal-form" onsubmit="saveProductPrice(event)" class="p-lg flex flex-col gap-md">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">รหัสสินค้า *</label>
+                    <input type="text" id="modal-code" required class="w-full px-3 py-2 border border-slate-200 rounded text-xs focus:ring-1 focus:ring-primary focus:border-primary outline-none" placeholder="เช่น LCA0001" />
+                </div>
+                
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">ชื่อสินค้า / รายการอะไหล่ *</label>
+                    <input type="text" id="modal-name" required class="w-full px-3 py-2 border border-slate-200 rounded text-xs focus:ring-1 focus:ring-primary focus:border-primary outline-none" placeholder="กรอกชื่อรายการสินค้า" />
+                </div>
+                
+                <div class="grid grid-cols-2 gap-sm">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">หน่วย *</label>
+                        <input type="text" id="modal-unit" required class="w-full px-3 py-2 border border-slate-200 rounded text-xs focus:ring-1 focus:ring-primary focus:border-primary outline-none" placeholder="เช่น ชิ้น, กล่อง, ม้วน" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">ราคาต่อหน่วย *</label>
+                        <input type="number" id="modal-price" required step="0.01" min="0" class="w-full px-3 py-2 border border-slate-200 rounded text-xs focus:ring-1 focus:ring-primary focus:border-primary outline-none" placeholder="0.00" />
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-sm">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">จำนวนรวมเบิก</label>
+                        <input type="number" id="modal-qty" min="0" class="w-full px-3 py-2 border border-slate-200 rounded text-xs focus:ring-1 focus:ring-primary focus:border-primary outline-none" placeholder="0" value="0" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">มูลค่ารวมเบิก</label>
+                        <input type="number" id="modal-val" min="0" step="0.01" class="w-full px-3 py-2 border border-slate-200 rounded text-xs focus:ring-1 focus:ring-primary focus:border-primary outline-none" placeholder="0.00" value="0.00" />
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">แหล่งข้อมูลประวัติสั่งซื้อ</label>
+                    <input type="text" id="modal-sources" class="w-full px-3 py-2 border border-slate-200 rounded text-xs focus:ring-1 focus:ring-primary focus:border-primary outline-none" placeholder="เช่น งาน pm, งาน เทคนิค" />
+                </div>
+                
+                <div class="flex justify-end gap-xs pt-sm border-t border-slate-100 mt-sm">
+                    <button type="button" onclick="closeModal()" class="px-md py-2 border border-slate-200 rounded text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors">
+                        ยกเลิก
+                    </button>
+                    <button type="submit" id="modal-save-btn" class="bg-primary hover:bg-primary/95 text-on-primary text-xs font-bold px-lg py-2 rounded transition-colors shadow-sm">
+                        บันทึกรายการ
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+
+<!-- Custom Delete Confirmation Modal -->
+<div id="delete-confirm-modal" class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm transition-opacity duration-200 opacity-0 pointer-events-none">
+    <div id="delete-confirm-box" class="bg-white border border-slate-200 rounded-xl shadow-2xl max-w-sm w-full mx-md transform scale-95 transition-transform duration-200">
+        <!-- Modal Icon + Header -->
+        <div class="px-lg pt-lg pb-md flex flex-col items-center text-center gap-3">
+            <div class="w-12 h-12 rounded-full bg-rose-50 flex items-center justify-center">
+                <svg class="w-6 h-6 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+                </svg>
+            </div>
+            <div>
+                <h4 class="font-bold text-slate-800 text-sm mb-1">ยืนยันการลบรายการ</h4>
+                <p class="text-xs text-slate-500 leading-relaxed">ต้องการลบรหัสสินค้า <span id="delete-confirm-code" class="font-bold text-rose-600 font-mono"></span> ออกจากราคากลางอ้างอิงหรือไม่? การดำเนินการนี้ไม่สามารถย้อนกลับได้</p>
+            </div>
+        </div>
+        <!-- Buttons -->
+        <div class="px-lg pb-lg flex gap-sm justify-center">
+            <button id="delete-cancel-btn" onclick="closeDeleteModal()" class="flex-1 px-md py-2 border border-slate-200 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors">
+                ยกเลิก
+            </button>
+            <button id="delete-confirm-btn" onclick="confirmDeleteAction()" class="flex-1 px-md py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold transition-colors shadow-sm">
+                ยืนยันการลบ
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Notification -->
+<div id="toast-wrapper" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2"></div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const searchInput = document.getElementById("search-input");
+    const clearSearchBtn = document.getElementById("clear-search-btn");
+    const tableBody = document.getElementById("table-body");
+    const totalCountBadge = document.getElementById("total-count-badge");
+    const paginationWrapper = document.getElementById("pagination-wrapper");
+    const isAdmin = @(isAdmin ? "true" : "false");
+
+    let currentSearch = searchInput.value;
+    let currentPageNum = 1;
+    let debounceTimeout = null;
+
+    // Toast function
+    window.showToast = function(message, type = "success") {
+        const container = document.getElementById('toast-wrapper');
+        const toast = document.createElement('div');
+        toast.className = `px-md py-3 rounded shadow-lg text-xs font-bold transition-all duration-300 transform translate-y-4 opacity-0 flex items-center gap-2 ${
+            type === 'success' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-800 border border-rose-200'
+        }`;
+        
+        toast.innerHTML = `
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                ${type === 'success' 
+                    ? '<path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />' 
+                    : '<path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />'}
+            </svg>
+            <span>${message}</span>
+        `;
+        
+        container.appendChild(toast);
+        setTimeout(() => {
+            toast.classList.remove('translate-y-4', 'opacity-0');
+        }, 10);
+
+        setTimeout(() => {
+            toast.classList.add('opacity-0', 'translate-y-2');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    };
+
+    // Modal Control Functions (Admin only)
+    if (isAdmin) {
+        const modal = document.getElementById("crud-modal");
+        const modalCode = document.getElementById("modal-code");
+        const modalName = document.getElementById("modal-name");
+        const modalUnit = document.getElementById("modal-unit");
+        const modalPrice = document.getElementById("modal-price");
+        const modalQty = document.getElementById("modal-qty");
+        const modalVal = document.getElementById("modal-val");
+        const modalSources = document.getElementById("modal-sources");
+        const modalTitle = document.getElementById("modal-title");
+        
+        let isEditMode = false;
+
+        window.openAddModal = function() {
+            isEditMode = false;
+            modalTitle.textContent = "เพิ่มราคากลางใหม่";
+            modalCode.disabled = false;
+            modalCode.value = "";
+            modalName.value = "";
+            modalUnit.value = "";
+            modalPrice.value = "";
+            modalQty.value = "0";
+            modalVal.value = "0.00";
+            modalSources.value = "งานคีย์ระบบ";
+            
+            modal.classList.remove("pointer-events-none", "opacity-0");
+            modal.firstElementChild.classList.remove("translate-y-4");
+        };
+
+        window.openEditModal = function(btn) {
+            isEditMode = true;
+            modalTitle.textContent = "แก้ไขข้อมูลราคากลาง";
+            modalCode.disabled = true;
+            
+            const tr = btn.closest("tr");
+            modalCode.value = tr.getAttribute("data-code");
+            modalName.value = tr.getAttribute("data-name");
+            modalUnit.value = tr.getAttribute("data-unit");
+            modalPrice.value = tr.getAttribute("data-price");
+            modalQty.value = tr.getAttribute("data-qty");
+            modalVal.value = tr.getAttribute("data-val");
+            modalSources.value = tr.getAttribute("data-sources") || "";
+            
+            modal.classList.remove("pointer-events-none", "opacity-0");
+            modal.firstElementChild.classList.remove("translate-y-4");
+        };
+
+        window.closeModal = function() {
+            modal.classList.add("pointer-events-none", "opacity-0");
+            modal.firstElementChild.classList.add("translate-y-4");
+        };
+
+        window.saveProductPrice = function(e) {
+            e.preventDefault();
+            
+            const data = {
+                productCode: modalCode.value.trim(),
+                productName: modalName.value.trim(),
+                unit: modalUnit.value.trim(),
+                pricePerUnit: parseFloat(modalPrice.value) || 0,
+                totalQty: parseFloat(modalQty.value) || 0,
+                totalValue: parseFloat(modalVal.value) || 0,
+                sources: modalSources.value.trim()
+            };
+
+            const url = isEditMode ? '/PriceReference/Edit' : '/PriceReference/Create';
+            
+            fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+            .then(res => res.json())
+            .then(resData => {
+                if (resData.success) {
+                    showToast(isEditMode ? "แก้ไขราคากลางเรียบร้อยแล้ว" : "เพิ่มราคากลางเรียบร้อยแล้ว");
+                    closeModal();
+                    fetchPriceData(currentSearch, currentPageNum);
+                } else {
+                    showToast(resData.error || "เกิดข้อผิดพลาดในการบันทึก", "error");
+                }
+            })
+            .catch(() => showToast("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้", "error"));
+        };
+
+        // Custom delete modal state
+        let _pendingDeleteCode = null;
+
+        window.deleteProductPrice = function(code) {
+            // Show custom popup instead of browser confirm()
+            _pendingDeleteCode = code;
+            document.getElementById('delete-confirm-code').textContent = code;
+            const modal = document.getElementById('delete-confirm-modal');
+            const box = document.getElementById('delete-confirm-box');
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            box.classList.remove('scale-95');
+            box.classList.add('scale-100');
+        };
+
+        window.closeDeleteModal = function() {
+            _pendingDeleteCode = null;
+            const modal = document.getElementById('delete-confirm-modal');
+            const box = document.getElementById('delete-confirm-box');
+            modal.classList.add('opacity-0', 'pointer-events-none');
+            box.classList.remove('scale-100');
+            box.classList.add('scale-95');
+        };
+
+        window.confirmDeleteAction = function() {
+            if (!_pendingDeleteCode) return;
+            const code = _pendingDeleteCode;
+            const confirmBtn = document.getElementById('delete-confirm-btn');
+            confirmBtn.disabled = true;
+            confirmBtn.textContent = 'กำลังลบ...';
+
+            fetch(`/PriceReference/Delete?productCode=${encodeURIComponent(code)}`, {
+                method: 'POST'
+            })
+            .then(res => res.json())
+            .then(resData => {
+                closeDeleteModal();
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = 'ยืนยันการลบ';
+                if (resData.success) {
+                    showToast("ลบข้อมูลราคากลางเรียบร้อยแล้ว");
+                    fetchPriceData(currentSearch, currentPageNum);
+                } else {
+                    showToast(resData.error || "เกิดข้อผิดพลาดในการลบ", "error");
+                }
+            })
+            .catch(() => {
+                closeDeleteModal();
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = 'ยืนยันการลบ';
+                showToast("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้", "error");
+            });
+        };
+
+        // Close delete modal when clicking outside the box
+        document.getElementById('delete-confirm-modal').addEventListener('click', function(e) {
+            if (e.target === this) closeDeleteModal();
+        });
+    }
+
+    // Show clear button initially if there is a search term
+    if (currentSearch.trim().length > 0) {
+        clearSearchBtn.classList.remove("hidden");
+    }
+
+    // Dynamic autocomplete instant search
+    searchInput.addEventListener("input", function() {
+        currentSearch = this.value;
+        currentPageNum = 1;
+
+        if (currentSearch.trim().length > 0) {
+            clearSearchBtn.classList.remove("hidden");
+        } else {
+            clearSearchBtn.classList.add("hidden");
+        }
+
+        clearTimeout(debounceTimeout);
+        debounceTimeout = setTimeout(() => {
+            fetchPriceData(currentSearch, currentPageNum);
+        }, 80);
+    });
+
+    // Clear search event
+    clearSearchBtn.addEventListener("click", function() {
+        searchInput.value = "";
+        currentSearch = "";
+        currentPageNum = 1;
+        this.classList.add("hidden");
+        fetchPriceData("", 1);
+    });
+
+    // Handle pagination button clicks
+    function setupPaginationEvents() {
+        document.querySelectorAll(".page-nav-btn").forEach(btn => {
+            btn.addEventListener("click", function() {
+                const targetPage = parseInt(this.getAttribute("data-page"));
+                currentPageNum = targetPage;
+                fetchPriceData(currentSearch, currentPageNum);
+            });
+        });
+    }
+
+    setupPaginationEvents();
+
+    function getSkeletonRows() {
+        let colCount = isAdmin ? 9 : 8;
+        let rowsHtml = "";
+        for (let i = 0; i < 8; i++) {
+            rowsHtml += `
+                <tr class="animate-pulse bg-slate-50/30">
+                    <td class="px-3 py-3"><div class="h-3.5 bg-slate-200 rounded w-6 mx-auto"></div></td>
+                    <td class="px-3 py-3"><div class="h-3.5 bg-slate-200 rounded w-16 mx-auto"></div></td>
+                    <td class="px-3 py-3"><div class="h-3.5 bg-slate-200/80 rounded w-5/6 mx-auto"></div></td>
+                    <td class="px-3 py-3"><div class="h-3.5 bg-slate-200 rounded w-10 mx-auto"></div></td>
+                    <td class="px-3 py-3"><div class="h-3.5 bg-slate-200 rounded w-14 mx-auto"></div></td>
+                    <td class="px-3 py-3"><div class="h-3.5 bg-slate-200 rounded w-12 mx-auto"></div></td>
+                    <td class="px-3 py-3"><div class="h-3.5 bg-slate-200 rounded w-20 mx-auto"></div></td>
+                    <td class="px-3 py-3"><div class="h-3.5 bg-slate-200/60 rounded w-32 mx-auto"></div></td>
+                    ${isAdmin ? '<td class="px-3 py-3"><div class="h-3.5 bg-slate-200 rounded w-12 mx-auto"></div></td>' : ''}
+                </tr>
+            `;
+        }
+        return rowsHtml;
+    }
+
+    // Fetch and redraw table
+    function fetchPriceData(searchQuery, pageNum) {
+        tableBody.innerHTML = getSkeletonRows();
+        fetch(`/PriceReference/SearchApi?search=${encodeURIComponent(searchQuery)}&page=${pageNum}`)
+            .then(res => res.json())
+            .then(data => {
+                // 1. Update total count
+                totalCountBadge.textContent = Number(data.totalCount).toLocaleString('en-US');
+
+                // 2. Redraw table rows
+                tableBody.innerHTML = "";
+                let colSpanCount = isAdmin ? 9 : 8;
+                if (!data.items || data.items.length === 0) {
+                    tableBody.innerHTML = `
+                        <tr>
+                            <td colspan="${colSpanCount}" class="py-lg text-slate-400 text-xs italic bg-slate-50/50">ไม่พบข้อมูลราคากลางอ้างอิงตรงกับคำค้นหา</td>
+                        </tr>
+                    `;
+                    paginationWrapper.innerHTML = "";
+                    return;
+                }
+
+                const startIndex = (data.currentPage - 1) * 50;
+                data.items.forEach((item, index) => {
+                    const tr = document.createElement("tr");
+                    tr.className = "hover:bg-slate-50/50 transition-colors";
+                    
+                    let actionCol = "";
+                    if (isAdmin) {
+                        actionCol = `
+                            <td class="px-3 py-2 flex items-center justify-center gap-1.5">
+                                <button onclick="openEditModal(this)" class="text-primary hover:underline font-bold text-[11px] bg-slate-100 hover:bg-slate-200 px-1.5 py-0.5 rounded transition-all">แก้ไข</button>
+                                <button onclick="deleteProductPrice('${item.productCode}')" class="text-rose-600 hover:underline font-bold text-[11px] bg-rose-50 hover:bg-rose-100 px-1.5 py-0.5 rounded transition-all">ลบ</button>
+                            </td>
+                        `;
+                    }
+
+                    tr.innerHTML = `
+                        <td class="px-3 py-2 text-slate-400 font-mono">${startIndex + index + 1}</td>
+                        <td class="px-3 py-2 font-mono text-primary font-bold">${item.productCode}</td>
+                        <td class="px-3 py-2 text-left max-w-[320px] truncate" title="${item.productName}">${item.productName}</td>
+                        <td class="px-3 py-2 text-slate-600">${item.unit}</td>
+                        <td class="px-3 py-2 font-mono font-bold text-primary bg-primary/5">฿${Number(item.pricePerUnit).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        <td class="px-3 py-2 font-mono">${Number(item.totalQty).toLocaleString('en-US')}</td>
+                        <td class="px-3 py-2 font-mono">฿${Number(item.totalValue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        <td class="px-3 py-2 text-left text-slate-500 text-[11px] truncate max-w-[200px]" title="${item.sources}">${item.sources || ""}</td>
+                        ${actionCol}
+                    `;
+                    
+                    // set data attributes for modal extraction
+                    tr.setAttribute("data-code", item.productCode);
+                    tr.setAttribute("data-name", item.productName);
+                    tr.setAttribute("data-unit", item.unit || "");
+                    tr.setAttribute("data-price", item.pricePerUnit);
+                    tr.setAttribute("data-qty", item.totalQty);
+                    tr.setAttribute("data-val", item.totalValue);
+                    tr.setAttribute("data-sources", item.sources || "");
+
+                    tableBody.appendChild(tr);
+                });
+
+                // 3. Redraw pagination
+                drawPagination(data.currentPage, data.totalPages, searchQuery);
+            });
+    }
+
+    // Dynamic pagination drawer
+    function drawPagination(currentPage, totalPages, searchQuery) {
+        paginationWrapper.innerHTML = "";
+        if (totalPages <= 1) return;
+
+        const container = document.createElement("div");
+        container.className = "flex justify-between items-center pt-md border-t border-slate-100 text-xs";
+        container.id = "pagination-container";
+
+        const info = document.createElement("div");
+        info.className = "text-secondary";
+        info.textContent = `หน้า ${currentPage} จากทั้งหมด ${totalPages} หน้า (แสดงผลทีละ 50 รายการ)`;
+        container.appendChild(info);
+
+        const buttonsGroup = document.createElement("div");
+        buttonsGroup.className = "flex gap-xs";
+
+        // Prev Button
+        if (currentPage > 1) {
+            buttonsGroup.innerHTML += `
+                <button data-page="${currentPage - 1}" class="px-3 py-1.5 border border-slate-200 rounded font-semibold text-slate-700 hover:bg-slate-50 transition-colors page-nav-btn">ก่อนหน้า</button>
+            `;
+        } else {
+            buttonsGroup.innerHTML += `
+                <span class="px-3 py-1.5 border border-slate-100 rounded text-slate-300 cursor-not-allowed">ก่อนหน้า</span>
+            `;
+        }
+
+        // Smart page number listing (current - 2 to current + 2)
+        const startPage = Math.max(1, currentPage - 2);
+        const endPage = Math.min(totalPages, currentPage + 2);
+        for (let p = startPage; p <= endPage; p++) {
+            if (p === currentPage) {
+                buttonsGroup.innerHTML += `
+                    <span class="px-3 py-1.5 bg-primary text-on-primary font-bold rounded">${p}</span>
+                `;
+            } else {
+                buttonsGroup.innerHTML += `
+                    <button data-page="${p}" class="px-3 py-1.5 border border-slate-200 rounded font-semibold text-slate-700 hover:bg-slate-50 transition-colors page-nav-btn">${p}</button>
+                `;
+            }
+        }
+
+        // Next Button
+        if (currentPage < totalPages) {
+            buttonsGroup.innerHTML += `
+                <button data-page="${currentPage + 1}" class="px-3 py-1.5 border border-slate-200 rounded font-semibold text-slate-700 hover:bg-slate-50 transition-colors page-nav-btn">ถัดไป</button>
+            `;
+        } else {
+            buttonsGroup.innerHTML += `
+                <span class="px-3 py-1.5 border border-slate-100 rounded text-slate-300 cursor-not-allowed">ถัดไป</span>
+            `;
+        }
+
+        container.appendChild(buttonsGroup);
+        paginationWrapper.appendChild(container);
+
+        setupPaginationEvents();
+    }
+});
+</script>

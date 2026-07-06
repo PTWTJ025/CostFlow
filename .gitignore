@@ -1,0 +1,51 @@
+## ===================================================
+## .gitignore สำหรับโปรเจกต์ ASP.NET Core (CostFlow)
+## ===================================================
+
+# ----- 🔴 ความปลอดภัย (SECURITY) - สำคัญที่สุด! -----
+# ไฟล์ตั้งค่าที่มี Password / Connection String จริงๆ
+appsettings.json
+appsettings.*.json
+
+# ไฟล์ SSL Certificate ของ Aiven
+*.pem
+*.key
+*.crt
+
+# ไฟล์ฐานข้อมูล SQLite เก่า
+*.db
+*.db-shm
+*.db-wal
+*.db.bak
+
+# ----- 🏗️ Build Output (ผลลัพธ์ที่ระบบ Build สร้างขึ้นมาเอง) -----
+[Bb]in/
+[Oo]bj/
+
+# ----- 🛠️ Visual Studio / VS Code -----
+.vs/
+.vscode/
+*.user
+*.suo
+
+# ----- 📦 NuGet Packages -----
+packages/
+*.nupkg
+
+# ----- 🌿 Environment Variables -----
+.env
+.env.local
+.env.production
+
+# ----- 💻 OS Files -----
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ----- 🤖 IDE / AI Agent Settings (Cursor & Gemini) -----
+.cursor/
+.gemini/
+.agents/
+.impeccable/
+skills/
+ca.pem

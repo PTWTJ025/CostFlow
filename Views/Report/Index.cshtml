@@ -1,0 +1,236 @@
+@model List<CostFlow.Controllers.ReportSummaryViewModel>
+@{
+    ViewData["Title"] = "รายงานทางการเงิน";
+    ViewData["HeaderTitle"] = "รายงาน (Financial Reports)";
+}
+
+<div class="flex-1 p-md md:p-lg lg:p-xl flex flex-col gap-lg max-w-[88vw] mx-auto w-full">
+    <!-- Reports list Card -->
+    <div class="bg-white rounded border border-outline-variant shadow-sm p-md md:p-lg lg:p-xl">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-md mb-lg">
+            <div>
+                <h3 class="font-headline-sm text-headline-sm text-on-surface">รายการรายงานทั้งหมด</h3>
+                <p class="font-label-sm text-label-sm text-secondary">คลังข้อมูลและประวัติการเปรียบเทียบข้อมูลแผนสั่งผลิตกับคำสั่งซื้อในอดีต</p>
+            </div>
+            <a href="/FileMerge" class="bg-primary hover:bg-primary/95 text-on-primary font-label-bold text-label-bold px-md py-2 rounded flex items-center gap-2 transition-colors shadow-sm text-xs">
+                <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg> สร้างรายงานเปรียบเทียบใหม่
+            </a>
+        </div>
+        
+        @if (Model == null || !Model.Any())
+        {
+            <div class="py-xl border border-dashed border-slate-200 rounded flex flex-col items-center justify-center text-center gap-md">
+                <div class="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center text-slate-400">
+                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5-3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                    </svg>
+                </div>
+                <div>
+                    <h4 class="font-bold text-on-surface text-sm mb-xs">ยังไม่มีรายงานที่บันทึกไว้ในระบบ</h4>
+                    <p class="text-xs text-secondary max-w-sm mx-auto">คุณสามารถนำเข้าไฟล์ "แผนผลิตประจำสัปดาห์" และ "ไฟล์ใบขออนุมัติสั่งผลิต" เพื่อเปรียบเทียบข้อมูลและบันทึกรายงานเก็บไว้ในระบบนี้ได้</p>
+                </div>
+                <a href="/FileMerge" class="px-lg py-2 border border-slate-200 rounded text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors">
+                    ไปหน้านำเข้าไฟล์
+                </a>
+            </div>
+        }
+        else
+        {
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-md">
+                @foreach (var report in Model)
+                {
+                    double accuracy = report.TotalRows > 0 ? Math.Round((double)report.MatchedRows / report.TotalRows * 100, 1) : 0;
+                    string formattedDate = report.CreatedAt.ToString("dd MMM yyyy", new System.Globalization.CultureInfo("th-TH"));
+                    string formattedTime = report.CreatedAt.ToString("HH:mm", new System.Globalization.CultureInfo("th-TH"));
+                    
+                    <div class="border border-outline-variant rounded p-md hover:shadow-md transition-all flex flex-col justify-between bg-white relative overflow-hidden group" id="report-card-@report.SessionId">
+                        <div class="absolute top-0 left-0 w-1.5 h-full bg-primary transition-all group-hover:w-2"></div>
+                        <div class="pl-2">
+                            <div class="flex justify-between items-start mb-sm">
+                                <svg class="w-6 h-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m3.75 9v6m3-3v3m-7.5-6v6m1.5-12H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                                </svg>
+                                
+                                <div class="flex gap-xs items-center">
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200/60 text-[10px] font-bold">
+                                        ความสอดคล้อง: @accuracy%
+                                    </span>
+                                    <!-- Delete Button -->
+                                    <button onclick="deleteReport('@report.SessionId', '@Html.Raw(report.ReportName)')" class="text-slate-400 hover:text-rose-600 transition-colors p-1 rounded hover:bg-slate-100" title="ลบรายงานนี้">
+                                        <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <h4 class="font-bold text-on-surface text-sm mb-xs group-hover:text-primary transition-colors line-clamp-2" title="@Html.Raw(report.ReportName)">
+                                @Html.Raw(report.ReportName)
+                            </h4>
+                            <p class="text-[10px] text-slate-400 font-semibold mb-xs truncate" title="@Html.Raw(report.CompareFileName)">
+                                ไฟล์หลัก: @Html.Raw(report.CompareFileName)
+                            </p>
+                            <p class="text-[10px] text-slate-500 mb-md">
+                                วันที่สร้างรายงาน: @formattedDate เวลา @formattedTime น.
+                            </p>
+                            
+                            <!-- Match statistics bar -->
+                            <div class="mb-sm">
+                                <div class="flex justify-between text-[10px] font-semibold text-slate-600 mb-1">
+                                    <span>ตรงตามแผนผลิต</span>
+                                    <span>@report.MatchedRows / @report.TotalRows รายการ</span>
+                                </div>
+                                <div class="w-full bg-slate-100 rounded-full h-1.5">
+                                    <div class="bg-primary h-1.5 rounded-full" style="width: @accuracy%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="border-t border-slate-100 pt-sm mt-md pl-2 flex justify-between items-center text-xs">
+                            <a href="/Report/Details?sessionId=@report.SessionId" class="text-primary hover:underline font-bold flex items-center gap-xs">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                                </svg> ดูรายละเอียด
+                            </a>
+                            
+                            <a href="/Report/ExportReport?sessionId=@report.SessionId" class="text-secondary hover:text-primary transition-colors flex items-center gap-xs font-semibold">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                                </svg> ส่งออก Excel
+                            </a>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+<script>
+// Custom dialog helpers to avoid default alert() and confirm()
+function showCustomAlert(message, title = "แจ้งข้อความ") {
+    let modal = document.getElementById("custom-alert-modal");
+    if (!modal) {
+        modal = document.createElement("div");
+        modal.id = "custom-alert-modal";
+        modal.className = "fixed inset-0 z-50 flex items-center justify-center p-md bg-slate-900/50 backdrop-blur-sm transition-opacity duration-300 opacity-0 hidden";
+        modal.innerHTML = `
+            <div class="bg-white rounded-lg shadow-xl border border-slate-100 max-w-sm w-full overflow-hidden transform scale-95 transition-all duration-300">
+                <div class="px-lg py-md border-b border-slate-100 bg-slate-50/50">
+                    <h3 class="font-bold text-slate-800 text-sm" id="custom-alert-title"></h3>
+                </div>
+                <div class="p-lg text-xs text-slate-600 leading-normal" id="custom-alert-message"></div>
+                <div class="px-lg py-md border-t border-slate-100 flex justify-end bg-slate-50/30">
+                    <button type="button" id="custom-alert-ok" class="bg-primary hover:bg-primary-container text-on-primary text-xs font-semibold px-5 py-2 rounded transition-colors shadow-sm">ตกลง</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+    
+    document.getElementById("custom-alert-title").textContent = title;
+    document.getElementById("custom-alert-message").innerHTML = message;
+    
+    modal.classList.remove("hidden");
+    setTimeout(() => {
+        modal.classList.add("opacity-100");
+        modal.querySelector("div").classList.remove("scale-95");
+        modal.querySelector("div").classList.add("scale-100");
+    }, 10);
+    
+    return new Promise((resolve) => {
+        document.getElementById("custom-alert-ok").onclick = () => {
+            modal.classList.remove("opacity-100");
+            modal.querySelector("div").classList.remove("scale-100");
+            modal.querySelector("div").classList.add("scale-95");
+            setTimeout(() => {
+                modal.classList.add("hidden");
+                resolve();
+            }, 300);
+        };
+    });
+}
+
+function showCustomConfirm(message, title = "ยืนยันการลบข้อมูล") {
+    let modal = document.getElementById("custom-confirm-modal");
+    if (!modal) {
+        modal = document.createElement("div");
+        modal.id = "custom-confirm-modal";
+        modal.className = "fixed inset-0 z-50 flex items-center justify-center p-md bg-slate-900/50 backdrop-blur-sm transition-opacity duration-300 opacity-0 hidden";
+        modal.innerHTML = `
+            <div class="bg-white rounded-lg shadow-xl border border-slate-100 max-w-sm w-full overflow-hidden transform scale-95 transition-all duration-300">
+                <div class="px-lg py-md border-b border-slate-100 bg-slate-50/50">
+                    <h3 class="font-bold text-slate-800 text-sm" id="custom-confirm-title"></h3>
+                </div>
+                <div class="p-lg text-xs text-slate-600 leading-normal" id="custom-confirm-message"></div>
+                <div class="px-lg py-md border-t border-slate-100 flex justify-end gap-sm bg-slate-50/30">
+                    <button type="button" id="custom-confirm-cancel" class="px-4 py-2 border border-slate-200 rounded text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors">ยกเลิก</button>
+                    <button type="button" id="custom-confirm-ok" class="bg-primary hover:bg-primary-container text-on-primary text-xs font-semibold px-5 py-2 rounded transition-colors shadow-sm">ยืนยันการลบ</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+    
+    document.getElementById("custom-confirm-title").textContent = title;
+    document.getElementById("custom-confirm-message").innerHTML = message;
+    
+    modal.classList.remove("hidden");
+    setTimeout(() => {
+        modal.classList.add("opacity-100");
+        modal.querySelector("div").classList.remove("scale-95");
+        modal.querySelector("div").classList.add("scale-100");
+    }, 10);
+    
+    return new Promise((resolve) => {
+        const okBtn = document.getElementById("custom-confirm-ok");
+        const cancelBtn = document.getElementById("custom-confirm-cancel");
+        
+        const close = (result) => {
+            modal.classList.remove("opacity-100");
+            modal.querySelector("div").classList.remove("scale-100");
+            modal.querySelector("div").classList.add("scale-95");
+            setTimeout(() => {
+                modal.classList.add("hidden");
+                resolve(result);
+            }, 300);
+        };
+        
+        okBtn.onclick = () => close(true);
+        cancelBtn.onclick = () => close(false);
+    });
+}
+
+function deleteReport(sessionId, reportName) {
+    showCustomConfirm(`คุณต้องการลบรายงาน "${reportName}" ออกจากระบบ ใช่หรือไม่? <br/><span class="text-rose-600 font-semibold">*ข้อมูลการเปรียบเทียบในรายงานนี้จะถูกลบถาวรและไม่สามารถกู้คืนได้</span>`)
+    .then(confirmed => {
+        if (!confirmed) return;
+
+        fetch(`/Report/DeleteSession?sessionId=${sessionId}`, {
+            method: 'POST'
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                showCustomAlert('ลบรายงานสรุปการเปรียบเทียบข้อมูลเรียบร้อยแล้ว', 'ลบสำเร็จ')
+                .then(() => {
+                    const card = document.getElementById(`report-card-${sessionId}`);
+                    if (card) {
+                        card.remove();
+                        // If no cards left, reload to show empty view
+                        if (document.querySelectorAll('[id^="report-card-"]').length === 0) {
+                            window.location.reload();
+                        }
+                    }
+                });
+            } else {
+                showCustomAlert(data.error || 'เกิดข้อผิดพลาดในการดำเนินการลบ', 'เกิดข้อผิดพลาด');
+            }
+        })
+        .catch(() => showCustomAlert('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์หลักได้ในขณะนี้', 'ข้อผิดพลาดระบบ'));
+    });
+}
+</script>

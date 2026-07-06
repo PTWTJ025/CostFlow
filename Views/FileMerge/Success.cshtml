@@ -1,0 +1,41 @@
+@{
+    ViewData["Title"] = "บันทึกสำเร็จ";
+    ViewData["HeaderTitle"] = "บันทึกสำเร็จ";
+    Guid sessionId = (Guid)(ViewData["SessionId"] ?? Guid.Empty);
+}
+
+<div class="flex-1 p-md md:p-lg lg:p-xl flex items-center justify-center max-w-container-max mx-auto w-full">
+    <div class="bg-white rounded border border-outline-variant shadow-sm p-xl max-w-md w-full text-center flex flex-col items-center gap-md">
+        <!-- Animated Check Circle -->
+        <div class="w-16 h-16 bg-green-50 text-green-600 rounded-full flex items-center justify-center border border-green-200/60 shadow-inner my-md">
+            <svg class="w-8 h-8 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+            </svg>
+        </div>
+        
+        <h3 class="font-headline-md text-headline-md text-on-surface">บันทึกข้อมูลเรียบร้อยแล้ว!</h3>
+        <p class="text-xs text-secondary px-sm leading-relaxed">
+            ข้อมูลสั่งซื้อและเป้าหมายส่งมอบที่จับคู่เปรียบเทียบได้ถูกบันทึกบันทึกเข้าสู่ฐานข้อมูล SQLite หลักถาวรแล้ว ระบบล้างแคชไฟล์เซสชันชั่วคราวเรียบร้อยแล้ว
+        </p>
+
+        <!-- Navigation Actions -->
+        <div class="flex flex-col gap-sm w-full mt-lg">
+            <a asp-controller="Report" asp-action="Details" asp-route-sessionId="@sessionId" class="w-full bg-primary hover:bg-primary-container text-on-primary text-center font-semibold text-sm py-2.5 rounded transition-colors shadow-sm">
+                ดูรายละเอียดรายงานที่เพิ่งบันทึก
+            </a>
+            <a asp-controller="Report" asp-action="Index" class="w-full border border-outline-variant hover:bg-slate-50 text-slate-700 text-center font-semibold text-sm py-2.5 rounded transition-all bg-white">
+                ดูรายการรายงานทั้งหมด
+            </a>
+            <a asp-controller="FileMerge" asp-action="Index" class="w-full border border-outline-variant hover:bg-slate-50 text-slate-700 text-center font-semibold text-sm py-2.5 rounded transition-all bg-white">
+                เปรียบเทียบข้อมูลชุดอื่น
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+// Auto-redirect to Report Details page after 5 seconds
+setTimeout(function() {
+    window.location.href = "/Report/Details?sessionId=@sessionId";
+}, 5000);
+</script>

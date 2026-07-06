@@ -1,0 +1,386 @@
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<CostFlow.Models.ApplicationUser> UserManager
+@{
+    var controllerName = ViewContext.RouteData.Values["Controller"]?.ToString() ?? "Home";
+
+    string fullName = "ผู้ใช้งาน";
+    string roleName = "Staff";
+    bool isAdmin = false;
+    CostFlow.Models.ApplicationUser? appUser = null;
+
+    if (User.Identity?.IsAuthenticated == true)
+    {
+        appUser = await UserManager.GetUserAsync(User);
+        if (appUser != null)
+        {
+            fullName = appUser.FullName;
+            var roles = await UserManager.GetRolesAsync(appUser);
+            roleName = roles.FirstOrDefault() ?? "Staff";
+            isAdmin = roles.Contains("Admin");
+        }
+    }
+
+
+    string GetNavClass(string targetController, string targetAction = "")
+    {
+        var actionName = ViewContext.RouteData.Values["Action"]?.ToString() ?? "Index";
+        bool isActive = string.Equals(controllerName, targetController, StringComparison.OrdinalIgnoreCase);
+        if (isActive && !string.IsNullOrEmpty(targetAction))
+        {
+            isActive = string.Equals(actionName, targetAction, StringComparison.OrdinalIgnoreCase);
+        }
+        return isActive
+            ? "group cursor-pointer flex items-center gap-2 px-3 py-2 rounded-sm text-primary font-bold border-r-4 border-primary bg-primary-container/10 transition-all font-body-md"
+            : "group cursor-pointer flex items-center gap-2 px-3 py-2 rounded-sm text-secondary hover:text-primary hover:bg-secondary-container/50 transition-all font-body-md";
+    }
+}
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - WOSync</title>
+    
+    <!-- Tailwind CSS and Config -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "secondary": "#505f76",
+                      "on-error": "#ffffff",
+                      "primary": "#00288e",
+                      "tertiary-fixed": "#ffdbce",
+                      "on-tertiary-fixed": "#380d00",
+                      "on-tertiary-container": "#ffa583",
+                      "outline-variant": "#c4c5d5",
+                      "primary-fixed-dim": "#b8c4ff",
+                      "inverse-on-surface": "#f1f0fa",
+                      "error-container": "#ffdad6",
+                      "surface-bright": "#fbf8ff",
+                      "error": "#ba1a1a",
+                      "surface-container-high": "#e8e7f1",
+                      "inverse-primary": "#b8c4ff",
+                      "surface": "#fbf8ff",
+                      "inverse-surface": "#2f3037",
+                      "primary-container": "#1e40af",
+                      "surface-container-lowest": "#ffffff",
+                      "secondary-fixed-dim": "#b7c8e1",
+                      "on-primary-fixed-variant": "#173bab",
+                      "surface-container-low": "#f4f2fc",
+                      "on-error-container": "#93000a",
+                      "surface-tint": "#3755c3",
+                      "tertiary-container": "#872d00",
+                      "outline": "#757684",
+                      "surface-dim": "#dad9e3",
+                      "on-secondary-fixed": "#0b1c30",
+                      "secondary-container": "#d0e1fb",
+                      "on-tertiary": "#ffffff",
+                      "on-secondary-container": "#54647a",
+                      "on-primary-container": "#a8b8ff",
+                      "on-surface": "#1a1b22",
+                      "tertiary": "#611e00",
+                      "secondary-fixed": "#d3e4fe",
+                      "surface-container-highest": "#e3e1eb",
+                      "on-surface-variant": "#444653",
+                      "surface-variant": "#e3e1eb",
+                      "tertiary-fixed-dim": "#ffb59a",
+                      "on-tertiary-fixed-variant": "#802a00",
+                      "surface-container": "#eeedf7",
+                      "on-secondary": "#ffffff",
+                      "on-primary": "#ffffff",
+                      "on-secondary-fixed-variant": "#38485d",
+                      "on-background": "#1a1b22",
+                      "primary-fixed": "#dde1ff",
+                      "background": "#fbf8ff",
+                      "on-primary-fixed": "#001453"
+              },
+              "borderRadius": {
+                      "DEFAULT": "4px",
+                      "sm": "2px",
+                      "md": "6px",
+                      "lg": "8px",
+                      "xl": "12px",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "lg": "24px",
+                      "md": "16px",
+                      "xl": "32px",
+                      "base": "4px",
+                      "sm": "8px",
+                      "xs": "4px",
+                      "container-max": "1440px",
+                      "gutter": "20px"
+              },
+              "fontFamily": {
+                      "headline-md": ["Ubuntu", "IBM Plex Sans Thai", "IBM Plex Sans", "ui-sans-serif", "system-ui", "sans-serif"],
+                      "label-bold": ["Ubuntu", "IBM Plex Sans Thai", "IBM Plex Sans", "ui-sans-serif", "system-ui", "sans-serif"],
+                      "body-md": ["Ubuntu", "IBM Plex Sans Thai", "IBM Plex Sans", "ui-sans-serif", "system-ui", "sans-serif"],
+                      "body-lg": ["Ubuntu", "IBM Plex Sans Thai", "IBM Plex Sans", "ui-sans-serif", "system-ui", "sans-serif"],
+                      "headline-sm": ["Ubuntu", "IBM Plex Sans Thai", "IBM Plex Sans", "ui-sans-serif", "system-ui", "sans-serif"],
+                      "label-sm": ["Ubuntu", "IBM Plex Sans Thai", "IBM Plex Sans", "ui-sans-serif", "system-ui", "sans-serif"],
+                      "data-tabular": ["Ubuntu", "IBM Plex Sans Thai", "IBM Plex Sans", "ui-sans-serif", "system-ui", "sans-serif"],
+                      "headline-lg": ["Ubuntu", "IBM Plex Sans Thai", "IBM Plex Sans", "ui-sans-serif", "system-ui", "sans-serif"],
+                      "sans": ["Ubuntu", "IBM Plex Sans Thai", "IBM Plex Sans", "ui-sans-serif", "system-ui", "sans-serif"]
+              },
+              "fontSize": {
+                      "headline-md": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "label-bold": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-md": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "body-lg": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "headline-sm": [
+                              "20px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "label-sm": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "data-tabular": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "headline-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ]
+              }
+            },
+          },
+        }
+    </script>
+    <style>
+        /* Custom Scrollbar for tables */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=Ubuntu:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- Flaticon UIcons CDN -->
+    <link href="https://cdn-uicons.flaticon.com/2.6.0/uicons-regular-straight/css/uicons-regular-straight.css" rel="stylesheet">
+    <link rel="icon" type="image/png" href="~/favicon.png" />
+    <link rel="shortcut icon" href="~/favicon.ico" />
+</head>
+<body class="text-on-surface flex min-h-screen bg-[#F8FAFC] font-sans">
+    <nav id="sidebar" class="hidden md:flex flex-col h-screen w-64 fixed left-0 top-0 bg-surface-container-low dark:bg-inverse-surface border-r border-outline-variant shadow-sm z-40">
+        <!-- Redesigned Logo Header linking to home -->
+        <a asp-controller="@(isAdmin ? "PriceReference" : "Home")" asp-action="Index" class="h-[64px] px-lg flex items-center gap-3 border-b border-outline-variant bg-surface-container-low/50 hover:bg-slate-50/50 transition-colors group">
+            <i class="fi fi-rs-chart-gantt text-[24px] text-primary flex-shrink-0 group-hover:scale-105 group-hover:rotate-2 transition-transform duration-300 leading-none"></i>
+            <div class="flex flex-col text-left select-none">
+                <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider leading-none mb-1 group-hover:text-primary transition-colors">ระบบตรวจสอบ</span>
+                <span class="text-[15px] font-black text-primary leading-none group-hover:translate-x-0.5 transition-transform duration-300">ข้อมูลจัดซื้อ</span>
+            </div>
+        </a>
+        
+        <!-- Navigation Links: Structured layout matching mockup -->
+        <div class="flex-1 flex flex-col gap-xs px-md mt-md">
+            @if (!isAdmin)
+            {
+                <a class="@GetNavClass("Home")" asp-controller="Home" asp-action="Index">
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V18ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z" />
+                    </svg>
+                    <span>หน้าหลัก</span>
+                </a>
+                <a class="@GetNavClass("FileMerge", "Index")" asp-controller="FileMerge" asp-action="Index">
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0 3 3m-3-3-3 3M6.75 19.5a4.5 4.5 0 0 1-1.41-8.775 a5.25 5.25 0 0 1 10.233-2.33 a3 3 0 0 1 3.758 3.848A3.752 3.752 0 0 1 18 19.5H6.75Z" />
+                    </svg>
+                    <span>นำเข้า & รวมไฟล์</span>
+                </a>
+                <a class="@GetNavClass("Report", "Index")" asp-controller="Report" asp-action="Index">
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                    </svg>
+                    <span>รายงาน</span>
+                </a>
+                <a class="@GetNavClass("ProductSearch", "Index")" asp-controller="ProductSearch" asp-action="Index">
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                    </svg>
+                    <span>คีย์ใบสั่งซื้อ</span>
+                </a>
+                <a class="@GetNavClass("ProductSearch", "SavedOrders")" asp-controller="ProductSearch" asp-action="SavedOrders">
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.03 0 1.9.693 2.166 1.638m-7.377 2.24a4.008 4.008 0 0 1 1.953-3.238" />
+                    </svg>
+                    <span>รายการที่บันทึก</span>
+                </a>
+            }
+            <a class="@GetNavClass("PriceReference", "Index")" asp-controller="PriceReference" asp-action="Index">
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5h16.5m-18 3h18M3.75 10.5h16.5M3.75 13.5h16.5M7.5 12h-.008v.008H7.5V12Zm.375 0a.375 .375 0 1 1 -.75 0 .375 .375 0 0 1 .75 0Zm-.375 3h-.008v.008H7.5V15Zm.375 0a.375 .375 0 1 1 -.75 0 .375 .375 0 0 1 .75 0Zm9.625-3h-.008v.008h-.008V12Zm.375 0a.375 .375 0 1 1 -.75 0 .375 .375 0 0 1 .75 0Zm-.375 3h-.008v.008h-.008V15Zm.375 0a.375 .375 0 1 1 -.75 0 .375 .375 0 0 1 .75 0Z" />
+                </svg>
+                <span>ราคากลางอ้างอิง</span>
+            </a>
+        </div>
+        <!-- Footer Links: Reduced spacing and simplified -->
+        <div class="px-md flex flex-col gap-xs mt-auto">
+            @if (!isAdmin)
+            {
+                <a class="@GetNavClass("Home", "Settings")" asp-controller="Home" asp-action="Settings">
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.43l-1.003.828c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.43l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z" />
+                    </svg>
+                    <span>ตั้งค่า</span>
+                </a>
+            }
+            <a class="group cursor-pointer flex items-center gap-2 px-3 py-2 rounded-sm text-secondary hover:text-primary hover:bg-secondary-container/50 transition-all font-body-md mb-2" asp-controller="Account" asp-action="Logout">
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75" />
+                </svg>
+                <span>ออกจากระบบ</span>
+            </a>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 md:ml-64 flex flex-col min-h-screen">
+        <!-- TopAppBar (Visible on Mobile & Desktop for context) -->
+        <header class="h-[64px] flex justify-between items-center px-lg w-full sticky top-0 z-30 bg-white border-b border-slate-200">
+            <div class="flex items-center gap-md">
+                <button id="mobile-menu-btn" class="md:hidden text-primary hover:bg-slate-100 p-1.5 rounded transition-colors">
+                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                    </svg>
+                </button>
+                <span class="md:hidden font-bold text-primary text-base">ระบบตรวจสอบข้อมูลจัดซื้อ</span>
+                <h2 class="hidden md:block text-lg font-semibold text-slate-800">@ViewData["HeaderTitle"]</h2>
+            </div>
+            <!-- Redesigned Profile Info Pill with Dropdown -->
+            <div class="flex items-center gap-sm relative">
+                <button id="profile-dropdown-btn" class="group flex items-center gap-2.5 hover:bg-slate-50 hover:shadow-sm border border-slate-200/70 transition-all pl-1.5 pr-3.5 py-1 rounded-full bg-white select-none">
+                    <div class="relative w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center border border-slate-200 overflow-hidden shrink-0">
+                        <img alt="User profile photo" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" src="@(appUser?.ProfilePictureUrl ?? "https://lh3.googleusercontent.com/aida-public/AB6AXuClsteqi-YK02c9Vk9jcpsMVloDL39QjYkSap1SuZJ8EfsLBHBT1o8wyfqeSLysYaC7bvbaZsN-7DlVfuia1UvWQGeODGTwnf7Lp6HjxxHh8SQHi9D62HrlY8d6SDbvbJtzn6VhZh_Ty7_rdnHoQ-TwkrVX1K3Vs1rgwZkh6xUShdweHFaQ1sAUoAPxQcWeJHDwmkmgcrZ-jBd5pfUrdfglE0LNA2_cEaw9Njy4rk3KYDQgiZTLF2z5")"/>
+                        <!-- Online Status Badge -->
+                        <span class="absolute bottom-0 right-0 block h-2 w-2 rounded-full bg-emerald-500 ring-2 ring-white"></span>
+                    </div>
+                    <div class="flex flex-col text-left shrink-0">
+                        <span class="text-xs font-bold text-slate-800 leading-none group-hover:text-primary transition-colors mb-0.5">@fullName</span>
+                        <span class="text-[9px] text-slate-500 font-semibold leading-none">@roleName</span>
+                    </div>
+                    <!-- Chevron Dropdown Indicator -->
+                    <svg class="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600 transition-colors ml-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                    </svg>
+                </button>
+
+                <!-- Dropdown Menu -->
+                <div id="profile-dropdown" class="hidden absolute right-0 top-full mt-2 w-52 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-50">
+                    <div class="px-4 py-2.5 border-b border-slate-100">
+                        <p class="text-xs font-bold text-slate-800 truncate">@fullName</p>
+                        <p class="text-[10px] text-slate-500 font-medium">@roleName</p>
+                    </div>
+                    <a asp-controller="Account" asp-action="Logout" class="flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75" />
+                        </svg>
+                        <span>ออกจากระบบ</span>
+                    </a>
+                </div>
+            </div>
+        </header>
+        
+        <!-- Render Body -->
+        <div class="flex-grow flex flex-col">
+            @RenderBody()
+        </div>
+        
+        <!-- Footer -->
+        <footer class="w-full py-md border-t border-slate-200 bg-white text-center text-xs text-slate-400 font-sans flex flex-col sm:flex-row items-center justify-between px-lg select-none gap-2">
+            <span>&copy; @DateTime.Now.Year - CostFlow. All rights reserved.</span>
+            <div class="flex gap-4">
+                <a href="/Home/About" class="text-primary hover:underline font-bold">About</a>
+            </div>
+        </footer>
+    </main>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const mobileMenuBtn = document.getElementById("mobile-menu-btn");
+            const sidebar = document.getElementById("sidebar");
+            const profileDropdownBtn = document.getElementById("profile-dropdown-btn");
+            const profileDropdown = document.getElementById("profile-dropdown");
+
+            if (mobileMenuBtn && sidebar) {
+                mobileMenuBtn.addEventListener("click", function(e) {
+                    e.stopPropagation();
+                    sidebar.classList.toggle("hidden");
+                    sidebar.classList.toggle("flex");
+                    sidebar.classList.toggle("w-64");
+                    sidebar.classList.toggle("z-50");
+                    sidebar.classList.toggle("bg-surface-container-low");
+                });
+
+                // Close sidebar when clicking outside on mobile
+                document.addEventListener("click", function(e) {
+                    if (window.innerWidth < 768) {
+                        if (!sidebar.contains(e.target) && !mobileMenuBtn.contains(e.target)) {
+                            sidebar.classList.add("hidden");
+                            sidebar.classList.remove("flex");
+                        }
+                    }
+                });
+            }
+
+            // Profile dropdown toggle
+            if (profileDropdownBtn && profileDropdown) {
+                profileDropdownBtn.addEventListener("click", function(e) {
+                    e.stopPropagation();
+                    profileDropdown.classList.toggle("hidden");
+                });
+
+                // Close dropdown when clicking outside
+                document.addEventListener("click", function(e) {
+                    if (!profileDropdownBtn.contains(e.target) && !profileDropdown.contains(e.target)) {
+                        profileDropdown.classList.add("hidden");
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

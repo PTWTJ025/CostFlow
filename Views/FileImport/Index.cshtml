@@ -1,0 +1,289 @@
+@{
+    ViewData["Title"] = "นำเข้าไฟล์";
+    ViewData["HeaderTitle"] = "นำเข้าไฟล์";
+}
+
+<div class="flex-1 p-md md:p-lg lg:p-xl flex flex-col gap-lg max-w-[88vw] mx-auto w-full">
+    <!-- Main Card -->
+    <div class="bg-white rounded border border-outline-variant shadow-sm p-md md:p-lg lg:p-xl">
+        <h3 class="font-headline-sm text-headline-sm text-on-surface mb-md">นำเข้าไฟล์</h3>
+        <p class="text-secondary mb-lg">ระบบนำเข้าข้อมูลสำหรับวิเคราะห์ค่าใช้จ่ายและบันทึกในฐานข้อมูล</p>
+        
+        <!-- STEP 1: Upload Section -->
+        <div id="upload-section" class="flex flex-col gap-md">
+            <div id="drop-zone" class="border-2 border-dashed border-outline-variant rounded p-xl flex flex-col items-center justify-center bg-surface-container-low hover:bg-surface-container transition-colors cursor-pointer min-h-[280px]">
+                <svg class="w-12 h-12 text-primary mb-md" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0 3 3m-3-3-3 3M6.75 19.5a4.5 4.5 0 0 1-1.41-8.775 a5.25 5.25 0 0 1 10.233-2.33 a3 3 0 0 1 3.758 3.848A3.752 3.752 0 0 1 18 19.5H6.75Z" />
+                </svg>
+                <span class="font-label-bold text-label-bold text-on-surface mb-sm text-center">ลากและวางไฟล์ที่นี่ หรือ คลิกเพื่อเลือกไฟล์</span>
+                <span class="text-xs text-secondary mb-md">รองรับไฟล์ .xlsx และ .csv ขนาดไม่เกิน 25 MB</span>
+                
+                <button type="button" id="select-file-btn" class="bg-primary hover:bg-primary/95 text-on-primary font-semibold text-xs px-4 py-2 rounded transition-colors shadow-sm">
+                    เลือกไฟล์
+                </button>
+            </div>
+            <!-- Client-side Validation Error Message -->
+            <p id="validation-error" class="text-error font-semibold text-xs hidden mt-1"></p>
+            <input type="file" id="file-input" class="hidden" accept=".xlsx,.csv" />
+        </div>
+
+        <!-- STEP 2: Loading State -->
+        <div id="loading-section" class="hidden flex flex-col items-center justify-center py-xl min-h-[280px]">
+            <div class="relative w-16 h-16 mb-md">
+                <!-- Simple CSS Spinner -->
+                <div class="absolute inset-0 rounded-full border-4 border-slate-200"></div>
+                <div class="absolute inset-0 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
+            </div>
+            <h4 class="font-bold text-on-surface mb-xs">กำลังอ่านไฟล์...</h4>
+            <p id="loading-file-info" class="text-xs text-secondary mb-xl"></p>
+            
+            <button type="button" id="cancel-upload-btn" class="border border-outline-variant hover:bg-slate-50 text-secondary font-semibold text-xs px-4 py-2 rounded transition-colors">
+                ยกเลิก
+            </button>
+        </div>
+
+        <!-- STEP 3: Success State -->
+        <div id="success-section" class="hidden flex flex-col items-center justify-center py-xl min-h-[280px] text-center">
+            <div class="w-12 h-12 bg-green-50 text-green-600 rounded-full flex items-center justify-center mb-md border border-green-200/50">
+                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                </svg>
+            </div>
+            <h4 class="font-bold text-on-surface mb-xs" id="success-title">อ่านไฟล์สำเร็จ</h4>
+            <p id="success-file-info" class="text-xs text-secondary mb-md"></p>
+            
+            <!-- List of worksheets parsed -->
+            <div id="sheets-list-container" class="w-full max-w-md bg-slate-50 border border-slate-200 rounded p-md mb-xl text-left hidden">
+                <span class="text-xs font-semibold text-slate-500 block mb-sm">รายชื่อชีทที่พบในไฟล์:</span>
+                <ul id="sheets-list" class="text-xs text-slate-700 list-disc list-inside flex flex-col gap-1"></ul>
+            </div>
+
+            <div class="flex gap-sm">
+                <button type="button" id="reupload-success-btn" class="border border-outline-variant hover:bg-slate-50 text-secondary font-semibold text-xs px-4 py-2 rounded transition-colors">
+                    อัปโหลดใหม่
+                </button>
+                <button type="button" id="proceed-btn" class="bg-primary hover:bg-primary/95 text-on-primary font-semibold text-xs px-5 py-2 rounded transition-colors shadow-sm">
+                    ดำเนินการต่อ
+                </button>
+            </div>
+        </div>
+
+        <!-- STEP 4: Error State -->
+        <div id="error-section" class="hidden flex flex-col items-center justify-center py-xl min-h-[280px] text-center">
+            <div class="w-12 h-12 bg-red-50 text-error rounded-full flex items-center justify-center mb-md border border-red-200/50">
+                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+                </svg>
+            </div>
+            <h4 class="font-bold text-error mb-xs">อ่านไฟล์ไม่สำเร็จ</h4>
+            <p id="error-message" class="text-xs text-secondary mb-xl max-w-md"></p>
+            
+            <button type="button" id="retry-btn" class="bg-primary hover:bg-primary/95 text-on-primary font-semibold text-xs px-4 py-2 rounded transition-colors shadow-sm">
+                ลองใหม่อีกครั้ง
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const dropZone = document.getElementById("drop-zone");
+    const fileInput = document.getElementById("file-input");
+    const selectFileBtn = document.getElementById("select-file-btn");
+    const validationError = document.getElementById("validation-error");
+
+    const uploadSection = document.getElementById("upload-section");
+    const loadingSection = document.getElementById("loading-section");
+    const successSection = document.getElementById("success-section");
+    const errorSection = document.getElementById("error-section");
+
+    const loadingFileInfo = document.getElementById("loading-file-info");
+    const cancelUploadBtn = document.getElementById("cancel-upload-btn");
+
+    const successTitle = document.getElementById("success-title");
+    const successFileInfo = document.getElementById("success-file-info");
+    const sheetsListContainer = document.getElementById("sheets-list-container");
+    const sheetsList = document.getElementById("sheets-list");
+    const reuploadSuccessBtn = document.getElementById("reupload-success-btn");
+    const proceedBtn = document.getElementById("proceed-btn");
+
+    const errorMessage = document.getElementById("error-message");
+    const retryBtn = document.getElementById("retry-btn");
+
+    let activeAbortController = null;
+    let currentSessionId = null;
+
+    // Trigger click on file input when clicking dropZone
+    dropZone.addEventListener("click", function(e) {
+        if (e.target !== selectFileBtn) {
+            fileInput.click();
+        }
+    });
+    selectFileBtn.addEventListener("click", function(e) {
+        e.stopPropagation();
+        fileInput.click();
+    });
+
+    // Drag over and drop events
+    dropZone.addEventListener("dragover", function(e) {
+        e.preventDefault();
+        dropZone.classList.add("bg-surface-container");
+    });
+    dropZone.addEventListener("dragleave", function(e) {
+        e.preventDefault();
+        dropZone.classList.remove("bg-surface-container");
+    });
+    dropZone.addEventListener("drop", function(e) {
+        e.preventDefault();
+        dropZone.classList.remove("bg-surface-container");
+        
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            handleFileSelection(e.dataTransfer.files[0]);
+        }
+    });
+
+    // Change file input event
+    fileInput.addEventListener("change", function(e) {
+        if (fileInput.files && fileInput.files.length > 0) {
+            handleFileSelection(fileInput.files[0]);
+        }
+    });
+
+    function handleFileSelection(file) {
+        validationError.classList.add("hidden");
+        validationError.textContent = "";
+
+        // 1. Check extension
+        const allowedExtensions = [".xlsx", ".csv"];
+        const fileName = file.name;
+        const fileExt = fileName.substring(fileName.lastIndexOf(".")).toLowerCase();
+        
+        if (!allowedExtensions.includes(fileExt)) {
+            showValidationError("ไม่รองรับไฟล์ประเภทนี้ กรุณาเลือกไฟล์ .xlsx หรือ .csv");
+            return;
+        }
+
+        // 2. Check size (Max 25 MB)
+        const maxFileSize = 25 * 1024 * 1024;
+        if (file.size > maxFileSize) {
+            showValidationError("ไฟล์มีขนาดใหญ่เกินไป (สูงสุด 25 MB)");
+            return;
+        }
+
+        // Proceed to upload
+        uploadFile(file);
+    }
+
+    function showValidationError(msg) {
+        validationError.textContent = msg;
+        validationError.classList.remove("hidden");
+    }
+
+    function formatBytes(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    function uploadFile(file) {
+        // Show Loading State
+        uploadSection.classList.add("hidden");
+        errorSection.classList.add("hidden");
+        successSection.classList.add("hidden");
+        loadingSection.classList.remove("hidden");
+
+        loadingFileInfo.textContent = `${file.name} (${formatBytes(file.size)})`;
+
+        activeAbortController = new AbortController();
+        const signal = activeAbortController.signal;
+
+        const formData = new FormData();
+        formData.append("file", file);
+
+        fetch("/FileImport/UploadFile", {
+            method: "POST",
+            body: formData,
+            signal: signal
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error("HTTP error " + response.status);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                showSuccess(data);
+            } else {
+                showError(data.error);
+            }
+        })
+        .catch(err => {
+            if (err.name === 'AbortError') {
+                resetToUploadState();
+            } else {
+                showError("ไม่สามารถเชื่อมต่อเครื่องเซิร์ฟเวอร์ได้ หรือเกิดข้อผิดพลาดในการส่งข้อมูล");
+            }
+        });
+    }
+
+    function showSuccess(data) {
+        loadingSection.classList.add("hidden");
+        successSection.classList.remove("hidden");
+        
+        currentSessionId = data.sessionId;
+
+        if (data.fileType === "csv") {
+            successTitle.textContent = `อ่านไฟล์สำเร็จ พบ ${data.totalRows} แถว`;
+            successFileInfo.textContent = `${data.fileName}`;
+            sheetsListContainer.classList.add("hidden");
+        } else {
+            successTitle.textContent = `อ่านไฟล์สำเร็จ พบ ${data.sheetCount} ชีท`;
+            successFileInfo.textContent = `${data.fileName}`;
+            
+            // Render sheets list
+            sheetsList.innerHTML = "";
+            data.sheetNames.forEach(name => {
+                const li = document.createElement("li");
+                li.textContent = name;
+                sheetsList.appendChild(li);
+            });
+            sheetsListContainer.classList.remove("hidden");
+        }
+    }
+
+    function showError(msg) {
+        loadingSection.classList.add("hidden");
+        errorSection.classList.remove("hidden");
+        errorMessage.textContent = msg;
+    }
+
+    function resetToUploadState() {
+        // Reset file input
+        fileInput.value = "";
+        
+        loadingSection.classList.add("hidden");
+        errorSection.classList.add("hidden");
+        successSection.classList.add("hidden");
+        uploadSection.classList.remove("hidden");
+    }
+
+    cancelUploadBtn.addEventListener("click", function() {
+        if (activeAbortController) {
+            activeAbortController.abort();
+        }
+    });
+
+    reuploadSuccessBtn.addEventListener("click", resetToUploadState);
+    retryBtn.addEventListener("click", resetToUploadState);
+
+    proceedBtn.addEventListener("click", function() {
+        if (currentSessionId) {
+            // Redirect to step 2 (Merge/Index or wizard step 2 page)
+            window.location.href = `/FileMerge?sessionId=${currentSessionId}`;
+        }
+    });
+});
+</script>

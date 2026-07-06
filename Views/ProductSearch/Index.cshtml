@@ -1,0 +1,664 @@
+@{
+    bool isEdit = ViewData["EditBatchId"] != null;
+    ViewData["Title"] = isEdit ? "แก้ไขแผ่นงานสั่งซื้ออะไหล่" : "คีย์ใบสั่งซื้ออะไหล่";
+    ViewData["HeaderTitle"] = isEdit 
+        ? $"แก้ไขแผ่นงานสั่งซื้ออะไหล่ (Edit Spare Part Order)" 
+        : "คีย์ใบสั่งซื้ออะไหล่ (Spare Part Order Entry)";
+}
+
+<div class="flex-1 p-md md:p-lg lg:p-xl flex flex-col gap-lg max-w-[88vw] mx-auto w-full">
+    @if (ViewData["EditBatchId"] != null)
+    {
+        <div class="bg-blue-50 border border-blue-200 rounded p-md flex flex-col md:flex-row justify-between items-start md:items-center gap-sm shadow-sm animate-fade-in">
+            <div class="flex items-center gap-2.5">
+                <p class="text-xs text-blue-800 font-semibold flex items-center gap-1.5 flex-wrap">
+                    กำลังอยู่ในโหมดแก้ไขแผ่นงานสั่งซื้อ: <span class="font-bold text-blue-900 font-mono">@ViewData["EditBatchName"]</span> <span class="text-[10px] text-blue-600/90 font-medium">(ระบบจะบันทึกเขียนทับแผ่นงานเดิมนี้)</span>
+                </p>
+            </div>
+            <a href="/ProductSearch" class="text-[11px] font-bold text-blue-600 hover:text-blue-800 transition-colors border border-blue-200 hover:border-blue-400 px-2.5 py-1 bg-white rounded shadow-sm">
+                ยกเลิกการแก้ไข
+            </a>
+        </div>
+    }
+    <!-- Form & Cart Section Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-lg">
+        
+        <!-- Left Side: Product Auto-complete Search & Details Input Form (5 cols) -->
+        <div class="lg:col-span-5 bg-white rounded border border-outline-variant shadow-sm p-md md:p-lg lg:p-xl flex flex-col gap-md">
+            <div>
+                <h3 class="font-headline-sm text-headline-sm text-on-surface mb-xs">ค้นหาและเพิ่มรายการอะไหล่</h3>
+                <p class="text-xs text-secondary">ค้นหาสินค้าจากราคากลางอ้างอิงเพื่อป้อนข้อมูลสั่งซื้อ</p>
+            </div>
+
+            <!-- Autocomplete Search Group -->
+            <div class="relative">
+                <label class="block text-xs font-semibold text-slate-700 mb-1.5">พิมพ์ชื่อหรือรหัสสินค้าเพื่อค้นหา</label>
+                <div class="relative">
+                    <svg class="w-4 h-4 absolute left-3 top-3 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.602 10.602Z" />
+                    </svg>
+                    <input id="search-input" class="w-full pl-9 pr-3 py-2 border border-outline-variant rounded text-xs focus:ring-1 focus:ring-primary focus:border-primary outline-none" placeholder="ป้อนตัวหนังสือเพื่อค้นหารหัส หรือ รายการอะไหล่..." type="text" autocomplete="off" />
+                </div>
+                
+                <!-- Autocomplete Dropdown List -->
+                <div id="suggestions-dropdown" class="hidden absolute left-0 right-0 mt-1 bg-white border border-slate-200 rounded shadow-lg z-50 max-h-[220px] overflow-y-auto divide-y divide-slate-100">
+                    <!-- Dynamic Items Go Here -->
+                </div>
+            </div>
+
+            <hr class="border-slate-100" />
+
+            <!-- Product Details Form -->
+            <div class="flex flex-col gap-sm">
+                <!-- Row 1: Code and Unit -->
+                <div class="grid grid-cols-2 gap-sm">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">รหัส 10 หลัก</label>
+                        <input id="form-code" class="w-full px-3 py-2 border border-slate-100 rounded text-xs bg-slate-50 text-slate-600 outline-none font-mono" type="text" readonly placeholder="-" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">หน่วยนับ</label>
+                        <input id="form-unit" class="w-full px-3 py-2 border border-slate-100 rounded text-xs bg-slate-50 text-slate-600 outline-none" type="text" readonly placeholder="-" />
+                    </div>
+                </div>
+
+                <!-- Row 2: Name/Description -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">รายการ/ชื่อสินค้า</label>
+                    <textarea id="form-name" class="w-full px-3 py-2 border border-slate-100 rounded text-xs bg-slate-50 text-slate-600 outline-none resize-none leading-normal h-[50px]" readonly placeholder="-"></textarea>
+                </div>
+
+                <!-- Row 3: Price & Qty -->
+                <div class="grid grid-cols-3 gap-sm">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">ราคาอ้างอิง</label>
+                        <input id="form-price" class="w-full px-3 py-2 border border-outline-variant rounded text-xs outline-none font-mono" type="number" step="0.01" value="0.00" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">จำนวนสั่งซื้อ</label>
+                        <input id="form-qty" class="w-full px-3 py-2 border border-outline-variant rounded text-xs outline-none font-mono" type="number" min="0.01" step="any" value="1" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">มูลค่ารวมประเมิน</label>
+                        <input id="form-total" class="w-full px-3 py-2 border border-slate-100 rounded text-xs bg-slate-50 text-slate-600 outline-none font-mono text-right" type="text" readonly value="0.00" />
+                    </div>
+                </div>
+
+                <!-- Row 4: Remarks -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">หมายเหตุ (ระบุหรือไม่ระบุก็ได้)</label>
+                    <input id="form-remarks" class="w-full px-3 py-2 border border-outline-variant rounded text-xs outline-none" type="text" placeholder="ป้อนหมายเหตุเพิ่มเติม เช่น 'แก้ไขใหม่กรณีไม่อนุมัติ...'" />
+                </div>
+
+
+            </div>
+
+            <!-- Add Item Button -->
+            <button id="add-item-btn" class="w-full bg-primary hover:bg-primary/95 text-on-primary text-xs font-bold py-2 rounded transition-colors flex items-center justify-center gap-sm mt-xs">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+                เพิ่มเข้าตารางสั่งซื้อ
+            </button>
+        </div>
+
+        <!-- Right Side: Draft Order Table (7 cols) -->
+        <div class="lg:col-span-7 bg-white rounded border border-outline-variant shadow-sm p-md md:p-lg lg:p-xl flex flex-col gap-md">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h3 class="font-headline-sm text-headline-sm text-on-surface mb-xs">@(isEdit ? "รายการสั่งซื้อในแผ่นงาน" : "แบบร่างรายการสั่งซื้อ")</h3>
+                    <p class="text-xs text-secondary">@(isEdit ? "แก้ไขรายการสั่งซื้ออะไหล่ในแผ่นงานนี้" : "สะสมรายการสั่งซื้ออะไหล่ก่อนยืนยันบันทึกลงระบบ")</p>
+                </div>
+                <div class="text-right">
+                    <span class="text-xs text-secondary block">ยอดรวมทั้งสิ้น</span>
+                    <span id="cart-total-display" class="font-headline-sm text-headline-sm font-black text-primary">฿0.00</span>
+                </div>
+            </div>
+
+            <!-- Cart Table Area -->
+            <div class="overflow-x-auto border border-outline-variant rounded max-h-[340px] overflow-y-auto">
+                <table class="min-w-full divide-y divide-slate-200 text-center" id="cart-table">
+                    <thead class="bg-slate-100 sticky top-0 z-10">
+                        <tr>
+                            <th class="px-2.5 py-2 text-xs font-bold text-slate-500 uppercase tracking-wider w-[40px]">#</th>
+                            <th class="px-2.5 py-2 text-xs font-bold text-slate-500 uppercase tracking-wider">รหัส 10 หลัก</th>
+                            <th class="px-2.5 py-2 text-xs font-bold text-slate-500 uppercase tracking-wider text-left">รายการอะไหล่</th>
+                            <th class="px-2.5 py-2 text-xs font-bold text-slate-500 uppercase tracking-wider">หน่วย</th>
+                            <th class="px-2.5 py-2 text-xs font-bold text-slate-500 uppercase tracking-wider">ราคา/หน่วย</th>
+                            <th class="px-2.5 py-2 text-xs font-bold text-slate-500 uppercase tracking-wider">จำนวน</th>
+                            <th class="px-2.5 py-2 text-xs font-bold text-slate-500 uppercase tracking-wider">มูลค่าเบิก</th>
+                            <th class="px-2.5 py-2 text-xs font-bold text-slate-500 uppercase tracking-wider text-left w-[150px]">หมายเหตุ</th>
+                            <th class="px-2.5 py-2 text-xs font-bold text-slate-500 uppercase tracking-wider w-[50px]">ลบ</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-slate-200 text-xs font-medium text-slate-800" id="cart-body">
+                        <!-- Items populated via JS -->
+                        <tr id="empty-cart-row">
+                            <td colspan="9" class="py-lg text-slate-400 text-xs italic bg-slate-50/50">@(isEdit ? "ไม่มีรายการสั่งซื้อในแผ่นงานนี้" : "ยังไม่มีรายการสั่งซื้อในระบบแบบร่าง")</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Submit Buttons -->
+            <div class="flex justify-end gap-sm mt-auto pt-sm border-t border-slate-100">
+                <button id="clear-cart-btn" class="px-md py-2 border border-slate-200 rounded text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors">
+                    ล้างรายการทั้งหมด
+                </button>
+                <button id="submit-orders-btn" class="bg-primary hover:bg-primary/95 text-on-primary text-xs font-bold px-lg py-2 rounded transition-colors flex items-center gap-sm shadow-sm" disabled>
+                    <svg id="submit-spinner" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white hidden" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    @(isEdit ? "บันทึกการแก้ไขแผ่นงาน" : "ลงข้อมูลสั่งซื้อเข้าระบบ")
+                </button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    // Premium Toast Notification Helper
+    function showToast(message, type = 'error') {
+        let container = document.getElementById("toast-container");
+        if (!container) {
+            container = document.createElement("div");
+            container.id = "toast-container";
+            container.className = "fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none";
+            document.body.appendChild(container);
+        }
+
+        const toast = document.createElement("div");
+        toast.className = `px-4 py-3 rounded shadow-lg text-xs font-semibold flex items-center gap-2 transform translate-y-2 opacity-0 transition-all duration-300 pointer-events-auto max-w-sm ${
+            type === 'success' 
+                ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' 
+                : 'bg-rose-50 text-rose-800 border border-rose-200'
+        }`;
+        
+        const icon = type === 'success'
+            ? `<svg class="w-4 h-4 text-emerald-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`
+            : `<svg class="w-4 h-4 text-rose-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>`;
+
+        toast.innerHTML = `${icon}<span>${message}</span>`;
+        container.appendChild(toast);
+
+        // Slide/fade animation in
+        setTimeout(() => {
+            toast.classList.remove("translate-y-2", "opacity-0");
+        }, 10);
+
+        // Auto remove after 3s
+        setTimeout(() => {
+            toast.classList.add("opacity-0", "translate-y-2");
+            setTimeout(() => {
+                toast.remove();
+            }, 300);
+        }, 3000);
+    }
+
+    const searchInput = document.getElementById("search-input");
+    const suggestionsDropdown = document.getElementById("suggestions-dropdown");
+
+    const formCode = document.getElementById("form-code");
+    const formUnit = document.getElementById("form-unit");
+    const formName = document.getElementById("form-name");
+    const formPrice = document.getElementById("form-price");
+    const formQty = document.getElementById("form-qty");
+    const formTotal = document.getElementById("form-total");
+    const formRemarks = document.getElementById("form-remarks");
+
+
+    const addItemBtn = document.getElementById("add-item-btn");
+    const cartBody = document.getElementById("cart-body");
+    const emptyCartRow = document.getElementById("empty-cart-row");
+    const cartTotalDisplay = document.getElementById("cart-total-display");
+    const clearCartBtn = document.getElementById("clear-cart-btn");
+    const submitOrdersBtn = document.getElementById("submit-orders-btn");
+    const submitSpinner = document.getElementById("submit-spinner");
+
+    // Basket memory storage
+    let basket = [];
+
+    // If editing a saved batch, populate from server
+    @if (ViewData["EditBatchId"] != null)
+    {
+        <text>
+        const editOrders = @Html.Raw(ViewData["EditOrdersJson"]);
+        const editBatchId = "@ViewData["EditBatchId"]";
+        const editBatchName = "@Html.Raw(ViewData["EditBatchName"])";
+        
+        if (editOrders && editOrders.length > 0) {
+            basket = editOrders;
+            // Update UI after variables initialization
+            setTimeout(() => {
+                updateCartUI();
+            }, 50);
+        }
+        </text>
+    }
+
+    // Format numbers helper
+    function formatCurrency(val) {
+        return "฿" + Number(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    // Dynamic autocomplete fetch
+    let debounceTimeout = null;
+    searchInput.addEventListener("input", function() {
+        const query = this.value;
+        
+        clearTimeout(debounceTimeout);
+        if (query.trim().length < 1) {
+            suggestionsDropdown.classList.add("hidden");
+            suggestionsDropdown.innerHTML = "";
+            return;
+        }
+        suggestionsDropdown.innerHTML = `
+            <div class="px-3 py-2.5 animate-pulse flex flex-col gap-1.5 bg-slate-50/30">
+                <div class="h-3 bg-slate-200 rounded w-1/4"></div>
+                <div class="h-3 bg-slate-200 rounded w-3/4"></div>
+            </div>
+            <div class="px-3 py-2.5 animate-pulse flex flex-col gap-1.5 bg-slate-50/30">
+                <div class="h-3 bg-slate-200 rounded w-1/3"></div>
+                <div class="h-3 bg-slate-200 rounded w-1/2"></div>
+            </div>
+        `;
+        suggestionsDropdown.classList.remove("hidden");
+
+        debounceTimeout = setTimeout(() => {
+            fetch(`/ProductSearch/Suggest?q=${encodeURIComponent(query)}`)
+                .then(res => res.json())
+                .then(data => {
+                    suggestionsDropdown.innerHTML = "";
+                    if (data && data.length > 0) {
+                        data.forEach(item => {
+                            const option = document.createElement("div");
+                            option.className = "px-3 py-2 text-xs hover:bg-slate-50 cursor-pointer transition-colors flex justify-between gap-sm items-center";
+                            option.innerHTML = `
+                                <div class="text-left">
+                                    <span class="font-mono text-primary font-bold block">${item.productCode}</span>
+                                    <span class="text-slate-700 block max-w-[320px] truncate">${item.productName}</span>
+                                </div>
+                                <span class="text-slate-500 text-[10px] font-mono shrink-0">${item.unit} / ฿${item.pricePerUnit.toFixed(2)}</span>
+                            `;
+                            option.addEventListener("click", function() {
+                                selectProduct(item);
+                            });
+                            suggestionsDropdown.appendChild(option);
+                        });
+                        suggestionsDropdown.classList.remove("hidden");
+                    } else {
+                        suggestionsDropdown.classList.add("hidden");
+                    }
+                });
+        }, 50);
+    });
+
+    // Close autocomplete on click outside
+    document.addEventListener("click", function(e) {
+        if (!searchInput.contains(e.target) && !suggestionsDropdown.contains(e.target)) {
+            suggestionsDropdown.classList.add("hidden");
+        }
+    });
+
+    // Populate details when part is selected
+    function selectProduct(item) {
+        formCode.value = item.productCode;
+        formUnit.value = item.unit;
+        formName.value = item.productName;
+        formPrice.value = item.pricePerUnit.toFixed(2);
+        formQty.value = "1";
+        updateFormTotal();
+        
+        suggestionsDropdown.classList.add("hidden");
+        suggestionsDropdown.innerHTML = "";
+        searchInput.value = ""; // clear search bar for clean look
+        
+        formQty.focus();
+    }
+
+    // Live total calculation on unit inputs
+    function updateFormTotal() {
+        const qty = parseFloat(formQty.value) || 0;
+        const price = parseFloat(formPrice.value) || 0;
+        formTotal.value = (qty * price).toFixed(2);
+    }
+    formQty.addEventListener("input", updateFormTotal);
+    formPrice.addEventListener("input", updateFormTotal);
+
+    // Add item to Cart
+    addItemBtn.addEventListener("click", function() {
+        const code = formCode.value;
+        const unit = formUnit.value;
+        const name = formName.value;
+        const price = parseFloat(formPrice.value) || 0;
+        const qty = parseFloat(formQty.value) || 0;
+        const remarks = formRemarks.value.trim();
+        const total = price * qty;
+
+        if (!code || code === "-") {
+            showToast("กรุณาค้นหาและเลือกสินค้าก่อนเพิ่มรายการ", "error");
+            searchInput.focus();
+            return;
+        }
+        if (qty <= 0) {
+            showToast("กรุณาระบุจำนวนสินค้าที่ถูกต้อง", "error");
+            formQty.focus();
+            return;
+        }
+
+        // Check if item already exists in basket
+        const existingItem = basket.find(item => item.productCode === code);
+        if (existingItem) {
+            existingItem.quantity += qty;
+            existingItem.totalAmount = existingItem.quantity * existingItem.unitPrice;
+            if (remarks) {
+                existingItem.remarks = existingItem.remarks 
+                    ? existingItem.remarks + "; " + remarks 
+                    : remarks;
+            }
+            showToast(`บวกเพิ่มจำนวนสินค้า ${name} เป็น ${existingItem.quantity} ${unit} เรียบร้อยแล้ว`, "success");
+        } else {
+            // Add new to basket memory
+            basket.push({
+                productCode: code,
+                productName: name,
+                unit: unit,
+                unitPrice: price,
+                quantity: qty,
+                totalAmount: total,
+                approvalNo: "",
+                remarks: remarks,
+                receiveDate: ""
+            });
+            showToast(`เพิ่ม ${name} เข้าตารางสั่งซื้อเรียบร้อยแล้ว`, "success");
+        }
+
+        // Reset details form
+        formCode.value = "-";
+        formUnit.value = "-";
+        formName.value = "-";
+        formPrice.value = "0.00";
+        formQty.value = "1";
+        formTotal.value = "0.00";
+        formRemarks.value = "";
+
+        updateCartUI();
+    });
+
+    // Update Cart UI list
+    function updateCartUI() {
+        cartBody.innerHTML = "";
+        
+        if (basket.length === 0) {
+            cartBody.appendChild(emptyCartRow);
+            submitOrdersBtn.disabled = true;
+            cartTotalDisplay.textContent = "฿0.00";
+            return;
+        }
+
+        let totalSum = 0;
+
+        basket.forEach((item, index) => {
+            totalSum += item.totalAmount;
+            
+            const tr = document.createElement("tr");
+            tr.className = "hover:bg-slate-50/50 transition-colors";
+            tr.innerHTML = `
+                <td class="px-2 py-2.5 text-slate-400 font-mono">${index + 1}</td>
+                <td class="px-2 py-2.5 font-mono text-primary">${item.productCode}</td>
+                <td class="px-2 py-2.5 text-left max-w-[200px] truncate" title="${item.productName}">${item.productName}</td>
+                <td class="px-2 py-2.5 text-slate-600">${item.unit}</td>
+                <td class="px-2 py-2.5 font-mono">฿${item.unitPrice.toFixed(2)}</td>
+                <td class="px-2 py-2.5 font-mono font-bold">${item.quantity}</td>
+                <td class="px-2 py-2.5 font-mono font-bold text-slate-900">฿${item.totalAmount.toFixed(2)}</td>
+                <td class="px-2 py-2.5 text-left max-w-[150px] truncate text-slate-500" title="${item.remarks || '-'}">${item.remarks || '-'}</td>
+                <td class="px-2 py-2.5">
+                    <button class="delete-item-btn text-red-500 hover:text-red-700 transition-colors p-1" data-index="${index}">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </td>
+            `;
+            cartBody.appendChild(tr);
+        });
+
+        // Add event listeners to delete buttons
+        document.querySelectorAll(".delete-item-btn").forEach(btn => {
+            btn.addEventListener("click", function() {
+                const idx = parseInt(this.getAttribute("data-index"));
+                basket.splice(idx, 1);
+                updateCartUI();
+            });
+        });
+
+        cartTotalDisplay.textContent = formatCurrency(totalSum);
+        submitOrdersBtn.disabled = false;
+    }
+
+    // Clear Basket
+    clearCartBtn.addEventListener("click", async function() {
+        if (basket.length === 0) return;
+
+        const confirmed = await showCustomModal({
+            title: "ล้างรายการแบบร่างทั้งหมด",
+            desc: "คุณต้องการล้างรายการสั่งซื้อสะสมในตารางแบบร่างนี้ใช่หรือไม่? (ข้อมูลที่ยังไม่บันทึกจะหายไป)",
+            confirmText: "ล้างข้อมูลทั้งหมด",
+            confirmClass: "bg-red-600 hover:bg-red-700 text-white"
+        });
+
+        if (confirmed) {
+            basket = [];
+            updateCartUI();
+            showToast("ล้างรายการแบบร่างเรียบร้อยแล้ว", "success");
+        }
+    });
+
+    // Submit Orders AJAX POST to Db
+    submitOrdersBtn.addEventListener("click", function() {
+        if (basket.length === 0) return;
+
+        const isEditMode = @(isEdit ? "true" : "false");
+
+        // Generate dynamic default name
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('th-TH', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '-');
+        const timeStr = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false }).replace(/:/g, '.');
+        const defaultName = (typeof editBatchName !== 'undefined') ? editBatchName : `แผ่นงานสั่งซื้ออะไหล่_${dateStr}_${timeStr}`;
+
+        showCustomModal({
+            title: isEditMode ? "ยืนยันการบันทึกแก้ไขแผ่นงาน" : "บันทึกข้อมูลเข้าระบบ",
+            desc: isEditMode ? "กรุณาตรวจสอบชื่อแผ่นงานสั่งซื้ออะไหล่ที่ต้องการแก้ไขบันทึก:" : "กรุณาระบุชื่อแผ่นงานสั่งซื้ออะไหล่นี้เพื่อเก็บบันทึกประวัติประวัติ:",
+            showInput: true,
+            defaultValue: defaultName,
+            confirmText: isEditMode ? "บันทึกการแก้ไข" : "บันทึกข้อมูล",
+            confirmClass: "bg-primary hover:bg-primary/95 text-white",
+            onConfirm: function(batchNameInput) {
+                const batchName = (batchNameInput || "").trim() || defaultName;
+
+                // Put modal into loading state and disable actions
+                setCustomModalLoading(true);
+
+                const payload = {
+                    BatchId: (typeof editBatchId !== 'undefined') ? editBatchId : null,
+                    BatchName: batchName,
+                    Orders: basket.map(item => ({
+                        ProductCode: item.productCode,
+                        ProductName: item.productName,
+                        Unit: item.unit,
+                        UnitPrice: String(item.unitPrice),
+                        Quantity: String(item.quantity),
+                        Remarks: item.remarks || "",
+                        ApprovalNo: item.approvalNo,
+                        ReceiveDate: item.receiveDate
+                    }))
+                };
+
+                fetch("/ProductSearch/SaveOrders", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(payload)
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast(isEditMode ? "บันทึกการแก้ไขแผ่นงานสั่งซื้ออะไหล่สำเร็จเรียบร้อยแล้ว!" : "บันทึกข้อมูลแผ่นงานสั่งซื้ออะไหล่สำเร็จเข้าระบบเรียบร้อยแล้ว!", "success");
+                        basket = [];
+                        updateCartUI();
+                        
+                        // Close modal after success
+                        hideModal(batchName);
+                        
+                        // Redirect to saved list
+                        setTimeout(() => {
+                            window.location.href = "/ProductSearch/SavedOrders";
+                        }, 1000);
+                    } else {
+                        showToast("เกิดข้อผิดพลาด: " + data.error, "error");
+                        setCustomModalLoading(false);
+                    }
+                })
+                .catch(err => {
+                    showToast("เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์", "error");
+                    setCustomModalLoading(false);
+                });
+            }
+        });
+    });
+
+    // Custom Modal System JS
+    const modalOverlay = document.getElementById("custom-modal-overlay");
+    const modalCard = document.getElementById("custom-modal-card");
+    const modalTitle = document.getElementById("modal-title");
+    const modalDesc = document.getElementById("modal-desc");
+    const modalInputContainer = document.getElementById("modal-input-container");
+    const modalInputField = document.getElementById("modal-input-field");
+    const modalCancelBtn = document.getElementById("modal-cancel-btn");
+    const modalConfirmBtn = document.getElementById("modal-confirm-btn");
+
+    let modalResolve = null;
+
+    window.setCustomModalLoading = function(isLoading) {
+        if (isLoading) {
+            modalCancelBtn.disabled = true;
+            modalConfirmBtn.disabled = true;
+            modalInputField.disabled = true;
+            modalCancelBtn.classList.add("opacity-50", "pointer-events-none");
+            modalConfirmBtn.classList.add("opacity-80", "pointer-events-none");
+            modalConfirmBtn.innerHTML = `
+                <span class="flex items-center justify-center gap-1.5">
+                    <svg class="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    กำลังบันทึก...
+                </span>
+            `;
+        } else {
+            modalCancelBtn.disabled = false;
+            modalConfirmBtn.disabled = false;
+            modalInputField.disabled = false;
+            modalCancelBtn.classList.remove("opacity-50", "pointer-events-none");
+            modalConfirmBtn.classList.remove("opacity-80", "pointer-events-none");
+            modalConfirmBtn.textContent = "บันทึกข้อมูล";
+        }
+    };
+
+    window.showCustomModal = function({ title, desc, showInput = false, defaultValue = "", confirmText = "ตกลง", confirmClass = "bg-primary text-white", onConfirm = null }) {
+        // Reset modal loading state first
+        setCustomModalLoading(false);
+        
+        return new Promise((resolve) => {
+            modalResolve = resolve;
+            
+            modalTitle.textContent = title;
+            modalDesc.textContent = desc;
+            
+            if (showInput) {
+                modalInputContainer.classList.remove("hidden");
+                modalInputField.value = defaultValue;
+            } else {
+                modalInputContainer.classList.add("hidden");
+            }
+
+            modalConfirmBtn.textContent = confirmText;
+            modalConfirmBtn.className = `text-xs font-bold px-5 py-2 rounded transition-colors shadow-sm ${confirmClass}`;
+
+            // Handle confirm callback
+            modalConfirmBtn.onclick = () => {
+                const hasInput = !modalInputContainer.classList.contains("hidden");
+                const val = hasInput ? modalInputField.value : true;
+                if (onConfirm) {
+                    onConfirm(val);
+                } else {
+                    hideModal(val);
+                }
+            };
+
+            // Handle cancel callback
+            modalCancelBtn.onclick = () => {
+                hideModal(null);
+            };
+
+            modalOverlay.classList.remove("hidden");
+            modalOverlay.classList.add("flex");
+            setTimeout(() => {
+                modalCard.classList.remove("scale-95", "opacity-0");
+                modalCard.classList.add("scale-100", "opacity-100");
+                if (showInput) {
+                    modalInputField.focus();
+                    modalInputField.select();
+                }
+            }, 50);
+        });
+    }
+
+    window.hideModal = function(value) {
+        modalCard.classList.remove("scale-100", "opacity-100");
+        modalCard.classList.add("scale-95", "opacity-0");
+        setTimeout(() => {
+            modalOverlay.classList.remove("flex");
+            modalOverlay.classList.add("hidden");
+            if (modalResolve) {
+                modalResolve(value);
+                modalResolve = null;
+            }
+        }, 150);
+    }
+
+    // Close on ESC
+    document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && !modalOverlay.classList.contains("hidden") && !modalConfirmBtn.disabled) {
+            hideModal(null);
+        }
+    });
+});
+</script>
+
+<!-- Custom Reusable Modal HTML -->
+<div id="custom-modal-overlay" class="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-[100] hidden items-center justify-center p-md">
+    <div class="bg-white rounded-lg border border-slate-200 shadow-2xl max-w-sm w-full overflow-hidden transform scale-95 opacity-0 transition-all duration-200" id="custom-modal-card">
+        <div class="p-lg">
+            <h3 class="text-sm font-bold text-slate-800" id="modal-title">หัวข้อ</h3>
+            <p class="text-xs text-slate-500 mt-1" id="modal-desc">รายละเอียดข้อความ...</p>
+        </div>
+        
+        <div class="px-lg pb-md hidden" id="modal-input-container">
+            <input type="text" id="modal-input-field" class="w-full px-3 py-2 border border-slate-200 rounded text-xs focus:ring-1 focus:ring-primary focus:border-primary outline-none" />
+        </div>
+
+        <div class="px-lg py-md bg-slate-50 border-t border-slate-100 flex justify-end gap-sm">
+            <button type="button" id="modal-cancel-btn" class="px-md py-2 border border-slate-200 rounded text-xs font-semibold text-slate-600 bg-white hover:bg-slate-50 transition-colors">
+                ยกเลิก
+            </button>
+            <button type="button" id="modal-confirm-btn" class="text-xs font-bold px-5 py-2 rounded transition-colors shadow-sm">
+                ตกลง
+            </button>
+        </div>
+    </div>
+</div>

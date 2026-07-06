@@ -1,0 +1,403 @@
+@model List<CostFlow.Models.MergeResult>
+@{
+    string reportName = (string)ViewData["ReportName"] ?? "รายงานการรวมข้อมูล";
+    Guid sessionId = (Guid)ViewData["SessionId"];
+    DateTime createdAt = (DateTime)ViewData["CreatedAt"];
+
+    ViewData["Title"] = $"รายละเอียดรายงาน - {reportName}";
+    ViewData["HeaderTitle"] = "รายละเอียดรายงาน (Report Details)";
+
+    int totalCount = Model.Count;
+    int matchedCount = Model.Count(r => r.IsMatched);
+    int unmatchedCount = totalCount - matchedCount;
+    double successRate = totalCount > 0 ? Math.Round((double)matchedCount / totalCount * 100, 1) : 0;
+
+    // Helper to format target delivery date
+    string FormatDeliveryCell(string? val)
+    {
+        if (string.IsNullOrEmpty(val)) return "-";
+        val = val.Trim();
+        if (val.StartsWith("นัดตอบเป้าหมาย"))
+        {
+            string rest = val.Substring("นัดตอบเป้าหมาย".Length).Trim();
+            if (string.IsNullOrEmpty(rest)) return "นัดตอบเป้าหมาย";
+            return "นัดตอบเป้าหมาย<br/>" + rest;
+        }
+        return val;
+    }
+}
+
+<div class="flex-1 p-md md:p-lg lg:p-xl flex flex-col gap-lg max-w-[88vw] mx-auto w-full">
+    <!-- Top Nav Action Bar -->
+    <div class="flex justify-between items-center bg-white rounded border border-outline-variant shadow-sm px-md py-3">
+        <a href="/Report" class="text-xs text-secondary hover:text-primary transition-colors flex items-center gap-xs font-semibold">
+            <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+            </svg>
+            ย้อนกลับไปหน้ารายงานทั้งหมด
+        </a>
+
+        <a href="/Report/ExportReport?sessionId=@sessionId" class="bg-primary hover:bg-primary/95 text-on-primary text-xs font-bold px-lg py-2 rounded transition-colors shadow-sm flex items-center gap-sm">
+            <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+            </svg>
+            ส่งออกไฟล์ Excel (.xlsx)
+        </a>
+    </div>
+
+    <!-- Report Metrics Section -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-md">
+        <!-- Metric 1: Total -->
+        <div class="bg-white rounded border border-outline-variant shadow-sm p-md flex flex-col justify-between">
+            <span class="text-slate-500 font-semibold text-[10px] uppercase tracking-wider block mb-1">จำนวนรายการทั้งหมด</span>
+            <div class="flex items-baseline justify-between">
+                <span class="text-headline-md text-slate-800 font-bold font-mono">@totalCount.ToString("N0")</span>
+                <span class="text-xs text-slate-400">รายการ</span>
+            </div>
+        </div>
+
+        <!-- Metric 2: Matched -->
+        <div class="bg-white rounded border border-outline-variant shadow-sm p-md flex flex-col justify-between border-l-4 border-l-emerald-500">
+            <span class="text-slate-500 font-semibold text-[10px] uppercase tracking-wider block mb-1">ตรงตามแผนผลิต</span>
+            <div class="flex items-baseline justify-between">
+                <span class="text-headline-md text-emerald-700 font-bold font-mono">@matchedCount.ToString("N0")</span>
+                <span class="text-xs text-emerald-600 font-semibold">@successRate%</span>
+            </div>
+        </div>
+
+        <!-- Metric 3: Unmatched -->
+        <div class="bg-white rounded border border-outline-variant shadow-sm p-md flex flex-col justify-between border-l-4 border-l-rose-500">
+            <span class="text-slate-500 font-semibold text-[10px] uppercase tracking-wider block mb-1">ไม่มีการสั่งซื้อ</span>
+            <div class="flex items-baseline justify-between">
+                <span class="text-headline-md text-rose-700 font-bold font-mono">@unmatchedCount.ToString("N0")</span>
+                <span class="text-xs text-rose-600 font-semibold">@(Math.Round(100 - successRate, 1))%</span>
+            </div>
+        </div>
+
+        <!-- Metric 4: Date -->
+        <div class="bg-white rounded border border-outline-variant shadow-sm p-md flex flex-col justify-between">
+            <span class="text-slate-500 font-semibold text-[10px] uppercase tracking-wider block mb-1">วันที่สร้างรายงาน</span>
+            <div class="flex flex-col">
+                <span class="text-sm font-bold text-slate-700">@createdAt.ToString("dd MMM yyyy", new System.Globalization.CultureInfo("th-TH"))</span>
+                <span class="text-[11px] text-slate-400">เวลา @createdAt.ToString("HH:mm", new System.Globalization.CultureInfo("th-TH")) น.</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Data Table Card -->
+    <div class="bg-white rounded border border-outline-variant shadow-sm p-md md:p-lg lg:p-xl flex flex-col gap-md">
+        <div>
+            <h3 class="font-headline-sm text-headline-sm text-on-surface mb-xs">ตารางเปรียบเทียบข้อมูลสั่งผลิตชิ้นส่วน</h3>
+            <p class="text-xs text-secondary">ตารางแสดงสถานะการจัดซื้อและข้อมูลที่ตรงตามแผนผลิตประจำสัปดาห์</p>
+        </div>
+
+        <!-- Search & Filter Controls -->
+        <div class="flex flex-col md:flex-row gap-sm justify-between items-stretch md:items-center">
+            <!-- Search bar -->
+            <div class="relative max-w-md w-full flex gap-2 z-30">
+                <div class="relative flex-1">
+                    <svg class="w-4 h-4 absolute left-3 top-3 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.602 10.602Z" />
+                    </svg>
+                    <input id="table-search" class="w-full pl-9 pr-3 py-2 border border-outline-variant rounded text-xs focus:ring-1 focus:ring-primary focus:border-primary outline-none" placeholder="ค้นหาใบขออนุมัติ หรือเลขที่อนุมัติ..." type="text" autocomplete="off" />
+                    
+                    <!-- Search Suggestions List -->
+                    <div id="search-suggestions" class="hidden absolute left-0 right-0 mt-1 bg-white border border-slate-200 rounded shadow-lg z-50 max-h-48 overflow-y-auto divide-y divide-slate-100 font-mono text-xs"></div>
+                </div>
+                <button id="find-btn" class="bg-primary hover:bg-primary/95 text-on-primary text-xs font-bold px-4 py-2 rounded transition-colors shadow-sm whitespace-nowrap">
+                    ค้นหาและโฟกัส
+                </button>
+            </div>
+
+            <!-- Filter buttons -->
+            <div class="flex gap-xs bg-slate-100 p-1 rounded-sm text-xs self-start md:self-auto">
+                <button id="btn-filter-all" class="px-3 py-1 rounded-sm bg-white text-slate-800 font-bold shadow-sm border border-slate-200/50 filter-btn">
+                    ทั้งหมด (@totalCount)
+                </button>
+                <button id="btn-filter-matched" class="px-3 py-1 rounded-sm text-slate-600 hover:text-slate-800 filter-btn">
+                    ตรงตามแผนผลิต (@matchedCount)
+                </button>
+                <button id="btn-filter-unmatched" class="px-3 py-1 rounded-sm text-slate-600 hover:text-slate-800 filter-btn">
+                    ไม่มีการสั่งซื้อ (@unmatchedCount)
+                </button>
+            </div>
+        </div>
+
+        <!-- High-density Data Table -->
+        <div class="overflow-x-auto border border-outline-variant rounded max-h-[600px] overflow-y-auto">
+            <table class="min-w-full divide-y divide-slate-200 text-center" id="details-table">
+                <thead class="bg-slate-100 sticky top-0 z-10 text-xs text-slate-500 font-bold">
+                    <tr>
+                        <th class="px-2.5 py-2 w-[40px]">#</th>
+                        <th class="px-2.5 py-2">ใบขออนุมัติ<br/>(สั่งผลิต)</th>
+                        <th class="px-2.5 py-2">เลขที่อนุมัติ<br/>(แผนการผลิต)</th>
+                        <th class="px-2.5 py-2">วันที่อนุมัติ</th>
+                        <th class="px-2.5 py-2">ความเร่งด่วน</th>
+                        <th class="px-2.5 py-2">จำนวนชิ้น</th>
+                        <th class="px-2.5 py-2">มูลค่าสั่งผลิต</th>
+                        <th class="px-2.5 py-2 text-left">หมายเหตุเพิ่มเติม</th>
+                        <th class="px-2.5 py-2">เป้าหมายส่งมอบ</th>
+                        <th class="px-2.5 py-2 w-[140px]">สถานะ</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-slate-200 text-xs text-slate-800" id="table-body">
+                    @for (int i = 0; i < Model.Count; i++)
+                    {
+                        var row = Model[i];
+                        string displayPoNo = !string.IsNullOrEmpty(row.PoNumber) ? row.PoNumber.Trim() : "-";
+                        string displayPlanNo = !string.IsNullOrEmpty(row.PlanOrderNo) ? row.PlanOrderNo.Trim() : "-";
+                        string displayApprovedDate = row.ApprovedDate.HasValue ? row.ApprovedDate.Value.ToString("dd/MM/yyyy") : "-";
+                        string displayQty = row.Quantity.HasValue ? row.Quantity.Value.ToString("N0") : "-";
+                        string displayAmount = row.Amount.HasValue ? "฿" + row.Amount.Value.ToString("N2") : "-";
+                        string displayDeliveryDate = !string.IsNullOrEmpty(row.DeliveryTargetDate) ? row.DeliveryTargetDate : "-";
+
+                        <tr class="hover:bg-slate-50/50 transition-all table-row-item cursor-pointer" data-matched="@(row.IsMatched.ToString().ToLower())">
+                            <td class="px-2 py-2 text-slate-400 font-mono">@(i + 1)</td>
+                            <td class="px-2 py-2 font-mono text-primary font-bold cell-po">@displayPoNo</td>
+                            <td class="px-2 py-2 font-mono text-slate-700 cell-plan">@displayPlanNo</td>
+                            <td class="px-2 py-2 text-slate-600 font-mono">@displayApprovedDate</td>
+                            <td class="px-2 py-2 text-slate-600 cell-urgency">@(row.Urgency ?? "-")</td>
+                            <td class="px-2 py-2 font-mono text-slate-700">@displayQty</td>
+                            <td class="px-2 py-2 font-mono text-slate-700">@displayAmount</td>
+                            <td class="px-2 py-2 text-left truncate max-w-[200px] text-slate-500 text-[11px] cell-remarks" title="@row.Remarks">@(row.Remarks ?? "-")</td>
+                            <td class="px-2 py-2 text-slate-600 font-mono cell-delivery">@Html.Raw(FormatDeliveryCell(displayDeliveryDate))</td>
+                            <td class="px-2 py-2 text-center">
+                                @if (row.IsMatched)
+                                {
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200/50 text-[10px] font-bold">
+                                        ตรงตามแผนผลิต
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200/50 text-[10px] font-bold">
+                                        ไม่มีการสั่งซื้อ
+                                    </span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+// Custom alert helper to avoid browser alert() Kestrel popups
+function showCustomAlert(message, title = "แจ้งข้อความ") {
+    let modal = document.getElementById("custom-alert-modal");
+    if (!modal) {
+        modal = document.createElement("div");
+        modal.id = "custom-alert-modal";
+        modal.className = "fixed inset-0 z-50 flex items-center justify-center p-md bg-slate-900/50 backdrop-blur-sm transition-opacity duration-300 opacity-0 hidden";
+        modal.innerHTML = `
+            <div class="bg-white rounded-lg shadow-xl border border-slate-100 max-w-sm w-full overflow-hidden transform scale-95 transition-all duration-300">
+                <div class="px-lg py-md border-b border-slate-100 bg-slate-50/50">
+                    <h3 class="font-bold text-slate-800 text-sm" id="custom-alert-title"></h3>
+                </div>
+                <div class="p-lg text-xs text-slate-600 leading-normal" id="custom-alert-message"></div>
+                <div class="px-lg py-md border-t border-slate-100 flex justify-end bg-slate-50/30">
+                    <button type="button" id="custom-alert-ok" class="bg-primary hover:bg-primary-container text-on-primary text-xs font-semibold px-5 py-2 rounded transition-colors shadow-sm">ตกลง</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+    
+    document.getElementById("custom-alert-title").textContent = title;
+    document.getElementById("custom-alert-message").innerHTML = message;
+    
+    modal.classList.remove("hidden");
+    setTimeout(() => {
+        modal.classList.add("opacity-100");
+        modal.querySelector("div").classList.remove("scale-95");
+        modal.querySelector("div").classList.add("scale-100");
+    }, 10);
+    
+    return new Promise((resolve) => {
+        document.getElementById("custom-alert-ok").onclick = () => {
+            modal.classList.remove("opacity-100");
+            modal.querySelector("div").classList.remove("scale-100");
+            modal.querySelector("div").classList.add("scale-95");
+            setTimeout(() => {
+                modal.classList.add("hidden");
+                resolve();
+            }, 300);
+        };
+    });
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+    const searchInput = document.getElementById("table-search");
+    const findBtn = document.getElementById("find-btn");
+    const rows = document.querySelectorAll(".table-row-item");
+    const btnAll = document.getElementById("btn-filter-all");
+    const btnMatched = document.getElementById("btn-filter-matched");
+    const btnUnmatched = document.getElementById("btn-filter-unmatched");
+    const suggestionsDropdown = document.getElementById("search-suggestions");
+
+    let currentFilter = "all"; // all, matched, unmatched
+    let currentSearch = "";
+
+    // Gather unique search keys from the table for autocomplete suggestions
+    function getSearchTerms() {
+        const terms = new Set();
+        rows.forEach(row => {
+            const po = row.querySelector(".cell-po").textContent.trim();
+            const plan = row.querySelector(".cell-plan").textContent.trim();
+            const remarks = row.querySelector(".cell-remarks") ? row.querySelector(".cell-remarks").textContent.trim() : "";
+            if (po && po !== "-") terms.add(po);
+            if (plan && plan !== "-") terms.add(plan);
+            if (remarks && remarks !== "-" && remarks.length < 30) terms.add(remarks);
+        });
+        return Array.from(terms).sort();
+    }
+
+    // Autocomplete dropdown input handler
+    searchInput.addEventListener("input", function() {
+        const query = this.value.trim().toLowerCase();
+        if (!query) {
+            suggestionsDropdown.classList.add("hidden");
+            suggestionsDropdown.innerHTML = "";
+            return;
+        }
+
+        const terms = getSearchTerms();
+        const matches = terms.filter(t => t.toLowerCase().includes(query)).slice(0, 10);
+
+        if (matches.length > 0) {
+            suggestionsDropdown.innerHTML = "";
+            matches.forEach(match => {
+                const item = document.createElement("div");
+                item.className = "px-3 py-2 text-xs hover:bg-slate-50 cursor-pointer transition-colors text-left text-slate-700 font-mono";
+                item.textContent = match;
+                item.addEventListener("click", function() {
+                    searchInput.value = match;
+                    suggestionsDropdown.classList.add("hidden");
+                    doSearchFocus();
+                });
+                suggestionsDropdown.appendChild(item);
+            });
+            suggestionsDropdown.classList.remove("hidden");
+        } else {
+            suggestionsDropdown.classList.add("hidden");
+        }
+    });
+
+    // Close suggestions on click outside
+    document.addEventListener("click", function(e) {
+        if (!searchInput.contains(e.target) && !suggestionsDropdown.contains(e.target)) {
+            suggestionsDropdown.classList.add("hidden");
+        }
+    });
+
+    // Search and focus into view
+    function doSearchFocus() {
+        const query = searchInput.value.trim().toLowerCase();
+        if (!query) return;
+
+        let found = false;
+        rows.forEach(row => {
+            const poNum = row.querySelector(".cell-po").textContent.trim().toLowerCase();
+            const planNo = row.querySelector(".cell-plan").textContent.trim().toLowerCase();
+            const remarks = row.querySelector(".cell-remarks") ? row.querySelector(".cell-remarks").textContent.trim().toLowerCase() : "";
+            const urgency = row.querySelector(".cell-urgency") ? row.querySelector(".cell-urgency").textContent.trim().toLowerCase() : "";
+            const delivery = row.querySelector(".cell-delivery") ? row.querySelector(".cell-delivery").textContent.trim().toLowerCase() : "";
+
+            if (poNum.includes(query) || planNo.includes(query) || remarks.includes(query) || urgency.includes(query) || delivery.includes(query)) {
+                // Clear other highlights
+                rows.forEach(r => r.style.backgroundColor = "");
+
+                // Make sure row is visible
+                row.classList.remove("hidden");
+
+                // Scroll to row
+                row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                // Highlight target row
+                row.style.backgroundColor = "#FEF08A"; // Tailwind yellow-200
+                setTimeout(() => {
+                    row.style.transition = "background-color 1s ease";
+                    row.style.backgroundColor = "";
+                }, 4000);
+
+                found = true;
+            }
+        });
+
+        if (!found) {
+            showCustomAlert("ไม่พบข้อมูลที่ระบุในตารางรายละเอียดนี้", "ไม่พบผลลัพธ์");
+        }
+    }
+
+    findBtn.addEventListener("click", doSearchFocus);
+    searchInput.addEventListener("keypress", function(e) {
+        if (e.key === "Enter") {
+            doSearchFocus();
+        }
+    });
+
+    // Search input live filtering as well
+    searchInput.addEventListener("input", function() {
+        currentSearch = this.value.trim().toLowerCase();
+        applyFilters();
+    });
+
+    // Filter button handlers
+    btnAll.addEventListener("click", function() {
+        setFilter("all", this);
+    });
+    btnMatched.addEventListener("click", function() {
+        setFilter("matched", this);
+    });
+    btnUnmatched.addEventListener("click", function() {
+        setFilter("unmatched", this);
+    });
+
+    function setFilter(filterType, activeBtn) {
+        currentFilter = filterType;
+        
+        // Toggle button styling
+        document.querySelectorAll(".filter-btn").forEach(btn => {
+            btn.className = "px-3 py-1 rounded-sm text-slate-600 hover:text-slate-800 filter-btn";
+        });
+        activeBtn.className = "px-3 py-1 rounded-sm bg-white text-slate-800 font-bold shadow-sm border border-slate-200/50 filter-btn";
+
+        applyFilters();
+    }
+
+    function applyFilters() {
+        rows.forEach(row => {
+            const isMatched = row.getAttribute("data-matched") === "true";
+            const poNum = row.querySelector(".cell-po").textContent.toLowerCase();
+            const planNo = row.querySelector(".cell-plan").textContent.toLowerCase();
+            const remarks = row.querySelector(".cell-remarks") ? row.querySelector(".cell-remarks").textContent.toLowerCase() : "";
+            const urgency = row.querySelector(".cell-urgency") ? row.querySelector(".cell-urgency").textContent.toLowerCase() : "";
+            const delivery = row.querySelector(".cell-delivery") ? row.querySelector(".cell-delivery").textContent.toLowerCase() : "";
+
+            // Match text query
+            const matchesSearch = currentSearch === "" || 
+                                  poNum.includes(currentSearch) || 
+                                  planNo.includes(currentSearch) ||
+                                  remarks.includes(currentSearch) ||
+                                  urgency.includes(currentSearch) ||
+                                  delivery.includes(currentSearch);
+
+            // Match status filter
+            let matchesFilter = true;
+            if (currentFilter === "matched") {
+                matchesFilter = isMatched;
+            } else if (currentFilter === "unmatched") {
+                matchesFilter = !isMatched;
+            }
+
+            if (matchesSearch && matchesFilter) {
+                row.classList.remove("hidden");
+            } else {
+                row.classList.add("hidden");
+            }
+        });
+    }
+});
+</script>
