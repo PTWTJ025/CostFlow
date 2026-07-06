@@ -17,6 +17,8 @@
             var roles = await UserManager.GetRolesAsync(appUser);
             roleName = roles.FirstOrDefault() ?? "Staff";
             isAdmin = roles.Contains("Admin");
+            if (roleName == "Staff") roleName = "ผู้ใช้งาน";
+            else if (roleName == "Admin") roleName = "ผู้ดูแลระบบ";
         }
     }
 

@@ -1,8 +1,8 @@
 @model CostFlow.Models.ApplicationUser
 @{
     ViewData["Title"] = "ตั้งค่าโปรไฟล์";
-    ViewData["HeaderTitle"] = "ตั้งค่าโปรไฟล์ผู้ใช้งาน (User Profile Settings)";
-    var roleName = ViewData["RoleName"] as string ?? "Staff";
+    var rawRole = ViewData["RoleName"] as string ?? "Staff";
+    var roleName = rawRole == "Admin" ? "ผู้ดูแลระบบ" : "ผู้ใช้งาน";
 }
 
 <div class="flex-1 p-md md:p-lg lg:p-xl flex flex-col gap-lg max-w-[88vw] mx-auto w-full">
@@ -46,7 +46,7 @@
             <div class="text-center w-full">
                 <h4 class="font-bold text-slate-800 text-sm">@Model.FullName</h4>
                 <span class="text-[10px] text-slate-500 font-semibold bg-slate-100 border border-slate-200/60 px-2.5 py-0.5 rounded-full inline-block mt-1">
-                    @(roleName == "Admin" ? "ผู้ดูแลระบบจัดซื้อ (Admin)" : "เจ้าหน้าที่จัดซื้อ (Staff)")
+                    @roleName
                 </span>
             </div>
  
@@ -56,7 +56,7 @@
             <div class="w-full grid grid-cols-2 gap-sm text-center">
                 <div class="bg-slate-50 p-sm border border-slate-100 rounded">
                     <span class="text-[9px] text-slate-400 block mb-0.5 uppercase tracking-wide">สิทธิ์การทำงาน</span>
-                    <span class="text-[11px] font-bold text-primary">@roleName.ToUpper()</span>
+                    <span class="text-[11px] font-bold text-primary">@roleName</span>
                 </div>
                 <div class="bg-slate-50 p-sm border border-slate-100 rounded">
                     <span class="text-[9px] text-slate-400 block mb-0.5 uppercase tracking-wide">สถานะบัญชี</span>
