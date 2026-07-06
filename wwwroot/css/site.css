@@ -52,3 +52,65 @@ body {
 .delay-300 { animation-delay: 300ms; }
 .delay-375 { animation-delay: 375ms; }
 .delay-450 { animation-delay: 450ms; }
+
+/* Smooth Scrolling & Custom Scrollbar */
+html {
+  scroll-behavior: smooth;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #f8fafc;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 8px;
+  border: 2px solid #f8fafc;
+  transition: background 0.3s ease;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Staggered Row & Card Entrance Animation */
+@keyframes tableRowFade {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.998);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.animate-row {
+  animation: tableRowFade 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Smooth Interactive Row & Card Hover */
+.hover-row-effect {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.hover-row-effect:hover {
+  transform: translateY(-1.5px) scale(1.002);
+  background-color: #f0f9ff !important; /* Sky-50 */
+  box-shadow: 0 6px 16px -4px rgba(14, 165, 233, 0.12), 0 2px 6px -1px rgba(0, 0, 0, 0.04);
+  position: relative;
+  z-index: 5;
+}
+
+/* Button & Interactive Element Micro-interactions */
+.btn-interactive {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.btn-interactive:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px -3px rgba(37, 99, 235, 0.3);
+}
+.btn-interactive:active {
+  transform: translateY(0);
+  box-shadow: none;
+}

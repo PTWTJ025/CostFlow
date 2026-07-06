@@ -239,6 +239,14 @@ namespace CostFlow.Controllers
                 return Json(new { success = false, error = "ไม่พบรายงานที่ระบุ" });
             }
 
+            // User Isolation Check (ป้องกัน IDOR)
+            bool isAdmin = User.IsInRole("Admin");
+            string currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
+            if (!isAdmin && session.UserId != currentUserId)
+            {
+                return Json(new { success = false, error = "คุณไม่มีสิทธิ์ลบรายงานของผู้อื่น" });
+            }
+
             // Delete associated merge results
             var results = _context.MergeResults.Where(r => r.ImportSessionId == sessionId);
             _context.MergeResults.RemoveRange(results);

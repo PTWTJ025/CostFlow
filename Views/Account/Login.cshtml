@@ -636,12 +636,11 @@
 
         const REMEMBER_KEY = 'costflow_remember';
 
-        // โหลดรหัสที่จดจำไว้ (ถ้ามี)
+        // โหลดรหัสที่จดจำไว้ (เฉพาะอีเมล ไม่เก็บรหัสผ่านเพื่อความปลอดภัย)
         try {
             const saved = JSON.parse(localStorage.getItem(REMEMBER_KEY) || '{}');
             if (saved.email) {
                 emailInput.value = saved.email;
-                pwInput.value = saved.password || '';
                 rememberMe.checked = true;
             }
         } catch (_) {}
@@ -737,14 +736,14 @@
                 const res = await fetch('/Account/SubmitLogin', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: new URLSearchParams({ email, password })
+                    body: new URLSearchParams({ email, password, rememberMe: rememberMe.checked })
                 });
 
                 const data = await res.json();
 
                 if (data.success) {
                     if (rememberMe.checked) {
-                        localStorage.setItem(REMEMBER_KEY, JSON.stringify({ email, password }));
+                        localStorage.setItem(REMEMBER_KEY, JSON.stringify({ email }));
                     } else {
                         localStorage.removeItem(REMEMBER_KEY);
                     }
