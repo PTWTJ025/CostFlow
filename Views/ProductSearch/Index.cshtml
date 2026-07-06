@@ -112,6 +112,7 @@
                 <div class="text-right">
                     <span class="text-xs text-secondary block">ยอดรวมทั้งสิ้น</span>
                     <span id="cart-total-display" class="font-headline-sm text-headline-sm font-black text-primary">฿0.00</span>
+                    <span id="cart-total-text" class="text-[11px] font-medium text-slate-500 block mt-0.5 font-sans">(ศูนย์บาทถ้วน)</span>
                 </div>
             </div>
 
@@ -244,6 +245,78 @@ document.addEventListener("DOMContentLoaded", function() {
         return "฿" + Number(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
+    // Convert number to Thai Baht text helper
+    function formatBahtText(amount) {
+        if (isNaN(amount) || amount === null || amount === undefined) return "(ศูนย์บาทถ้วน)";
+        const num = Number(amount);
+        if (num === 0) return "(ศูนย์บาทถ้วน)";
+        
+        const fixed = num.toFixed(2);
+        const parts = fixed.split('.');
+        const bahtStr = parts[0];
+        const satangStr = parts[1];
+
+        const textNum = ["ศูนย์", "หนึ่ง", "สอง", "สาม", "สี่", "ห้า", "หก", "เจ็ด", "แปด", "เก้า"];
+        const textUnit = ["", "สิบ", "ร้อย", "พัน", "หมื่น", "แสน"];
+
+        function readSixDigits(str) {
+            let res = "";
+            let len = str.length;
+            for (let i = 0; i < len; i++) {
+                let digit = parseInt(str.charAt(i));
+                let pos = len - i - 1;
+                if (digit !== 0) {
+                    if (pos === 1 && digit === 2) {
+                        res += "ยี่สิบ";
+                    } else if (pos === 1 && digit === 1) {
+                        res += "สิบ";
+                    } else if (pos === 0 && digit === 1 && len > 1 && parseInt(str.substring(0, len - 1)) > 0) {
+                        res += "เอ็ด";
+                    } else {
+                        res += textNum[digit] + textUnit[pos];
+                    }
+                }
+            }
+            return res;
+        }
+
+        function readIntegerPart(str) {
+            if (str === "0" || str === "") return "ศูนย์";
+            let chunks = [];
+            let temp = str;
+            while (temp.length > 0) {
+                let chunk = temp.slice(-6);
+                chunks.unshift(chunk);
+                temp = temp.slice(0, -6);
+            }
+            let res = "";
+            for (let i = 0; i < chunks.length; i++) {
+                let chunkText = readSixDigits(chunks[i]);
+                if (chunkText !== "") {
+                    res += chunkText;
+                    let millionCount = chunks.length - 1 - i;
+                    for (let m = 0; m < millionCount; m++) {
+                        res += "ล้าน";
+                    }
+                }
+            }
+            return res;
+        }
+
+        let bahtText = "";
+        if (Number(bahtStr) > 0) {
+            bahtText = readIntegerPart(bahtStr) + "บาท";
+        }
+        let satangText = "";
+        if (Number(satangStr) > 0) {
+            satangText = readIntegerPart(satangStr) + "สตางค์";
+        } else {
+            satangText = "ถ้วน";
+        }
+        
+        return `(${bahtText}${satangText})`;
+    }
+
     // Dynamic autocomplete fetch
     let debounceTimeout = null;
     searchInput.addEventListener("input", function() {
@@ -348,10 +421,20 @@ document.addEventListener("DOMContentLoaded", function() {
             formQty.focus();
             return;
         }
+        if (qty > 1000) {
+            showToast("ไม่อนุญาตให้สั่งซื้อเกิน 1,000 ชิ้นต่อรายการ เนื่องจากจำนวนสินค้าสูงเกินเกณฑ์ปกติ กรุณาตรวจสอบความถูกต้องอีกครั้ง", "error");
+            formQty.focus();
+            return;
+        }
 
         // Check if item already exists in basket
         const existingItem = basket.find(item => item.productCode === code);
         if (existingItem) {
+            if ((existingItem.quantity + qty) > 1000) {
+                showToast(`ไม่สามารถเพิ่มได้เนื่องจากจำนวนรวมของรายการนี้จะเกิน 1,000 ชิ้น (ปัจจุบันมีอยู่แล้ว ${existingItem.quantity} ${unit})`, "error");
+                formQty.focus();
+                return;
+            }
             existingItem.quantity += qty;
             existingItem.totalAmount = existingItem.quantity * existingItem.unitPrice;
             if (remarks) {
@@ -391,11 +474,14 @@ document.addEventListener("DOMContentLoaded", function() {
     // Update Cart UI list
     function updateCartUI() {
         cartBody.innerHTML = "";
+        const cartTotalTextDisplay = document.getElementById("cart-total-text");
         
         if (basket.length === 0) {
             cartBody.appendChild(emptyCartRow);
             submitOrdersBtn.disabled = true;
             cartTotalDisplay.textContent = "฿0.00";
+            cartTotalDisplay.className = "font-headline-sm text-headline-sm font-black text-primary";
+            if (cartTotalTextDisplay) cartTotalTextDisplay.textContent = "(ศูนย์บาทถ้วน)";
             return;
         }
 
@@ -436,6 +522,19 @@ document.addEventListener("DOMContentLoaded", function() {
         });
 
         cartTotalDisplay.textContent = formatCurrency(totalSum);
+        if (totalSum > 10000000) {
+            cartTotalDisplay.className = "font-headline-sm text-headline-sm font-black text-rose-600 animate-pulse";
+            cartTotalDisplay.title = "ยอดรวมเกินเกณฑ์กำหนด 10,000,000 บาท";
+            if (cartTotalTextDisplay) {
+                cartTotalTextDisplay.innerHTML = `<span class="text-rose-600 font-bold">⚠️ ${formatBahtText(totalSum)} (ยอดสูงเกินเกณฑ์กำหนด 10 ล้านบาท)</span>`;
+            }
+        } else {
+            cartTotalDisplay.className = "font-headline-sm text-headline-sm font-black text-primary";
+            cartTotalDisplay.title = "";
+            if (cartTotalTextDisplay) {
+                cartTotalTextDisplay.textContent = formatBahtText(totalSum);
+            }
+        }
         submitOrdersBtn.disabled = false;
     }
 
@@ -460,6 +559,12 @@ document.addEventListener("DOMContentLoaded", function() {
     // Submit Orders AJAX POST to Db
     submitOrdersBtn.addEventListener("click", function() {
         if (basket.length === 0) return;
+
+        const totalCartSum = basket.reduce((acc, item) => acc + item.totalAmount, 0);
+        if (totalCartSum > 10000000) {
+            showToast("ไม่สามารถบันทึกได้ เนื่องจากยอดรวมทั้งสิ้นสูงเกินเกณฑ์กำหนด (10,000,000 บาท) กรุณาตรวจสอบมูลค่ารายการอีกครั้ง", "error");
+            return;
+        }
 
         const isEditMode = @(isEdit ? "true" : "false");
 
