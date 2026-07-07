@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using CostFlow.Data;
 using CostFlow.Models;
 using System.Text.Json;
+using CostFlow.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -46,7 +47,8 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
     options.User.RequireUniqueEmail = false;
 })
 .AddEntityFrameworkStores<AppDbContext>()
-.AddDefaultTokenProviders();
+.AddDefaultTokenProviders()
+.AddClaimsPrincipalFactory<CustomUserClaimsPrincipalFactory>();
 
 // Cookie Authentication Settings
 builder.Services.ConfigureApplicationCookie(options =>
@@ -73,6 +75,19 @@ app.UseRouting();
 
 app.UseAuthentication(); // ← ต้องมาก่อน Authorization
 app.UseAuthorization();
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    OnPrepareResponse = ctx =>
+    {
+        var headers = ctx.Context.Response.GetTypedHeaders();
+        headers.CacheControl = new Microsoft.Net.Http.Headers.CacheControlHeaderValue
+        {
+            Public = true,
+            MaxAge = TimeSpan.FromDays(30)
+        };
+    }
+});
 
 app.MapStaticAssets();
 
