@@ -44,7 +44,7 @@ namespace CostFlow.Controllers
 
         // POST: /Account/SubmitLogin
         [HttpPost]
-        public async Task<IActionResult> SubmitLogin(string email, string password)
+        public async Task<IActionResult> SubmitLogin(string email, string password, bool rememberMe = false)
         {
             if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
             {
@@ -66,11 +66,11 @@ namespace CostFlow.Controllers
                 return Json(new { success = false, error = "บัญชีนี้ถูกระงับการใช้งานชั่วคราว" });
             }
 
-            // ตรวจสอบรหัสผ่าน + set cookie อัตโนมัติ
+            // ตรวจสอบรหัสผ่าน + set cookie อัตโนมัติ (ใช้ persistent cookie เมื่อ rememberMe เป็นจริง)
             var result = await _signInManager.PasswordSignInAsync(
                 user,
                 password,
-                isPersistent: true,  // Persistent cookie — ปิดเบราว์เซอร์แล้วยังอยู่
+                isPersistent: rememberMe,  // Persistent cookie — ปิดเบราว์เซอร์แล้วยังอยู่ตามที่ผู้ใช้เลือก
                 lockoutOnFailure: false
             );
 

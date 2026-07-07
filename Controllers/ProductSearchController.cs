@@ -134,6 +134,13 @@ namespace CostFlow.Controllers
 
                 if (existingBatch != null)
                 {
+                    // User Isolation Check (ป้องกัน IDOR)
+                    bool isAdmin = User.IsInRole("Admin");
+                    if (!isAdmin && existingBatch.UserId != userId)
+                    {
+                        return Json(new { success = false, message = "คุณไม่มีสิทธิ์แก้ไขแผ่นงานของผู้อื่น" });
+                    }
+
                     var oldOrders = _context.SparePartOrders.Where(o => o.BatchId == existingBatch.Id);
                     _context.SparePartOrders.RemoveRange(oldOrders);
                 }

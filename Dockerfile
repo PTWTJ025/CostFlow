@@ -2,8 +2,15 @@
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build-env
 WORKDIR /App
 
+# Install Node.js to build Tailwind CSS in CI/CD
+RUN apt-get update && apt-get install -y curl && \
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    apt-get install -y nodejs
+
 # Copy everything
 COPY . ./
+# Build Tailwind static CSS
+RUN npm install && npm run build:css
 # Restore as distinct layers
 RUN dotnet restore
 # Build and publish a release

@@ -6,13 +6,13 @@
 
 <div class="flex-1 p-md md:p-lg lg:p-xl flex flex-col gap-lg max-w-[88vw] mx-auto w-full">
     <!-- Reports list Card -->
-    <div class="bg-white rounded border border-outline-variant shadow-sm p-md md:p-lg lg:p-xl">
+    <div class="bg-white rounded border border-outline-variant shadow-sm p-md md:p-lg lg:p-xl fade-in-up">
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-md mb-lg">
             <div>
                 <h3 class="font-headline-sm text-headline-sm text-on-surface">รายการรายงานทั้งหมด</h3>
                 <p class="font-label-sm text-label-sm text-secondary">คลังข้อมูลและประวัติการเปรียบเทียบข้อมูลแผนสั่งผลิตกับคำสั่งซื้อในอดีต</p>
             </div>
-            <a href="/FileMerge" class="bg-primary hover:bg-primary/95 text-on-primary font-label-bold text-label-bold px-md py-2 rounded flex items-center gap-2 transition-colors shadow-sm text-xs">
+            <a href="/FileMerge" class="bg-primary hover:bg-primary/95 text-on-primary font-label-bold text-label-bold px-md py-2 rounded flex items-center gap-2 transition-colors shadow-sm text-xs btn-interactive">
                 <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                 </svg> สร้างรายงานเปรียบเทียบใหม่
@@ -45,7 +45,7 @@
                     string formattedDate = report.CreatedAt.ToString("dd MMM yyyy", new System.Globalization.CultureInfo("th-TH"));
                     string formattedTime = report.CreatedAt.ToString("HH:mm", new System.Globalization.CultureInfo("th-TH"));
                     
-                    <div class="border border-outline-variant rounded p-md hover:shadow-md transition-all flex flex-col justify-between bg-white relative overflow-hidden group" id="report-card-@report.SessionId">
+                    <div class="border border-outline-variant rounded p-md hover:shadow-lg transition-all flex flex-col justify-between bg-white relative overflow-hidden group hover-row-effect animate-row" style="animation-delay: @((Model.IndexOf(report) * 50))ms;" id="report-card-@report.SessionId">
                         <div class="absolute top-0 left-0 w-1.5 h-full bg-primary transition-all group-hover:w-2"></div>
                         <div class="pl-2">
                             <div class="flex justify-between items-start mb-sm">

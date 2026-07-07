@@ -99,12 +99,6 @@ namespace CostFlow.Controllers
             return View();
         }
 
-        [AllowAnonymous]
-        public IActionResult About()
-        {
-            return View();
-        }
-
         // GET: /Home/Settings
         [HttpGet]
         public async Task<IActionResult> Settings()

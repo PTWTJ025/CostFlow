@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using CostFlow.Data;
 using CostFlow.Models;
 using System.Text.Json;
+using CostFlow.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -46,7 +47,8 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
     options.User.RequireUniqueEmail = false;
 })
 .AddEntityFrameworkStores<AppDbContext>()
-.AddDefaultTokenProviders();
+.AddDefaultTokenProviders()
+.AddClaimsPrincipalFactory<CustomUserClaimsPrincipalFactory>();
 
 // Cookie Authentication Settings
 builder.Services.ConfigureApplicationCookie(options =>
@@ -73,6 +75,19 @@ app.UseRouting();
 
 app.UseAuthentication(); // ← ต้องมาก่อน Authorization
 app.UseAuthorization();
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    OnPrepareResponse = ctx =>
+    {
+        var headers = ctx.Context.Response.GetTypedHeaders();
+        headers.CacheControl = new Microsoft.Net.Http.Headers.CacheControlHeaderValue
+        {
+            Public = true,
+            MaxAge = TimeSpan.FromDays(30)
+        };
+    }
+});
 
 app.MapStaticAssets();
 
@@ -146,28 +161,44 @@ using (var scope = app.Services.CreateScope())
         }
     }
 
+    // อ่านรหัสผ่านจาก Environment Variable หรือ Configuration (ใน Development อนุญาตให้ใช้รหัสผ่านเริ่มต้นเพื่อความสะดวก)
+    string? adminPassword = app.Configuration["Seed:AdminPassword"] 
+                         ?? Environment.GetEnvironmentVariable("ADMIN_PASSWORD") 
+                         ?? (app.Environment.IsDevelopment() ? "admin1234" : null);
+
+    string? staffPassword = app.Configuration["Seed:StaffPassword"] 
+                         ?? Environment.GetEnvironmentVariable("STAFF_PASSWORD") 
+                         ?? (app.Environment.IsDevelopment() ? "123456" : null);
+
     // Seed ADMIN01
     var adminUser = await userManager.FindByNameAsync("ADMIN01");
     if (adminUser == null)
     {
-        var admin = new ApplicationUser
+        if (string.IsNullOrEmpty(adminPassword))
         {
-            UserName = "ADMIN01",
-            EmployeeCode = "ADMIN01",
-            FullName = "แมวกวนๆ",
-            ProfilePictureUrl = "https://cdn.readawrite.com/articles/11729/11728659/thumbnail/large.gif?1",
-            IsActive = true,
-            CreatedAt = DateTime.Now
-        };
-        var result = await userManager.CreateAsync(admin, "admin1234");
-        if (result.Succeeded)
-        {
-            await userManager.AddToRoleAsync(admin, "Admin");
-            Console.WriteLine("Seeded user ADMIN01 with role Admin.");
+            Console.WriteLine("WARNING: Skipping ADMIN01 creation in Production because ADMIN_PASSWORD is not set.");
         }
         else
         {
-            Console.WriteLine($"Failed to seed ADMIN01: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+            var admin = new ApplicationUser
+            {
+                UserName = "ADMIN01",
+                EmployeeCode = "ADMIN01",
+                FullName = "แมวกวนๆ",
+                ProfilePictureUrl = "https://cdn.readawrite.com/articles/11729/11728659/thumbnail/large.gif?1",
+                IsActive = true,
+                CreatedAt = DateTime.Now
+            };
+            var result = await userManager.CreateAsync(admin, adminPassword);
+            if (result.Succeeded)
+            {
+                await userManager.AddToRoleAsync(admin, "Admin");
+                Console.WriteLine("Seeded user ADMIN01 with role Admin.");
+            }
+            else
+            {
+                Console.WriteLine($"Failed to seed ADMIN01: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+            }
         }
     }
     else
@@ -181,24 +212,31 @@ using (var scope = app.Services.CreateScope())
     var staffUser = await userManager.FindByNameAsync("STAFF01");
     if (staffUser == null)
     {
-        var staff = new ApplicationUser
+        if (string.IsNullOrEmpty(staffPassword))
         {
-            UserName = "STAFF01",
-            EmployeeCode = "STAFF01",
-            FullName = "พัชราภา เลิศวิจิตร",
-            ProfilePictureUrl = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRkt942qIdGSgY_RotRR9_HhY3bveTRjSgZZYygIyA-3JzTkNbA9PR1CbXB&s=10",
-            IsActive = true,
-            CreatedAt = DateTime.Now
-        };
-        var result = await userManager.CreateAsync(staff, "123456");
-        if (result.Succeeded)
-        {
-            await userManager.AddToRoleAsync(staff, "Staff");
-            Console.WriteLine("Seeded user STAFF01 with role Staff.");
+            Console.WriteLine("WARNING: Skipping STAFF01 creation in Production because STAFF_PASSWORD is not set.");
         }
         else
         {
-            Console.WriteLine($"Failed to seed STAFF01: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+            var staff = new ApplicationUser
+            {
+                UserName = "STAFF01",
+                EmployeeCode = "STAFF01",
+                FullName = "พัชราภา เลิศวิจิตร",
+                ProfilePictureUrl = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRkt942qIdGSgY_RotRR9_HhY3bveTRjSgZZYygIyA-3JzTkNbA9PR1CbXB&s=10",
+                IsActive = true,
+                CreatedAt = DateTime.Now
+            };
+            var result = await userManager.CreateAsync(staff, staffPassword);
+            if (result.Succeeded)
+            {
+                await userManager.AddToRoleAsync(staff, "Staff");
+                Console.WriteLine("Seeded user STAFF01 with role Staff.");
+            }
+            else
+            {
+                Console.WriteLine($"Failed to seed STAFF01: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+            }
         }
     }
     else
