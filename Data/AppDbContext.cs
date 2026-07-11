@@ -15,6 +15,12 @@ namespace CostFlow.Data
         public DbSet<ProductPrice> ProductPrices { get; set; }
         public DbSet<SparePartOrderBatch> SparePartOrderBatches { get; set; }
         public DbSet<SparePartOrder> SparePartOrders { get; set; }
+        
+        // New tracking system tables
+        public DbSet<Report> Reports { get; set; }
+        public DbSet<OrderTrackingMaster> OrderTrackingMasters { get; set; }
+        public DbSet<WeeklyPlan> WeeklyPlans { get; set; }
+        public DbSet<WeeklyPlanDetail> WeeklyPlanDetails { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -24,6 +30,39 @@ namespace CostFlow.Data
             builder.Entity<ApplicationUser>()
                 .HasIndex(u => u.EmployeeCode)
                 .IsUnique();
+
+            // Unique index on ReportName
+            builder.Entity<Report>()
+                .HasIndex(r => r.ReportName)
+                .IsUnique();
+
+            // Report -> OrderTrackingMaster (1-to-many)
+            builder.Entity<OrderTrackingMaster>()
+                .HasOne(o => o.Report)
+                .WithMany(r => r.Orders)
+                .HasForeignKey(o => o.ReportId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Report -> WeeklyPlan (1-to-many)
+            builder.Entity<WeeklyPlan>()
+                .HasOne(w => w.Report)
+                .WithMany(r => r.WeeklyPlans)
+                .HasForeignKey(w => w.ReportId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // WeeklyPlan -> WeeklyPlanDetail (1-to-many)
+            builder.Entity<WeeklyPlanDetail>()
+                .HasOne(d => d.WeeklyPlan)
+                .WithMany(w => w.Details)
+                .HasForeignKey(d => d.WeeklyPlanId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // WeeklyPlanDetail -> OrderTrackingMaster (many-to-1, optional)
+            builder.Entity<WeeklyPlanDetail>()
+                .HasOne(d => d.MatchedOrder)
+                .WithMany(o => o.MatchedInWeeklyPlans)
+                .HasForeignKey(d => d.MatchedOrderId)
+                .OnDelete(DeleteBehavior.SetNull);
         }
     }
 }

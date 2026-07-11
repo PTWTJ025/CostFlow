@@ -29,9 +29,9 @@ namespace CostFlow.Controllers
             {
                 if (User.IsInRole("Admin"))
                 {
-                    return RedirectToAction("Index", "PriceReference");
+                    return RedirectToAction("Index", "Home");
                 }
-                return RedirectToAction("Index", "Home");
+                return RedirectToAction("Index", "ProductSearch");
             }
 
             var admin = await _userManager.FindByNameAsync("ADMIN01");
@@ -77,7 +77,7 @@ namespace CostFlow.Controllers
             if (result.Succeeded)
             {
                 bool isAdmin = await _userManager.IsInRoleAsync(user, "Admin");
-                string redirect = isAdmin ? Url.Action("Index", "PriceReference")! : Url.Action("Index", "Home")!;
+                string redirect = isAdmin ? Url.Action("Index", "Home")! : Url.Action("Index", "ProductSearch")!;
                 return Json(new { success = true, redirectUrl = redirect });
             }
 

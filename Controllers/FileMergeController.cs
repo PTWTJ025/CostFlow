@@ -8,6 +8,8 @@ using CostFlow.Models;
 using CostFlow.Services;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 
 namespace CostFlow.Controllers
 {
@@ -28,246 +30,522 @@ namespace CostFlow.Controllers
             return View();
         }
 
-        // Action to process the dual uploaded files and show the comparison table
-        public IActionResult ProcessMerge(Guid sessionIdA, Guid sessionIdB)
+        // --- STEP 1: Preview Master File ---
+        [HttpPost]
+        public IActionResult PreviewMasterFile(Guid sessionId)
         {
-            var fileA = _storageService.GetImport(sessionIdA);
-            var fileB = _storageService.GetImport(sessionIdB);
-
-            if (fileA == null || fileB == null)
+            var file = _storageService.GetImport(sessionId);
+            if (file == null)
             {
-                TempData["ErrorMessage"] = "เซสชันไฟล์อัปโหลดหมดอายุ (เกิน 30 นาที) กรุณาอัปโหลดไฟล์ใหม่อีกครั้ง";
-                return RedirectToAction("Index");
+                return Json(new { success = false, error = "เซสชันไฟล์หมดอายุ (เกิน 30 นาที) กรุณาอัปโหลดใหม่" });
             }
 
-            // ===== STEP 1: Build lookup dictionary from File A (Part PO) =====
-            var poSheet = fileA.Sheets.FirstOrDefault(s => s.SheetName.Equals("mcsAppvProduct", StringComparison.OrdinalIgnoreCase))
-                          ?? fileA.Sheets.FirstOrDefault();
+            var poSheet = file.Sheets.FirstOrDefault(s => s.SheetName.Equals("mcsAppvProduct", StringComparison.OrdinalIgnoreCase))
+                          ?? file.Sheets.FirstOrDefault();
 
-            var poLookup = new Dictionary<string, TempPartPo>(); // cleaned WO key -> row from File A
-            if (poSheet != null)
+            if (poSheet == null)
             {
+                return Json(new { success = false, error = "ไม่พบชีทข้อมูลในไฟล์นี้" });
+            }
+
+            var previewList = new List<object>();
+            var distinctRows = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+
+            int startRowIndex = poSheet.RawRows.Count > 5 ? 5 : 0;
+            for (int r = startRowIndex; r < Math.Min(poSheet.RawRows.Count, startRowIndex + 500); r++)
+            {
+                var row = poSheet.RawRows[r];
+                if (row.Count == 0 || string.IsNullOrEmpty(row[0])) continue;
+
+                string poNum = GetColVal(row, 0).Trim();
+                if (string.IsNullOrEmpty(poNum)) continue;
+
+                if (!distinctRows.ContainsKey(poNum))
+                {
+                    distinctRows[poNum] = row;
+                }
+            }
+
+            foreach (var kvp in distinctRows)
+            {
+                string poNum = kvp.Key;
+                var row = kvp.Value;
+                previewList.Add(new {
+                    poNumber = poNum,
+                    requestDate = GetColVal(row, 1),
+                    approvedDate = GetColVal(row, 2),
+                    urgency = GetColVal(row, 4),
+                    amount = GetColVal(row, 17),
+                    remarks = GetColVal(row, 22),
+                    quantity = ExtractQuantity(GetColVal(row, 22))
+                });
+            }
+
+            return Json(new { success = true, items = previewList, totalCount = distinctRows.Count });
+        }
+
+        // --- STEP 2: Save Master File ---
+        [HttpPost]
+        public IActionResult ConfirmSaveMaster(Guid sessionId, string? reportName)
+        {
+            try
+            {
+                var file = _storageService.GetImport(sessionId);
+                if (file == null)
+                {
+                    return Json(new { success = false, error = "เซสชันไฟล์หมดอายุ (เกิน 30 นาที) กรุณาอัปโหลดใหม่" });
+                }
+
+                string baseReportName = !string.IsNullOrWhiteSpace(reportName) ? reportName.Trim() : file.FileName;
+                
+                // Check for duplicate report name and auto-increment
+                string finalReportName = baseReportName;
+                int counter = 1;
+                while (_context.Reports.Any(r => r.ReportName == finalReportName))
+                {
+                    finalReportName = $"{baseReportName} ({counter})";
+                    counter++;
+                }
+
+                var poSheet = file.Sheets.FirstOrDefault(s => s.SheetName.Equals("mcsAppvProduct", StringComparison.OrdinalIgnoreCase))
+                              ?? file.Sheets.FirstOrDefault();
+
+                if (poSheet == null)
+                {
+                    return Json(new { success = false, error = "ไม่พบชีทข้อมูลในไฟล์นี้" });
+                }
+
+                // Extract distinct PO rows
+                var distinctRows = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
                 int startRowIndex = poSheet.RawRows.Count > 5 ? 5 : 0;
                 for (int r = startRowIndex; r < poSheet.RawRows.Count; r++)
                 {
                     var row = poSheet.RawRows[r];
                     if (row.Count == 0 || string.IsNullOrEmpty(row[0])) continue;
 
-                    string poNum = GetColVal(row, 0);
-                    string key = CleanKey(poNum);
-                    if (string.IsNullOrEmpty(key)) continue;
-
-                    poLookup[key] = new TempPartPo
+                    string poNum = GetColVal(row, 0).Trim();
+                    if (string.IsNullOrEmpty(poNum)) continue;
+                    
+                    if (!distinctRows.ContainsKey(poNum))
                     {
+                        distinctRows[poNum] = row;
+                    }
+                }
+
+                // Create new Report
+                var newReport = new Report
+                {
+                    Id = Guid.NewGuid(),
+                    ReportName = finalReportName,
+                    OriginalFileName = file.FileName,
+                    TotalPOs = distinctRows.Count,
+                    MatchedPOs = 0,
+                    CreatedAt = DateTime.Now
+                };
+                _context.Reports.Add(newReport);
+
+                // Create OrderTrackingMaster records
+                foreach (var kvp in distinctRows)
+                {
+                    string poNum = kvp.Key;
+                    var row = kvp.Value;
+
+                    var newOrder = new OrderTrackingMaster
+                    {
+                        Id = Guid.NewGuid(),
+                        ReportId = newReport.Id,
                         PoNumber = poNum,
                         RequestDate = GetColVal(row, 1),
                         ApprovedDate = GetColVal(row, 2),
                         Urgency = GetColVal(row, 4),
                         Amount = GetColVal(row, 17),
                         Remarks = GetColVal(row, 22),
-                        RemarksQuantity = ExtractQuantity(GetColVal(row, 22))
+                        RemarksQuantity = ExtractQuantity(GetColVal(row, 22)),
+                        Status = "Pending",
+                        CreatedAt = DateTime.Now,
+                        UpdatedAt = DateTime.Now
                     };
-                }
-            }
-
-            // ===== STEP 2: Find the main sheet of File B (รวมงานผลิต - ราคาLCA00-LCD00) =====
-            var planSheet = fileB.Sheets.FirstOrDefault(s =>
-                s.SheetName.Contains("รวมงานผลิต") && s.SheetName.Contains("ราคา"))
-                ?? fileB.Sheets.FirstOrDefault();
-
-            var mergedRows = new List<MergeResult>();
-
-            if (planSheet != null)
-            {
-                // Dynamically find header row and column indices
-                int headerRowIndex = -1;
-                int colApproveNo = -1;  // เลขที่ (WO number) — Column B
-                int colDelivery = -1;   // ส่งมอบ — Column M
-
-                for (int r = 0; r < Math.Min(planSheet.RawRows.Count, 15); r++)
-                {
-                    var row = planSheet.RawRows[r];
-                    for (int c = 0; c < row.Count; c++)
-                    {
-                        var cellVal = row[c]?.Trim() ?? string.Empty;
-
-                        if (colApproveNo == -1 && (
-                            cellVal.Contains("เลขที่ใบสั่ง") ||
-                            cellVal.Contains("เลขที่") ||
-                            cellVal.Contains("เลขใบสั่ง")))
-                        {
-                            colApproveNo = c;
-                            headerRowIndex = Math.Max(headerRowIndex, r);
-                        }
-
-                        if (colDelivery == -1 && (
-                            cellVal.Contains("ส่งมอบ") ||
-                            cellVal.Contains("เป้าหมาย")))
-                        {
-                            colDelivery = c;
-                            headerRowIndex = Math.Max(headerRowIndex, r);
-                        }
-                    }
-                }
-
-                // Fallback defaults if headers not found
-                if (colApproveNo == -1) colApproveNo = 1;  // Column B
-                if (colDelivery == -1) colDelivery = 12;    // Column M
-                if (headerRowIndex == -1) headerRowIndex = 7;
-
-                var matchedKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-                // ===== STEP 3: Loop File B rows (driver) and left-join File A =====
-                for (int r = headerRowIndex + 1; r < planSheet.RawRows.Count; r++)
-                {
-                    var row = planSheet.RawRows[r];
-                    if (row.Count == 0) continue;
-
-                    string approveNo = GetColVal(row, colApproveNo);
-                    if (string.IsNullOrEmpty(approveNo)) continue; // skip blank/summary rows
-
-                    string key = CleanKey(approveNo);
-                    bool isMatched = poLookup.TryGetValue(key, out var matchedPo);
-
-                    if (isMatched)
-                    {
-                        matchedKeys.Add(key);
-                    }
-
-                    string deliveryDate = colDelivery < row.Count ? GetColVal(row, colDelivery) : "";
-
-                    mergedRows.Add(new MergeResult
-                    {
-                        // Fields from File B (always present)
-                        PoNumber = isMatched ? (matchedPo?.PoNumber ?? "") : "", // File A number (only if matched)
-                        PlanOrderNo = approveNo,                        // File B number
-                        ApprovedDate = ParseDateNullable(matchedPo?.ApprovedDate),
-                        Urgency = matchedPo?.Urgency ?? "",
-                        Quantity = ParseDecimalNullable(matchedPo?.RemarksQuantity),
-                        Amount = ParseDecimalNullable(matchedPo?.Amount),
-                        Remarks = matchedPo?.Remarks ?? "",
-                        DeliveryTargetDate = FormatDeliveryTargetDate(deliveryDate),
-                        IsMatched = isMatched
-                    });
-                }
-
-                // ===== STEP 4: Add remaining items from File A (Request for Approval) that were not matched =====
-                foreach (var kvp in poLookup)
-                {
-                    if (!matchedKeys.Contains(kvp.Key))
-                    {
-                        var unmatchedPo = kvp.Value;
-                        mergedRows.Add(new MergeResult
-                        {
-                            // Fields from File A (always present since it comes from File A)
-                            PoNumber = unmatchedPo.PoNumber, // File A number
-                            PlanOrderNo = "",                 // File B number (missing)
-                            ApprovedDate = ParseDateNullable(unmatchedPo.ApprovedDate),
-                            Urgency = unmatchedPo.Urgency,
-                            Quantity = ParseDecimalNullable(unmatchedPo.RemarksQuantity),
-                            Amount = ParseDecimalNullable(unmatchedPo.Amount),
-                            Remarks = unmatchedPo.Remarks,
-                            DeliveryTargetDate = null,
-                            IsMatched = false
-                        });
-                    }
-                }
-            }
-
-            ViewData["SessionIdA"] = sessionIdA;
-            ViewData["SessionIdB"] = sessionIdB;
-            ViewData["FileNameA"] = fileA.FileName;
-            ViewData["FileNameB"] = fileB.FileName;
-
-            return View(mergedRows);
-        }
-
-        // Action to save the finalized matched/edited rows to the database
-        [HttpPost]
-        public IActionResult SaveMergeResult([FromBody] SaveMergeRequestModel model)
-        {
-            if (model == null || model.Rows == null || !model.Rows.Any())
-            {
-                return Json(new { success = false, error = "ไม่มีข้อมูลที่จะบันทึก" });
-            }
-
-            try
-            {
-                int matchedCount = model.Rows.Count(r => r.IsMatched);
-                int unmatchedCount = model.Rows.Count(r => !r.IsMatched);
-
-                // Try to get logged in UserId from claims, fallback to ADMIN01
-                string userId = string.Empty;
-                var claimUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                if (!string.IsNullOrEmpty(claimUserId))
-                {
-                    userId = claimUserId;
-                }
-                else
-                {
-                    var defaultUser = _context.Users.FirstOrDefault(u => u.EmployeeCode == "ADMIN01");
-                    userId = defaultUser?.Id ?? string.Empty;
-                }
-
-                // 1. Create a DB Session Record
-                var session = new ImportSession
-                {
-                    Id = Guid.NewGuid(),
-                    UserId = userId,
-                    SourceFileName = string.IsNullOrWhiteSpace(model.ReportName) ? "รายงานเปรียบเทียบข้อมูล" : model.ReportName.Trim(),
-                    CompareFileName = $"{model.FileNameA} และ {model.FileNameB}",
-                    MatchedCount = matchedCount,
-                    UnmatchedCount = unmatchedCount,
-                    CreatedAt = DateTime.Now
-                };
-                _context.ImportSessions.Add(session);
-
-                // 2. Insert rows linking to this session
-                foreach (var row in model.Rows)
-                {
-                    var result = new MergeResult
-                    {
-                        ImportSessionId = session.Id,
-                        PoNumber = row.PoNumber == "-" ? "" : row.PoNumber,
-                        PlanOrderNo = row.PlanOrderNo == "-" ? "" : row.PlanOrderNo,
-                        ApprovedDate = ParseDateNullable(row.ApprovedDate),
-                        Urgency = row.Urgency == "-" ? "" : row.Urgency,
-                        Quantity = ParseDecimalNullable(row.Quantity),
-                        Amount = ParseDecimalNullable(row.Amount),
-                        Remarks = row.Remarks == "-" ? "" : row.Remarks,
-                        DeliveryTargetDate = FormatDeliveryTargetDate(row.DeliveryTargetDate),
-                        IsMatched = row.IsMatched
-                    };
-                    _context.MergeResults.Add(result);
+                    _context.OrderTrackingMasters.Add(newOrder);
                 }
 
                 _context.SaveChanges();
+                _storageService.DeleteImport(sessionId);
 
-                // 3. Clear temporary files from cache
-                if (Guid.TryParse(model.SessionIdA, out var idA)) _storageService.DeleteImport(idA);
-                if (Guid.TryParse(model.SessionIdB, out var idB)) _storageService.DeleteImport(idB);
-
-                return Json(new { success = true, redirectUrl = Url.Action("Success", new { sessionId = session.Id }) });
+                return Json(new { success = true, insertCount = distinctRows.Count, updateCount = 0, totalCount = distinctRows.Count, fileName = finalReportName });
             }
             catch (Exception ex)
             {
-                return Json(new { success = false, error = $"เกิดข้อผิดพลาดในการบันทึกข้อมูล: {ex.Message}" });
+                return Json(new { success = false, error = "เกิดข้อผิดพลาดในการบันทึกข้อมูล: " + ex.Message + (ex.InnerException != null ? " -> " + ex.InnerException.Message : "") });
             }
         }
 
-        public IActionResult Success(Guid sessionId)
+        // --- STEP 3: Upload Multiple Weekly Plan Files (สูงสุด 5 ไฟล์) ---
+        [HttpPost]
+        public async Task<IActionResult> UploadWeeklyPlanFiles(List<Microsoft.AspNetCore.Http.IFormFile> files)
         {
-            ViewData["SessionId"] = sessionId;
-            return View();
+            if (files == null || files.Count == 0)
+                return Json(new { success = false, error = "กรุณาเลือกไฟล์อย่างน้อย 1 ไฟล์" });
+
+            if (files.Count > 5)
+                return Json(new { success = false, error = "อัปโหลดได้สูงสุด 5 ไฟล์เท่านั้น" });
+
+            try
+            {
+                var uploadedFiles = new List<object>();
+                var excelReader = new ExcelFileReader();
+                var csvReader = new CsvFileReader();
+
+                foreach (var file in files)
+                {
+                    if (file.Length == 0) continue;
+
+                    // Validate file type
+                    var extension = Path.GetExtension(file.FileName).ToLower();
+                    if (extension != ".xlsx" && extension != ".xls" && extension != ".csv")
+                        continue;
+
+                    // Parse file
+                    ImportedFile importedFile;
+                    using (var stream = file.OpenReadStream())
+                    {
+                        importedFile = await Task.Run(() =>
+                        {
+                            if (extension == ".csv")
+                                return csvReader.ReadCsv(stream, file.FileName);
+                            else
+                                return excelReader.ReadWorkbook(stream, file.FileName);
+                        });
+                    }
+
+                    // Save to temp storage
+                    _storageService.SaveImport(importedFile);
+
+                    // Get sheet names
+                    var sheetNames = importedFile.Sheets.Select(s => s.SheetName).ToList();
+
+                    uploadedFiles.Add(new
+                    {
+                        sessionId = importedFile.SessionId,
+                        fileName = file.FileName,
+                        sheets = sheetNames
+                    });
+                }
+
+                return Json(new { success = true, files = uploadedFiles });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, error = "เกิดข้อผิดพลาดในการอัปโหลด: " + ex.Message });
+            }
         }
 
-        // Safe helper to read column value
+        [HttpPost]
+        public IActionResult CheckDuplicateWeeklyPlans([FromBody] WeeklyPlanProcessRequest request)
+        {
+            if (request == null || request.Files == null || request.Files.Count == 0)
+                return Json(new { success = true, duplicates = new List<string>() });
+
+            try
+            {
+                var report = _context.Reports.FirstOrDefault(r => r.ReportName == request.ReportName);
+                if (report == null)
+                    return Json(new { success = false, error = "ไม่พบรายงานหลัก" });
+
+                var duplicates = new List<string>();
+
+                foreach (var fileInfo in request.Files)
+                {
+                    var importedFile = _storageService.GetImport(fileInfo.SessionId);
+                    if (importedFile == null) continue;
+
+                    var existingPlan = _context.WeeklyPlans
+                        .FirstOrDefault(wp => wp.ReportId == report.Id && 
+                                              wp.FileName == importedFile.FileName && 
+                                              wp.SheetName == fileInfo.SelectedSheet);
+                    
+                    if (existingPlan != null)
+                    {
+                        duplicates.Add($"{importedFile.FileName} (ชีท: {fileInfo.SelectedSheet})");
+                    }
+                }
+
+                return Json(new { success = true, duplicates = duplicates });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, error = "เกิดข้อผิดพลาดในการตรวจสอบ: " + ex.Message });
+            }
+        }
+
+        // --- STEP 4: Process Weekly Plan (รับ sheet ที่เลือกมาแล้ว) ---
+        [HttpPost]
+        public IActionResult ProcessWeeklyPlan([FromBody] WeeklyPlanProcessRequest request)
+        {
+            if (request == null || request.Files == null || request.Files.Count == 0)
+                return Json(new { success = false, error = "ไม่มีข้อมูลไฟล์" });
+
+            try
+            {
+                var report = _context.Reports.FirstOrDefault(r => r.ReportName == request.ReportName);
+                if (report == null)
+                    return Json(new { success = false, error = "ไม่พบรายงานหลัก" });
+
+                // Get all orders from this report
+                var allOrders = _context.OrderTrackingMasters
+                    .Where(o => o.ReportId == report.Id)
+                    .ToList();
+
+                int totalMatched = 0;
+                var fileResults = new List<object>();
+                var debugInfo = new List<string>(); // เพิ่ม debug info
+
+                foreach (var fileInfo in request.Files)
+                {
+                    var importedFile = _storageService.GetImport(fileInfo.SessionId);
+                    if (importedFile == null) 
+                    {
+                        debugInfo.Add($"❌ ไม่พบไฟล์ในระบบสำหรับ sessionId: {fileInfo.SessionId}");
+                        continue;
+                    }
+
+                    // Debug: แสดงชีทที่มีในไฟล์
+                    var availableSheets = string.Join(", ", importedFile.Sheets.Select(s => $"'{s.SheetName}'"));
+                    debugInfo.Add($"📄 ไฟล์: {importedFile.FileName}");
+                    debugInfo.Add($"   - ชีทที่มีในไฟล์: {availableSheets}");
+                    debugInfo.Add($"   - ชีทที่เลือก: '{fileInfo.SelectedSheet}'");
+
+                    var selectedSheet = importedFile.Sheets.FirstOrDefault(s => s.SheetName == fileInfo.SelectedSheet);
+                    if (selectedSheet == null) 
+                    {
+                        debugInfo.Add($"   ❌ ไม่พบชีท '{fileInfo.SelectedSheet}' ในไฟล์");
+                        continue;
+                    }
+                    
+                    debugInfo.Add($"   ✅ พบชีท '{selectedSheet.SheetName}' - มี {selectedSheet.RawRows.Count} แถว");
+
+                    // Check for duplicate uploads (overwrite logic)
+                    var existingPlan = _context.WeeklyPlans
+                        .FirstOrDefault(wp => wp.ReportId == report.Id && 
+                                              wp.FileName == importedFile.FileName && 
+                                              wp.SheetName == selectedSheet.SheetName);
+                    
+                    if (existingPlan != null)
+                    {
+                        debugInfo.Add($"   ⚠️ พบไฟล์ '{importedFile.FileName}' ชีท '{selectedSheet.SheetName}' ซ้ำในระบบ - ทำการลบข้อมูลเก่าเพื่อบันทึกใหม่ (Overwrite)");
+                        // Remove old details
+                        var oldDetails = _context.WeeklyPlanDetails.Where(d => d.WeeklyPlanId == existingPlan.Id);
+                        _context.WeeklyPlanDetails.RemoveRange(oldDetails);
+                        // Remove old plan
+                        _context.WeeklyPlans.Remove(existingPlan);
+                        _context.SaveChanges();
+                    }
+
+                    // Create WeeklyPlan record
+                    var weeklyPlan = new WeeklyPlan
+                    {
+                        Id = Guid.NewGuid(),
+                        ReportId = report.Id,
+                        FileName = importedFile.FileName,
+                        SheetName = selectedSheet.SheetName,
+                        TotalRecords = selectedSheet.RawRows.Count,
+                        MatchedCount = 0,
+                        UploadedAt = DateTime.Now
+                    };
+                    _context.WeeklyPlans.Add(weeklyPlan);
+
+                    int fileMatchedCount = 0;
+                    var foundPOs = new List<string>(); // เก็บ PO ที่เจอ
+
+                    // หา column index ของ "ใบขออนุมัติ" หรือ "เลขที่อนุมัติ" จาก header
+                    int poColumnIndex = -1;
+                    for (int r = 0; r < Math.Min(5, selectedSheet.RawRows.Count); r++)
+                    {
+                        var headerRow = selectedSheet.RawRows[r];
+                        for (int c = 0; c < headerRow.Count; c++)
+                        {
+                            var cellValue = GetColVal(headerRow, c);
+                            // ค้นหาคำว่า "อนุมัติ" ในชื่อคอลัมน์
+                            if (cellValue.Contains("อนุมัติ", StringComparison.OrdinalIgnoreCase))
+                            {
+                                poColumnIndex = c;
+                                debugInfo.Add($"   ✅ เจอคอลัมน์ PO: '{cellValue}' ที่ตำแหน่ง {c}");
+                                break;
+                            }
+                        }
+                        if (poColumnIndex != -1) break;
+                    }
+
+                    // ถ้าไม่เจอ header ให้ fallback เป็นคอลัมน์ 1 (หรือ 2 ถ้าเริ่มนับจาก 0)
+                    if (poColumnIndex == -1)
+                    {
+                        poColumnIndex = 1; // เปลี่ยนจาก 3 เป็น 1
+                        debugInfo.Add($"   ⚠️ ไม่เจอ header 'อนุมัติ' ใช้คอลัมน์ {poColumnIndex} แทน");
+                    }
+
+                    // Process each row
+                    for (int r = 0; r < selectedSheet.RawRows.Count; r++)
+                    {
+                        var row = selectedSheet.RawRows[r];
+                        if (row.Count == 0) continue;
+
+                        // ดึง PO จากคอลัมน์ที่หาเจอ โดยเลือกเฉพาะที่ขึ้นต้นด้วย WO
+                        string poNumberInFile = ExtractPoNumberFromColumn(row, poColumnIndex);
+                        if (string.IsNullOrEmpty(poNumberInFile)) continue;
+                        
+                        foundPOs.Add(poNumberInFile); // เก็บไว้ debug
+
+                        // Clean PO number (digits only)
+                        string cleanPoInFile = CleanKey(poNumberInFile);
+
+                        // Try to match with existing orders
+                        var matchedOrder = allOrders.FirstOrDefault(o =>
+                            CleanKey(o.PoNumber) == cleanPoInFile
+                        );
+
+                        // Extract data from correct columns based on your file structure
+                        // จากข้อมูลจริง:
+                        // 0=ลำดับ, 1=เลขที่อนุมัติ(WO), 2=วันที่รับPO, 3=วันที่เปิดใบสั่ง,
+                        // 4=เลขที่ใบสั่ง, 5=หน่วยงาน, 6=สาขา, 7=ชื่อใบสั่ง, 8=ประเภทงาน,
+                        // 9=จำนวนชิ้น, 10=ราคา, 11=สถานะใบสั่ง, 12=ส่งมอบ, 13+=อื่นๆ
+                        string department = GetColVal(row, 5);      // หน่วยงาน (LCD00, LCA00)
+                        string orderName = GetColVal(row, 7);       // ชื่อใบสั่ง
+                        string orderStatus = GetColVal(row, 11);    // สถานะใบสั่ง (C:ปิดใบสั่ง, O:กำลังดำเนินการ)
+                        string deliveryTarget = GetColVal(row, 12); // ส่งมอบ (วันที่)
+
+                        // Create WeeklyPlanDetail
+                        var detail = new WeeklyPlanDetail
+                        {
+                            Id = Guid.NewGuid(),
+                            WeeklyPlanId = weeklyPlan.Id,
+                            PoNumberInFile = poNumberInFile,
+                            Department = department,
+                            OrderName = orderName,
+                            OrderStatus = orderStatus,
+                            DeliveryTarget = FormatDeliveryTargetDate(deliveryTarget) ?? string.Empty,
+                            Price = GetColVal(row, 10),
+                            RowIndex = r,
+                            IsMatched = matchedOrder != null,
+                            MatchedOrderId = matchedOrder?.Id
+                        };
+                        _context.WeeklyPlanDetails.Add(detail);
+
+                        // Update order status if matched (and was pending)
+                        if (matchedOrder != null && matchedOrder.Status == "Pending")
+                        {
+                            matchedOrder.Status = "Matched";
+                            matchedOrder.UpdatedAt = DateTime.Now;
+                            fileMatchedCount++;
+                            totalMatched++;
+                        }
+                    }
+
+                    weeklyPlan.MatchedCount = fileMatchedCount;
+                    fileResults.Add(new
+                    {
+                        fileName = importedFile.FileName,
+                        sheetName = selectedSheet.SheetName,
+                        totalCount = foundPOs.Count,
+                        matchedCount = fileMatchedCount
+                    });
+
+                    // Debug: แสดง PO ที่เจอ
+                    debugInfo.Add($"   - เจอ PO ทั้งหมด: {foundPOs.Count} รายการ");
+                    if (foundPOs.Count > 0)
+                    {
+                        debugInfo.Add($"   - PO 5 ตัวแรก: {string.Join(", ", foundPOs.Take(5))}");
+                    }
+                    debugInfo.Add($"   - จับคู่ได้: {fileMatchedCount} รายการ");
+
+                    // Delete temp file
+                    _storageService.DeleteImport(fileInfo.SessionId);
+                }
+
+                // Save changes to commit the new plan and details first
+                _context.SaveChanges();
+
+                // Reconcile order statuses based on all active WeeklyPlanDetails for this report in the DB
+                var allActiveDetails = _context.WeeklyPlanDetails
+                    .Where(d => d.WeeklyPlan.ReportId == report.Id)
+                    .ToList();
+
+                foreach (var order in allOrders)
+                {
+                    bool hasMatch = allActiveDetails.Any(d => d.MatchedOrderId == order.Id);
+                    order.Status = hasMatch ? "Matched" : "Pending";
+                    order.UpdatedAt = DateTime.Now;
+                }
+
+                // Update report matched count
+                report.MatchedPOs = allOrders.Count(o => o.Status == "Matched");
+
+                _context.SaveChanges();
+
+                return Json(new
+                {
+                    success = true,
+                    totalMatched = totalMatched,
+                    fileResults = fileResults,
+                    message = $"จับคู่สำเร็จทั้งหมด {totalMatched} รายการ",
+                    debug = string.Join("\n", debugInfo) // ส่ง debug info กลับไป
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, error = "เกิดข้อผิดพลาด: " + ex.Message });
+            }
+        }
+
+        // --- Helper methods ---
+        private string ExtractPoNumberFromColumn(List<string> row, int columnIndex)
+        {
+            if (columnIndex < 0 || columnIndex >= row.Count)
+                return string.Empty;
+
+            var val = GetColVal(row, columnIndex);
+            if (string.IsNullOrWhiteSpace(val)) return string.Empty;
+
+            // Match เฉพาะ WO pattern: WO26010017 หรือ WO-26010017
+            // ตัวเลข 8 หลัก (2 หลักปี + 6 หลัก running number)
+            if (Regex.IsMatch(val, @"^WO-?\d{8}$", RegexOptions.IgnoreCase))
+            {
+                return val;
+            }
+
+            return string.Empty;
+        }
+
+        private string ExtractPoNumberFromRow(List<string> row)
+        {
+            // Fallback: ค้นหาใน 10 คอลัมน์แรก โดยหา WO pattern
+            for (int i = 0; i < Math.Min(10, row.Count); i++)
+            {
+                var val = GetColVal(row, i);
+                if (string.IsNullOrWhiteSpace(val)) continue;
+
+                // Match เฉพาะ WO pattern
+                if (Regex.IsMatch(val, @"^WO-?\d{8}$", RegexOptions.IgnoreCase))
+                {
+                    return val;
+                }
+            }
+            return string.Empty;
+        }
+
+        private int GetLastNonEmptyColumnIndex(List<string> row)
+        {
+            for (int i = row.Count - 1; i >= 0; i--)
+            {
+                if (!string.IsNullOrWhiteSpace(row[i]))
+                    return i;
+            }
+            return row.Count > 0 ? row.Count - 1 : 0;
+        }
+
         private string GetColVal(List<string> row, int index)
         {
             return index < row.Count ? (row[index]?.Trim() ?? string.Empty) : string.Empty;
         }
 
-        // Helper to strip non-digit characters for matching keys
         private string CleanKey(string val)
         {
             if (string.IsNullOrEmpty(val)) return string.Empty;
@@ -282,13 +560,10 @@ namespace CostFlow.Controllers
             return sb.ToString();
         }
 
-        // Helper to extract quantity from remarks text
         private string ExtractQuantity(string remarks)
         {
             if (string.IsNullOrEmpty(remarks)) return "-";
-            
             remarks = remarks.Replace("\u200b", "").Trim();
-            
             string[] patterns = {
                 @"(?:จำนวน|จํานวน|จำนวนชิ้น|จํานวนชิ้น|จำนวน\s*ชิ้น|จำนวณ|จนวน|จํนวน|จำนวน)\s*[:=\-\s]*\s*([0-9]+)",
                 @"([0-9]+)\s*(?:ชิ้น|อัน|ตัว|เครื่อง)"
@@ -296,86 +571,25 @@ namespace CostFlow.Controllers
 
             foreach (var pattern in patterns)
             {
-                var match = System.Text.RegularExpressions.Regex.Match(remarks, pattern, System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                var match = Regex.Match(remarks, pattern, RegexOptions.IgnoreCase);
                 if (match.Success && match.Groups.Count > 1)
                 {
                     return match.Groups[1].Value;
                 }
             }
-
             return "-";
-        }
-
-        private DateTime? ParseDateNullable(string? val)
-        {
-            if (string.IsNullOrWhiteSpace(val)) return null;
-            if (DateTime.TryParse(val, out var d)) return d;
-            
-            string[] formats = { "d/M/yyyy", "d/M/yy", "dd/MM/yyyy", "yyyy-MM-dd" };
-            if (DateTime.TryParseExact(val, formats, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var d2))
-            {
-                return d2;
-            }
-            return null;
         }
 
         private string? FormatDeliveryTargetDate(string? val)
         {
             if (string.IsNullOrWhiteSpace(val)) return "";
-            
-            // Try to parse as date. If it is a valid date, format it as dd/MM/yyyy for consistency.
-            // Otherwise, return the raw string (e.g. "นัดตอบเป้าหมาย7/7/26").
             if (DateTime.TryParse(val, out var d)) return d.ToString("dd/MM/yyyy");
-            
-            string[] formats = { "d/M/yyyy", "d/M/yy", "dd/MM/yyyy", "yyyy-MM-dd" };
+            string[] formats = { "d/M/yyyy", "d/M/yy", "dd/MM/yyyy", "yyyy-MM-dd", "d/M/yyyy H:mm:ss" };
             if (DateTime.TryParseExact(val, formats, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var d2))
             {
                 return d2.ToString("dd/MM/yyyy");
             }
-            
             return val.Trim();
         }
-
-        private decimal? ParseDecimalNullable(string? val)
-        {
-            if (string.IsNullOrWhiteSpace(val) || val == "-") return null;
-            string clean = val.Replace("฿", "").Replace(",", "").Trim();
-            if (decimal.TryParse(clean, out var dec)) return dec;
-            return null;
-        }
-    }
-
-    public class TempPartPo
-    {
-        public string PoNumber { get; set; } = string.Empty;
-        public string RequestDate { get; set; } = string.Empty;
-        public string ApprovedDate { get; set; } = string.Empty;
-        public string Urgency { get; set; } = string.Empty;
-        public string Amount { get; set; } = string.Empty;
-        public string Remarks { get; set; } = string.Empty;
-        public string RemarksQuantity { get; set; } = string.Empty;
-    }
-
-    public class SaveMergeRequestModel
-    {
-        public string SessionIdA { get; set; } = string.Empty;
-        public string SessionIdB { get; set; } = string.Empty;
-        public string FileNameA { get; set; } = string.Empty;
-        public string FileNameB { get; set; } = string.Empty;
-        public string ReportName { get; set; } = string.Empty;
-        public List<SaveMergeRowModel> Rows { get; set; } = new();
-    }
-
-    public class SaveMergeRowModel
-    {
-        public string PoNumber { get; set; } = string.Empty;
-        public string PlanOrderNo { get; set; } = string.Empty;
-        public string ApprovedDate { get; set; } = string.Empty;
-        public string Urgency { get; set; } = string.Empty;
-        public string Quantity { get; set; } = string.Empty;
-        public string Amount { get; set; } = string.Empty;
-        public string Remarks { get; set; } = string.Empty;
-        public string DeliveryTargetDate { get; set; } = string.Empty;
-        public bool IsMatched { get; set; }
     }
 }

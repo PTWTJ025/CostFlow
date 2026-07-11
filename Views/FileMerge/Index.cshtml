@@ -1,386 +1,299 @@
 @{
-    ViewData["Title"] = "เปรียบเทียบข้อมูล";
-    ViewData["HeaderTitle"] = "เปรียบเทียบข้อมูล";
+    ViewData["Title"] = "นำเข้าไฟล์";
+    ViewData["HeaderTitle"] = "นำเข้าข้อมูลสั่งผลิต";
 }
 
 <div class="flex-1 p-md md:p-lg lg:p-xl flex flex-col gap-lg max-w-container-max mx-auto w-full">
-    <!-- Header Card -->
-    <div class="bg-white rounded border border-outline-variant shadow-sm p-lg">
-        <h3 class="font-headline-sm text-headline-sm text-on-surface mb-md">เปรียบเทียบข้อมูล</h3>
-        <p class="text-secondary mb-lg">อัปโหลดไฟล์ใบสั่งงานผลิตชิ้นส่วน (mcsAppvProduct) และไฟล์แผนผลิตประจำสัปดาห์ เพื่อนำข้อมูลมาจับคู่เปรียบเทียบร่วมกัน</p>
-        
-        <!-- Dual Upload Section -->
-        <div class="flex flex-col lg:flex-row gap-lg items-stretch mb-xl">
-            <!-- Slot A: Part PO -->
-            <div id="container-a" class="flex-1 border border-outline-variant rounded p-lg flex flex-col justify-between bg-surface-container-low/30">
-                <div>
-                    <h4 class="font-bold text-on-surface mb-xs">ไฟล์ใบสั่งงานผลิตชิ้นส่วน (mcsAppvProduct)</h4>
-                    <p class="text-xs text-secondary mb-md">ข้อมูลสั่งผลิตหลักที่ใช้สำหรับอ้างอิงเปรียบเทียบ</p>
-                </div>
-                
-                <!-- Upload Dropzone A -->
-                <div id="dropzone-a" class="border-2 border-dashed border-outline-variant rounded p-md flex flex-col items-center justify-center bg-white hover:bg-slate-50 transition-colors cursor-pointer min-h-[180px] text-center my-md w-full shadow-sm">
-                    <svg class="w-8 h-8 text-primary mb-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0 3 3m-3-3-3 3M6.75 19.5a4.5 4.5 0 0 1-1.41-8.775 a5.25 5.25 0 0 1 10.233-2.33 a3 3 0 0 1 3.758 3.848A3.752 3.752 0 0 1 18 19.5H6.75Z" />
-                    </svg>
-                    <span class="text-xs font-semibold text-on-surface mb-1">ลากไฟล์มาวาง หรือ คลิกเพื่ออัปโหลด</span>
-                    <span class="text-[10px] text-secondary">รองรับ .xlsx, .csv (สูงสุด 25 MB)</span>
-                </div>
-                
-                <!-- Input Element A (hidden) -->
-                <input type="file" id="input-a" class="hidden" accept=".xlsx,.csv" />
-                
-                <!-- Status Box A -->
-                <div id="status-a" class="hidden border border-slate-200 rounded p-md flex flex-col items-center justify-center bg-white min-h-[180px] text-center my-md w-full shadow-sm">
-                    <!-- Spinner State -->
-                    <div id="loading-a" class="hidden flex flex-col items-center justify-center my-auto">
-                        <span class="loader"></span>
-                        <span class="text-xs text-secondary font-medium">กำลังอัปโหลดและอ่านข้อมูลไฟล์...</span>
-                    </div>
-                    <!-- Success State -->
-                    <div id="success-a" class="hidden flex flex-col items-center justify-center my-auto">
-                        <div class="w-8 h-8 bg-green-50 text-green-600 rounded-full flex items-center justify-center border border-green-200/50 mb-xs shadow-sm">
-                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-                            </svg>
-                        </div>
-                        <span class="text-xs font-bold text-slate-800" id="filename-a"></span>
-                        <span class="text-[10px] text-secondary" id="details-a"></span>
-                        <button type="button" id="reset-a" class="text-[10px] text-primary underline mt-2 hover:text-primary/80">เปลี่ยนไฟล์</button>
-                    </div>
-                    <!-- Error State -->
-                    <div id="error-a" class="hidden flex flex-col items-center justify-center my-auto">
-                        <span class="text-xs text-error font-bold mb-1">โหลดไม่สำเร็จ</span>
-                        <span class="text-[10px] text-secondary px-sm mb-2" id="errormsg-a"></span>
-                        <button type="button" id="retry-a" class="text-[10px] text-primary underline hover:text-primary/80">ลองใหม่</button>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Connection indicator -->
-            <div class="flex items-center justify-center py-2 lg:py-0">
-                <svg class="w-6 h-6 text-secondary rotate-90 lg:rotate-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0-4.5 4.5M21 7.5H7.5" />
-                </svg>
-            </div>
-            
-            <!-- Slot B: Weekly Production Plan -->
-            <div id="container-b" class="flex-1 border border-outline-variant rounded p-lg flex flex-col justify-between bg-surface-container-low/30">
-                <div>
-                    <h4 class="font-bold text-on-surface mb-xs">ไฟล์แผนผลิตประจำสัปดาห์ (Weekly Production Plan)</h4>
-                    <p class="text-xs text-secondary mb-md">ข้อมูลแผนผลิตรายสัปดาห์ที่นำมาเปรียบเทียบจับคู่ (เช่น แผนผลิตประจำสัปดาห์ KC 30-6-69.xlsx)</p>
-                </div>
-                
-                <!-- Upload Dropzone B -->
-                <div id="dropzone-b" class="border-2 border-dashed border-outline-variant rounded p-md flex flex-col items-center justify-center bg-white hover:bg-slate-50 transition-colors cursor-pointer min-h-[180px] text-center my-md w-full shadow-sm">
-                    <svg class="w-8 h-8 text-primary mb-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0 3 3m-3-3-3 3M6.75 19.5a4.5 4.5 0 0 1-1.41-8.775 a5.25 5.25 0 0 1 10.233-2.33 a3 3 0 0 1 3.758 3.848A3.752 3.752 0 0 1 18 19.5H6.75Z" />
-                    </svg>
-                    <span class="text-xs font-semibold text-on-surface mb-1">ลากไฟล์มาวาง หรือ คลิกเพื่ออัปโหลด</span>
-                    <span class="text-[10px] text-secondary">รองรับ .xlsx, .csv (สูงสุด 25 MB)</span>
-                </div>
-                
-                <!-- Input Element B (hidden) -->
-                <input type="file" id="input-b" class="hidden" accept=".xlsx,.csv" />
-                
-                <!-- Status Box B -->
-                <div id="status-b" class="hidden border border-slate-200 rounded p-md flex flex-col items-center justify-center bg-white min-h-[180px] text-center my-md w-full shadow-sm">
-                    <!-- Spinner State -->
-                    <div id="loading-b" class="hidden flex flex-col items-center justify-center my-auto">
-                        <span class="loader"></span>
-                        <span class="text-xs text-secondary font-medium">กำลังอัปโหลดและอ่านข้อมูลไฟล์...</span>
-                    </div>
-                    <!-- Success State -->
-                    <div id="success-b" class="hidden flex flex-col items-center justify-center my-auto">
-                        <div class="w-8 h-8 bg-green-50 text-green-600 rounded-full flex items-center justify-center border border-green-200/50 mb-xs shadow-sm">
-                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-                            </svg>
-                        </div>
-                        <span class="text-xs font-bold text-slate-800" id="filename-b"></span>
-                        <span class="text-[10px] text-secondary" id="details-b"></span>
-                        <button type="button" id="reset-b" class="text-[10px] text-primary underline mt-2 hover:text-primary/80">เปลี่ยนไฟล์</button>
-                    </div>
-                    <!-- Error State -->
-                    <div id="error-b" class="hidden flex flex-col items-center justify-center my-auto">
-                        <span class="text-xs text-error font-bold mb-1">โหลดไม่สำเร็จ</span>
-                        <span class="text-[10px] text-secondary px-sm mb-2" id="errormsg-b"></span>
-                        <button type="button" id="retry-b" class="text-[10px] text-primary underline hover:text-primary/80">ลองใหม่</button>
-                    </div>
-                </div>
-            </div>
-        </div>
 
-        <!-- Action Row -->
-        <div class="flex justify-end border-t border-slate-200 pt-lg gap-sm">
-            <button type="button" id="cancel-btn" class="border border-outline-variant hover:bg-slate-50 text-secondary font-semibold text-sm px-5 py-2.5 rounded transition-colors bg-white">
-                ยกเลิก
-            </button>
-            <button type="button" id="merge-btn" disabled class="bg-primary text-on-primary font-semibold text-sm px-6 py-2.5 rounded transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
-                เปรียบเทียบข้อมูล
-            </button>
+    <!-- Upload Section -->
+    <div id="step-1" class="bg-white rounded border border-outline-variant shadow-sm p-lg animate-fade-in">
+        <h3 class="font-headline-sm text-headline-sm text-on-surface mb-1">นำเข้าไฟล์ใบสั่งผลิต</h3>
+        <p class="text-secondary text-sm mb-lg">อัปโหลดไฟล์สั่งผลิตหลัก — ระบบจะนำเข้าและรอจับคู่แผนผลิต</p>
+
+        <div id="dropzone-master" class="border border-dashed border-primary/40 rounded p-xl flex flex-col items-center justify-center bg-sky-50/30 hover:bg-sky-50 transition-all cursor-pointer min-h-[220px] text-center mb-md w-full">
+            <svg class="dropzone-icon w-10 h-10 text-primary mb-sm transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0 3 3m-3-3-3 3M6.75 19.5a4.5 4.5 0 0 1-1.41-8.775 a5.25 5.25 0 0 1 10.233-2.33 a3 3 0 0 1 3.758 3.848A3.752 3.752 0 0 1 18 19.5H6.75Z" />
+            </svg>
+            <span class="dropzone-label text-sm font-semibold text-slate-700 mb-0.5 transition-colors">คลิกหรือลากไฟล์มาวาง</span>
+            <span class="text-xs text-secondary">รองรับ .xlsx, .csv</span>
+        </div>
+        <input type="file" id="input-master" class="hidden" accept=".xlsx,.csv" />
+
+        <div id="status-master" class="hidden border border-outline-variant rounded p-lg flex flex-col items-center justify-center bg-white min-h-[220px] text-center mb-md">
+            <div id="loading-master" class="hidden flex-col items-center justify-center w-full">
+                <span class="loader mb-4"></span>
+                <span class="text-sm font-medium text-slate-700">กำลังอัปโหลดและประมวลผล...</span>
+            </div>
         </div>
     </div>
+
+    <!-- Step 2: Preview -->
+    <div id="step-2" class="hidden bg-white rounded border border-outline-variant shadow-sm p-lg animate-fade-in">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-md mb-md pb-md border-b border-slate-100">
+            <div class="shrink-0">
+                <h3 class="font-bold text-slate-800 text-lg">ตรวจสอบข้อมูลก่อนบันทึก</h3>
+                <p class="text-slate-400 text-xs mt-1">พบข้อมูลทั้งหมด <span id="preview-total-count" class="font-extrabold text-primary">0</span> รายการ (ไม่ซ้ำกัน)</p>
+            </div>
+            
+            <div id="save-actions-normal" class="flex items-center gap-sm shrink-0">
+                <button type="button" id="btn-cancel-preview" class="border border-slate-200 text-slate-600 px-md py-2.5 rounded text-xs font-bold hover:bg-slate-50 transition-colors">
+                    ยกเลิก/เปลี่ยนไฟล์
+                </button>
+                <button type="button" id="btn-save-master" class="bg-primary hover:bg-primary/95 text-on-primary px-md py-2.5 rounded text-xs font-bold shadow-sm transition-all flex items-center gap-sm btn-interactive">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                    </svg>
+                    ยืนยันการบันทึกเข้าระบบ
+                </button>
+            </div>
+
+            <div id="save-actions-naming" class="hidden flex items-center gap-sm shrink-0">
+                <div class="w-64">
+                    <input type="text" id="input-report-name" class="w-full pl-3 pr-3 py-2 border border-slate-200 rounded text-xs focus:ring-1 focus:ring-primary focus:border-primary outline-none font-semibold text-slate-700" placeholder="กรอกชื่อรายงานนี้..." />
+                </div>
+                <button type="button" id="btn-confirm-save-master" class="bg-primary hover:bg-primary/95 text-on-primary border border-transparent px-4 py-2.5 rounded text-xs font-bold shadow-sm transition-all flex items-center gap-sm whitespace-nowrap btn-interactive">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                    </svg>
+                    บันทึกข้อมูล
+                </button>
+                <button type="button" id="btn-back-to-actions" class="border border-slate-200 text-slate-500 px-3 py-2.5 rounded text-xs font-bold hover:bg-slate-50 transition-colors whitespace-nowrap">
+                    ย้อนกลับ
+                </button>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto overflow-y-auto rounded border border-outline-variant min-h-[300px]" style="max-height: calc(100vh - 250px);">
+            <table class="w-full text-left border-collapse min-w-[1000px]">
+                <thead class="sticky top-0 z-10 text-slate-600 font-bold" style="font-size: 13px;">
+                    <tr class="bg-slate-100 border-b border-slate-200">
+                        <th class="px-3 py-2.5 bg-slate-100 w-14 text-center">#</th>
+                        <th class="px-3 py-2.5 bg-slate-100 text-left">เลขที่อนุมัติ (สั่งผลิต)</th>
+                        <th class="px-3 py-2.5 bg-slate-100 text-center">วันที่อนุมัติ</th>
+                        <th class="px-3 py-2.5 bg-slate-100 text-center">ปภ.ความเร่งด่วน</th>
+                        <th class="px-3 py-2.5 bg-slate-100 text-center">จำนวนชิ้น</th>
+                        <th class="px-3 py-2.5 bg-slate-100 text-right">ราคาที่ผู้ผลิตเสนอ</th>
+                        <th class="px-3 py-2.5 bg-slate-100 w-1/3 text-left">หมายเหตุ / รายละเอียด</th>
+                    </tr>
+                </thead>
+                <tbody id="preview-tbody" class="divide-y divide-slate-200 bg-white text-xs font-medium text-slate-800">
+                    <!-- Preview rows go here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+
 </div>
 
-<script>
-document.addEventListener("DOMContentLoaded", function() {
-    // DOM Cache for Slot A
-    const dropzoneA = document.getElementById("dropzone-a");
-    const inputA = document.getElementById("input-a");
-    const statusA = document.getElementById("status-a");
-    const loadingA = document.getElementById("loading-a");
-    const successA = document.getElementById("success-a");
-    const errorA = document.getElementById("error-a");
-    const filenameA = document.getElementById("filename-a");
-    const detailsA = document.getElementById("details-a");
-    const errormsgA = document.getElementById("errormsg-a");
-    const resetA = document.getElementById("reset-a");
-    const retryA = document.getElementById("retry-a");
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            let sessionMaster = null;
 
-    // DOM Cache for Slot B
-    const dropzoneB = document.getElementById("dropzone-b");
-    const inputb = document.getElementById("input-b");
-    const statusB = document.getElementById("status-b");
-    const loadingB = document.getElementById("loading-b");
-    const successB = document.getElementById("success-b");
-    const errorB = document.getElementById("error-b");
-    const filenameB = document.getElementById("filename-b");
-    const detailsB = document.getElementById("details-b");
-    const errormsgB = document.getElementById("errormsg-b");
-    const resetB = document.getElementById("reset-b");
-    const retryB = document.getElementById("retry-b");
-
-    const mergeBtn = document.getElementById("merge-btn");
-    const cancelBtn = document.getElementById("cancel-btn");
-
-    let sessionIdA = null;
-    let sessionIdB = null;
-
-    let abortA = null;
-    let abortB = null;
-
-    // --- SETUP SLOT A ---
-    dropzoneA.addEventListener("click", () => inputA.click());
-    dropzoneA.addEventListener("dragover", (e) => { 
-        e.preventDefault(); 
-        dropzoneA.classList.add("bg-sky-50", "border-primary", "scale-[1.01]", "shadow-md"); 
-    });
-    dropzoneA.addEventListener("dragleave", (e) => { 
-        e.preventDefault(); 
-        dropzoneA.classList.remove("bg-sky-50", "border-primary", "scale-[1.01]", "shadow-md"); 
-    });
-    dropzoneA.addEventListener("drop", (e) => {
-        e.preventDefault();
-        dropzoneA.classList.remove("bg-sky-50", "border-primary", "scale-[1.01]", "shadow-md");
-        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-            validateAndUpload(e.dataTransfer.files[0], 'A');
-        }
-    });
-    inputA.addEventListener("change", () => {
-        if (inputA.files && inputA.files.length > 0) {
-            validateAndUpload(inputA.files[0], 'A');
-        }
-    });
-
-    // --- SETUP SLOT B ---
-    dropzoneB.addEventListener("click", () => inputb.click());
-    dropzoneB.addEventListener("dragover", (e) => { 
-        e.preventDefault(); 
-        dropzoneB.classList.add("bg-sky-50", "border-primary", "scale-[1.01]", "shadow-md"); 
-    });
-    dropzoneB.addEventListener("dragleave", (e) => { 
-        e.preventDefault(); 
-        dropzoneB.classList.remove("bg-sky-50", "border-primary", "scale-[1.01]", "shadow-md"); 
-    });
-    dropzoneB.addEventListener("drop", (e) => {
-        e.preventDefault();
-        dropzoneB.classList.remove("bg-sky-50", "border-primary", "scale-[1.01]", "shadow-md");
-        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-            validateAndUpload(e.dataTransfer.files[0], 'B');
-        }
-    });
-    inputb.addEventListener("change", () => {
-        if (inputb.files && inputb.files.length > 0) {
-            validateAndUpload(inputb.files[0], 'B');
-        }
-    });
-
-    // Reset handlers
-    resetA.addEventListener("click", () => clearSlot('A'));
-    retryA.addEventListener("click", () => clearSlot('A'));
-    resetB.addEventListener("click", () => clearSlot('B'));
-    retryB.addEventListener("click", () => clearSlot('B'));
-
-    cancelBtn.addEventListener("click", () => {
-        clearSlot('A');
-        clearSlot('B');
-        window.location.href = "/Home";
-    });
-
-    function validateAndUpload(file, slot) {
-        const allowedExtensions = [".xlsx", ".csv"];
-        const fileName = file.name;
-        const fileExt = fileName.substring(fileName.lastIndexOf(".")).toLowerCase();
-
-        if (!allowedExtensions.includes(fileExt)) {
-            showSlotError(slot, "ไม่รองรับไฟล์ประเภทนี้ กรุณาเลือก .xlsx หรือ .csv");
-            return;
-        }
-
-        const maxFileSize = 25 * 1024 * 1024;
-        if (file.size > maxFileSize) {
-            showSlotError(slot, "ไฟล์มีขนาดใหญ่เกินไป (สูงสุด 25 MB)");
-            return;
-        }
-
-        uploadFile(file, slot);
-    }
-
-    function uploadFile(file, slot) {
-        showSlotLoading(slot);
-
-        const controller = new AbortController();
-        if (slot === 'A') abortA = controller;
-        else abortB = controller;
-
-        const formData = new FormData();
-        formData.append("file", file);
-
-        fetch("/FileImport/UploadFile", {
-            method: "POST",
-            body: formData,
-            signal: controller.signal
-        })
-        .then(response => {
-            if (!response.ok) throw new Error("HTTP error " + response.status);
-            return response.json();
-        })
-        .then(data => {
-            if (data.success) {
-                showSlotSuccess(slot, file.name, data);
-            } else {
-                showSlotError(slot, data.error);
+            // --- Navigation Functions ---
+            function showUploadForm() {
+                document.getElementById('step-1').classList.remove('hidden');
+                document.getElementById('step-2').classList.add('hidden');
             }
-        })
-        .catch(err => {
-            if (err.name !== 'AbortError') {
-                showSlotError(slot, "เกิดข้อผิดพลาดในการติดต่อเซิร์ฟเวอร์");
+
+            function showPreviewForm() {
+                document.getElementById('step-1').classList.add('hidden');
+                document.getElementById('step-2').classList.remove('hidden');
             }
+
+            // --- Reusable Dropzone Setup (drag feedback + file type hint) ---
+            function setupDropzone(dropzone, input, onFile) {
+                let dragCounter = 0;
+
+                dropzone.addEventListener('click', () => input.click());
+
+                dropzone.addEventListener("dragenter", (e) => {
+                    e.preventDefault();
+                    dragCounter++;
+                    dropzone.classList.add("dropzone-active");
+                });
+
+                dropzone.addEventListener("dragover", (e) => {
+                    e.preventDefault();
+                    const items = e.dataTransfer.items;
+                    if (items && items.length > 0) {
+                        const fileType = items[0].type;
+                        const isValid = !fileType || fileType.includes('sheet') || fileType.includes('csv') || fileType.includes('excel');
+                        dropzone.classList.toggle('border-red-400', !isValid);
+                        dropzone.classList.toggle('bg-red-50/30', !isValid);
+                    }
+                });
+
+                dropzone.addEventListener("dragleave", (e) => {
+                    e.preventDefault();
+                    dragCounter--;
+                    if (dragCounter <= 0) {
+                        dragCounter = 0;
+                        dropzone.classList.remove("dropzone-active", "border-red-400", "bg-red-50/30");
+                    }
+                });
+
+                dropzone.addEventListener("drop", (e) => {
+                    e.preventDefault();
+                    dragCounter = 0;
+                    dropzone.classList.remove("dropzone-active", "border-red-400", "bg-red-50/30");
+                    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                        onFile(e.dataTransfer.files[0]);
+                    }
+                });
+
+                input.addEventListener('change', () => {
+                    if (input.files && input.files.length > 0) onFile(input.files[0]);
+                });
+            }
+
+            // --- Step 1: Upload Master ---
+            const dropzoneMaster = document.getElementById('dropzone-master');
+            const inputMaster = document.getElementById('input-master');
+
+            setupDropzone(dropzoneMaster, inputMaster, processMasterFile);
+
+            function processMasterFile(file) {
+                dropzoneMaster.classList.add('hidden');
+                document.getElementById('status-master').classList.remove('hidden');
+                document.getElementById('loading-master').classList.remove('hidden');
+                document.getElementById('loading-master').classList.add('flex');
+
+                const formData = new FormData();
+                formData.append("file", file);
+
+                fetch("/FileImport/UploadFile", { method: "POST", body: formData })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            sessionMaster = data.sessionId;
+                            return fetch("/FileMerge/PreviewMasterFile?sessionId=" + sessionMaster, { method: "POST" });
+                        } else {
+                            throw new Error(data.error);
+                        }
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            document.getElementById('preview-total-count').textContent = data.totalCount;
+                            const tbody = document.getElementById('preview-tbody');
+                            tbody.innerHTML = "";
+                            let idx = 1;
+                            data.items.slice(0, 500).forEach(item => {
+                                const formattedAmount = item.amount ? '฿' + Number(item.amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '฿0.00';
+                                tbody.innerHTML += `
+                                    <tr class="hover:bg-slate-50/50 transition-colors">
+                                        <td class="px-3 py-2.5 text-center text-slate-400 font-mono">${idx++}</td>
+                                        <td class="px-3 py-2.5 text-left font-mono font-bold text-primary">${item.poNumber}</td>
+                                        <td class="px-3 py-2.5 text-center text-slate-600">${item.approvedDate}</td>
+                                        <td class="px-3 py-2.5 text-center text-slate-500">${item.urgency || '-'}</td>
+                                        <td class="px-3 py-2.5 text-center font-bold text-slate-900">${item.quantity}</td>
+                                        <td class="px-3 py-2.5 text-right font-mono text-slate-700">${formattedAmount}</td>
+                                        <td class="px-3 py-2.5 text-left text-slate-500 truncate max-w-[280px]" title="${item.remarks}">${item.remarks || '-'}</td>
+                                    </tr>
+                                `;
+                            });
+                            showPreviewForm();
+                        } else {
+                            throw new Error(data.error);
+                        }
+                    })
+                    .catch(err => {
+                        Swal.fire('Error', err.message, 'error');
+                        resetMasterUpload();
+                    });
+            }
+
+            function resetMasterUpload() {
+                inputMaster.value = "";
+                sessionMaster = null;
+                dropzoneMaster.classList.remove('hidden');
+                document.getElementById('status-master').classList.add('hidden');
+                document.getElementById('loading-master').classList.add('hidden');
+                document.getElementById('loading-master').classList.remove('flex');
+            }
+
+            document.getElementById('btn-cancel-preview').addEventListener('click', () => {
+                resetMasterUpload();
+                showUploadForm();
+            });
+
+            // --- Save Actions Inline Naming Flow ---
+            const saveActionsNormal = document.getElementById('save-actions-normal');
+            const saveActionsNaming = document.getElementById('save-actions-naming');
+            const btnSaveMaster = document.getElementById('btn-save-master');
+            const btnBackToActions = document.getElementById('btn-back-to-actions');
+            const btnConfirmSaveMaster = document.getElementById('btn-confirm-save-master');
+            const inputReportName = document.getElementById('input-report-name');
+
+            btnSaveMaster.addEventListener('click', () => {
+                // Generate default report name
+                const dateStr = new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' }).replace(/ /g, '_');
+                const defaultName = "รายงานสั่งผลิต_" + dateStr;
+
+                inputReportName.value = defaultName;
+                inputReportName.classList.remove('border-red-500', 'focus:ring-red-500', 'focus:border-red-500');
+
+                // Toggle visibility
+                saveActionsNormal.classList.add('hidden');
+                saveActionsNaming.classList.remove('hidden');
+                inputReportName.focus();
+                inputReportName.select();
+            });
+
+            btnBackToActions.addEventListener('click', () => {
+                saveActionsNormal.classList.remove('hidden');
+                saveActionsNaming.classList.add('hidden');
+            });
+
+            btnConfirmSaveMaster.addEventListener('click', () => {
+                const reportName = inputReportName.value.trim();
+
+                if (!reportName) {
+                    inputReportName.classList.add('border-red-500', 'focus:ring-red-500', 'focus:border-red-500');
+                    inputReportName.focus();
+                    return;
+                } else {
+                    inputReportName.classList.remove('border-red-500', 'focus:ring-red-500', 'focus:border-red-500');
+                }
+
+                Swal.fire({
+                    title: 'กำลังบันทึกข้อมูล...',
+                    allowOutsideClick: false,
+                    didOpen: () => { Swal.showLoading(); }
+                });
+
+                fetch(`/FileMerge/ConfirmSaveMaster?sessionId=${sessionMaster}&reportName=${encodeURIComponent(reportName)}`, { method: "POST" })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'บันทึกสำเร็จ!',
+                                text: `บันทึก ${data.totalCount} รายการเข้าระบบเรียบร้อย`,
+                                showCancelButton: true,
+                                confirmButtonText: 'ไปดูรายงาน',
+                                cancelButtonText: 'อัปโหลดไฟล์เพิ่ม',
+                                confirmButtonColor: '#00288e',
+                                cancelButtonColor: '#94a3b8',
+                                allowOutsideClick: false
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    window.location.href = "/Report";
+                                } else {
+                                    window.location.reload();
+                                }
+                            });
+                        } else {
+                            Swal.fire('Error', data.error, 'error');
+                        }
+                    })
+                    .catch(err => {
+                        Swal.fire('Error', err.message, 'error');
+                    });
+            });
         });
-    }
-
-    function showSlotLoading(slot) {
-        if (slot === 'A') {
-            dropzoneA.classList.add("hidden");
-            statusA.classList.remove("hidden");
-            loadingA.classList.remove("hidden");
-            successA.classList.add("hidden");
-            errorA.classList.add("hidden");
-        } else {
-            dropzoneB.classList.add("hidden");
-            statusB.classList.remove("hidden");
-            loadingB.classList.remove("hidden");
-            successB.classList.add("hidden");
-            errorB.classList.add("hidden");
-        }
-    }
-
-    function showSlotSuccess(slot, name, data) {
-        if (slot === 'A') {
-            sessionIdA = data.sessionId;
-            loadingA.classList.add("hidden");
-            successA.classList.remove("hidden");
-            filenameA.textContent = name;
-            detailsA.textContent = data.fileType === "csv" ? `พบ ${data.totalRows} แถว` : `พบ ${data.sheetCount} ชีท`;
-        } else {
-            sessionIdB = data.sessionId;
-            loadingB.classList.add("hidden");
-            successB.classList.remove("hidden");
-            filenameB.textContent = name;
-            detailsB.textContent = data.fileType === "csv" ? `พบ ${data.totalRows} แถว` : `พบ ${data.sheetCount} ชีท`;
-        }
-        checkMergeState();
-    }
-
-    function showSlotError(slot, msg) {
-        if (slot === 'A') {
-            dropzoneA.classList.add("hidden");
-            statusA.classList.remove("hidden");
-            loadingA.classList.add("hidden");
-            successA.classList.add("hidden");
-            errorA.classList.remove("hidden");
-            errormsgA.textContent = msg;
-        } else {
-            dropzoneB.classList.add("hidden");
-            statusB.classList.remove("hidden");
-            loadingB.classList.add("hidden");
-            successB.classList.add("hidden");
-            errorB.classList.remove("hidden");
-            errormsgB.textContent = msg;
-        }
-        checkMergeState();
-    }
-
-    function clearSlot(slot) {
-        if (slot === 'A') {
-            if (abortA) abortA.abort();
-            sessionIdA = null;
-            inputA.value = "";
-            dropzoneA.classList.remove("hidden");
-            statusA.classList.add("hidden");
-        } else {
-            if (abortB) abortB.abort();
-            sessionIdB = null;
-            inputb.value = "";
-            dropzoneB.classList.remove("hidden");
-            statusB.classList.add("hidden");
-        }
-        checkMergeState();
-    }
-
-    function checkMergeState() {
-        if (sessionIdA && sessionIdB) {
-            mergeBtn.disabled = false;
-        } else {
-            mergeBtn.disabled = true;
-        }
-    }
-
-    // Handle Merge Click
-    mergeBtn.addEventListener("click", () => {
-        if (sessionIdA && sessionIdB) {
-            mergeBtn.disabled = true;
-            mergeBtn.innerHTML = `
-                <span class="flex items-center gap-2">
-                    <svg class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    กำลังประมวลผลเปรียบเทียบ...
-                </span>
-            `;
-            let overlay = document.createElement("div");
-            overlay.className = "fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex flex-col items-center justify-center p-4";
-            overlay.innerHTML = `
-                <div class="bg-white rounded-lg p-6 max-w-sm w-full shadow-xl flex flex-col items-center text-center border border-slate-100">
-                    <span class="loader"></span>
-                    <h4 class="text-sm font-bold text-slate-800 mb-1">กำลังเปรียบเทียบข้อมูลไฟล์...</h4>
-                    <p class="text-xs text-slate-500">ระบบกำลังจับคู่รายการสั่งซื้อและแผนผลิตประจำสัปดาห์</p>
-                </div>
-            `;
-            document.body.appendChild(overlay);
-
-            setTimeout(() => {
-                window.location.href = `/FileMerge/ProcessMerge?sessionIdA=${sessionIdA}&sessionIdB=${sessionIdB}`;
-            }, 600);
-        }
-    });
-
-    // Reset file uploads on page show or history back
-    window.addEventListener("pageshow", function (event) {
-        clearSlot('A');
-        clearSlot('B');
-    });
-});
-</script>
+    </script>
+}

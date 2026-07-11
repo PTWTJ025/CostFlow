@@ -28,6 +28,11 @@ namespace CostFlow.Services
 
             foreach (var worksheet in workbook.Worksheets)
             {
+                if (worksheet.Visibility != XLWorksheetVisibility.Visible)
+                {
+                    continue;
+                }
+
                 var importedSheet = new ImportedSheet
                 {
                     SheetName = worksheet.Name,

@@ -10,7 +10,7 @@ using CostFlow.Services;
 namespace CostFlow.Controllers
 {
     // Handles temporary file upload and caching for both FileImport and FileMerge workflows
-    [Authorize]
+    [Authorize(Roles = "Admin")]
     public class FileImportController : Controller
     {
         private readonly ExcelFileReader _excelReader;

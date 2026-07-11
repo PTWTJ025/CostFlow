@@ -43,41 +43,30 @@ namespace CostFlow.Controllers
                     .CountAsync();
             }
             
-            var querySessions = _context.ImportSessions.AsQueryable();
-            if (!isAdmin && !string.IsNullOrEmpty(currentUserId))
-            {
-                querySessions = querySessions.Where(s => s.UserId == currentUserId);
-            }
-
-            var sessions = await querySessions
-                .OrderByDescending(s => s.CreatedAt)
+            // Query จาก Reports table แทน
+            var groupedReports = await _context.Reports
+                .OrderByDescending(r => r.CreatedAt)
+                .Select(r => new ReportSummaryViewModel
+                {
+                    ReportName = r.ReportName,
+                    TotalRows = r.TotalPOs,
+                    MatchedRows = r.MatchedPOs,
+                    CreatedAt = r.CreatedAt,
+                    CompareFileName = r.OriginalFileName
+                })
                 .ToListAsync();
 
-            int totalMergedReports = sessions.Count;
+            int totalMergedReports = groupedReports.Count;
             double avgSuccessRate = 0;
-            var recentReports = new System.Collections.Generic.List<ReportSummaryViewModel>();
+            var recentReports = groupedReports.Take(3).ToList();
 
             if (totalMergedReports > 0)
             {
                 double totalAccuracy = 0;
-                foreach (var session in sessions)
+                foreach (var report in groupedReports)
                 {
-                    int totalRows = session.MatchedCount + session.UnmatchedCount;
-                    int matchedRows = session.MatchedCount;
-                    double accuracy = totalRows > 0 ? (double)matchedRows / totalRows * 100 : 0;
+                    double accuracy = report.TotalRows > 0 ? (double)report.MatchedRows / report.TotalRows * 100 : 0;
                     totalAccuracy += accuracy;
-
-                    if (recentReports.Count < 3)
-                    {
-                        recentReports.Add(new ReportSummaryViewModel
-                        {
-                            SessionId = session.Id,
-                            ReportName = session.SourceFileName + " & " + session.CompareFileName,
-                            CreatedAt = session.CreatedAt,
-                            TotalRows = totalRows,
-                            MatchedRows = matchedRows
-                        });
-                    }
                 }
                 avgSuccessRate = Math.Round(totalAccuracy / totalMergedReports, 1);
             }

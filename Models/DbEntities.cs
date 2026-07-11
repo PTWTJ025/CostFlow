@@ -85,4 +85,105 @@ namespace CostFlow.Models
         public DateTime? ReceiveDate { get; set; }
         public DateTime CreatedAt { get; set; }
     }
+    // ตารางรายงานหลัก (ไฟล์สั่งผลิต)
+    public class Report
+    {
+        [Key]
+        public Guid Id { get; set; }
+        
+        [Required]
+        public string ReportName { get; set; } = string.Empty;
+        
+        public string OriginalFileName { get; set; } = string.Empty;
+        public int TotalPOs { get; set; }
+        public int MatchedPOs { get; set; }
+        public DateTime CreatedAt { get; set; }
+        
+        // Navigation property
+        public ICollection<OrderTrackingMaster> Orders { get; set; } = new List<OrderTrackingMaster>();
+        public ICollection<WeeklyPlan> WeeklyPlans { get; set; } = new List<WeeklyPlan>();
+    }
+
+    // ตาราง PO จากไฟล์สั่งผลิต
+    public class OrderTrackingMaster
+    {
+        [Key]
+        public Guid Id { get; set; }
+        
+        [Required]
+        public Guid ReportId { get; set; }
+        
+        [Required]
+        public string PoNumber { get; set; } = string.Empty;
+        public string? RequestDate { get; set; }
+        public string? ApprovedDate { get; set; }
+        public string? Urgency { get; set; }
+        public string? Amount { get; set; }
+        public string? Remarks { get; set; }
+        public string? RemarksQuantity { get; set; }
+        
+        public string Status { get; set; } = "Pending";
+        
+        public DateTime CreatedAt { get; set; }
+        public DateTime UpdatedAt { get; set; }
+        
+        // Navigation properties
+        public Report Report { get; set; } = null!;
+        public ICollection<WeeklyPlanDetail> MatchedInWeeklyPlans { get; set; } = new List<WeeklyPlanDetail>();
+    }
+
+    // ตารางไฟล์แผนผลิตสัปดาห์
+    public class WeeklyPlan
+    {
+        [Key]
+        public Guid Id { get; set; }
+        
+        [Required]
+        public Guid ReportId { get; set; }
+        
+        public string FileName { get; set; } = string.Empty;
+        public string SheetName { get; set; } = string.Empty;
+        public int TotalRecords { get; set; }
+        public int MatchedCount { get; set; }
+        public DateTime UploadedAt { get; set; }
+        
+        // Navigation properties
+        public Report Report { get; set; } = null!;
+        public ICollection<WeeklyPlanDetail> Details { get; set; } = new List<WeeklyPlanDetail>();
+    }
+
+    // ตารางรายละเอียด PO ในไฟล์แผนผลิต
+    public class WeeklyPlanDetail
+    {
+        [Key]
+        public Guid Id { get; set; }
+        
+        [Required]
+        public Guid WeeklyPlanId { get; set; }
+        
+        public string? PoNumberInFile { get; set; }
+        public string? Department { get; set; }
+        public string? OrderName { get; set; }
+        public string? OrderStatus { get; set; }
+        public string? DeliveryTarget { get; set; }
+        public string? Price { get; set; }
+        
+        public int RowIndex { get; set; }
+        public bool IsMatched { get; set; }
+        public Guid? MatchedOrderId { get; set; }
+        
+        // Navigation properties
+        public WeeklyPlan WeeklyPlan { get; set; } = null!;
+        public OrderTrackingMaster? MatchedOrder { get; set; }
+    }
+
+    public class ReportSummaryViewModel
+    {
+        public Guid SessionId { get; set; }
+        public string ReportName { get; set; } = string.Empty;
+        public string CompareFileName { get; set; } = string.Empty;
+        public DateTime CreatedAt { get; set; }
+        public int TotalRows { get; set; }
+        public int MatchedRows { get; set; }
+    }
 }

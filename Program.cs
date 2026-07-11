@@ -109,6 +109,40 @@ using (var scope = app.Services.CreateScope())
     }
     catch { /* Suppress exception if column already exists */ }
 
+    try
+    {
+        db.Database.ExecuteSqlRaw(@"
+            CREATE TABLE IF NOT EXISTS `OrderTrackingMasters` (
+                `PoNumber` varchar(255) NOT NULL,
+                `RequestDate` longtext NULL,
+                `ApprovedDate` longtext NULL,
+                `Urgency` longtext NULL,
+                `Amount` longtext NULL,
+                `Remarks` longtext NULL,
+                `RemarksQuantity` longtext NULL,
+                `Status` longtext NULL,
+                `DeliveryTargetDate` longtext NULL,
+                `MatchedSourceFile` longtext NULL,
+                `MasterSourceFile` longtext NULL,
+                `CreatedAt` datetime(6) NOT NULL,
+                `UpdatedAt` datetime(6) NOT NULL,
+                PRIMARY KEY (`PoNumber`)
+            ) CHARACTER SET utf8mb4;
+        ");
+        
+        try {
+            db.Database.ExecuteSqlRaw("ALTER TABLE `OrderTrackingMasters` ADD COLUMN `MasterSourceFile` longtext NULL;");
+        } catch { } // ignore if already exists
+
+        try {
+            db.Database.ExecuteSqlRaw("ALTER TABLE `WeeklyPlanDetails` ADD COLUMN `Price` longtext NULL;");
+        } catch { } // ignore if already exists
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error creating OrderTrackingMasters: {ex.Message}");
+    }
+
     // 2. Seed Product Prices only if the table is empty
     if (!db.ProductPrices.Any())
     {

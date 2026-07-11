@@ -1,178 +1,183 @@
-@model List<CostFlow.Models.MergeResult>
+@model List<CostFlow.Models.OrderTrackingMaster>
 @{
-    string reportName = (string)ViewData["ReportName"] ?? "รายงานการรวมข้อมูล";
-    Guid sessionId = (Guid)ViewData["SessionId"];
-    DateTime createdAt = (DateTime)ViewData["CreatedAt"];
-
-    ViewData["Title"] = $"รายละเอียดรายงาน - {reportName}";
-    ViewData["HeaderTitle"] = "รายละเอียดรายงาน (Report Details)";
-
-    int totalCount = Model.Count;
-    int matchedCount = Model.Count(r => r.IsMatched);
-    int unmatchedCount = totalCount - matchedCount;
-    double successRate = totalCount > 0 ? Math.Round((double)matchedCount / totalCount * 100, 1) : 0;
-
-    // Helper to format target delivery date
-    string FormatDeliveryCell(string? val)
-    {
-        if (string.IsNullOrEmpty(val)) return "-";
-        val = val.Trim();
-        if (val.StartsWith("นัดตอบเป้าหมาย"))
-        {
-            string rest = val.Substring("นัดตอบเป้าหมาย".Length).Trim();
-            if (string.IsNullOrEmpty(rest)) return "นัดตอบเป้าหมาย";
-            return "นัดตอบเป้าหมาย<br/>" + rest;
-        }
-        return val;
-    }
+    string reportName = ViewData["ReportName"] as string ?? "รายละเอียดใบสั่งผลิต";
+    DateTime createdAt = ViewData["CreatedAt"] as DateTime? ?? DateTime.Now;
+    int total = Model.Count;
+    int matchedCount = Model.Count(x => x.Status == "Matched");
+    int pendingCount = total - matchedCount;
+    double successRate = total > 0 ? (double)matchedCount / total * 100 : 0;
+    ViewData["Title"] = reportName;
+    ViewData["HeaderTitle"] = "รายละเอียดรายการสั่งผลิต";
+    var sortedModel = Model.OrderBy(x => x.Status == "Matched" ? 1 : 0).ThenBy(x => x.PoNumber).ToList();
 }
 
-<div class="flex-1 p-md md:p-lg lg:p-xl flex flex-col gap-lg max-w-[88vw] mx-auto w-full">
-    <!-- Top Nav Action Bar -->
-    <div class="flex justify-between items-center bg-white rounded border border-outline-variant shadow-sm px-md py-3">
-        <a href="/Report" class="text-xs text-secondary hover:text-primary transition-colors flex items-center gap-xs font-semibold">
-            <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
-            </svg>
-            ย้อนกลับไปหน้ารายงานทั้งหมด
-        </a>
-
-        <a href="/Report/ExportReport?sessionId=@sessionId" class="bg-primary hover:bg-primary/95 text-on-primary text-xs font-bold px-lg py-2 rounded transition-colors shadow-sm flex items-center gap-sm">
-            <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
-            </svg>
-            ส่งออกไฟล์ Excel (.xlsx)
-        </a>
-    </div>
-
-    <!-- Report Metrics Section -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-md">
-        <!-- Metric 1: Total -->
-        <div class="bg-white rounded border border-outline-variant shadow-sm p-md flex flex-col justify-between">
-            <span class="text-slate-500 font-semibold text-[10px] uppercase tracking-wider block mb-1">จำนวนรายการทั้งหมด</span>
-            <div class="flex items-baseline justify-between">
-                <span class="text-headline-md text-slate-800 font-bold font-mono">@totalCount.ToString("N0")</span>
-                <span class="text-xs text-slate-400">รายการ</span>
-            </div>
+<div class="flex-1 p-md md:p-lg flex flex-col gap-md max-w-container-max mx-auto w-full">
+    <div class="flex items-center gap-sm mb-xs">
+        <div class="flex-1 min-w-0">
+            <h3 class="font-headline-sm text-headline-sm text-on-surface mb-0">@reportName</h3>
+            <p class="text-secondary text-xs">นำเข้าข้อมูล @createdAt.ToString("dd/MM/yyyy HH:mm")</p>
         </div>
-
-        <!-- Metric 2: Matched -->
-        <div class="bg-white rounded border border-outline-variant shadow-sm p-md flex flex-col justify-between border-l-4 border-l-emerald-500">
-            <span class="text-slate-500 font-semibold text-[10px] uppercase tracking-wider block mb-1">ตรงตามแผนผลิต</span>
-            <div class="flex items-baseline justify-between">
-                <span class="text-headline-md text-emerald-700 font-bold font-mono">@matchedCount.ToString("N0")</span>
-                <span class="text-xs text-emerald-600 font-semibold">@successRate%</span>
+        <div class="flex items-center gap-2 shrink-0">
+            <div class="w-32 bg-slate-200 rounded-full h-2 overflow-hidden">
+                <div class="h-2 rounded-full transition-all @(successRate == 100 ? "bg-emerald-500" : "bg-primary")" style="width: @successRate.ToString("0.0")%"></div>
             </div>
-        </div>
-
-        <!-- Metric 3: Unmatched -->
-        <div class="bg-white rounded border border-outline-variant shadow-sm p-md flex flex-col justify-between border-l-4 border-l-rose-500">
-            <span class="text-slate-500 font-semibold text-[10px] uppercase tracking-wider block mb-1">ไม่มีการสั่งซื้อ</span>
-            <div class="flex items-baseline justify-between">
-                <span class="text-headline-md text-rose-700 font-bold font-mono">@unmatchedCount.ToString("N0")</span>
-                <span class="text-xs text-rose-600 font-semibold">@(Math.Round(100 - successRate, 1))%</span>
-            </div>
-        </div>
-
-        <!-- Metric 4: Date -->
-        <div class="bg-white rounded border border-outline-variant shadow-sm p-md flex flex-col justify-between">
-            <span class="text-slate-500 font-semibold text-[10px] uppercase tracking-wider block mb-1">วันที่สร้างรายงาน</span>
-            <div class="flex flex-col">
-                <span class="text-sm font-bold text-slate-700">@createdAt.ToString("dd MMM yyyy", new System.Globalization.CultureInfo("th-TH"))</span>
-                <span class="text-[11px] text-slate-400">เวลา @createdAt.ToString("HH:mm", new System.Globalization.CultureInfo("th-TH")) น.</span>
-            </div>
+            <span class="text-sm font-bold @(successRate == 100 ? "text-emerald-600" : "text-primary") whitespace-nowrap">@successRate.ToString("0.0")% (@matchedCount/@total)</span>
         </div>
     </div>
 
-    <!-- Main Data Table Card -->
-    <div class="bg-white rounded border border-outline-variant shadow-sm p-md md:p-lg lg:p-xl flex flex-col gap-md">
-        <div>
-            <h3 class="font-headline-sm text-headline-sm text-on-surface mb-xs">ตารางเปรียบเทียบข้อมูลสั่งผลิตชิ้นส่วน</h3>
-            <p class="text-xs text-secondary">ตารางแสดงสถานะการจัดซื้อและข้อมูลที่ตรงตามแผนผลิตประจำสัปดาห์</p>
+    <div class="bg-white rounded border border-outline-variant shadow-sm p-4 custom-toolbar">
+        <!-- Left Side: Search Input Box only -->
+        <div class="w-64 flex-shrink-0">
+            <input
+                id="po-search"
+                type="text"
+                placeholder="ค้นหาเลขที่อนุมัติ..."
+                class="block w-full border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+            >
         </div>
 
-        <!-- Search & Filter Controls -->
-        <div class="flex flex-col md:flex-row gap-sm justify-between items-stretch md:items-center">
-            <!-- Search bar -->
-            <div class="relative max-w-md w-full flex gap-2 z-30">
-                <div class="relative flex-1">
-                    <svg class="w-4 h-4 absolute left-3 top-3 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.602 10.602Z" />
+        <!-- Right Side: Both Status Filters and Action Buttons grouped together -->
+        <div class="custom-toolbar-right">
+            <!-- Status Filters -->
+            <div class="flex gap-2">
+                <button class="status-filter-btn active flex items-center justify-center bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 transition-all" data-filter="all">
+                    ทั้งหมด (@total)
+                </button>
+                <button class="status-filter-btn flex items-center justify-center bg-emerald-50 hover:bg-emerald-100 border border-emerald-500 text-emerald-700 transition-all" data-filter="matched">
+                    ได้แผนแล้ว (@matchedCount)
+                </button>
+                <button class="status-filter-btn flex items-center justify-center bg-amber-50 hover:bg-amber-100 border border-amber-500 text-amber-700 transition-all" data-filter="pending">
+                    รอแผนผลิต (@pendingCount)
+                </button>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex items-center gap-3 flex-wrap">
+                <button id="btn-open-upload-modal"
+                        class="flex items-center gap-2 btn-custom-amber shadow-sm transition-all active:scale-95">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="color: #b45309 !important;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V3m0 0L7.5 7.5M12 3l4.5 4.5M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5" />
                     </svg>
-                    <input id="table-search" class="w-full pl-9 pr-3 py-2 border border-outline-variant rounded text-xs focus:ring-1 focus:ring-primary focus:border-primary outline-none" placeholder="ค้นหาใบขออนุมัติ หรือเลขที่อนุมัติ..." type="text" autocomplete="off" />
-                    
-                    <!-- Search Suggestions List -->
-                    <div id="search-suggestions" class="hidden absolute left-0 right-0 mt-1 bg-white border border-slate-200 rounded shadow-lg z-50 max-h-48 overflow-y-auto divide-y divide-slate-100 font-mono text-xs"></div>
-                </div>
-                <button id="find-btn" class="bg-primary hover:bg-primary/95 text-on-primary text-xs font-bold px-4 py-2 rounded transition-colors shadow-sm whitespace-nowrap">
-                    ค้นหา
+                    <span>นำเข้าแผนผลิต</span>
+                    @if (pendingCount > 0)
+                    {
+                        <span class="bg-amber-200 text-amber-800 px-2 py-0.5 rounded-full text-xs font-bold">@pendingCount</span>
+                    }
                 </button>
-            </div>
 
-            <!-- Filter buttons -->
-            <div class="flex gap-xs bg-slate-100 p-1 rounded-sm text-xs self-start md:self-auto">
-                <button id="btn-filter-all" class="px-3 py-1 rounded-sm bg-white text-slate-800 font-bold shadow-sm border border-slate-200/50 filter-btn">
-                    ทั้งหมด (@totalCount)
+                <button type="button" id="btn-export-excel"
+                        class="flex items-center gap-2 btn-custom-blue-soft shadow-sm transition-all active:scale-95">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="color: #1d4ed8 !important;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v13.5m0 0L7.5 12m4.5 4.5L16.5 12M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5" />
+                    </svg>
+                    <span>ส่งออก Excel</span>
                 </button>
-                <button id="btn-filter-matched" class="px-3 py-1 rounded-sm text-slate-600 hover:text-slate-800 filter-btn">
-                    ตรงตามแผนผลิต (@matchedCount)
-                </button>
-                <button id="btn-filter-unmatched" class="px-3 py-1 rounded-sm text-slate-600 hover:text-slate-800 filter-btn">
-                    ไม่มีการสั่งซื้อ (@unmatchedCount)
+
+                <button type="button" id="btn-view-all-system"
+                        class="flex items-center gap-2 btn-custom-white shadow-sm transition-all active:scale-95">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="color: #475569 !important;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 12h16.5m-16.5-5.25h16.5m-16.5 10.5h16.5" />
+                    </svg>
+                    <span>ดูรายการทั้งหมด</span>
                 </button>
             </div>
         </div>
+    </div>
 
-        <!-- High-density Data Table -->
-        <div class="overflow-x-auto border border-outline-variant rounded max-h-[600px] overflow-y-auto">
-            <table class="min-w-full divide-y divide-slate-200 text-center" id="details-table">
-                <thead class="bg-slate-100 sticky top-0 z-10 text-xs text-slate-500 font-bold">
+    <div class="bg-white rounded border border-outline-variant shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full table-compact text-sm">
+                <thead class="bg-slate-100 border-b border-outline-variant">
                     <tr>
-                        <th class="px-2.5 py-2 w-[40px]">#</th>
-                        <th class="px-2.5 py-2">ใบขออนุมัติ<br/>(สั่งผลิต)</th>
-                        <th class="px-2.5 py-2">เลขที่อนุมัติ<br/>(แผนการผลิต)</th>
-                        <th class="px-2.5 py-2">วันที่อนุมัติ</th>
-                        <th class="px-2.5 py-2">ความเร่งด่วน</th>
-                        <th class="px-2.5 py-2">จำนวนชิ้น</th>
-                        <th class="px-2.5 py-2">มูลค่าสั่งผลิต</th>
-                        <th class="px-2.5 py-2 text-left">หมายเหตุเพิ่มเติม</th>
-                        <th class="px-2.5 py-2">เป้าหมายส่งมอบ</th>
-                        <th class="px-2.5 py-2 w-[140px]">สถานะ</th>
+                        <th class="text-center text-on-surface font-bold whitespace-nowrap">ลำดับ</th>
+                        <th class="text-center text-on-surface font-bold whitespace-nowrap">สถานะ</th>
+                        <th class="text-center text-on-surface font-bold whitespace-nowrap">เลขที่อนุมัติ</th>
+                        <th class="text-center text-on-surface font-bold whitespace-nowrap">วันที่อนุมัติ</th>
+                        <th class="text-center text-on-surface font-bold whitespace-nowrap">ปภ.ความเร่งด่วน</th>
+                        <th class="text-center text-on-surface font-bold whitespace-nowrap">ราคาที่ผู้ผลิตเสนอ</th>
+                        <th class="text-center text-on-surface font-bold whitespace-nowrap">จำนวน</th>
+                        <th class="text-center text-on-surface font-bold">รายละเอียด</th>
+                        <th class="text-center text-on-surface font-bold whitespace-nowrap">เป้าหมายส่งมอบ</th>
+                        <th class="text-center text-on-surface font-bold whitespace-nowrap">ข้อมูลแผนผลิต</th>
                     </tr>
                 </thead>
-                <tbody class="bg-white divide-y divide-slate-200 text-xs text-slate-800" id="table-body">
-                    @for (int i = 0; i < Model.Count; i++)
+                <tbody class="divide-y divide-outline-variant">
+                    @for (int i = 0; i < sortedModel.Count; i++)
                     {
-                        var row = Model[i];
-                        string displayPoNo = !string.IsNullOrEmpty(row.PoNumber) ? row.PoNumber.Trim() : "-";
-                        string displayPlanNo = !string.IsNullOrEmpty(row.PlanOrderNo) ? row.PlanOrderNo.Trim() : "-";
-                        string displayApprovedDate = row.ApprovedDate.HasValue ? row.ApprovedDate.Value.ToString("dd/MM/yyyy") : "-";
-                        string displayQty = row.Quantity.HasValue ? row.Quantity.Value.ToString("N0") : "-";
-                        string displayAmount = row.Amount.HasValue ? "฿" + row.Amount.Value.ToString("N2") : "-";
-                        string displayDeliveryDate = !string.IsNullOrEmpty(row.DeliveryTargetDate) ? row.DeliveryTargetDate : "-";
+                        var order = sortedModel[i];
+                        var isMatched = order.Status == "Matched";
+                        var hasWeeklyPlan = order.MatchedInWeeklyPlans.Any();
+                        var deliveryTarget = hasWeeklyPlan ? order.MatchedInWeeklyPlans.First().DeliveryTarget : "-";
 
-                        <tr class="hover:bg-slate-50/50 transition-all table-row-item cursor-pointer" data-matched="@(row.IsMatched.ToString().ToLower())">
-                            <td class="px-2 py-2 text-slate-400 font-mono">@(i + 1)</td>
-                            <td class="px-2 py-2 font-mono text-primary font-bold cell-po">@displayPoNo</td>
-                            <td class="px-2 py-2 font-mono text-slate-700 cell-plan">@displayPlanNo</td>
-                            <td class="px-2 py-2 text-slate-600 font-mono">@displayApprovedDate</td>
-                            <td class="px-2 py-2 text-slate-600 cell-urgency">@(row.Urgency ?? "-")</td>
-                            <td class="px-2 py-2 font-mono text-slate-700">@displayQty</td>
-                            <td class="px-2 py-2 font-mono text-slate-700">@displayAmount</td>
-                            <td class="px-2 py-2 text-left truncate max-w-[200px] text-slate-500 text-[11px] cell-remarks" title="@row.Remarks">@(row.Remarks ?? "-")</td>
-                            <td class="px-2 py-2 text-slate-600 font-mono cell-delivery">@Html.Raw(FormatDeliveryCell(displayDeliveryDate))</td>
-                            <td class="px-2 py-2 text-center">
-                                @if (row.IsMatched)
+                        <tr class="order-row hover:bg-slate-50 transition-colors text-sm" data-status="@(isMatched ? "matched" : "pending")" data-po="@order.PoNumber">
+                            <td class="text-secondary px-3 py-2 text-center">@(i + 1)</td>
+                            <td class="px-3 py-2 text-center">
+                                @if (isMatched)
                                 {
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200/50 text-[10px] font-bold">
-                                        ตรงตามแผนผลิต
+                                    <span class="badge-status badge-matched inline-flex items-center justify-center gap-1 px-2.5 py-1 text-xs font-medium rounded-lg whitespace-nowrap">
+                                        <svg style="transform: translateY(-1.5px);" class="w-3.5 h-3.5 shrink-0 !inline-block" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16zm3.857-9.809a.75.75 0 0 0-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.137-.089l4-5.5z" clip-rule="evenodd"/>
+                                        </svg>
+                                        <span class="leading-none">ได้แผนผลิตแล้ว</span>
                                     </span>
                                 }
                                 else
                                 {
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200/50 text-[10px] font-bold">
-                                        ไม่มีการสั่งซื้อ
+                                    <span class="badge-status badge-pending inline-flex items-center justify-center gap-1 px-2.5 py-1 text-xs font-medium rounded-lg whitespace-nowrap">
+                                        <svg style="transform: translateY(-1.5px);" class="w-3.5 h-3.5 shrink-0 !inline-block" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                        </svg>
+                                        <span class="leading-none">ยังไม่มีแผนผลิต</span>
                                     </span>
+                                }
+                            </td>
+                            <td class="font-medium text-on-surface text-center">@order.PoNumber</td>
+                            <td class="text-center text-secondary">@order.ApprovedDate</td>
+                            <td class="text-center text-secondary">@order.Urgency</td>
+                            @{
+                                var proposedPrice = hasWeeklyPlan 
+                                    ? order.MatchedInWeeklyPlans.OrderByDescending(wpd => wpd.WeeklyPlan.UploadedAt).First().Price 
+                                    : order.Amount;
+                                
+                                if (string.IsNullOrEmpty(proposedPrice) || proposedPrice == "-")
+                                {
+                                    proposedPrice = order.Amount;
+                                }
+
+                                decimal tempPrice;
+                                string displayProposedPrice = proposedPrice ?? "-";
+                                if (!string.IsNullOrEmpty(proposedPrice) && decimal.TryParse(proposedPrice.Replace("฿", "").Replace(",", "").Trim(), out tempPrice))
+                                {
+                                    displayProposedPrice = "฿" + tempPrice.ToString("N2");
+                                }
+                                else
+                                {
+                                    displayProposedPrice = "-";
+                                }
+                            }
+                            <td class="text-right font-medium text-on-surface">@displayProposedPrice</td>
+                            <td class="text-center text-secondary">@order.RemarksQuantity</td>
+                            <td class="text-secondary detail-cell text-left">@order.Remarks</td>
+                            <td class="text-center">
+                                @if (hasWeeklyPlan)
+                                {
+                                    <span class="text-xs font-bold text-blue-700">@deliveryTarget</span>
+                                }
+                                else
+                                {
+                                    <span class="text-secondary text-xs">-</span>
+                                }
+                            </td>
+                            <td class="text-center">
+                                @if (hasWeeklyPlan)
+                                {
+                                    <button class="btn-view-detail px-3 py-1 bg-primary hover:bg-primary/90 text-white text-xs font-bold rounded transition-colors" data-order-id="@order.Id">
+                                        ตรวจสอบ
+                                    </button>
+                                }
+                                else
+                                {
+                                    <span class="text-secondary text-xs">-</span>
                                 }
                             </td>
                         </tr>
@@ -183,221 +188,301 @@
     </div>
 </div>
 
-<script>
-// Custom alert helper to avoid browser alert() Kestrel popups
-function showCustomAlert(message, title = "แจ้งข้อความ") {
-    let modal = document.getElementById("custom-alert-modal");
-    if (!modal) {
-        modal = document.createElement("div");
-        modal.id = "custom-alert-modal";
-        modal.className = "fixed inset-0 z-50 flex items-center justify-center p-md bg-slate-900/50 backdrop-blur-sm transition-opacity duration-300 opacity-0 hidden";
-        modal.innerHTML = `
-            <div class="bg-white rounded-lg shadow-xl border border-slate-100 max-w-sm w-full overflow-hidden transform scale-95 transition-all duration-300">
-                <div class="px-lg py-md border-b border-slate-100 bg-slate-50/50">
-                    <h3 class="font-bold text-slate-800 text-sm" id="custom-alert-title"></h3>
+<div id="upload-modal" class="hidden fixed inset-0 modal-backdrop-premium flex items-center justify-center z-50 p-4">
+    <div class="modal-content-premium w-full max-w-lg">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+            <h3 class="text-base font-bold text-slate-800">นำเข้าไฟล์แผนผลิตสัปดาห์ (สูงสุด 5 ไฟล์)</h3>
+            <button id="btn-close-upload-modal" class="text-slate-400 hover:text-slate-600 transition p-1 hover:bg-slate-100 rounded-full">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <div style="padding: 24px;">
+            <div id="upload-step">
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider" style="margin-bottom: 12px; display: block;">อัปโหลดไฟล์ Excel (สูงสุด 5 ไฟล์)</label>
+                <div id="dropzone-area" class="border-2 border-dashed border-slate-200 rounded flex flex-col items-center justify-center bg-slate-50/30 hover:bg-slate-50/70 hover:border-slate-400 cursor-pointer transition-all" style="padding: 36px 24px; border-radius: 8px;">
+                    <input type="file" id="weeklyPlanFiles" multiple accept=".xlsx,.csv" class="hidden" />
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-slate-400" style="margin-bottom: 16px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
+                    </svg>
+                    <span class="text-sm font-semibold text-slate-600" style="margin-bottom: 6px; display: block; text-align: center;">ลากและวางไฟล์ที่นี่ หรือ คลิกเพื่อเลือกไฟล์</span>
+                    <span class="text-xs text-slate-400" style="text-align: center; display: block;">Excel (.xlsx) หรือ .csv สูงสุด 5 ไฟล์</span>
                 </div>
-                <div class="p-lg text-xs text-slate-600 leading-normal" id="custom-alert-message"></div>
-                <div class="px-lg py-md border-t border-slate-100 flex justify-end bg-slate-50/30">
-                    <button type="button" id="custom-alert-ok" class="bg-primary hover:bg-primary-container text-on-primary text-xs font-semibold px-5 py-2 rounded transition-colors shadow-sm">ตกลง</button>
+                <div id="files-list" style="margin-top: 16px; display: flex; flex-direction: column; gap: 8px;"></div>
+                <button id="btn-upload-files" class="hidden btn-custom-blue font-bold rounded shadow-sm" style="margin-top: 16px; width: 100%;">
+                    อัปโหลดและเลือก Sheet
+                </button>
+            </div>
+
+            <div id="sheet-selection-step" class="hidden">
+                <h4 class="text-sm font-bold text-slate-700" style="margin-bottom: 16px;">เลือก Sheet ที่ต้องการจากแต่ละไฟล์:</h4>
+                <div id="sheet-selectors" style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px;"></div>
+                <div style="display: flex; gap: 12px; margin-top: 24px;">
+                    <button id="btn-process-sheets" class="flex-1 btn-custom-green font-bold rounded shadow-sm">
+                        ดำเนินการจับคู่
+                    </button>
+                    <button id="btn-back-to-upload" class="flex-1 btn-custom-gray font-bold rounded">
+                        กลับไปเลือกไฟล์ใหม่
+                    </button>
                 </div>
             </div>
-        `;
-        document.body.appendChild(modal);
-    }
-    
-    document.getElementById("custom-alert-title").textContent = title;
-    document.getElementById("custom-alert-message").innerHTML = message;
-    
-    modal.classList.remove("hidden");
-    setTimeout(() => {
-        modal.classList.add("opacity-100");
-        modal.querySelector("div").classList.remove("scale-95");
-        modal.querySelector("div").classList.add("scale-100");
-    }, 10);
-    
-    return new Promise((resolve) => {
-        document.getElementById("custom-alert-ok").onclick = () => {
-            modal.classList.remove("opacity-100");
-            modal.querySelector("div").classList.remove("scale-100");
-            modal.querySelector("div").classList.add("scale-95");
-            setTimeout(() => {
-                modal.classList.add("hidden");
-                resolve();
-            }, 300);
+        </div>
+    </div>
+</div>
+
+@await Html.PartialAsync("_OrderDetailModal")
+
+
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="~/js/weekly-plan-upload.js"></script>
+    <script>
+        const formatPrice = (val) => {
+            if (val === null || val === undefined || val === '') return '-';
+            if (typeof val === 'number') {
+                return '฿' + val.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
+            const cleanStr = val.toString().replace(/[^\d.-]/g, '');
+            const num = parseFloat(cleanStr);
+            if (!isNaN(num)) {
+                return '฿' + num.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
+            return val;
         };
-    });
-}
 
-document.addEventListener("DOMContentLoaded", function() {
-    const searchInput = document.getElementById("table-search");
-    const findBtn = document.getElementById("find-btn");
-    const rows = document.querySelectorAll(".table-row-item");
-    const btnAll = document.getElementById("btn-filter-all");
-    const btnMatched = document.getElementById("btn-filter-matched");
-    const btnUnmatched = document.getElementById("btn-filter-unmatched");
-    const suggestionsDropdown = document.getElementById("search-suggestions");
+        // Initialize uploader
+        WeeklyPlanUploader.init('@Html.Raw(reportName)');
 
-    let currentFilter = "all"; // all, matched, unmatched
-    let currentSearch = "";
-
-    // Gather unique search keys from the table for autocomplete suggestions
-    function getSearchTerms() {
-        const terms = new Set();
-        rows.forEach(row => {
-            const po = row.querySelector(".cell-po").textContent.trim();
-            const plan = row.querySelector(".cell-plan").textContent.trim();
-            const remarks = row.querySelector(".cell-remarks") ? row.querySelector(".cell-remarks").textContent.trim() : "";
-            if (po && po !== "-") terms.add(po);
-            if (plan && plan !== "-") terms.add(plan);
-            if (remarks && remarks !== "-" && remarks.length < 30) terms.add(remarks);
-        });
-        return Array.from(terms).sort();
-    }
-
-    // Autocomplete dropdown input handler
-    searchInput.addEventListener("input", function() {
-        const query = this.value.trim().toLowerCase();
-        if (!query) {
-            suggestionsDropdown.classList.add("hidden");
-            suggestionsDropdown.innerHTML = "";
-            return;
-        }
-
-        const terms = getSearchTerms();
-        const matches = terms.filter(t => t.toLowerCase().includes(query)).slice(0, 10);
-
-        if (matches.length > 0) {
-            suggestionsDropdown.innerHTML = "";
-            matches.forEach(match => {
-                const item = document.createElement("div");
-                item.className = "px-3 py-2 text-xs hover:bg-slate-50 cursor-pointer transition-colors text-left text-slate-700 font-mono";
-                item.textContent = match;
-                item.addEventListener("click", function() {
-                    searchInput.value = match;
-                    suggestionsDropdown.classList.add("hidden");
-                    doSearchFocus();
-                });
-                suggestionsDropdown.appendChild(item);
-            });
-            suggestionsDropdown.classList.remove("hidden");
-        } else {
-            suggestionsDropdown.classList.add("hidden");
-        }
-    });
-
-    // Close suggestions on click outside
-    document.addEventListener("click", function(e) {
-        if (!searchInput.contains(e.target) && !suggestionsDropdown.contains(e.target)) {
-            suggestionsDropdown.classList.add("hidden");
-        }
-    });
-
-    // Search and focus into view
-    function doSearchFocus() {
-        const query = searchInput.value.trim().toLowerCase();
-        if (!query) return;
-
-        let found = false;
-        rows.forEach(row => {
-            const poNum = row.querySelector(".cell-po").textContent.trim().toLowerCase();
-            const planNo = row.querySelector(".cell-plan").textContent.trim().toLowerCase();
-            const remarks = row.querySelector(".cell-remarks") ? row.querySelector(".cell-remarks").textContent.trim().toLowerCase() : "";
-            const urgency = row.querySelector(".cell-urgency") ? row.querySelector(".cell-urgency").textContent.trim().toLowerCase() : "";
-            const delivery = row.querySelector(".cell-delivery") ? row.querySelector(".cell-delivery").textContent.trim().toLowerCase() : "";
-
-            if (poNum.includes(query) || planNo.includes(query) || remarks.includes(query) || urgency.includes(query) || delivery.includes(query)) {
-                // Clear other highlights
-                rows.forEach(r => r.style.backgroundColor = "");
-
-                // Make sure row is visible
-                row.classList.remove("hidden");
-
-                // Scroll to row
-                row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-                // Highlight target row
-                row.style.backgroundColor = "#FEF08A"; // Tailwind yellow-200
-                setTimeout(() => {
-                    row.style.transition = "background-color 1s ease";
-                    row.style.backgroundColor = "";
-                }, 4000);
-
-                found = true;
-            }
+        // Modal handlers
+        document.getElementById('btn-open-upload-modal').addEventListener('click', () => {
+            document.getElementById('upload-modal').classList.remove('hidden');
         });
 
-        if (!found) {
-            showCustomAlert("ไม่พบข้อมูลที่ระบุในตารางรายละเอียดนี้", "ไม่พบผลลัพธ์");
-        }
-    }
+        const closeUploadModal = () => {
+            document.getElementById('upload-modal').classList.add('hidden');
+            WeeklyPlanUploader.backToUpload();
+        };
 
-    findBtn.addEventListener("click", doSearchFocus);
-    searchInput.addEventListener("keypress", function(e) {
-        if (e.key === "Enter") {
-            doSearchFocus();
-        }
-    });
+        document.getElementById('btn-close-upload-modal').addEventListener('click', closeUploadModal);
+        document.getElementById('upload-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'upload-modal') closeUploadModal();
+        });
 
-    // Search input live filtering as well
-    searchInput.addEventListener("input", function() {
-        currentSearch = this.value.trim().toLowerCase();
-        applyFilters();
-    });
-
-    // Filter button handlers
-    btnAll.addEventListener("click", function() {
-        setFilter("all", this);
-    });
-    btnMatched.addEventListener("click", function() {
-        setFilter("matched", this);
-    });
-    btnUnmatched.addEventListener("click", function() {
-        setFilter("unmatched", this);
-    });
-
-    function setFilter(filterType, activeBtn) {
-        currentFilter = filterType;
+        // Detail Modal
+        const detailModal = document.getElementById('detail-modal');
         
-        // Toggle button styling
-        document.querySelectorAll(".filter-btn").forEach(btn => {
-            btn.className = "px-3 py-1 rounded-sm text-slate-600 hover:text-slate-800 filter-btn";
+        document.querySelectorAll('.btn-view-detail').forEach(btn => {
+            btn.addEventListener('click', async function() {
+                const orderId = this.getAttribute('data-order-id');
+
+                try {
+                    const response = await fetch(`/Report/GetWeeklyPlanDetail?orderId=${orderId}`);
+                    const data = await response.json();
+
+                    if (data.success) {
+                        document.getElementById('detail-department').textContent = data.department || '-';
+                        document.getElementById('detail-order-name').textContent = data.orderName || '-';
+                        document.getElementById('detail-delivery-target').textContent = data.deliveryTarget || '-';
+                        document.getElementById('detail-file-name').textContent = data.fileName || '-';
+                        document.getElementById('detail-file-name').setAttribute('title', data.fileName || '-');
+                        document.getElementById('detail-po-number').textContent = data.poNumberInFile || '-';
+
+                        // Render status badge
+                        const statusContainer = document.getElementById('detail-order-status-badge');
+                        const statusVal = data.orderStatus || '';
+                        let cleanStatusVal = statusVal;
+                        if (statusVal.includes(':')) {
+                            cleanStatusVal = statusVal.split(':').slice(1).join(':').trim();
+                        }
+                        
+                        let badgeHtml = '';
+                        if (statusVal.includes('ดำเนินการ') || statusVal.startsWith('0') || statusVal.startsWith('O:')) {
+                            badgeHtml = `<span class="inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200"><span style="width: 6px; height: 6px; border-radius: 50%; background-color: #d97706; flex-shrink: 0;"></span>${cleanStatusVal}</span>`;
+                        } else if (statusVal.includes('ปิด') || statusVal.startsWith('C:')) {
+                            badgeHtml = `<span class="inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200"><span style="width: 6px; height: 6px; border-radius: 50%; background-color: #e11d48; flex-shrink: 0;"></span>${cleanStatusVal}</span>`;
+                        } else {
+                            badgeHtml = `<span class="inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-slate-50 text-slate-600 border border-slate-200"><span style="width: 6px; height: 6px; border-radius: 50%; background-color: #64748b; flex-shrink: 0;"></span>${cleanStatusVal || '-'}</span>`;
+                        }
+                        statusContainer.innerHTML = badgeHtml;
+
+                        // Render timeline history
+                        const historyContainer = document.getElementById('detail-history-container');
+                        historyContainer.innerHTML = '';
+                        
+                        if (data.history && data.history.length > 0) {
+                            // Build timeline wrapper with vertical line
+                            const timelineOuter = document.createElement('div');
+                            timelineOuter.style.cssText = 'position: relative; padding-left: 28px;';
+                            
+                            // Vertical timeline line
+                            const vLine = document.createElement('div');
+                            vLine.style.cssText = 'position: absolute; left: 6px; top: 10px; bottom: 10px; width: 2px; background: #e2e8f0; border-radius: 1px;';
+                            timelineOuter.appendChild(vLine);
+
+                            data.history.forEach((item, index) => {
+                                const hStatusVal = item.orderStatus || '';
+                                let hCleanStatusVal = hStatusVal;
+                                if (hStatusVal.includes(':')) {
+                                    hCleanStatusVal = hStatusVal.split(':').slice(1).join(':').trim();
+                                }
+                                
+                                // Determine status badge colors
+                                let badgeBg, badgeText, badgeBorder, dotColor, markerColor;
+                                if (hStatusVal.includes('ดำเนินการ') || hStatusVal.startsWith('0') || hStatusVal.startsWith('O:')) {
+                                    badgeBg = '#fffbeb'; badgeText = '#b45309'; badgeBorder = '#fde68a'; dotColor = '#f59e0b'; markerColor = '#f59e0b';
+                                } else if (hStatusVal.includes('ปิด') || hStatusVal.startsWith('C:')) {
+                                    badgeBg = '#fff1f2'; badgeText = '#be123c'; badgeBorder = '#fecdd3'; dotColor = '#f43f5e'; markerColor = '#f43f5e';
+                                } else {
+                                    badgeBg = '#f8fafc'; badgeText = '#475569'; badgeBorder = '#e2e8f0'; dotColor = '#94a3b8'; markerColor = '#94a3b8';
+                                }
+                                
+                                const hBadgeHtml = `<span style="display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: 700; background: ${badgeBg}; color: ${badgeText}; border: 1px solid ${badgeBorder};"><span style="width: 5px; height: 5px; border-radius: 50%; background: ${dotColor}; flex-shrink: 0;"></span>${hCleanStatusVal || '-'}</span>`;
+                                
+                                const isLatest = index === 0;
+                                const markerExtra = isLatest ? 'box-shadow: 0 0 0 3px #e2e8f0;' : '';
+
+                                const itemHtml = `
+                                    <div style="position: relative; margin-bottom: 16px;">
+                                        <!-- Marker dot -->
+                                        <div style="position: absolute; left: -27px; top: 14px; width: 10px; height: 10px; border-radius: 50%; background: ${markerColor}; ${markerExtra}"></div>
+                                        
+                                        <!-- Card -->
+                                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px;">
+                                            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+                                                <span style="font-size: 12px; font-weight: 600; color: #1e293b; line-height: 1.4; word-break: break-word; max-width: 320px;" title="${item.fileName}">${item.fileName}</span>
+                                                <span style="font-size: 10px; color: #94a3b8; font-weight: 500; white-space: nowrap; flex-shrink: 0;">${item.uploadedAt}</span>
+                                            </div>
+                                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+                                                <span style="font-size: 11px; color: #94a3b8;">ชีท: <strong style="color: #64748b; font-weight: 500;">${item.sheetName}</strong> <span style="margin: 0 5px; color: #cbd5e1;">|</span> ราคาเสนอ: <strong style="color: #334155; font-weight: 600;">${formatPrice(item.price)}</strong></span>
+                                                <div>${hBadgeHtml}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `;
+                                timelineOuter.insertAdjacentHTML('beforeend', itemHtml);
+                            });
+                            
+                            historyContainer.appendChild(timelineOuter);
+                        } else {
+                            historyContainer.innerHTML = '<div style="text-align: center; font-size: 12px; color: #94a3b8; padding: 16px 0;">ไม่มีข้อมูลประวัติแผนผลิต</div>';
+                        }
+
+                        // Reset collapsible state to closed by default
+                        const historyWrapper = document.getElementById('history-wrapper');
+                        const chevronHistory = document.getElementById('chevron-history');
+                        if (historyWrapper) historyWrapper.style.display = 'none';
+                        if (chevronHistory) chevronHistory.style.transform = 'rotate(0deg)';
+
+                        detailModal.classList.remove('hidden');
+                    } else {
+                        Swal.fire('ไม่พบข้อมูล', 'ไม่พบข้อมูลแผนผลิต', 'warning');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    Swal.fire('เกิดข้อผิดพลาด', 'เกิดข้อผิดพลาดในการโหลดข้อมูล', 'error');
+                }
+            });
         });
-        activeBtn.className = "px-3 py-1 rounded-sm bg-white text-slate-800 font-bold shadow-sm border border-slate-200/50 filter-btn";
 
-        applyFilters();
-    }
+        // Toggle history accordion
+        const btnToggleHistory = document.getElementById('btn-toggle-history');
+        if (btnToggleHistory) {
+            btnToggleHistory.addEventListener('click', () => {
+                const historyWrapper = document.getElementById('history-wrapper');
+                const chevronHistory = document.getElementById('chevron-history');
+                if (historyWrapper && chevronHistory) {
+                    const isHidden = historyWrapper.style.display === 'none';
+                    historyWrapper.style.display = isHidden ? 'block' : 'none';
+                    chevronHistory.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+                }
+            });
+        }
 
-    function applyFilters() {
-        rows.forEach(row => {
-            const isMatched = row.getAttribute("data-matched") === "true";
-            const poNum = row.querySelector(".cell-po").textContent.toLowerCase();
-            const planNo = row.querySelector(".cell-plan").textContent.toLowerCase();
-            const remarks = row.querySelector(".cell-remarks") ? row.querySelector(".cell-remarks").textContent.toLowerCase() : "";
-            const urgency = row.querySelector(".cell-urgency") ? row.querySelector(".cell-urgency").textContent.toLowerCase() : "";
-            const delivery = row.querySelector(".cell-delivery") ? row.querySelector(".cell-delivery").textContent.toLowerCase() : "";
-
-            // Match text query
-            const matchesSearch = currentSearch === "" || 
-                                  poNum.includes(currentSearch) || 
-                                  planNo.includes(currentSearch) ||
-                                  remarks.includes(currentSearch) ||
-                                  urgency.includes(currentSearch) ||
-                                  delivery.includes(currentSearch);
-
-            // Match status filter
-            let matchesFilter = true;
-            if (currentFilter === "matched") {
-                matchesFilter = isMatched;
-            } else if (currentFilter === "unmatched") {
-                matchesFilter = !isMatched;
-            }
-
-            if (matchesSearch && matchesFilter) {
-                row.classList.remove("hidden");
-            } else {
-                row.classList.add("hidden");
-            }
+        document.getElementById('btn-close-detail-modal').addEventListener('click', () => {
+            detailModal.classList.add('hidden');
         });
-    }
-});
-</script>
+
+        document.getElementById('btn-close-detail').addEventListener('click', () => {
+            detailModal.classList.add('hidden');
+        });
+
+        // Status Filter
+        document.querySelectorAll('.status-filter-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.status-filter-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+
+                const filter = this.getAttribute('data-filter');
+                const rows = document.querySelectorAll('.order-row');
+
+                rows.forEach(row => {
+                    const status = row.getAttribute('data-status');
+                    if (filter === 'all') {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = status === filter ? '' : 'none';
+                    }
+                });
+            });
+        });
+
+        // Search
+        document.getElementById('po-search').addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase().trim();
+            const rows = document.querySelectorAll('.order-row');
+            const activeFilter = document.querySelector('.status-filter-btn.active').getAttribute('data-filter');
+
+            rows.forEach(row => {
+                const poNumber = row.getAttribute('data-po').toLowerCase();
+                const rowStatus = row.getAttribute('data-status');
+
+                const matchSearch = poNumber.includes(searchTerm);
+                const matchFilter = (activeFilter === 'all' || rowStatus === activeFilter);
+
+                row.style.display = (matchSearch && matchFilter) ? '' : 'none';
+            });
+        });
+
+        // Handle export Excel with custom name prompt
+        document.getElementById('btn-export-excel').addEventListener('click', function() {
+            const reportName = "@Html.Raw(reportName)";
+            const defaultExportName = `รายงาน_${reportName}_${new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' }).replace(/ /g, '_')}`;
+
+            Swal.fire({
+                title: 'ตั้งชื่อไฟล์สำหรับส่งออก',
+                input: 'text',
+                inputValue: defaultExportName,
+                inputPlaceholder: 'กรอกชื่อไฟล์...',
+                showCancelButton: true,
+                confirmButtonText: 'ดาวน์โหลด',
+                cancelButtonText: 'ยกเลิก',
+                confirmButtonColor: '#00288e',
+                cancelButtonColor: '#94a3b8',
+                inputValidator: (value) => {
+                    if (!value.trim()) {
+                        return 'กรุณากรอกชื่อไฟล์ที่ต้องการบันทึก!';
+                    }
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const customName = result.value.trim();
+                    const exportUrl = `@Url.Action("ExportToExcel", "Report")?fileName=${encodeURIComponent(reportName)}&customName=${encodeURIComponent(customName)}`;
+                    window.location.href = exportUrl;
+                }
+            });
+        });
+
+        // Close modals on background click
+        detailModal.addEventListener('click', (e) => {
+            if (e.target === detailModal) detailModal.classList.add('hidden');
+        });
+
+        // Redirect to All Orders page
+        document.getElementById('btn-view-all-system').addEventListener('click', () => {
+            const reportName = "@Html.Raw(reportName)";
+            window.location.href = `/Report/AllOrders?returnReportName=${encodeURIComponent(reportName)}`;
+        });
+    </script>
+}

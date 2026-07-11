@@ -75,15 +75,15 @@ module.exports = {
         "gutter": "20px"
       },
       fontFamily: {
-        "headline-md": ["Ubuntu", "IBM Plex Sans Thai", "IBM Plex Sans", "ui-sans-serif", "system-ui", "sans-serif"],
-        "label-bold": ["Ubuntu", "IBM Plex Sans Thai", "IBM Plex Sans", "ui-sans-serif", "system-ui", "sans-serif"],
-        "body-md": ["Ubuntu", "IBM Plex Sans Thai", "IBM Plex Sans", "ui-sans-serif", "system-ui", "sans-serif"],
-        "body-lg": ["Ubuntu", "IBM Plex Sans Thai", "IBM Plex Sans", "ui-sans-serif", "system-ui", "sans-serif"],
-        "headline-sm": ["Ubuntu", "IBM Plex Sans Thai", "IBM Plex Sans", "ui-sans-serif", "system-ui", "sans-serif"],
-        "label-sm": ["Ubuntu", "IBM Plex Sans Thai", "IBM Plex Sans", "ui-sans-serif", "system-ui", "sans-serif"],
-        "data-tabular": ["Ubuntu", "IBM Plex Sans Thai", "IBM Plex Sans", "ui-sans-serif", "system-ui", "sans-serif"],
-        "headline-lg": ["Ubuntu", "IBM Plex Sans Thai", "IBM Plex Sans", "ui-sans-serif", "system-ui", "sans-serif"],
-        "sans": ["Ubuntu", "IBM Plex Sans Thai", "IBM Plex Sans", "ui-sans-serif", "system-ui", "sans-serif"]
+        "headline-md": ["IBM Plex Sans", "IBM Plex Sans Thai", "ui-sans-serif", "system-ui", "sans-serif"],
+        "label-bold": ["IBM Plex Sans", "IBM Plex Sans Thai", "ui-sans-serif", "system-ui", "sans-serif"],
+        "body-md": ["IBM Plex Sans", "IBM Plex Sans Thai", "ui-sans-serif", "system-ui", "sans-serif"],
+        "body-lg": ["IBM Plex Sans", "IBM Plex Sans Thai", "ui-sans-serif", "system-ui", "sans-serif"],
+        "headline-sm": ["IBM Plex Sans", "IBM Plex Sans Thai", "ui-sans-serif", "system-ui", "sans-serif"],
+        "label-sm": ["IBM Plex Sans", "IBM Plex Sans Thai", "ui-sans-serif", "system-ui", "sans-serif"],
+        "data-tabular": ["IBM Plex Sans", "IBM Plex Sans Thai", "ui-sans-serif", "system-ui", "sans-serif"],
+        "headline-lg": ["IBM Plex Sans", "IBM Plex Sans Thai", "ui-sans-serif", "system-ui", "sans-serif"],
+        "sans": ["IBM Plex Sans", "IBM Plex Sans Thai", "ui-sans-serif", "system-ui", "sans-serif"]
       },
       fontSize: {
         "headline-md": ["24px", { lineHeight: "32px", letterSpacing: "-0.01em", fontWeight: "600" }],

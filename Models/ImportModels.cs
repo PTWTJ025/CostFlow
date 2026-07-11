@@ -21,3 +21,16 @@ namespace CostFlow.Models
         public List<List<string>> RawRows { get; set; } = new();
     }
 }
+
+    // Request model for ProcessWeeklyPlan
+    public class WeeklyPlanProcessRequest
+    {
+        public string ReportName { get; set; } = string.Empty;
+        public List<WeeklyPlanFileInfo> Files { get; set; } = new List<WeeklyPlanFileInfo>();
+    }
+
+    public class WeeklyPlanFileInfo
+    {
+        public Guid SessionId { get; set; }
+        public string SelectedSheet { get; set; } = string.Empty;
+    }
