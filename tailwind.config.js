@@ -75,15 +75,15 @@ module.exports = {
         "gutter": "20px"
       },
       fontFamily: {
-        "headline-md": ["IBM Plex Sans", "IBM Plex Sans Thai", "ui-sans-serif", "system-ui", "sans-serif"],
-        "label-bold": ["IBM Plex Sans", "IBM Plex Sans Thai", "ui-sans-serif", "system-ui", "sans-serif"],
-        "body-md": ["IBM Plex Sans", "IBM Plex Sans Thai", "ui-sans-serif", "system-ui", "sans-serif"],
-        "body-lg": ["IBM Plex Sans", "IBM Plex Sans Thai", "ui-sans-serif", "system-ui", "sans-serif"],
-        "headline-sm": ["IBM Plex Sans", "IBM Plex Sans Thai", "ui-sans-serif", "system-ui", "sans-serif"],
-        "label-sm": ["IBM Plex Sans", "IBM Plex Sans Thai", "ui-sans-serif", "system-ui", "sans-serif"],
-        "data-tabular": ["IBM Plex Sans", "IBM Plex Sans Thai", "ui-sans-serif", "system-ui", "sans-serif"],
-        "headline-lg": ["IBM Plex Sans", "IBM Plex Sans Thai", "ui-sans-serif", "system-ui", "sans-serif"],
-        "sans": ["IBM Plex Sans", "IBM Plex Sans Thai", "ui-sans-serif", "system-ui", "sans-serif"]
+        "headline-md": ["Poppins", "IBM Plex Sans Thai", "ui-sans-serif", "system-ui", "sans-serif"],
+        "label-bold": ["Poppins", "IBM Plex Sans Thai", "ui-sans-serif", "system-ui", "sans-serif"],
+        "body-md": ["Poppins", "IBM Plex Sans Thai", "ui-sans-serif", "system-ui", "sans-serif"],
+        "body-lg": ["Poppins", "IBM Plex Sans Thai", "ui-sans-serif", "system-ui", "sans-serif"],
+        "headline-sm": ["Poppins", "IBM Plex Sans Thai", "ui-sans-serif", "system-ui", "sans-serif"],
+        "label-sm": ["Poppins", "IBM Plex Sans Thai", "ui-sans-serif", "system-ui", "sans-serif"],
+        "data-tabular": ["Poppins", "IBM Plex Sans Thai", "ui-sans-serif", "system-ui", "sans-serif"],
+        "headline-lg": ["Poppins", "IBM Plex Sans Thai", "ui-sans-serif", "system-ui", "sans-serif"],
+        "sans": ["Poppins", "IBM Plex Sans Thai", "ui-sans-serif", "system-ui", "sans-serif"]
       },
       fontSize: {
         "headline-md": ["24px", { lineHeight: "32px", letterSpacing: "-0.01em", fontWeight: "600" }],

@@ -3,7 +3,7 @@
     ViewData["HeaderTitle"] = "คำนวณค่าใช้จ่ายประจำเดือน";
 }
 
-<div class="flex-1 p-md md:p-lg lg:p-xl flex flex-col gap-lg max-w-[82vw] xl:max-w-5xl mx-auto w-full">
+<div class="flex-1 p-md md:p-lg lg:p-xl flex flex-col gap-lg w-full max-w-[96vw] xl:max-w-[98vw] 2xl:max-w-[1600px] mx-auto">
     <!-- Unified Workspace Surface -->
     <div class="bg-white rounded border border-outline-variant shadow-sm p-md md:p-lg lg:p-xl flex flex-col flex-1">
         
@@ -82,13 +82,12 @@
                             <tr>
                                 <th class="px-4 py-3 w-12 text-center">ลำดับ</th>
                                 <th class="px-4 py-3 w-28 text-left">รหัสสินค้า</th>
-                                <th id="th-product-name" class="px-4 py-3 text-left">ชื่อสินค้า / รายการอะไหล่</th>
+                                <th class="px-4 py-3 text-left">ชื่อสินค้า / รายการอะไหล่</th>
                                 <th class="px-4 py-3 w-20 text-center">หน่วย</th>
                                 <th class="px-4 py-3 w-32 text-right">ราคาต่อหน่วย</th>
                                 <th class="px-4 py-3 w-36 text-center">จำนวนที่ต้องการสั่ง</th>
                                 <th class="px-4 py-3 w-32 text-right">รวมประมาณการ</th>
                                 <th class="px-4 py-3 w-16 text-center">จัดการ</th>
-                                <th class="p-0"></th>
                             </tr>
                         </thead>
                         <tbody id="calc-tbody" class="divide-y divide-slate-200 bg-white text-sm text-slate-700">
@@ -147,23 +146,6 @@
                 return;
             }
 
-            // Find longest name in calcItems
-            let longestNameLen = 0;
-            calcItems.forEach(item => {
-                const len = item.productName ? item.productName.length : 0;
-                if (len > longestNameLen) {
-                    longestNameLen = len;
-                }
-            });
-
-            // Calculate dynamic name width (approx 8.5px per character, min 220px, max 480px)
-            const nameColWidth = Math.max(220, Math.min(480, longestNameLen * 8.5));
-            const nameHeader = document.getElementById('th-product-name');
-            if (nameHeader) {
-                nameHeader.style.width = `${nameColWidth}px`;
-                nameHeader.style.maxWidth = `${nameColWidth}px`;
-            }
-
             tbody.innerHTML = '';
             let grandTotal = 0;
 
@@ -180,7 +162,7 @@
                 tr.innerHTML = `
                     <td class="px-4 py-2.5 text-center text-slate-500 font-mono">${index + 1}</td>
                     <td class="px-4 py-2.5 text-left font-mono font-bold text-primary">${item.productCode}</td>
-                    <td class="px-4 py-2.5 text-left text-slate-800 font-semibold truncate" style="width: ${nameColWidth}px; max-width: ${nameColWidth}px;" title="${item.productName}">${item.productName}</td>
+                    <td class="px-4 py-2.5 text-left text-slate-800 font-bold">${item.productName}</td>
                     <td class="px-4 py-2.5 text-center text-slate-600 font-medium">${item.unit || '-'}</td>
                     <td class="px-4 py-2.5 text-right font-mono text-slate-700 font-bold">${formattedPrice}</td>
                     <td class="px-4 py-2.5 text-center">
@@ -205,7 +187,6 @@
                             </svg>
                         </button>
                     </td>
-                    <td class="p-0"></td>
                 `;
                 tbody.appendChild(tr);
             });

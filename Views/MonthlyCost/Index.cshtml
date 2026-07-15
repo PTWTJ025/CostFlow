@@ -1,0 +1,227 @@
+@model CostFlow.Models.MonthlyCostIndexViewModel
+@{
+    ViewData["Title"] = "คิดค่าใช้จ่ายประจำเดือน";
+    ViewData["HeaderTitle"] = "คิดค่าใช้จ่ายประจำเดือน (จากแผนผลิต)";
+}
+
+<div class="flex-1 p-md md:p-lg lg:p-xl flex flex-col gap-lg max-w-container-max mx-auto w-full">
+
+    <!-- Page Header -->
+    <div class="flex justify-between items-end mb-xs">
+        <div>
+            <h3 class="font-headline-sm text-headline-sm text-on-surface mb-xs">คิดค่าใช้จ่ายประจำเดือน</h3>
+            <p class="text-secondary text-sm">จัดการการรับสินค้าและการผ่อนชำระจากไฟล์แผนผลิต</p>
+        </div>
+    </div>
+
+    <!-- Toolbar: search + sort + filter -->
+    <div class="bg-white rounded border border-outline-variant shadow-sm p-md flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 mb-4">
+        <div class="relative flex-1 max-w-sm">
+            <input id="search-input" type="text" placeholder="ค้นหาเดือนหรือชื่อไฟล์..."
+                   class="w-full pl-3 pr-3 py-2 border border-outline-variant rounded text-sm focus:ring-1 focus:ring-primary focus:border-primary outline-none"/>
+        </div>
+        <div class="flex flex-wrap gap-sm ml-auto sm:ml-auto">
+            <select id="filter-status" class="px-3 py-2 border border-outline-variant rounded text-xs font-semibold text-slate-600 outline-none cursor-pointer">
+                <option value="all">ทุกสถานะ</option>
+                <option value="active">กำลังดำเนินการ</option>
+                <option value="completed">เสร็จสมบูรณ์</option>
+                <option value="pending">ค้างดำเนินการ</option>
+            </select>
+            <select id="sort-order" class="px-3 py-2 border border-outline-variant rounded text-xs font-semibold text-slate-600 outline-none cursor-pointer">
+                <option value="month-asc">เรียงตามเดือน (ก่อน -> หลัง)</option>
+                <option value="month-desc">เรียงตามเดือน (หลัง -> ก่อน)</option>
+                <option value="progress-high">ความคืบหน้าสูงสุด</option>
+                <option value="progress-low">ความคืบหน้าต่ำสุด</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Monthly Cards Grid -->
+    <div id="cards-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-md">
+
+        @if (Model.Cards.Any())
+        {
+            foreach (var card in Model.Cards)
+            {
+                var statusBg = card.StatusCode == "active" ? "bg-emerald-50 text-emerald-600 border-emerald-200/60"
+                    : card.StatusCode == "completed" ? "bg-blue-50 text-blue-600 border-blue-200/60"
+                    : "bg-amber-50 text-amber-700 border-amber-200/60";
+
+                var progressColor = card.StatusCode == "active" ? "bg-gradient-to-r from-primary to-primary-container"
+                    : card.StatusCode == "completed" ? "bg-blue-600"
+                    : "bg-amber-500";
+
+                var progressTextColor = card.StatusCode == "active" ? "text-primary"
+                    : card.StatusCode == "completed" ? "text-blue-600"
+                    : "text-amber-600";
+
+                var pendingDotClass = card.PendingItems > 0 ? "animate-pulse bg-amber-500" : "bg-slate-400";
+                var pendingBadgeBg = card.PendingItems > 0
+                    ? "bg-amber-50 text-amber-700 border-amber-200/60"
+                    : "bg-slate-100 text-slate-500 border-slate-200/60";
+
+                var fileIconColor = card.StatusCode == "completed" ? "text-blue-600" : "text-emerald-600";
+
+                <a asp-controller="MonthlyCost" asp-action="Detail" asp-route-id="@card.MonthYearDisplay"
+                   data-month="@card.MonthYearDisplay.ToLower()"
+                   data-month-key="@card.MonthYearKey"
+                   data-file="@card.FileName.ToLower()"
+                   data-status="@card.StatusCode"
+                   data-progress="@card.ProgressPercent"
+                   class="card-item group bg-white rounded-lg border border-slate-200 shadow-sm hover:shadow-md hover:border-primary/40 hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between p-md cursor-pointer">
+
+                    <div>
+                        <div class="flex justify-between items-start mb-3">
+                            <div class="overflow-hidden">
+                                <div class="flex items-center gap-2">
+                                    <h4 class="font-bold text-slate-800 text-sm group-hover:text-primary transition-colors duration-300">@card.MonthYearDisplay</h4>
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-extrabold border @statusBg">@card.StatusLabel</span>
+                                </div>
+                                @if (!string.IsNullOrEmpty(card.FileName))
+                                {
+                                    <span class="text-[11px] text-secondary block mt-1 font-medium">
+                                        <i class="fi fi-rs-file-excel @fileIconColor text-xs"></i>
+                                        @card.FileName
+                                    </span>
+                                }
+                            </div>
+                        </div>
+
+                        <!-- Progress Bar & Summary -->
+                        <div class="mb-3">
+                            <div class="mb-1.5 flex justify-between items-baseline text-xs font-bold">
+                                <div class="flex items-center gap-1 text-slate-600">
+                                    <span>ความคืบหน้า</span>
+                                </div>
+                                <div class="flex items-center gap-1.5">
+                                    <span class="font-black font-mono text-[13px] @progressTextColor">@card.ProgressPercent%</span>
+                                </div>
+                            </div>
+                            <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden border border-slate-200/60 shadow-inner">
+                                <div class="h-full rounded-full @progressColor transition-all duration-500" style="width: @card.ProgressPercent%"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Status Breakdown Pills -->
+                    <div class="pt-3 border-t border-slate-100 flex flex-row gap-2">
+                        <div class="flex-1 min-w-0 bg-emerald-50/50 hover:bg-emerald-50/90 border border-emerald-200/70 rounded-lg py-2 px-2 flex flex-col items-center justify-center text-center transition-all duration-200 group/pill">
+                            <div class="flex items-center gap-1 text-[10px] font-bold text-emerald-700 uppercase tracking-tight mb-0.5">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
+                                <span>รับสินค้า</span>
+                            </div>
+                            <div class="text-sm font-black font-mono text-slate-800 leading-none my-0.5 group-hover/pill:text-emerald-950 transition-colors">
+                                @card.ReceivedCount <span class="text-[10px] font-semibold text-slate-400 font-sans">รายการ</span>
+                            </div>
+                            @if (card.ReceivedCarryOver > 0)
+                            {
+                                <div class="text-[10px] font-semibold text-emerald-600/70 leading-none mt-0.5">
+                                    +@card.ReceivedCarryOver ค้างเดิม
+                                </div>
+                            }
+                        </div>
+                        <div class="flex-1 min-w-0 bg-amber-50/50 hover:bg-amber-50/90 border border-amber-200/70 rounded-lg py-2 px-2 flex flex-col items-center justify-center text-center transition-all duration-200 group/pill">
+                            <div class="flex items-center gap-1 text-[10px] font-bold text-amber-700 uppercase tracking-tight mb-0.5">
+                                <span class="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0"></span>
+                                <span>ผ่อนชำระ</span>
+                            </div>
+                            <div class="text-sm font-black font-mono text-slate-800 leading-none my-0.5 group-hover/pill:text-amber-950 transition-colors">
+                                @card.DeferredCount <span class="text-[10px] font-semibold text-slate-400 font-sans">รายการ</span>
+                            </div>
+                            @if (card.DeferredCarryOver > 0)
+                            {
+                                <div class="text-[10px] font-semibold text-amber-600/70 leading-none mt-0.5">
+                                    +@card.DeferredCarryOver ค้างเดิม
+                                </div>
+                            }
+                        </div>
+                        <div class="flex-1 min-w-0 bg-purple-50/50 hover:bg-purple-50/90 border border-purple-200/70 rounded-lg py-2 px-2 flex flex-col items-center justify-center text-center transition-all duration-200 group/pill">
+                            <div class="flex items-center gap-1 text-[10px] font-bold text-purple-700 uppercase tracking-tight mb-0.5">
+                                <span class="w-1.5 h-1.5 rounded-full bg-purple-500 shrink-0"></span>
+                                <span>ยังไม่รับ</span>
+                            </div>
+                            <div class="text-sm font-black font-mono text-slate-800 leading-none my-0.5 group-hover/pill:text-purple-950 transition-colors">
+                                @card.SkippedCount <span class="text-[10px] font-semibold text-slate-400 font-sans">รายการ</span>
+                            </div>
+                            @if (card.SkippedCarryOver > 0)
+                            {
+                                <div class="text-[10px] font-semibold text-purple-600/70 leading-none mt-0.5">
+                                    +@card.SkippedCarryOver ค้างเดิม
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </a>
+            }
+        }
+        else
+        {
+            <div class="col-span-full text-center py-12">
+                <svg class="w-16 h-16 text-slate-300 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                <p class="text-slate-500 text-sm">ยังไม่มีข้อมูลประจำเดือน</p>
+                <p class="text-slate-400 text-xs mt-1">เดือนใหม่จะปรากฏที่นี่เมื่อมีการบันทึกข้อมูล</p>
+            </div>
+        }
+
+    </div>
+
+    <!-- Empty state when filter/search yields no results -->
+    <div id="empty-search-state" class="hidden text-center py-12">
+        <svg class="w-16 h-16 text-slate-300 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+        </svg>
+        <p class="text-slate-500 text-sm">ไม่พบรายการที่ตรงกับการค้นหา</p>
+    </div>
+
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const searchInput = document.getElementById('search-input');
+            const filterStatus = document.getElementById('filter-status');
+            const sortOrder = document.getElementById('sort-order');
+            const grid = document.getElementById('cards-grid');
+            const emptyState = document.getElementById('empty-search-state');
+            const allCards = Array.from(grid.querySelectorAll('a.card-item'));
+
+            function applyFilters() {
+                const term = searchInput.value.toLowerCase().trim();
+                const status = filterStatus.value;
+                const sortBy = sortOrder.value;
+
+                let visible = allCards.filter(card => {
+                    const matchSearch = !term
+                        || card.dataset.month.includes(term)
+                        || card.dataset.file.includes(term);
+                    const matchStatus = status === 'all' || card.dataset.status === status;
+                    return matchSearch && matchStatus;
+                });
+
+                visible.sort((a, b) => {
+                    const keyA = a.dataset.monthKey || a.dataset.month;
+                    const keyB = b.dataset.monthKey || b.dataset.month;
+                    if (sortBy === 'month-desc' || sortBy === 'newest') return keyB.localeCompare(keyA);
+                    if (sortBy === 'progress-high') return parseFloat(b.dataset.progress) - parseFloat(a.dataset.progress);
+                    if (sortBy === 'progress-low') return parseFloat(a.dataset.progress) - parseFloat(b.dataset.progress);
+                    return keyA.localeCompare(keyB); // month-asc (default calendar order)
+                });
+
+                allCards.forEach(c => { c.style.display = 'none'; });
+                visible.forEach(c => { c.style.display = ''; grid.appendChild(c); });
+
+                if (visible.length === 0 && allCards.length > 0) {
+                    emptyState.classList.remove('hidden');
+                } else {
+                    emptyState.classList.add('hidden');
+                }
+            }
+
+            searchInput.addEventListener('input', applyFilters);
+            filterStatus.addEventListener('change', applyFilters);
+            sortOrder.addEventListener('change', applyFilters);
+        });
+    </script>
+}

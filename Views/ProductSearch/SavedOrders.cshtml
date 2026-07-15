@@ -1,151 +1,158 @@
 @model List<CostFlow.Controllers.SavedBatchViewModel>
 @{
-    ViewData["Title"] = "แผ่นงานสั่งซื้อที่บันทึก";
-    ViewData["HeaderTitle"] = "แผ่นงานสั่งซื้อที่บันทึก";
-
-    double grandTotal = Model?.Sum(b => b.TotalAmount) ?? 0;
-    
-    int? selectedYear = ViewData["SelectedYear"] as int?;
-    int? selectedMonth = ViewData["SelectedMonth"] as int?;
-    var availableYears = ViewData["AvailableYears"] as List<int> ?? new List<int> { DateTime.Now.Year };
-
-    var monthsThai = new Dictionary<int, string>
-    {
-        { 1, "มกราคม" },
-        { 2, "กุมภาพันธ์" },
-        { 3, "มีนาคม" },
-        { 4, "เมษายน" },
-        { 5, "พฤษภาคม" },
-        { 6, "มิถุนายน" },
-        { 7, "กรกฎาคม" },
-        { 8, "สิงหาคม" },
-        { 9, "กันยายน" },
-        { 10, "ตุลาคม" },
-        { 11, "พฤศจิกายน" },
-        { 12, "ธันวาคม" }
-    };
+    ViewData["Title"] = "ประวัติการบันทึกใบสั่งซื้อ";
+    ViewData["HeaderTitle"] = "ประวัติการบันทึกใบสั่งซื้อ (Google Sheets)";
 }
 
-<div class="flex-1 p-md md:p-lg lg:p-xl flex flex-col gap-lg max-w-7xl mx-auto w-full">
-    <!-- Saved Orders Card -->
-    <div class="bg-white rounded border border-outline-variant shadow-sm p-md md:p-lg lg:p-xl">
-        <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-md mb-lg">
-            <div>
-                <h3 class="font-headline-sm text-headline-sm text-on-surface mb-xs">ประวัติรายการที่บันทึก</h3>
-                <p class="text-xs text-secondary">รายการสรุปแผ่นงานคีย์สั่งซื้ออะไหล่แบ่งตามช่วงเวลา</p>
-            </div>
-            
-            <div class="flex flex-wrap gap-sm items-center w-full lg:w-auto justify-end">
-    <!-- เพิ่ม text-right เพื่อให้ข้อความภายใน div นี้ชิดขวา ทั้งหัวข้อและยอดเงิน -->
-    <div class="bg-slate-50 border border-slate-200/60 rounded px-3 py-1.5 text-xs font-semibold text-slate-700 text-right">
-        <span class="text-slate-400 block text-[10px]">ยอดรวมแผ่นงานทั้งหมด</span>
-        <!-- เพิ่ม block หรือ w-full เพื่อให้ element ขยายเต็มพื้นที่ และใช้ text-right เพื่อดันตัวเลขชิดขวา -->
-        <span class="text-primary font-bold font-mono text-sm block text-right">฿@grandTotal.ToString("N2")</span>
-    </div>
-</div>
+<div class="flex-1 py-md md:py-lg flex flex-col gap-md w-full h-full min-h-0 overflow-hidden bg-background" style="padding-left: clamp(1.5rem, 6vw, 6rem); padding-right: clamp(1.5rem, 6vw, 6rem);">
 
+    <!-- Breadcrumbs & Header -->
+    <div class="flex items-center justify-between shrink-0">
+        <div class="flex flex-col gap-1">
+            <div class="flex items-center gap-2 text-sm text-on-surface-variant">
+                <a href="/" class="hover:text-primary transition-colors flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
+                    <span>หน้าแรก</span>
+                </a>
+                <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+                <a href="/ProductSearch" class="hover:text-primary transition-colors">คีย์ใบสั่งซื้อ</a>
+                <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+                <span class="font-semibold text-on-surface">ประวัติการบันทึก</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-md shrink-0">
+        <div class="bg-surface border border-outline-variant rounded-lg p-md shadow-xs flex items-center gap-4">
+            <div class="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+            </div>
+            <div class="flex flex-col">
+                <span class="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">จำนวนแผ่นงานบันทึก</span>
+                <span class="text-xl font-black text-slate-800 leading-none mt-1">@(Model?.Count ?? 0) แผ่นงาน</span>
+            </div>
+        </div>
+        <div class="bg-surface border border-outline-variant rounded-lg p-md shadow-xs flex items-center gap-4">
+            <div class="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                </svg>
+            </div>
+            <div class="flex flex-col">
+                <span class="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">จำนวนรายการทั้งหมด</span>
+                <span class="text-xl font-black text-emerald-600 leading-none mt-1 font-mono">@(Model?.Sum(b => b.TotalItems) ?? 0) รายการ</span>
+            </div>
+        </div>
+        <div class="bg-surface border border-outline-variant rounded-lg p-md shadow-xs flex items-center gap-4">
+            <div class="w-10 h-10 rounded-full bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </div>
+            <div class="flex flex-col">
+                <span class="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">มูลค่ารวมสะสม</span>
+                <span class="text-xl font-black text-blue-600 leading-none mt-1 font-mono">฿@(Model?.Sum(b => b.TotalAmount).ToString("N2") ?? "0.00")</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Table Card -->
+    <div class="flex-1 flex flex-col bg-surface border border-outline-variant rounded-lg overflow-hidden min-h-0">
+        <!-- Toolbar -->
+        <div class="bg-surface px-6 py-3.5 border-b border-outline-variant shrink-0 flex flex-wrap items-center justify-between gap-4">
+            <form method="get" action="/ProductSearch/SavedOrders" class="flex flex-wrap items-center gap-3">
+                <select name="year" onchange="this.form.submit()" class="px-3 py-2 border border-outline-variant rounded text-xs font-semibold text-slate-600 outline-none cursor-pointer bg-white">
+                    <option value="">ปีทั้งหมด</option>
+                    @if (ViewData["AvailableYears"] is List<int> years)
+                    {
+                        foreach (var y in years)
+                        {
+                            if ((int?)ViewData["SelectedYear"] == y)
+                            {
+                                <option value="@y" selected>ปี @(y + 543)</option>
+                            }
+                            else
+                            {
+                                <option value="@y">ปี @(y + 543)</option>
+                            }
+                        }
+                    }
+                </select>
+
+                <select name="month" onchange="this.form.submit()" class="px-3 py-2 border border-outline-variant rounded text-xs font-semibold text-slate-600 outline-none cursor-pointer bg-white">
+                    <option value="">เดือนทั้งหมด</option>
+                    @{
+                        string[] monthsTh = { "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม" };
+                        for (int i = 1; i <= 12; i++)
+                        {
+                            if ((int?)ViewData["SelectedMonth"] == i)
+                            {
+                                <option value="@i" selected>@monthsTh[i - 1]</option>
+                            }
+                            else
+                            {
+                                <option value="@i">@monthsTh[i - 1]</option>
+                            }
+                        }
+                    }
+                </select>
+            </form>
+
+            <div class="relative w-72 sm:w-80">
+                <input type="text" id="search-input" placeholder="ค้นหาชื่อแผ่นงาน..."
+                       class="w-full pl-9 pr-9 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-slate-800 placeholder-slate-400 transition-all" />
+            </div>
         </div>
 
-        <!-- Period Selection Filter Form -->
-        <form method="get" class="flex flex-wrap gap-sm max-w-2xl mb-lg items-end bg-slate-50/50 p-md border border-slate-200/50 rounded" id="filter-form">
-            <div class="flex-1 min-w-[140px]">
-                <label class="block text-xs font-semibold text-slate-700 mb-1">เลือก ปี (ค.ศ.)</label>
-                <select name="year" onchange="this.form.submit()" class="w-full px-3 py-1.5 border border-outline-variant rounded text-xs focus:ring-1 focus:ring-primary focus:border-primary outline-none bg-white">
-                    <option value="">-- ทั้งหมด --</option>
-                    @foreach (var y in availableYears)
-                    {
-                        if (y == selectedYear)
-                        {
-                            <option value="@y" selected>@y</option>
-                        }
-                        else
-                        {
-                            <option value="@y">@y</option>
-                        }
-                    }
-                </select>
-            </div>
-            
-            <div class="flex-1 min-w-[140px]">
-                <label class="block text-xs font-semibold text-slate-700 mb-1">เลือก เดือน</label>
-                <select name="month" onchange="this.form.submit()" class="w-full px-3 py-1.5 border border-outline-variant rounded text-xs focus:ring-1 focus:ring-primary focus:border-primary outline-none bg-white">
-                    <option value="">-- ทั้งหมด --</option>
-                    @foreach (var m in monthsThai)
-                    {
-                        if (m.Key == selectedMonth)
-                        {
-                            <option value="@m.Key" selected>@m.Value</option>
-                        }
-                        else
-                        {
-                            <option value="@m.Key">@m.Value</option>
-                        }
-                    }
-                </select>
-            </div>
-
-            @if (selectedYear.HasValue || selectedMonth.HasValue)
-            {
-                <a href="/ProductSearch/SavedOrders" class="px-md py-1.5 border border-slate-200 rounded text-xs font-semibold text-slate-600 bg-white hover:bg-slate-50 transition-colors flex items-center h-[32px] justify-center">
-                    ล้างตัวกรอง
-                </a>
-            }
-        </form>
-
-        <!-- High-density Data Table -->
-        <div class="overflow-x-auto border border-outline-variant rounded mb-lg max-h-[550px] overflow-y-auto">
-            <table class="min-w-full divide-y divide-slate-200 text-center" id="saved-orders-table">
-                <thead class="bg-slate-100 sticky top-0 z-10">
-                    <tr>
-                        <th class="px-3 py-2.5 text-xs font-bold text-slate-500 uppercase tracking-wider w-[50px]">#</th>
-                        <th class="px-3 py-2.5 text-xs font-bold text-slate-500 uppercase tracking-wider w-[180px]">วันที่บันทึกข้อมูล</th>
-                        <th class="px-3 py-2.5 text-xs font-bold text-slate-500 uppercase tracking-wider text-left">ชื่อแผ่นงาน / รายการคีย์</th>
-                        <th class="px-3 py-2.5 text-xs font-bold text-slate-500 uppercase tracking-wider w-[120px]">จำนวนรายการ</th>
-                        <th class="px-3 py-2.5 text-xs font-bold text-slate-500 uppercase tracking-wider w-[180px]">มูลค่ารวมทั้งสิ้น</th>
-                        <th class="px-3 py-2.5 text-xs font-bold text-slate-500 uppercase tracking-wider w-[240px]">จัดการ</th>
+        <div class="flex-1 overflow-auto relative min-h-0">
+            <table class="w-full text-[14px]">
+                <thead>
+                    <tr class="text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider">
+                        <th class="sticky top-0 bg-surface-container border-b border-outline-variant z-20 py-3 px-4 text-left">ชื่อแผ่นงาน (Batch Name)</th>
+                        <th class="sticky top-0 bg-surface-container border-b border-outline-variant z-20 py-3 px-4 text-left">เวลาที่บันทึก</th>
+                        <th class="sticky top-0 bg-surface-container border-b border-outline-variant z-20 py-3 px-4 text-right">จำนวนรายการ</th>
+                        <th class="sticky top-0 bg-surface-container border-b border-outline-variant z-20 py-3 px-4 text-right">ยอดรวม</th>
+                        <th class="sticky top-0 bg-surface-container border-b border-outline-variant z-20 py-3 px-4 text-center w-48">การจัดการ</th>
                     </tr>
                 </thead>
-                <tbody class="bg-white divide-y divide-slate-200 text-xs text-slate-800" id="table-body">
-                    @if (Model == null || !Model.Any())
+                <tbody id="batch-tbody">
+                    @if (Model != null && Model.Any())
                     {
-                        <tr>
-                            <td colspan="6" class="py-lg text-slate-400 text-xs italic bg-slate-50/50">ไม่พบประวัติการคีย์ข้อมูลในระบบสำหรับช่วงเวลาที่เลือก</td>
-                        </tr>
-                    }
-                    else
-                    {
-                        for (int i = 0; i < Model.Count; i++)
+                        foreach (var batch in Model)
                         {
-                            var b = Model[i];
-                            <tr class="hover:bg-slate-50/50 transition-colors">
-                                <td class="px-3 py-3 text-slate-400 font-mono">@(i + 1)</td>
-                                <td class="px-3 py-3 font-mono text-slate-500">@b.CreatedAt.ToString("dd/MM/yyyy HH:mm") น.</td>
-                                <td class="px-3 py-3 text-left font-semibold text-slate-700">@b.BatchName</td>
-                                <td class="px-3 py-3 font-mono">@b.TotalItems.ToString("N0") รายการ</td>
-                                <td class="px-3 py-3 font-mono font-bold text-slate-900">฿@b.TotalAmount.ToString("N2")</td>
-                                <td class="px-3 py-3">
+                            <tr class="border-b border-outline-variant hover:bg-surface-container-high transition-colors batch-row"
+                                data-name="@batch.BatchName">
+                                <td class="py-3 px-4">
+                                    <div class="font-bold text-on-surface">@batch.BatchName</div>
+                                </td>
+                                <td class="py-3 px-4 text-on-surface-variant font-mono text-xs">
+                                    @(batch.CreatedAt == default ? "-" : batch.CreatedAt.ToString("dd/MM/yyyy HH:mm"))
+                                </td>
+                                <td class="py-3 px-4 text-right font-mono font-bold text-slate-700">
+                                    @batch.TotalItems รายการ
+                                </td>
+                                <td class="py-3 px-4 text-right font-mono font-black text-primary">
+                                    ฿@batch.TotalAmount.ToString("N2")
+                                </td>
+                                <td class="py-3 px-4 text-center">
                                     <div class="flex items-center justify-center gap-2">
-                                        <!-- View -->
-                                        <a href="/ProductSearch/SavedBatchDetails?batchId=@b.BatchId" class="inline-flex items-center gap-1.5 px-2.5 py-1 border border-slate-200 hover:border-primary text-[11px] font-semibold text-slate-600 hover:text-primary bg-white rounded shadow-sm transition-all" title="เปิดดูรายละเอียด">
-                                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-                                            </svg>
-                                            <span>เปิดดู</span>
-                                        </a>
-                                        
-                                        <!-- Edit -->
-                                        <a href="/ProductSearch?editBatchId=@b.BatchId" class="inline-flex items-center gap-1.5 px-2.5 py-1 border border-slate-200 hover:border-blue-600 text-[11px] font-semibold text-slate-600 hover:text-blue-600 bg-white rounded shadow-sm transition-all" title="แก้ไขรายการอะไหล่ในแผ่นงาน">
-                                            <svg class="w-3.5 h-3.5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+                                        <a href="/ProductSearch?editBatchName=@Uri.EscapeDataString(batch.BatchName)" 
+                                           class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold text-primary bg-primary/10 hover:bg-primary/20 transition-all cursor-pointer shadow-2xs"
+                                           title="ดึงข้อมูลกลับไปแก้ไขหรือเขียนทับ">
+                                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
                                             </svg>
                                             <span>แก้ไข</span>
                                         </a>
-                                        
-                                        <!-- Delete -->
-                                        <button type="button" onclick="confirmDeleteBatch('@b.BatchId', '@b.BatchName')" class="inline-flex items-center gap-1.5 px-2.5 py-1 border border-slate-200 hover:border-red-600 text-[11px] font-semibold text-slate-600 hover:text-red-600 bg-white rounded shadow-sm transition-all" title="ลบแผ่นงานนี้">
-                                            <svg class="w-3.5 h-3.5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                                        <button type="button" 
+                                                class="btn-delete inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-all cursor-pointer shadow-2xs"
+                                                data-name="@batch.BatchName"
+                                                title="ลบแผ่นงานนี้ออกจาก Google Sheets">
+                                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                             </svg>
                                             <span>ลบ</span>
                                         </button>
@@ -154,197 +161,119 @@
                             </tr>
                         }
                     }
+                    else
+                    {
+                        <tr>
+                            <td colspan="5" class="py-12 text-center text-xs text-on-surface-variant">
+                                <div class="flex flex-col items-center gap-2">
+                                    <svg class="w-10 h-10 text-outline opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                    <span class="font-bold text-on-surface text-sm">ไม่พบประวัติการบันทึกใบสั่งซื้อ</span>
+                                    <span>เมื่อคุณบันทึกข้อมูลใบสั่งซื้อ รายการจะส่งไปยัง Google Sheets และแสดงที่นี่</span>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                    <tr id="no-search-results" class="hidden">
+                        <td colspan="5" class="py-10 text-center text-xs text-on-surface-variant bg-surface-container-low/40">
+                            <div class="flex flex-col items-center gap-1.5">
+                                <svg class="w-8 h-8 text-outline opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>
+                                <span class="font-semibold text-on-surface">ไม่พบข้อมูลที่ค้นหา</span>
+                            </div>
+                        </td>
+                    </tr>
                 </tbody>
             </table>
         </div>
     </div>
 </div>
 
-<!-- Custom Reusable Modal HTML -->
-<div id="custom-modal-overlay" class="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-[100] hidden items-center justify-center p-md">
-    <div class="bg-white rounded-lg border border-slate-200 shadow-2xl max-w-sm w-full overflow-hidden transform scale-95 opacity-0 transition-all duration-200" id="custom-modal-card">
-        <div class="p-lg">
-            <h3 class="text-sm font-bold text-slate-800" id="modal-title">หัวข้อ</h3>
-            <p class="text-xs text-slate-500 mt-1.5 leading-relaxed" id="modal-desc">รายละเอียดข้อความ...</p>
-        </div>
-        
-        <div class="px-lg pb-md hidden" id="modal-input-container">
-            <input type="text" id="modal-input-field" class="w-full px-3 py-2 border border-slate-200 rounded text-xs focus:ring-1 focus:ring-primary focus:border-primary outline-none" />
-        </div>
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Search Filter
+            const searchInput = document.getElementById('search-input');
+            const rows = Array.from(document.querySelectorAll('.batch-row'));
+            const noResults = document.getElementById('no-search-results');
 
-        <div class="px-lg py-md bg-slate-50 border-t border-slate-100 flex justify-end gap-sm">
-            <button type="button" id="modal-cancel-btn" class="px-md py-2 border border-slate-200 rounded text-xs font-semibold text-slate-600 bg-white hover:bg-slate-50 transition-colors">
-                ยกเลิก
-            </button>
-            <button type="button" id="modal-confirm-btn" class="text-xs font-bold px-5 py-2 rounded transition-colors shadow-sm">
-                ตกลง
-            </button>
-        </div>
-    </div>
-</div>
+            if (searchInput) {
+                searchInput.addEventListener('input', () => {
+                    const query = searchInput.value.trim().toLowerCase();
+                    let visibleCount = 0;
 
-<!-- Toast Container -->
-<div id="toast-container" class="fixed bottom-5 right-5 z-[200] flex flex-col gap-2 pointer-events-none"></div>
+                    rows.forEach(row => {
+                        const name = (row.dataset.name || '').toLowerCase();
+                        const matches = name.includes(query);
+                        row.style.display = matches ? '' : 'none';
+                        if (matches) visibleCount++;
+                    });
 
-<script>
-document.addEventListener("DOMContentLoaded", () => {
-    // Toast helper
-    function showToast(message, type = 'success') {
-        const container = document.getElementById("toast-container");
-        const toast = document.createElement("div");
-        toast.className = `px-4 py-3 rounded shadow-lg text-xs font-semibold flex items-center gap-2 transform translate-y-2 opacity-0 transition-all duration-300 pointer-events-auto max-w-sm ${
-            type === 'success' 
-                ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' 
-                : 'bg-rose-50 text-rose-800 border border-rose-200'
-        }`;
-        
-        const icon = type === 'success'
-            ? `<svg class="w-4 h-4 text-emerald-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`
-            : `<svg class="w-4 h-4 text-rose-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>`;
-
-        toast.innerHTML = `${icon}<span>${message}</span>`;
-        container.appendChild(toast);
-
-        setTimeout(() => {
-            toast.classList.remove("translate-y-2", "opacity-0");
-        }, 10);
-
-        setTimeout(() => {
-            toast.classList.add("opacity-0", "translate-y-2");
-            setTimeout(() => {
-                toast.remove();
-            }, 300);
-        }, 3000);
-    }
-
-    // Modal elements
-    const modalOverlay = document.getElementById("custom-modal-overlay");
-    const modalCard = document.getElementById("custom-modal-card");
-    const modalTitle = document.getElementById("modal-title");
-    const modalDesc = document.getElementById("modal-desc");
-    const modalInputContainer = document.getElementById("modal-input-container");
-    const modalInputField = document.getElementById("modal-input-field");
-    const modalCancelBtn = document.getElementById("modal-cancel-btn");
-    const modalConfirmBtn = document.getElementById("modal-confirm-btn");
-
-    let modalResolve = null;
-
-    window.setCustomModalLoading = function(isLoading) {
-        if (isLoading) {
-            modalCancelBtn.disabled = true;
-            modalConfirmBtn.disabled = true;
-            modalCancelBtn.classList.add("opacity-50", "pointer-events-none");
-            modalConfirmBtn.classList.add("opacity-80", "pointer-events-none");
-            modalConfirmBtn.innerHTML = `
-                <span class="flex items-center justify-center gap-1.5">
-                    <svg class="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    กำลังดำเนินการ...
-                </span>
-            `;
-        } else {
-            modalCancelBtn.disabled = false;
-            modalConfirmBtn.disabled = false;
-            modalCancelBtn.classList.remove("opacity-50", "pointer-events-none");
-            modalConfirmBtn.classList.remove("opacity-80", "pointer-events-none");
-            modalConfirmBtn.textContent = "ตกลง";
-        }
-    };
-
-    window.showCustomModal = function({ title, desc, showInput = false, defaultValue = "", confirmText = "ตกลง", confirmClass = "bg-primary text-white", onConfirm = null }) {
-        setCustomModalLoading(false);
-        return new Promise((resolve) => {
-            modalResolve = resolve;
-            
-            modalTitle.textContent = title;
-            modalDesc.textContent = desc;
-            
-            if (showInput) {
-                modalInputContainer.classList.remove("hidden");
-                modalInputField.value = defaultValue;
-            } else {
-                modalInputContainer.classList.add("hidden");
-            }
-
-            modalConfirmBtn.textContent = confirmText;
-            modalConfirmBtn.className = `text-xs font-bold px-5 py-2 rounded transition-colors shadow-sm ${confirmClass}`;
-
-            modalConfirmBtn.onclick = () => {
-                const hasInput = !modalInputContainer.classList.contains("hidden");
-                const val = hasInput ? modalInputField.value : true;
-                if (onConfirm) {
-                    onConfirm(val);
-                } else {
-                    hideModal(val);
-                }
-            };
-
-            modalCancelBtn.onclick = () => {
-                hideModal(null);
-            };
-
-            modalOverlay.classList.remove("hidden");
-            modalOverlay.classList.add("flex");
-            setTimeout(() => {
-                modalCard.classList.remove("scale-95", "opacity-0");
-                modalCard.classList.add("scale-100", "opacity-100");
-            }, 50);
-        });
-    };
-
-    window.hideModal = function(value) {
-        modalCard.classList.remove("scale-100", "opacity-100");
-        modalCard.classList.add("scale-95", "opacity-0");
-        setTimeout(() => {
-            modalOverlay.classList.remove("flex");
-            modalOverlay.classList.add("hidden");
-            if (modalResolve) {
-                modalResolve(value);
-                modalResolve = null;
-            }
-        }, 150);
-    };
-
-    // Confirm Delete Action
-    window.confirmDeleteBatch = function(batchId, batchName) {
-        showCustomModal({
-            title: "ยืนยันการลบแผ่นงาน",
-            desc: `ต้องการลบแผ่นงาน "${batchName}" และรายการสั่งซื้อทั้งหมดอย่างถาวรใช่หรือไม่? (ไม่สามารถกู้คืนได้)`,
-            confirmText: "ลบแผ่นงาน",
-            confirmClass: "bg-red-600 hover:bg-red-700 text-white",
-            onConfirm: function() {
-                setCustomModalLoading(true);
-
-                fetch(`/ProductSearch/DeleteBatch?batchId=${batchId}`, {
-                    method: "POST"
-                })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success) {
-                        showToast("ลบแผ่นงานสั่งซื้ออะไหล่สำเร็จเรียบร้อยแล้ว!", "success");
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 1000);
-                    } else {
-                        showToast("เกิดข้อผิดพลาด: " + data.error, "error");
-                        setCustomModalLoading(false);
+                    if (noResults) {
+                        noResults.classList.toggle('hidden', visibleCount > 0 || rows.length === 0);
                     }
-                })
-                .catch(err => {
-                    showToast("เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์", "error");
-                    setCustomModalLoading(false);
                 });
             }
-        });
-    };
 
-    // Close on ESC
-    document.addEventListener("keydown", (e) => {
-        if (e.key === "Escape" && !modalOverlay.classList.contains("hidden") && !modalConfirmBtn.disabled) {
-            hideModal(null);
-        }
-    });
-});
-</script>
+            // Delete Batch Action
+            document.querySelectorAll('.btn-delete').forEach(btn => {
+                btn.addEventListener('click', async function() {
+                    const name = this.dataset.name;
+
+                    const confirmRes = await Swal.fire({
+                        title: 'ยืนยันการลบแผ่นงาน?',
+                        text: `ต้องการลบแผ่นงาน "${name}" ออกจาก Google Sheets ใช่หรือไม่? (การดำเนินการนี้ไม่สามารถย้อนกลับได้)`,
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#e11d48',
+                        cancelButtonColor: '#64748b',
+                        confirmButtonText: 'ยืนยัน, ลบแผ่นงาน',
+                        cancelButtonText: 'ยกเลิก'
+                    });
+
+                    if (!confirmRes.isConfirmed) return;
+
+                    // Show loading overlay
+                    Swal.fire({
+                        title: 'กำลังลบข้อมูล...',
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+
+                    try {
+                        const response = await fetch('/ProductSearch/DeleteBatch', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded'
+                            },
+                            body: new URLSearchParams({ batchName: name })
+                        });
+
+                        const result = await response.json();
+
+                        if (result.success) {
+                            await Swal.fire({
+                                icon: 'success',
+                                  title: 'ลบแผ่นงานสำเร็จ',
+                                  text: 'ลบแผ่นงานสั่งซื้อออกจาก Google Sheets เรียบร้อยแล้ว',
+                                  confirmButtonColor: '#00288e'
+                            });
+                            location.reload();
+                        } else {
+                            throw new Error(result.error || 'ลบข้อมูลล้มเหลว');
+                        }
+                    } catch (error) {
+                        console.error(error);
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'เกิดข้อผิดพลาด',
+                            text: error.message || 'ไม่สามารถลบแผ่นงานสั่งซื้อได้',
+                            confirmButtonColor: '#00288e'
+                        });
+                    }
+                });
+            });
+        });
+    </script>
+}

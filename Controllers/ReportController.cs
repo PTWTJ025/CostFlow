@@ -9,19 +9,16 @@ using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 using ClosedXML.Excel;
 using System.IO;
-
 namespace CostFlow.Controllers
 {
-    [Authorize]
+    [Authorize(Roles = "Admin")]
     public class ReportController : Controller
     {
         private readonly AppDbContext _context;
-
         public ReportController(AppDbContext context)
         {
             _context = context;
         }
-
         public async Task<IActionResult> Index()
         {
             // Query จาก Report table แทน
@@ -37,68 +34,56 @@ namespace CostFlow.Controllers
                     CompareFileName = r.OriginalFileName
                 })
                 .ToListAsync();
-
             return View(reports);
         }
-
         public async Task<IActionResult> Details(string fileName)
         {
             if (string.IsNullOrEmpty(fileName)) return NotFound();
-
             var report = await _context.Reports
                 .Include(r => r.Orders)
                     .ThenInclude(o => o.MatchedInWeeklyPlans)
                         .ThenInclude(wpd => wpd.WeeklyPlan)
                 .FirstOrDefaultAsync(r => r.ReportName == fileName);
-
             if (report == null) return NotFound();
-
+            int uploadedPlansCount = await _context.WeeklyPlans
+                .Where(wp => wp.ReportId == report.Id)
+                .CountAsync();
             var orders = report.Orders
                 .OrderBy(o => o.Status == "Pending" ? 0 : 1)
                 .ThenBy(o => o.PoNumber)
                 .ToList();
-
             ViewData["ReportName"] = report.ReportName;
             ViewData["CreatedAt"] = report.CreatedAt;
-
+            ViewData["UploadedWeeklyPlansCount"] = uploadedPlansCount;
             return View(orders);
         }
-
         [HttpPost]
         public async Task<IActionResult> DeleteReport(string fileName)
         {
             var report = await _context.Reports
                 .Include(r => r.Orders)
                 .FirstOrDefaultAsync(r => r.ReportName == fileName);
-
             if (report != null)
             {
                 _context.Reports.Remove(report); // Cascade delete จะลบ Orders ด้วย
                 await _context.SaveChangesAsync();
                 return Json(new { success = true });
             }
-
             return Json(new { success = false, error = "ไม่พบข้อมูลที่ต้องการลบ" });
         }
-
         public async Task<IActionResult> ExportToExcel(string fileName, string? customName)
         {
             if (string.IsNullOrEmpty(fileName)) return NotFound();
-
             var report = await _context.Reports
                 .Include(r => r.Orders)
                 .FirstOrDefaultAsync(r => r.ReportName == fileName);
-
             if (report == null) return NotFound();
-
             var orders = report.Orders
                 .OrderBy(o => o.Status == "Pending" ? 0 : 1)
                 .ThenBy(o => o.PoNumber)
                 .ToList();
-
             using var workbook = new XLWorkbook();
             var worksheet = workbook.Worksheets.Add("TrackingReport");
-
             // Define headers
             worksheet.Cell(1, 1).Value = "เลขที่ใบสั่งซื้อ (PO)";
             worksheet.Cell(1, 2).Value = "วันที่สั่ง";
@@ -108,17 +93,14 @@ namespace CostFlow.Controllers
             worksheet.Cell(1, 6).Value = "หมายเหตุ";
             worksheet.Cell(1, 7).Value = "จำนวนชิ้น (สกัดได้)";
             worksheet.Cell(1, 8).Value = "สถานะ";
-
             var headerRow = worksheet.Range("A1:H1");
             headerRow.Style.Font.Bold = true;
             headerRow.Style.Fill.BackgroundColor = XLColor.LightGray;
-
             // Fill data
             for (int i = 0; i < orders.Count; i++)
             {
                 var order = orders[i];
                 var row = i + 2;
-
                 worksheet.Cell(row, 1).Value = order.PoNumber;
                 worksheet.Cell(row, 2).Value = order.RequestDate;
                 worksheet.Cell(row, 3).Value = order.ApprovedDate;
@@ -128,20 +110,15 @@ namespace CostFlow.Controllers
                 worksheet.Cell(row, 7).Value = order.RemarksQuantity;
                 worksheet.Cell(row, 8).Value = order.Status == "Matched" ? "ได้แผนผลิตแล้ว" : "ยังไม่มีแผนผลิต";
             }
-
             worksheet.Columns().AdjustToContents();
-
             using var stream = new MemoryStream();
             workbook.SaveAs(stream);
             var content = stream.ToArray();
-
             string downloadName = !string.IsNullOrWhiteSpace(customName)
                 ? $"{customName.Trim()}.xlsx"
                 : $"TrackingReport_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
-
             return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", downloadName);
         }
-
         [HttpGet]
         public async Task<IActionResult> GetWeeklyPlanDetail(Guid orderId)
         {
@@ -150,7 +127,6 @@ namespace CostFlow.Controllers
                 .Include(o => o.MatchedInWeeklyPlans)
                     .ThenInclude(wpd => wpd.WeeklyPlan)
                 .FirstOrDefaultAsync(o => o.Id == orderId);
-
             if (order != null)
             {
                 if (!order.MatchedInWeeklyPlans.Any())
@@ -169,15 +145,12 @@ namespace CostFlow.Controllers
                         history = new List<object>()
                     });
                 }
-
                 // Get matching details sorted by latest UploadedAt
                 var sortedDetails = order.MatchedInWeeklyPlans
                     .OrderByDescending(wpd => wpd.WeeklyPlan.UploadedAt)
                     .ToList();
-
                 var latestDetail = sortedDetails.First();
                 var latestPlan = latestDetail.WeeklyPlan;
-
                 var history = sortedDetails.Select(wpd => new
                 {
                     fileName = wpd.WeeklyPlan?.FileName ?? "-",
@@ -189,7 +162,6 @@ namespace CostFlow.Controllers
                     price = wpd.Price ?? "-",
                     uploadedAt = wpd.WeeklyPlan != null ? wpd.WeeklyPlan.UploadedAt.ToString("dd/MM/yyyy HH:mm") : "-"
                 }).ToList();
-
                 return Json(new
                 {
                     success = true,
@@ -204,12 +176,10 @@ namespace CostFlow.Controllers
                     history = history
                 });
             }
-
             // 2. Try to find WeeklyPlanDetail (unmatched ones)
             var wpdDetail = await _context.WeeklyPlanDetails
                 .Include(d => d.WeeklyPlan)
                 .FirstOrDefaultAsync(d => d.Id == orderId);
-
             if (wpdDetail != null)
             {
                 var history = new List<object>
@@ -226,7 +196,6 @@ namespace CostFlow.Controllers
                         uploadedAt = wpdDetail.WeeklyPlan != null ? wpdDetail.WeeklyPlan.UploadedAt.ToString("dd/MM/yyyy HH:mm") : "-"
                     }
                 };
-
                 return Json(new
                 {
                     success = true,
@@ -241,10 +210,8 @@ namespace CostFlow.Controllers
                     history = history
                 });
             }
-
             return Json(new { success = false, error = "ไม่พบข้อมูลแผนผลิต" });
         }
-
         public async Task<IActionResult> GetAllSystemOrders(
             int page = 1, 
             int pageSize = 15, 
@@ -254,9 +221,16 @@ namespace CostFlow.Controllers
         {
             if (page < 1) page = 1;
             if (pageSize < 1) pageSize = 15;
-
+            Guid? reportId = null;
+            if (!string.IsNullOrEmpty(reportName))
+            {
+                var rep = await _context.Reports.FirstOrDefaultAsync(r => r.ReportName == reportName);
+                if (rep != null)
+                {
+                    reportId = rep.Id;
+                }
+            }
             var allItems = new List<dynamic>();
-
             // 1. Query Master Orders if status filter is not exclusively "Unmatched"
             if (statusFilter != "Unmatched")
             {
@@ -265,12 +239,10 @@ namespace CostFlow.Controllers
                     .Include(o => o.MatchedInWeeklyPlans)
                         .ThenInclude(wpd => wpd.WeeklyPlan)
                     .AsQueryable();
-
-                if (!string.IsNullOrEmpty(reportName))
+                if (reportId.HasValue)
                 {
-                    masterQuery = masterQuery.Where(o => o.Report.ReportName == reportName);
+                    masterQuery = masterQuery.Where(o => o.ReportId == reportId.Value);
                 }
-
                 if (!string.IsNullOrEmpty(search))
                 {
                     var s = search.Trim().ToLower();
@@ -279,12 +251,10 @@ namespace CostFlow.Controllers
                                                      (o.Report.ReportName ?? "").ToLower().Contains(s) ||
                                                      o.MatchedInWeeklyPlans.Any(wpd => (wpd.WeeklyPlan.FileName ?? "").ToLower().Contains(s)));
                 }
-
                 if (statusFilter == "Matched" || statusFilter == "Pending")
                 {
                     masterQuery = masterQuery.Where(o => o.Status == statusFilter);
                 }
-
                 var masterList = await masterQuery
                     .Select(o => new
                     {
@@ -308,10 +278,8 @@ namespace CostFlow.Controllers
                         SortDate = o.CreatedAt
                     })
                     .ToListAsync();
-
                 allItems.AddRange(masterList);
             }
-
             // 2. Query Unmatched Weekly Plan Details if status filter is "All" or "Unmatched"
             if (statusFilter == "All" || statusFilter == "Unmatched")
             {
@@ -320,12 +288,10 @@ namespace CostFlow.Controllers
                         .ThenInclude(wp => wp.Report)
                     .Where(d => d.IsMatched == false || d.MatchedOrderId == null)
                     .AsQueryable();
-
-                if (!string.IsNullOrEmpty(reportName))
+                if (reportId.HasValue)
                 {
-                    weeklyQuery = weeklyQuery.Where(d => d.WeeklyPlan.Report.ReportName == reportName);
+                    weeklyQuery = weeklyQuery.Where(d => d.WeeklyPlan.ReportId == reportId.Value);
                 }
-
                 if (!string.IsNullOrEmpty(search))
                 {
                     var s = search.Trim().ToLower();
@@ -334,7 +300,6 @@ namespace CostFlow.Controllers
                                                      (d.WeeklyPlan.Report.ReportName ?? "").ToLower().Contains(s) ||
                                                      (d.WeeklyPlan.FileName ?? "").ToLower().Contains(s));
                 }
-
                 var weeklyList = await weeklyQuery
                     .Select(d => new
                     {
@@ -348,26 +313,37 @@ namespace CostFlow.Controllers
                         Remarks = d.OrderName ?? "-",
                         Status = "Unmatched",
                         ReportName = d.WeeklyPlan.Report.ReportName ?? "-",
-                        WeeklyPlanFiles = new List<string> { d.WeeklyPlan.FileName ?? "-" },
+                        WeeklyPlanFile = d.WeeklyPlan.FileName ?? "-",
                         SortDate = d.WeeklyPlan.UploadedAt
                     })
                     .ToListAsync();
-
-                allItems.AddRange(weeklyList);
+                var mappedWeekly = weeklyList.Select(d => new
+                {
+                    Id = d.Id,
+                    PoNumber = d.PoNumber,
+                    RequestDate = d.RequestDate,
+                    ApprovedDate = d.ApprovedDate,
+                    Urgency = d.Urgency,
+                    Amount = d.Amount,
+                    ProposedPrice = d.ProposedPrice,
+                    Remarks = d.Remarks,
+                    Status = d.Status,
+                    ReportName = d.ReportName,
+                    WeeklyPlanFiles = new List<string> { d.WeeklyPlanFile },
+                    SortDate = d.SortDate
+                });
+                allItems.AddRange(mappedWeekly);
             }
-
             // 3. Merge in memory, Order & Paginate
             var orderedItems = allItems
                 .OrderByDescending(x => (DateTime)x.SortDate)
                 .ThenBy(x => (string)x.PoNumber)
                 .ToList();
-
             int totalCount = orderedItems.Count;
             var items = orderedItems
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToList();
-
             return Json(new
             {
                 success = true,
@@ -377,9 +353,68 @@ namespace CostFlow.Controllers
                 items
             });
         }
-
         [HttpGet]
-        public IActionResult AllOrders(string? returnReportName)
+        public async Task<IActionResult> GetUploadedWeeklyPlanEntries(
+            int page = 1, 
+            int pageSize = 15, 
+            string? search = null, 
+            string? reportName = null, 
+            string? statusFilter = "All")
+        {
+            if (page < 1) page = 1;
+            if (pageSize < 1) pageSize = 15;
+
+            var query = _context.WeeklyPlanDetails
+                .Include(d => d.WeeklyPlan)
+                    .ThenInclude(wp => wp.Report)
+                .Include(d => d.MatchedOrder)
+                .AsQueryable();
+
+            if (!string.IsNullOrEmpty(reportName))
+            {
+                query = query.Where(d => d.WeeklyPlan.Report.ReportName == reportName);
+            }
+
+            if (!string.IsNullOrEmpty(search))
+            {
+                var s = search.Trim().ToLower();
+                query = query.Where(d => (d.PoNumberInFile ?? "").ToLower().Contains(s) || 
+                                         (d.OrderName ?? "").ToLower().Contains(s) || 
+                                         (d.WeeklyPlan.FileName ?? "").ToLower().Contains(s));
+            }
+
+            if (statusFilter == "Matched")
+            {
+                query = query.Where(d => d.IsMatched);
+            }
+            else if (statusFilter == "Unmatched" || statusFilter == "Pending") 
+            {
+                query = query.Where(d => !d.IsMatched);
+            }
+
+            var totalCount = await query.CountAsync();
+
+            var items = await query
+                .OrderBy(d => d.RowIndex) // Maintain Excel row order
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Select(d => new
+                {
+                    id = d.Id,
+                    poNumber = d.PoNumberInFile ?? "-",
+                    approvedDate = d.MatchedOrder != null ? (d.MatchedOrder.ApprovedDate ?? "-") : "-",
+                    urgency = d.MatchedOrder != null ? (d.MatchedOrder.Urgency ?? "-") : "-",
+                    amount = d.Price ?? "-",
+                    remarks = d.OrderName ?? "-",
+                    status = d.IsMatched ? "Matched" : "Unmatched",
+                    weeklyPlanFiles = new[] { d.WeeklyPlan.FileName ?? "-" }
+                })
+                .ToListAsync();
+
+            return Json(new { success = true, totalCount, page, pageSize, items });
+        }
+
+        [HttpGet] public IActionResult AllOrders(string? returnReportName)
         {
             ViewBag.ReturnReportName = returnReportName;
             return View();

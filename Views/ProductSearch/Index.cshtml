@@ -1,13 +1,13 @@
 @{
-    bool isEdit = ViewData["EditBatchId"] != null;
+    bool isEdit = ViewData["EditBatchName"] != null;
     ViewData["Title"] = isEdit ? "แก้ไขแผ่นงานสั่งซื้ออะไหล่" : "คีย์ใบสั่งซื้ออะไหล่";
-    ViewData["HeaderTitle"] = isEdit 
-        ? $"แก้ไขแผ่นงานสั่งซื้ออะไหล่ (Edit Spare Part Order)" 
+    ViewData["HeaderTitle"] = isEdit
+        ? $"แก้ไขแผ่นงานสั่งซื้ออะไหล่ (Edit Spare Part Order)"
         : "คีย์ใบสั่งซื้ออะไหล่ (Spare Part Order Entry)";
 }
 
-<div class="flex-1 p-md md:p-lg lg:p-xl flex flex-col gap-lg max-w-7xl mx-auto w-full">
-    @if (ViewData["EditBatchId"] != null)
+<div class="flex-1 p-md md:p-lg lg:p-xl flex flex-col gap-lg w-full max-w-[96vw] xl:max-w-[98vw] 2xl:max-w-[1600px] mx-auto">
+    @if (ViewData["EditBatchName"] != null)
     {
         <div class="bg-blue-50 border border-blue-200 rounded p-md flex flex-col md:flex-row justify-between items-start md:items-center gap-sm shadow-sm animate-fade-in">
             <div class="flex items-center gap-2.5">
@@ -22,7 +22,7 @@
     }
     <!-- Form & Cart Section Grid -->
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-lg">
-        
+
         <!-- Left Side: Product Auto-complete Search & Details Input Form (5 cols) -->
         <div class="lg:col-span-5 bg-white rounded border border-outline-variant shadow-sm p-md md:p-lg lg:p-xl flex flex-col gap-md">
             <div>
@@ -34,16 +34,16 @@
             <div class="relative">
                 <label class="block text-sm font-semibold text-slate-700 mb-1.5">พิมพ์ชื่อหรือรหัสสินค้าเพื่อค้นหา</label>
                 <div class="relative">
-                    <input id="search-input" class="w-full pl-3 pr-3 py-2.5 border border-outline-variant rounded text-sm focus:ring-1 focus:ring-primary focus:border-primary outline-none font-semibold text-slate-700" placeholder="ป้อนตัวหนังสือเพื่อค้นหารหัส หรือ รายการอะไหล่..." type="text" autocomplete="off" />
+                    <input id="search-input" class="w-full pl-3 pr-3 py-2.5 border border-outline-variant rounded text-sm focus:ring-1 focus:ring-primary focus:border-primary outline-none font-semibold text-slate-700" placeholder="ป้อนตัวหนังสือเพื่อค้นหารหัส หรือ รายการอะไหล่..." type="text" autocomplete="off"/>
                 </div>
-                
+
                 <!-- Autocomplete Dropdown List -->
                 <div id="suggestions-dropdown" class="hidden absolute left-0 right-0 mt-1 bg-white border border-slate-200 rounded shadow-lg z-50 max-h-[260px] overflow-y-auto divide-y divide-slate-100">
                     <!-- Dynamic Items Go Here -->
                 </div>
             </div>
 
-            <hr class="border-slate-100" />
+            <hr class="border-slate-100"/>
 
             <!-- Product Details Form -->
             <div class="flex flex-col gap-sm">
@@ -51,11 +51,11 @@
                 <div class="grid grid-cols-2 gap-sm">
                     <div>
                         <label class="block text-sm font-semibold text-slate-700 mb-1">รหัส 10 หลัก</label>
-                        <input id="form-code" class="w-full px-3 py-2 border border-slate-100 rounded text-sm bg-slate-50 text-slate-600 outline-none font-mono" type="text" readonly placeholder="-" />
+                        <input id="form-code" class="w-full px-3 py-2 border border-slate-100 rounded text-sm bg-slate-50 text-slate-600 outline-none font-mono" type="text" readonly placeholder="-"/>
                     </div>
                     <div>
                         <label class="block text-sm font-semibold text-slate-700 mb-1">หน่วยนับ</label>
-                        <input id="form-unit" class="w-full px-3 py-2 border border-slate-100 rounded text-sm bg-slate-50 text-slate-600 outline-none" type="text" readonly placeholder="-" />
+                        <input id="form-unit" class="w-full px-3 py-2 border border-slate-100 rounded text-sm bg-slate-50 text-slate-600 outline-none" type="text" readonly placeholder="-"/>
                     </div>
                 </div>
 
@@ -70,23 +70,23 @@
                     <div class="flex gap-sm">
                         <div class="flex-1">
                             <label class="block text-sm font-semibold text-slate-700 mb-1">ราคาอ้างอิง</label>
-                            <input id="form-price" class="w-full px-3 py-2 border border-outline-variant rounded text-sm outline-none font-mono" type="number" step="0.01" value="0.00" />
+                            <input id="form-price" class="w-full px-3 py-2 border border-outline-variant rounded text-sm outline-none font-mono" type="number" step="0.01" value="0.00"/>
                         </div>
                         <div class="flex-1">
                             <label class="block text-sm font-semibold text-slate-700 mb-1">จำนวนสั่งซื้อ</label>
-                            <input id="form-qty" class="w-full px-3 py-2 border border-outline-variant rounded text-sm outline-none font-mono" type="number" min="0.01" step="any" value="1" />
+                            <input id="form-qty" class="w-full px-3 py-2 border border-outline-variant rounded text-sm outline-none font-mono" type="number" min="0.01" step="any" value="1"/>
                         </div>
                     </div>
                     <div>
                         <label class="block text-sm font-semibold text-slate-700 mb-1">มูลค่ารวมประเมิน</label>
-                        <input id="form-total" class="w-full pl-3 pr-4 py-2 border border-slate-100 rounded text-sm bg-slate-50 text-slate-600 outline-none font-mono text-right text-base font-bold text-primary tabular-nums" type="text" readonly value="0.00" />
+                        <input id="form-total" class="w-full pl-3 pr-4 py-2 border border-slate-100 rounded text-sm bg-slate-50 outline-none font-mono text-right font-bold text-primary tabular-nums" type="text" readonly value="0.00"/>
                     </div>
                 </div>
 
                 <!-- Row 4: Remarks -->
                 <div>
                     <label class="block text-sm font-semibold text-slate-700 mb-1">หมายเหตุ (ระบุหรือไม่ระบุก็ได้)</label>
-                    <input id="form-remarks" class="w-full px-3 py-2 border border-outline-variant rounded text-sm outline-none" type="text" placeholder="ป้อนหมายเหตุเพิ่มเติม เช่น 'แก้ไขใหม่กรณีไม่อนุมัติ...'" />
+                    <input id="form-remarks" class="w-full px-3 py-2 border border-outline-variant rounded text-sm outline-none" type="text" placeholder="ป้อนหมายเหตุเพิ่มเติม เช่น 'แก้ไขใหม่กรณีไม่อนุมัติ...'"/>
                 </div>
 
 
@@ -95,7 +95,7 @@
             <!-- Add Item Button -->
             <button id="add-item-btn" class="w-full bg-primary hover:bg-primary/95 text-on-primary text-sm font-bold py-2.5 rounded transition-colors flex items-center justify-center gap-sm mt-xs">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
                 </svg>
                 เพิ่มเข้าตารางสั่งซื้อ
             </button>
@@ -119,31 +119,31 @@
             <div class="overflow-x-auto border border-outline-variant rounded max-h-[340px] overflow-y-auto">
                 <table class="min-w-full divide-y divide-slate-200 text-center" id="cart-table">
                     <thead class="bg-slate-100 sticky top-0 z-10">
-                        <tr>
-                            <th class="px-2.5 py-2 text-xs font-bold text-slate-500 uppercase tracking-wider w-[40px]">#</th>
-                            <th class="px-2.5 py-2 text-xs font-bold text-slate-500 uppercase tracking-wider">รหัส 10 หลัก</th>
-                            <th class="px-2.5 py-2 text-xs font-bold text-slate-500 uppercase tracking-wider text-left">รายการอะไหล่</th>
-                            <th class="px-2.5 py-2 text-xs font-bold text-slate-500 uppercase tracking-wider">หน่วย</th>
-                            <th class="px-2.5 py-2 text-xs font-bold text-slate-500 uppercase tracking-wider">ราคา/หน่วย</th>
-                            <th class="px-2.5 py-2 text-xs font-bold text-slate-500 uppercase tracking-wider">จำนวน</th>
-                            <th class="px-2.5 py-2 text-xs font-bold text-slate-500 uppercase tracking-wider">มูลค่าเบิก</th>
-                            <th class="px-2.5 py-2 text-xs font-bold text-slate-500 uppercase tracking-wider text-left w-[150px]">หมายเหตุ</th>
-                            <th class="px-2.5 py-2 text-xs font-bold text-slate-500 uppercase tracking-wider w-[50px]">ลบ</th>
-                        </tr>
+                    <tr>
+                        <th class="px-2.5 py-2 text-xs font-bold text-slate-500 uppercase tracking-wider w-[40px]">#</th>
+                        <th class="px-2.5 py-2 text-xs font-bold text-slate-500 uppercase tracking-wider">รหัส 10 หลัก</th>
+                        <th class="px-2.5 py-2 text-xs font-bold text-slate-500 uppercase tracking-wider text-left">รายการอะไหล่</th>
+                        <th class="px-2.5 py-2 text-xs font-bold text-slate-500 uppercase tracking-wider">หน่วย</th>
+                        <th class="px-2.5 py-2 text-xs font-bold text-slate-500 uppercase tracking-wider">ราคา/หน่วย</th>
+                        <th class="px-2.5 py-2 text-xs font-bold text-slate-500 uppercase tracking-wider">จำนวน</th>
+                        <th class="px-2.5 py-2 text-xs font-bold text-slate-500 uppercase tracking-wider">มูลค่าเบิก</th>
+                        <th class="px-2.5 py-2 text-xs font-bold text-slate-500 uppercase tracking-wider text-left w-[150px]">หมายเหตุ</th>
+                        <th class="px-2.5 py-2 text-xs font-bold text-slate-500 uppercase tracking-wider w-[50px]">ลบ</th>
+                    </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-slate-200 text-xs font-medium text-slate-800" id="cart-body">
-                        <!-- Items populated via JS -->
-                        <tr id="empty-cart-row">
-                            <td colspan="9" class="py-lg text-slate-400 text-xs italic bg-slate-50/50">@(isEdit ? "ไม่มีรายการสั่งซื้อในแผ่นงานนี้" : "ยังไม่มีรายการสั่งซื้อในระบบแบบร่าง")</td>
-                        </tr>
+                    <!-- Items populated via JS -->
+                    <tr id="empty-cart-row">
+                        <td colspan="9" class="py-lg text-slate-400 text-xs italic bg-slate-50/50">@(isEdit ? "ไม่มีรายการสั่งซื้อในแผ่นงานนี้" : "ยังไม่มีรายการสั่งซื้อในระบบแบบร่าง")</td>
+                    </tr>
                     </tbody>
                     <tfoot class="bg-slate-100/95 backdrop-blur sticky bottom-0 z-10 border-t-2 border-slate-300 font-bold text-slate-800">
-                        <tr>
-                            <td colspan="5" class="px-3 py-2.5 text-right uppercase text-xs">รวมทั้งสิ้น (<span id="cart-total-items-tfoot">0</span> รายการ):</td>
-                            <td class="px-2 py-2.5 font-mono text-primary text-base" id="cart-total-qty-tfoot">0</td>
-                            <td class="px-2 py-2.5 font-mono text-primary text-base" id="cart-total-amount-tfoot">฿0.00</td>
-                            <td colspan="2" class="px-2 py-2.5 text-left text-[11px] text-slate-500 font-normal truncate max-w-[180px]" id="cart-total-text-tfoot">(ศูนย์บาทถ้วน)</td>
-                        </tr>
+                    <tr>
+                        <td colspan="5" class="px-3 py-2.5 text-right uppercase text-xs">รวมทั้งสิ้น (<span id="cart-total-items-tfoot">0</span> รายการ):</td>
+                        <td class="px-2 py-2.5 font-mono text-primary text-base" id="cart-total-qty-tfoot">0</td>
+                        <td class="px-2 py-2.5 font-mono text-primary text-base" id="cart-total-amount-tfoot">฿0.00</td>
+                        <td colspan="2" class="px-2 py-2.5 text-left text-[11px] text-slate-500 font-normal truncate max-w-[180px]" id="cart-total-text-tfoot">(ศูนย์บาทถ้วน)</td>
+                    </tr>
                     </tfoot>
                 </table>
             </div>
@@ -167,199 +167,207 @@
 </div>
 
 <script>
-document.addEventListener("DOMContentLoaded", function() {
-    // Premium Toast Notification Helper
-    function showToast(message, type = 'error') {
-        let container = document.getElementById("toast-container");
-        if (!container) {
-            container = document.createElement("div");
-            container.id = "toast-container";
-            container.className = "fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none";
-            document.body.appendChild(container);
-        }
+    document.addEventListener("DOMContentLoaded", function () {
+        // Premium Toast Notification Helper
+        function showToast(message, type = 'error') {
+            let container = document.getElementById("toast-container");
+            if (!container) {
+                container = document.createElement("div");
+                container.id = "toast-container";
+                container.className = "fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none";
+                document.body.appendChild(container);
+            }
 
-        const toast = document.createElement("div");
-        toast.className = `px-4 py-3 rounded shadow-lg text-xs font-semibold flex items-center gap-2 transform translate-y-2 opacity-0 transition-all duration-300 pointer-events-auto max-w-sm ${
-            type === 'success' 
-                ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' 
-                : 'bg-rose-50 text-rose-800 border border-rose-200'
-        }`;
-        
-        const icon = type === 'success'
-            ? `<svg class="w-4 h-4 text-emerald-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`
-            : `<svg class="w-4 h-4 text-rose-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>`;
+            const toast = document.createElement("div");
+            toast.className = `px-4 py-3 rounded shadow-lg text-xs font-semibold flex items-center gap-2 transform translate-y-2 opacity-0 transition-all duration-300 pointer-events-auto max-w-sm ${type === 'success'
+                    ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                    : 'bg-rose-50 text-rose-800 border border-rose-200'
+                }`;
 
-        toast.innerHTML = `${icon}<span>${message}</span>`;
-        container.appendChild(toast);
+            const icon = type === 'success'
+                ? `<svg class="w-4 h-4 text-emerald-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`
+                : `<svg class="w-4 h-4 text-rose-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>`;
 
-        // Slide/fade animation in
-        setTimeout(() => {
-            toast.classList.remove("translate-y-2", "opacity-0");
-        }, 10);
+            toast.innerHTML = `${icon}<span>${message}</span>`;
+            container.appendChild(toast);
 
-        // Auto remove after 3s
-        setTimeout(() => {
-            toast.classList.add("opacity-0", "translate-y-2");
+            // Slide/fade animation in
             setTimeout(() => {
-                toast.remove();
-            }, 300);
-        }, 3000);
-    }
+                toast.classList.remove("translate-y-2", "opacity-0");
+            }, 10);
 
-    const searchInput = document.getElementById("search-input");
-    const suggestionsDropdown = document.getElementById("suggestions-dropdown");
-
-    const formCode = document.getElementById("form-code");
-    const formUnit = document.getElementById("form-unit");
-    const formName = document.getElementById("form-name");
-    const formPrice = document.getElementById("form-price");
-    const formQty = document.getElementById("form-qty");
-    const formTotal = document.getElementById("form-total");
-    const formRemarks = document.getElementById("form-remarks");
-
-
-    const addItemBtn = document.getElementById("add-item-btn");
-    const cartBody = document.getElementById("cart-body");
-    const emptyCartRow = document.getElementById("empty-cart-row");
-    const cartTotalDisplay = document.getElementById("cart-total-display");
-    const clearCartBtn = document.getElementById("clear-cart-btn");
-    const submitOrdersBtn = document.getElementById("submit-orders-btn");
-    const submitSpinner = document.getElementById("submit-spinner");
-
-    // Basket memory storage
-    let basket = [];
-
-    // Unsaved Changes Guard
-    window.addEventListener("beforeunload", function(e) {
-        if (basket.length > 0) {
-            e.preventDefault();
-            e.returnValue = "คุณมีรายการสั่งซื้อที่ยังไม่ได้บันทึก ต้องการออกจากหน้านี้หรือไม่?";
-            return e.returnValue;
+            // Auto remove after 3s
+            setTimeout(() => {
+                toast.classList.add("opacity-0", "translate-y-2");
+                setTimeout(() => {
+                    toast.remove();
+                }, 300);
+            }, 3000);
         }
-    });
 
-    // If editing a saved batch, populate from server
-    @if (ViewData["EditBatchId"] != null)
+        const searchInput = document.getElementById("search-input");
+        const suggestionsDropdown = document.getElementById("suggestions-dropdown");
+
+        const formCode = document.getElementById("form-code");
+        const formUnit = document.getElementById("form-unit");
+        const formName = document.getElementById("form-name");
+        const formPrice = document.getElementById("form-price");
+        const formQty = document.getElementById("form-qty");
+        const formTotal = document.getElementById("form-total");
+        const formRemarks = document.getElementById("form-remarks");
+
+
+        const addItemBtn = document.getElementById("add-item-btn");
+        const cartBody = document.getElementById("cart-body");
+        const emptyCartRow = document.getElementById("empty-cart-row");
+        const cartTotalDisplay = document.getElementById("cart-total-display");
+        const clearCartBtn = document.getElementById("clear-cart-btn");
+        const submitOrdersBtn = document.getElementById("submit-orders-btn");
+        const submitSpinner = document.getElementById("submit-spinner");
+
+        // Basket memory storage
+        let basket = [];
+
+        // Unsaved Changes Guard
+        window.addEventListener("beforeunload", function (e) {
+            if (basket.length > 0) {
+                e.preventDefault();
+                e.returnValue = "คุณมีรายการสั่งซื้อที่ยังไม่ได้บันทึก ต้องการออกจากหน้านี้หรือไม่?";
+                return e.returnValue;
+            }
+        });
+
+        // If editing a saved batch, populate from server
+        @if (ViewData["EditBatchName"] != null)
     {
         <text>
-        const editOrders = @Html.Raw(ViewData["EditOrdersJson"]);
-        const editBatchId = "@ViewData["EditBatchId"]";
-        const editBatchName = "@Html.Raw(ViewData["EditBatchName"])";
+            const editOrders = @Html.Raw(ViewData["EditOrdersJson"] ?? "[]");
+            const editBatchName = "@Html.Raw(ViewData["EditBatchName"])";
         
         if (editOrders && editOrders.length > 0) {
-            basket = editOrders;
-            setTimeout(() => { updateCartUI(); }, 50);
+                basket = editOrders.map(o => ({
+                    productCode: o.ProductCode || o.productCode,
+                    productName: o.ProductName || o.productName,
+                    unit: o.Unit || o.unit,
+                    unitPrice: o.UnitPrice || o.unitPrice,
+                    quantity: o.Quantity || o.quantity,
+                    totalAmount: o.TotalAmount || o.totalAmount,
+                    approvalNo: o.ApprovalNo || o.approvalNo || "",
+                    remarks: o.Remarks || o.remarks || "",
+                    receiveDate: o.ReceiveDate || o.receiveDate || ""
+                }));
+            setTimeout(() => {updateCartUI(); }, 50);
         }
         </text>
     }
     else
     {
         <text>
-        try {
+            try {
             const savedDraft = localStorage.getItem("costflow_draft_orders");
             if (savedDraft) {
                 const parsed = JSON.parse(savedDraft);
                 if (Array.isArray(parsed) && parsed.length > 0) {
-                    basket = parsed;
+                basket = parsed;
                     setTimeout(() => {
-                        updateCartUI();
-                        showToast("กู้คืนรายการสั่งซื้อแบบร่างที่ค้างอยู่จากหน่วยความจำเรียบร้อยแล้ว", "success");
+                updateCartUI();
+            showToast("กู้คืนรายการสั่งซื้อแบบร่างที่ค้างอยู่จากหน่วยความจำเรียบร้อยแล้ว", "success");
                     }, 100);
                 }
             }
-        } catch (e) {}
+        } catch (e) { }
         </text>
     }
 
-    // Format numbers helper
-    function formatCurrency(val) {
-        return "฿" + Number(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    }
+        // Format numbers helper
+        function formatCurrency(val) {
+            return "฿" + Number(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
 
-    // Convert number to Thai Baht text helper
-    function formatBahtText(amount) {
-        if (isNaN(amount) || amount === null || amount === undefined) return "(ศูนย์บาทถ้วน)";
-        const num = Number(amount);
-        if (num === 0) return "(ศูนย์บาทถ้วน)";
-        
-        const fixed = num.toFixed(2);
-        const parts = fixed.split('.');
-        const bahtStr = parts[0];
-        const satangStr = parts[1];
+        // Convert number to Thai Baht text helper
+        function formatBahtText(amount) {
+            if (isNaN(amount) || amount === null || amount === undefined) return "(ศูนย์บาทถ้วน)";
+            const num = Number(amount);
+            if (num === 0) return "(ศูนย์บาทถ้วน)";
 
-        const textNum = ["ศูนย์", "หนึ่ง", "สอง", "สาม", "สี่", "ห้า", "หก", "เจ็ด", "แปด", "เก้า"];
-        const textUnit = ["", "สิบ", "ร้อย", "พัน", "หมื่น", "แสน"];
+            const fixed = num.toFixed(2);
+            const parts = fixed.split('.');
+            const bahtStr = parts[0];
+            const satangStr = parts[1];
 
-        function readSixDigits(str) {
-            let res = "";
-            let len = str.length;
-            for (let i = 0; i < len; i++) {
-                let digit = parseInt(str.charAt(i));
-                let pos = len - i - 1;
-                if (digit !== 0) {
-                    if (pos === 1 && digit === 2) {
-                        res += "ยี่สิบ";
-                    } else if (pos === 1 && digit === 1) {
-                        res += "สิบ";
-                    } else if (pos === 0 && digit === 1 && len > 1 && parseInt(str.substring(0, len - 1)) > 0) {
-                        res += "เอ็ด";
-                    } else {
-                        res += textNum[digit] + textUnit[pos];
+            const textNum = ["ศูนย์", "หนึ่ง", "สอง", "สาม", "สี่", "ห้า", "หก", "เจ็ด", "แปด", "เก้า"];
+            const textUnit = ["", "สิบ", "ร้อย", "พัน", "หมื่น", "แสน"];
+
+            function readSixDigits(str) {
+                let res = "";
+                let len = str.length;
+                for (let i = 0; i < len; i++) {
+                    let digit = parseInt(str.charAt(i));
+                    let pos = len - i - 1;
+                    if (digit !== 0) {
+                        if (pos === 1 && digit === 2) {
+                            res += "ยี่สิบ";
+                        } else if (pos === 1 && digit === 1) {
+                            res += "สิบ";
+                        } else if (pos === 0 && digit === 1 && len > 1 && parseInt(str.substring(0, len - 1)) > 0) {
+                            res += "เอ็ด";
+                        } else {
+                            res += textNum[digit] + textUnit[pos];
+                        }
                     }
                 }
+                return res;
             }
-            return res;
-        }
 
-        function readIntegerPart(str) {
-            if (str === "0" || str === "") return "ศูนย์";
-            let chunks = [];
-            let temp = str;
-            while (temp.length > 0) {
-                let chunk = temp.slice(-6);
-                chunks.unshift(chunk);
-                temp = temp.slice(0, -6);
-            }
-            let res = "";
-            for (let i = 0; i < chunks.length; i++) {
-                let chunkText = readSixDigits(chunks[i]);
-                if (chunkText !== "") {
-                    res += chunkText;
-                    let millionCount = chunks.length - 1 - i;
-                    for (let m = 0; m < millionCount; m++) {
-                        res += "ล้าน";
+            function readIntegerPart(str) {
+                if (str === "0" || str === "") return "ศูนย์";
+                let chunks = [];
+                let temp = str;
+                while (temp.length > 0) {
+                    let chunk = temp.slice(-6);
+                    chunks.unshift(chunk);
+                    temp = temp.slice(0, -6);
+                }
+                let res = "";
+                for (let i = 0; i < chunks.length; i++) {
+                    let chunkText = readSixDigits(chunks[i]);
+                    if (chunkText !== "") {
+                        res += chunkText;
+                        let millionCount = chunks.length - 1 - i;
+                        for (let m = 0; m < millionCount; m++) {
+                            res += "ล้าน";
+                        }
                     }
                 }
+                return res;
             }
-            return res;
+
+            let bahtText = "";
+            if (Number(bahtStr) > 0) {
+                bahtText = readIntegerPart(bahtStr) + "บาท";
+            }
+            let satangText = "";
+            if (Number(satangStr) > 0) {
+                satangText = readIntegerPart(satangStr) + "สตางค์";
+            } else {
+                satangText = "ถ้วน";
+            }
+
+            return `(${bahtText}${satangText})`;
         }
 
-        let bahtText = "";
-        if (Number(bahtStr) > 0) {
-            bahtText = readIntegerPart(bahtStr) + "บาท";
-        }
-        let satangText = "";
-        if (Number(satangStr) > 0) {
-            satangText = readIntegerPart(satangStr) + "สตางค์";
-        } else {
-            satangText = "ถ้วน";
-        }
-        
-        return `(${bahtText}${satangText})`;
-    }
+        // Dynamic autocomplete fetch
+        let debounceTimeout = null;
+        searchInput.addEventListener("input", function () {
+            const query = this.value;
 
-    // Dynamic autocomplete fetch
-    let debounceTimeout = null;
-    searchInput.addEventListener("input", function() {
-        const query = this.value;
-        
-        clearTimeout(debounceTimeout);
-        if (query.trim().length < 1) {
-            suggestionsDropdown.classList.add("hidden");
-            suggestionsDropdown.innerHTML = "";
-            return;
-        }
-        suggestionsDropdown.innerHTML = `
+            clearTimeout(debounceTimeout);
+            if (query.trim().length < 1) {
+                suggestionsDropdown.classList.add("hidden");
+                suggestionsDropdown.innerHTML = "";
+                return;
+            }
+            suggestionsDropdown.innerHTML = `
             <div class="px-3 py-2.5 animate-pulse flex flex-col gap-1.5 bg-slate-50/30">
                 <div class="h-3 bg-slate-200 rounded w-1/4"></div>
                 <div class="h-3 bg-slate-200 rounded w-3/4"></div>
@@ -369,172 +377,172 @@ document.addEventListener("DOMContentLoaded", function() {
                 <div class="h-3 bg-slate-200 rounded w-1/2"></div>
             </div>
         `;
-        suggestionsDropdown.classList.remove("hidden");
+            suggestionsDropdown.classList.remove("hidden");
 
-        debounceTimeout = setTimeout(() => {
-            fetch(`/ProductSearch/Suggest?q=${encodeURIComponent(query)}`)
-                .then(res => res.json())
-                .then(data => {
-                    suggestionsDropdown.innerHTML = "";
-                    if (data && data.length > 0) {
-                        data.forEach(item => {
-                            const option = document.createElement("div");
-                            option.className = "px-3 py-2.5 hover:bg-slate-50 cursor-pointer transition-colors flex justify-between gap-sm items-center";
-                            option.innerHTML = `
+            debounceTimeout = setTimeout(() => {
+                fetch(`/ProductSearch/Suggest?q=${encodeURIComponent(query)}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        suggestionsDropdown.innerHTML = "";
+                        if (data && data.length > 0) {
+                            data.forEach(item => {
+                                const option = document.createElement("div");
+                                option.className = "px-3 py-2.5 hover:bg-slate-50 cursor-pointer transition-colors flex justify-between gap-sm items-center";
+                                option.innerHTML = `
                                 <div class="text-left">
                                     <span class="font-mono text-primary font-bold block text-sm">${item.productCode}</span>
                                     <span class="text-slate-700 block max-w-[320px] truncate text-sm">${item.productName}</span>
                                 </div>
                                 <span class="text-slate-500 text-xs font-mono shrink-0">${item.unit} / ฿${item.pricePerUnit.toFixed(2)}</span>
                             `;
-                            option.addEventListener("click", function() {
-                                selectProduct(item);
+                                option.addEventListener("click", function () {
+                                    selectProduct(item);
+                                });
+                                suggestionsDropdown.appendChild(option);
                             });
-                            suggestionsDropdown.appendChild(option);
-                        });
-                        suggestionsDropdown.classList.remove("hidden");
-                    } else {
-                        suggestionsDropdown.classList.add("hidden");
-                    }
-                });
-        }, 50);
-    });
+                            suggestionsDropdown.classList.remove("hidden");
+                        } else {
+                            suggestionsDropdown.classList.add("hidden");
+                        }
+                    });
+            }, 50);
+        });
 
-    // Close autocomplete on click outside
-    document.addEventListener("click", function(e) {
-        if (!searchInput.contains(e.target) && !suggestionsDropdown.contains(e.target)) {
+        // Close autocomplete on click outside
+        document.addEventListener("click", function (e) {
+            if (!searchInput.contains(e.target) && !suggestionsDropdown.contains(e.target)) {
+                suggestionsDropdown.classList.add("hidden");
+            }
+        });
+
+        // Populate details when part is selected
+        function selectProduct(item) {
+            formCode.value = item.productCode;
+            formUnit.value = item.unit;
+            formName.value = item.productName;
+            formPrice.value = item.pricePerUnit.toFixed(2);
+            formQty.value = "1";
+            updateFormTotal();
+
             suggestionsDropdown.classList.add("hidden");
-        }
-    });
+            suggestionsDropdown.innerHTML = "";
+            searchInput.value = ""; // clear search bar for clean look
 
-    // Populate details when part is selected
-    function selectProduct(item) {
-        formCode.value = item.productCode;
-        formUnit.value = item.unit;
-        formName.value = item.productName;
-        formPrice.value = item.pricePerUnit.toFixed(2);
-        formQty.value = "1";
-        updateFormTotal();
-        
-        suggestionsDropdown.classList.add("hidden");
-        suggestionsDropdown.innerHTML = "";
-        searchInput.value = ""; // clear search bar for clean look
-        
-        formQty.focus();
-    }
-
-    // Live total calculation on unit inputs
-    function updateFormTotal() {
-        const qty = parseFloat(formQty.value) || 0;
-        const price = parseFloat(formPrice.value) || 0;
-        formTotal.value = (qty * price).toFixed(2);
-    }
-    formQty.addEventListener("input", updateFormTotal);
-    formPrice.addEventListener("input", updateFormTotal);
-
-    // Add item to Cart
-    addItemBtn.addEventListener("click", function() {
-        const code = formCode.value;
-        const unit = formUnit.value;
-        const name = formName.value;
-        const price = parseFloat(formPrice.value) || 0;
-        const qty = parseFloat(formQty.value) || 0;
-        const remarks = formRemarks.value.trim();
-        const total = price * qty;
-
-        if (!code || code === "-") {
-            showToast("กรุณาค้นหาและเลือกสินค้าก่อนเพิ่มรายการ", "error");
-            searchInput.focus();
-            return;
-        }
-        if (qty <= 0) {
-            showToast("กรุณาระบุจำนวนสินค้าที่ถูกต้อง", "error");
             formQty.focus();
-            return;
-        }
-        if (qty > 1000) {
-            showToast("ไม่อนุญาตให้สั่งซื้อเกิน 1,000 ชิ้นต่อรายการ เนื่องจากจำนวนสินค้าสูงเกินเกณฑ์ปกติ กรุณาตรวจสอบความถูกต้องอีกครั้ง", "error");
-            formQty.focus();
-            return;
         }
 
-        // Check if item already exists in basket
-        const existingItem = basket.find(item => item.productCode === code);
-        if (existingItem) {
-            if ((existingItem.quantity + qty) > 1000) {
-                showToast(`ไม่สามารถเพิ่มได้เนื่องจากจำนวนรวมของรายการนี้จะเกิน 1,000 ชิ้น (ปัจจุบันมีอยู่แล้ว ${existingItem.quantity} ${unit})`, "error");
+        // Live total calculation on unit inputs
+        function updateFormTotal() {
+            const qty = parseFloat(formQty.value) || 0;
+            const price = parseFloat(formPrice.value) || 0;
+            formTotal.value = (qty * price).toFixed(2);
+        }
+        formQty.addEventListener("input", updateFormTotal);
+        formPrice.addEventListener("input", updateFormTotal);
+
+        // Add item to Cart
+        addItemBtn.addEventListener("click", function () {
+            const code = formCode.value;
+            const unit = formUnit.value;
+            const name = formName.value;
+            const price = parseFloat(formPrice.value) || 0;
+            const qty = parseFloat(formQty.value) || 0;
+            const remarks = formRemarks.value.trim();
+            const total = price * qty;
+
+            if (!code || code === "-") {
+                showToast("กรุณาค้นหาและเลือกสินค้าก่อนเพิ่มรายการ", "error");
+                searchInput.focus();
+                return;
+            }
+            if (qty <= 0) {
+                showToast("กรุณาระบุจำนวนสินค้าที่ถูกต้อง", "error");
                 formQty.focus();
                 return;
             }
-            existingItem.quantity += qty;
-            existingItem.totalAmount = existingItem.quantity * existingItem.unitPrice;
-            if (remarks) {
-                existingItem.remarks = existingItem.remarks 
-                    ? existingItem.remarks + "; " + remarks 
-                    : remarks;
+            if (qty > 1000) {
+                showToast("ไม่อนุญาตให้สั่งซื้อเกิน 1,000 ชิ้นต่อรายการ เนื่องจากจำนวนสินค้าสูงเกินเกณฑ์ปกติ กรุณาตรวจสอบความถูกต้องอีกครั้ง", "error");
+                formQty.focus();
+                return;
             }
-            showToast(`บวกเพิ่มจำนวนสินค้า ${name} เป็น ${existingItem.quantity} ${unit} เรียบร้อยแล้ว`, "success");
-        } else {
-            // Add new to basket memory
-            basket.push({
-                productCode: code,
-                productName: name,
-                unit: unit,
-                unitPrice: price,
-                quantity: qty,
-                totalAmount: total,
-                approvalNo: "",
-                remarks: remarks,
-                receiveDate: ""
-            });
-            showToast(`เพิ่ม ${name} เข้าตารางสั่งซื้อเรียบร้อยแล้ว`, "success");
-        }
 
-        // Reset details form
-        formCode.value = "-";
-        formUnit.value = "-";
-        formName.value = "-";
-        formPrice.value = "0.00";
-        formQty.value = "1";
-        formTotal.value = "0.00";
-        formRemarks.value = "";
+            // Check if item already exists in basket
+            const existingItem = basket.find(item => item.productCode === code);
+            if (existingItem) {
+                if ((existingItem.quantity + qty) > 1000) {
+                    showToast(`ไม่สามารถเพิ่มได้เนื่องจากจำนวนรวมของรายการนี้จะเกิน 1,000 ชิ้น (ปัจจุบันมีอยู่แล้ว ${existingItem.quantity} ${unit})`, "error");
+                    formQty.focus();
+                    return;
+                }
+                existingItem.quantity += qty;
+                existingItem.totalAmount = existingItem.quantity * existingItem.unitPrice;
+                if (remarks) {
+                    existingItem.remarks = existingItem.remarks
+                        ? existingItem.remarks + "; " + remarks
+                        : remarks;
+                }
+                showToast(`บวกเพิ่มจำนวนสินค้า ${name} เป็น ${existingItem.quantity} ${unit} เรียบร้อยแล้ว`, "success");
+            } else {
+                // Add new to basket memory
+                basket.push({
+                    productCode: code,
+                    productName: name,
+                    unit: unit,
+                    unitPrice: price,
+                    quantity: qty,
+                    totalAmount: total,
+                    approvalNo: "",
+                    remarks: remarks,
+                    receiveDate: ""
+                });
+                showToast(`เพิ่ม ${name} เข้าตารางสั่งซื้อเรียบร้อยแล้ว`, "success");
+            }
 
-        updateCartUI();
-    });
+            // Reset details form
+            formCode.value = "-";
+            formUnit.value = "-";
+            formName.value = "-";
+            formPrice.value = "0.00";
+            formQty.value = "1";
+            formTotal.value = "0.00";
+            formRemarks.value = "";
 
-    // Update Cart UI list
-    function updateCartUI() {
-        cartBody.innerHTML = "";
-        const cartTotalTextDisplay = document.getElementById("cart-total-text");
-        const cartTotalItemsTfoot = document.getElementById("cart-total-items-tfoot");
-        const cartTotalQtyTfoot = document.getElementById("cart-total-qty-tfoot");
-        const cartTotalAmountTfoot = document.getElementById("cart-total-amount-tfoot");
-        const cartTotalTextTfoot = document.getElementById("cart-total-text-tfoot");
-        
-        if (basket.length === 0) {
-            cartBody.appendChild(emptyCartRow);
-            submitOrdersBtn.disabled = true;
-            cartTotalDisplay.textContent = "฿0.00";
-            cartTotalDisplay.className = "font-headline-sm text-headline-sm font-black text-primary";
-            if (cartTotalTextDisplay) cartTotalTextDisplay.textContent = "(ศูนย์บาทถ้วน)";
-            if (cartTotalItemsTfoot) cartTotalItemsTfoot.textContent = "0";
-            if (cartTotalQtyTfoot) cartTotalQtyTfoot.textContent = "0";
-            if (cartTotalAmountTfoot) cartTotalAmountTfoot.textContent = "฿0.00";
-            if (cartTotalTextTfoot) cartTotalTextTfoot.textContent = "(ศูนย์บาทถ้วน)";
-            try { localStorage.removeItem("costflow_draft_orders"); } catch(e) {}
-            return;
-        }
+            updateCartUI();
+        });
 
-        let totalSum = 0;
-        let totalQty = 0;
+        // Update Cart UI list
+        function updateCartUI() {
+            cartBody.innerHTML = "";
+            const cartTotalTextDisplay = document.getElementById("cart-total-text");
+            const cartTotalItemsTfoot = document.getElementById("cart-total-items-tfoot");
+            const cartTotalQtyTfoot = document.getElementById("cart-total-qty-tfoot");
+            const cartTotalAmountTfoot = document.getElementById("cart-total-amount-tfoot");
+            const cartTotalTextTfoot = document.getElementById("cart-total-text-tfoot");
 
-        basket.forEach((item, index) => {
-            totalSum += item.totalAmount;
-            totalQty += item.quantity;
-            
-            const tr = document.createElement("tr");
-            tr.className = "hover:bg-slate-50/50 transition-colors";
-            tr.innerHTML = `
+            if (basket.length === 0) {
+                cartBody.appendChild(emptyCartRow);
+                submitOrdersBtn.disabled = true;
+                cartTotalDisplay.textContent = "฿0.00";
+                cartTotalDisplay.className = "font-headline-sm text-headline-sm font-black text-primary";
+                if (cartTotalTextDisplay) cartTotalTextDisplay.textContent = "(ศูนย์บาทถ้วน)";
+                if (cartTotalItemsTfoot) cartTotalItemsTfoot.textContent = "0";
+                if (cartTotalQtyTfoot) cartTotalQtyTfoot.textContent = "0";
+                if (cartTotalAmountTfoot) cartTotalAmountTfoot.textContent = "฿0.00";
+                if (cartTotalTextTfoot) cartTotalTextTfoot.textContent = "(ศูนย์บาทถ้วน)";
+                try { localStorage.removeItem("costflow_draft_orders"); } catch (e) { }
+                return;
+            }
+
+            let totalSum = 0;
+            let totalQty = 0;
+
+            basket.forEach((item, index) => {
+                totalSum += item.totalAmount;
+                totalQty += item.quantity;
+
+                const tr = document.createElement("tr");
+                tr.className = "hover:bg-slate-50/50 transition-colors";
+                tr.innerHTML = `
                 <td class="px-2 py-2.5 text-slate-400 font-mono">${index + 1}</td>
                 <td class="px-2 py-2.5 font-mono text-primary">${item.productCode}</td>
                 <td class="px-2 py-2.5 text-left max-w-[200px] truncate" title="${item.productName}">${item.productName}</td>
@@ -551,165 +559,169 @@ document.addEventListener("DOMContentLoaded", function() {
                     </button>
                 </td>
             `;
-            cartBody.appendChild(tr);
+                cartBody.appendChild(tr);
+            });
+
+            // Add event listeners to delete buttons
+            document.querySelectorAll(".delete-item-btn").forEach(btn => {
+                btn.addEventListener("click", function () {
+                    const idx = parseInt(this.getAttribute("data-index"));
+                    basket.splice(idx, 1);
+                    updateCartUI();
+                });
+            });
+
+            cartTotalDisplay.textContent = formatCurrency(totalSum);
+            if (cartTotalItemsTfoot) cartTotalItemsTfoot.textContent = String(basket.length);
+            if (cartTotalQtyTfoot) cartTotalQtyTfoot.textContent = String(totalQty);
+            if (cartTotalAmountTfoot) cartTotalAmountTfoot.textContent = formatCurrency(totalSum);
+
+            if (totalSum > 10000000) {
+                cartTotalDisplay.className = "font-headline-sm text-headline-sm font-black text-rose-600 animate-pulse";
+                cartTotalDisplay.title = "ยอดรวมเกินเกณฑ์กำหนด 10,000,000 บาท";
+                if (cartTotalTextDisplay) {
+                    cartTotalTextDisplay.innerHTML = `<span class="text-rose-600 font-bold">⚠️ ${formatBahtText(totalSum)} (ยอดสูงเกินเกณฑ์กำหนด 10 ล้านบาท)</span>`;
+                }
+                if (cartTotalTextTfoot) {
+                    cartTotalTextTfoot.innerHTML = `<span class="text-rose-600 font-bold">⚠️ ${formatBahtText(totalSum)} (เกิน 10 ล้านบาท)</span>`;
+                }
+            } else {
+                cartTotalDisplay.className = "font-headline-sm text-headline-sm font-black text-primary";
+                cartTotalDisplay.title = "";
+                if (cartTotalTextDisplay) {
+                    cartTotalTextDisplay.textContent = formatBahtText(totalSum);
+                }
+                if (cartTotalTextTfoot) {
+                    cartTotalTextTfoot.textContent = formatBahtText(totalSum);
+                }
+            }
+            submitOrdersBtn.disabled = false;
+
+            try { localStorage.setItem("costflow_draft_orders", JSON.stringify(basket)); } catch (e) { }
+        }
+
+        // Clear Basket
+        clearCartBtn.addEventListener("click", async function () {
+            if (basket.length === 0) return;
+
+            const confirmed = await showCustomModal({
+                title: "ล้างรายการแบบร่างทั้งหมด",
+                desc: "คุณต้องการล้างรายการสั่งซื้อสะสมในตารางแบบร่างนี้ใช่หรือไม่? (ข้อมูลที่ยังไม่บันทึกจะหายไป)",
+                confirmText: "ล้างข้อมูลทั้งหมด",
+                confirmClass: "bg-red-600 hover:bg-red-700 text-white"
+            });
+
+            if (confirmed) {
+                basket = [];
+                updateCartUI();
+                showToast("ล้างรายการแบบร่างเรียบร้อยแล้ว", "success");
+            }
         });
 
-        // Add event listeners to delete buttons
-        document.querySelectorAll(".delete-item-btn").forEach(btn => {
-            btn.addEventListener("click", function() {
-                const idx = parseInt(this.getAttribute("data-index"));
-                basket.splice(idx, 1);
-                updateCartUI();
+        // Submit Orders AJAX POST to Db
+        submitOrdersBtn.addEventListener("click", function () {
+            if (basket.length === 0) return;
+
+            const totalCartSum = basket.reduce((acc, item) => acc + item.totalAmount, 0);
+            if (totalCartSum > 10000000) {
+                showToast("ไม่สามารถบันทึกได้ เนื่องจากยอดรวมทั้งสิ้นสูงเกินเกณฑ์กำหนด (10,000,000 บาท) กรุณาตรวจสอบมูลค่ารายการอีกครั้ง", "error");
+                return;
+            }
+
+            const isEditMode = @(isEdit ? "true" : "false");
+
+            // Generate dynamic default name
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('th-TH', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '-');
+            const timeStr = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false }).replace(/:/g, '.');
+            const defaultName = (typeof editBatchName !== 'undefined') ? editBatchName : `แผ่นงานสั่งซื้ออะไหล่_${dateStr}_${timeStr}`;
+
+            showCustomModal({
+                title: isEditMode ? "ยืนยันการบันทึกแก้ไขแผ่นงาน" : "บันทึกข้อมูลเข้าระบบ",
+                desc: isEditMode ? "กรุณาตรวจสอบชื่อแผ่นงานสั่งซื้ออะไหล่ที่ต้องการแก้ไขบันทึก:" : "กรุณาระบุชื่อแผ่นงานสั่งซื้ออะไหล่นี้เพื่อเก็บบันทึกประวัติประวัติ:",
+                showInput: true,
+                defaultValue: defaultName,
+                confirmText: isEditMode ? "บันทึกการแก้ไข" : "บันทึกข้อมูล",
+                confirmClass: "bg-primary hover:bg-primary/95 text-white",
+                onConfirm: function (batchNameInput) {
+                    const batchName = (batchNameInput || "").trim() || defaultName;
+
+                    // Put modal into loading state and disable actions
+                    setCustomModalLoading(true);
+
+                    const payload = {
+                        BatchName: batchName,
+                        Orders: basket.map(item => ({
+                            ProductCode: item.productCode,
+                            ProductName: item.productName,
+                            Unit: item.unit,
+                            UnitPrice: String(item.unitPrice),
+                            Quantity: String(item.quantity),
+                            Remarks: item.remarks || "",
+                            ApprovalNo: item.approvalNo,
+                            ReceiveDate: item.receiveDate
+                        }))
+                    };
+
+                    fetch("/ProductSearch/SaveOrders", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify(payload)
+                    })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.success) {
+                                basket = [];
+                                updateCartUI();
+
+                                // Close modal after success
+                                hideModal(batchName);
+
+                                // Show SweetAlert popup
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'บันทึกข้อมูลสำเร็จ!',
+                                    text: 'บันทึกข้อมูลสั่งซื้อเข้าระบบและ Google Sheets สำเร็จเรียบร้อยแล้ว',
+                                    confirmButtonText: 'ตกลง',
+                                    confirmButtonColor: '#00288e'
+                                }).then(() => {
+                                    window.location.href = "/ProductSearch/SavedOrders";
+                                });
+                            } else {
+                                showToast("เกิดข้อผิดพลาด: " + data.error, "error");
+                                setCustomModalLoading(false);
+                            }
+                        })
+                        .catch(err => {
+                            showToast("เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์", "error");
+                            setCustomModalLoading(false);
+                        });
+                }
             });
         });
 
-        cartTotalDisplay.textContent = formatCurrency(totalSum);
-        if (cartTotalItemsTfoot) cartTotalItemsTfoot.textContent = String(basket.length);
-        if (cartTotalQtyTfoot) cartTotalQtyTfoot.textContent = String(totalQty);
-        if (cartTotalAmountTfoot) cartTotalAmountTfoot.textContent = formatCurrency(totalSum);
+        // Custom Modal System JS
+        const modalOverlay = document.getElementById("custom-modal-overlay");
+        const modalCard = document.getElementById("custom-modal-card");
+        const modalTitle = document.getElementById("modal-title");
+        const modalDesc = document.getElementById("modal-desc");
+        const modalInputContainer = document.getElementById("modal-input-container");
+        const modalInputField = document.getElementById("modal-input-field");
+        const modalCancelBtn = document.getElementById("modal-cancel-btn");
+        const modalConfirmBtn = document.getElementById("modal-confirm-btn");
 
-        if (totalSum > 10000000) {
-            cartTotalDisplay.className = "font-headline-sm text-headline-sm font-black text-rose-600 animate-pulse";
-            cartTotalDisplay.title = "ยอดรวมเกินเกณฑ์กำหนด 10,000,000 บาท";
-            if (cartTotalTextDisplay) {
-                cartTotalTextDisplay.innerHTML = `<span class="text-rose-600 font-bold">⚠️ ${formatBahtText(totalSum)} (ยอดสูงเกินเกณฑ์กำหนด 10 ล้านบาท)</span>`;
-            }
-            if (cartTotalTextTfoot) {
-                cartTotalTextTfoot.innerHTML = `<span class="text-rose-600 font-bold">⚠️ ${formatBahtText(totalSum)} (เกิน 10 ล้านบาท)</span>`;
-            }
-        } else {
-            cartTotalDisplay.className = "font-headline-sm text-headline-sm font-black text-primary";
-            cartTotalDisplay.title = "";
-            if (cartTotalTextDisplay) {
-                cartTotalTextDisplay.textContent = formatBahtText(totalSum);
-            }
-            if (cartTotalTextTfoot) {
-                cartTotalTextTfoot.textContent = formatBahtText(totalSum);
-            }
-        }
-        submitOrdersBtn.disabled = false;
+        let modalResolve = null;
 
-        try { localStorage.setItem("costflow_draft_orders", JSON.stringify(basket)); } catch(e) {}
-    }
-
-    // Clear Basket
-    clearCartBtn.addEventListener("click", async function() {
-        if (basket.length === 0) return;
-
-        const confirmed = await showCustomModal({
-            title: "ล้างรายการแบบร่างทั้งหมด",
-            desc: "คุณต้องการล้างรายการสั่งซื้อสะสมในตารางแบบร่างนี้ใช่หรือไม่? (ข้อมูลที่ยังไม่บันทึกจะหายไป)",
-            confirmText: "ล้างข้อมูลทั้งหมด",
-            confirmClass: "bg-red-600 hover:bg-red-700 text-white"
-        });
-
-        if (confirmed) {
-            basket = [];
-            updateCartUI();
-            showToast("ล้างรายการแบบร่างเรียบร้อยแล้ว", "success");
-        }
-    });
-
-    // Submit Orders AJAX POST to Db
-    submitOrdersBtn.addEventListener("click", function() {
-        if (basket.length === 0) return;
-
-        const totalCartSum = basket.reduce((acc, item) => acc + item.totalAmount, 0);
-        if (totalCartSum > 10000000) {
-            showToast("ไม่สามารถบันทึกได้ เนื่องจากยอดรวมทั้งสิ้นสูงเกินเกณฑ์กำหนด (10,000,000 บาท) กรุณาตรวจสอบมูลค่ารายการอีกครั้ง", "error");
-            return;
-        }
-
-        const isEditMode = @(isEdit ? "true" : "false");
-
-        // Generate dynamic default name
-        const now = new Date();
-        const dateStr = now.toLocaleDateString('th-TH', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '-');
-        const timeStr = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false }).replace(/:/g, '.');
-        const defaultName = (typeof editBatchName !== 'undefined') ? editBatchName : `แผ่นงานสั่งซื้ออะไหล่_${dateStr}_${timeStr}`;
-
-        showCustomModal({
-            title: isEditMode ? "ยืนยันการบันทึกแก้ไขแผ่นงาน" : "บันทึกข้อมูลเข้าระบบ",
-            desc: isEditMode ? "กรุณาตรวจสอบชื่อแผ่นงานสั่งซื้ออะไหล่ที่ต้องการแก้ไขบันทึก:" : "กรุณาระบุชื่อแผ่นงานสั่งซื้ออะไหล่นี้เพื่อเก็บบันทึกประวัติประวัติ:",
-            showInput: true,
-            defaultValue: defaultName,
-            confirmText: isEditMode ? "บันทึกการแก้ไข" : "บันทึกข้อมูล",
-            confirmClass: "bg-primary hover:bg-primary/95 text-white",
-            onConfirm: function(batchNameInput) {
-                const batchName = (batchNameInput || "").trim() || defaultName;
-
-                // Put modal into loading state and disable actions
-                setCustomModalLoading(true);
-
-                const payload = {
-                    BatchId: (typeof editBatchId !== 'undefined') ? editBatchId : null,
-                    BatchName: batchName,
-                    Orders: basket.map(item => ({
-                        ProductCode: item.productCode,
-                        ProductName: item.productName,
-                        Unit: item.unit,
-                        UnitPrice: String(item.unitPrice),
-                        Quantity: String(item.quantity),
-                        Remarks: item.remarks || "",
-                        ApprovalNo: item.approvalNo,
-                        ReceiveDate: item.receiveDate
-                    }))
-                };
-
-                fetch("/ProductSearch/SaveOrders", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify(payload)
-                })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success) {
-                        showToast(isEditMode ? "บันทึกการแก้ไขแผ่นงานสั่งซื้ออะไหล่สำเร็จเรียบร้อยแล้ว!" : "บันทึกข้อมูลแผ่นงานสั่งซื้ออะไหล่สำเร็จเข้าระบบเรียบร้อยแล้ว!", "success");
-                        basket = [];
-                        updateCartUI();
-                        
-                        // Close modal after success
-                        hideModal(batchName);
-                        
-                        // Redirect to saved list
-                        setTimeout(() => {
-                            window.location.href = "/ProductSearch/SavedOrders";
-                        }, 1000);
-                    } else {
-                        showToast("เกิดข้อผิดพลาด: " + data.error, "error");
-                        setCustomModalLoading(false);
-                    }
-                })
-                .catch(err => {
-                    showToast("เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์", "error");
-                    setCustomModalLoading(false);
-                });
-            }
-        });
-    });
-
-    // Custom Modal System JS
-    const modalOverlay = document.getElementById("custom-modal-overlay");
-    const modalCard = document.getElementById("custom-modal-card");
-    const modalTitle = document.getElementById("modal-title");
-    const modalDesc = document.getElementById("modal-desc");
-    const modalInputContainer = document.getElementById("modal-input-container");
-    const modalInputField = document.getElementById("modal-input-field");
-    const modalCancelBtn = document.getElementById("modal-cancel-btn");
-    const modalConfirmBtn = document.getElementById("modal-confirm-btn");
-
-    let modalResolve = null;
-
-    window.setCustomModalLoading = function(isLoading) {
-        if (isLoading) {
-            modalCancelBtn.disabled = true;
-            modalConfirmBtn.disabled = true;
-            modalInputField.disabled = true;
-            modalCancelBtn.classList.add("opacity-50", "pointer-events-none");
-            modalConfirmBtn.classList.add("opacity-80", "pointer-events-none");
-            modalConfirmBtn.innerHTML = `
+        window.setCustomModalLoading = function (isLoading) {
+            if (isLoading) {
+                modalCancelBtn.disabled = true;
+                modalConfirmBtn.disabled = true;
+                modalInputField.disabled = true;
+                modalCancelBtn.classList.add("opacity-50", "pointer-events-none");
+                modalConfirmBtn.classList.add("opacity-80", "pointer-events-none");
+                modalConfirmBtn.innerHTML = `
                 <span class="flex items-center justify-center gap-1.5">
                     <svg class="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -718,85 +730,85 @@ document.addEventListener("DOMContentLoaded", function() {
                     กำลังบันทึก...
                 </span>
             `;
-        } else {
-            modalCancelBtn.disabled = false;
-            modalConfirmBtn.disabled = false;
-            modalInputField.disabled = false;
-            modalCancelBtn.classList.remove("opacity-50", "pointer-events-none");
-            modalConfirmBtn.classList.remove("opacity-80", "pointer-events-none");
-            modalConfirmBtn.textContent = "บันทึกข้อมูล";
-        }
-    };
-
-    window.showCustomModal = function({ title, desc, showInput = false, defaultValue = "", confirmText = "ตกลง", confirmClass = "bg-primary text-white", onConfirm = null }) {
-        // Reset modal loading state first
-        setCustomModalLoading(false);
-        
-        return new Promise((resolve) => {
-            modalResolve = resolve;
-            
-            modalTitle.textContent = title;
-            modalDesc.textContent = desc;
-            
-            if (showInput) {
-                modalInputContainer.classList.remove("hidden");
-                modalInputField.value = defaultValue;
             } else {
-                modalInputContainer.classList.add("hidden");
+                modalCancelBtn.disabled = false;
+                modalConfirmBtn.disabled = false;
+                modalInputField.disabled = false;
+                modalCancelBtn.classList.remove("opacity-50", "pointer-events-none");
+                modalConfirmBtn.classList.remove("opacity-80", "pointer-events-none");
+                modalConfirmBtn.textContent = "บันทึกข้อมูล";
             }
+        };
 
-            modalConfirmBtn.textContent = confirmText;
-            modalConfirmBtn.className = `text-xs font-bold px-5 py-2 rounded transition-colors shadow-sm ${confirmClass}`;
+        window.showCustomModal = function ({ title, desc, showInput = false, defaultValue = "", confirmText = "ตกลง", confirmClass = "bg-primary text-white", onConfirm = null }) {
+            // Reset modal loading state first
+            setCustomModalLoading(false);
 
-            // Handle confirm callback
-            modalConfirmBtn.onclick = () => {
-                const hasInput = !modalInputContainer.classList.contains("hidden");
-                const val = hasInput ? modalInputField.value : true;
-                if (onConfirm) {
-                    onConfirm(val);
-                } else {
-                    hideModal(val);
-                }
-            };
+            return new Promise((resolve) => {
+                modalResolve = resolve;
 
-            // Handle cancel callback
-            modalCancelBtn.onclick = () => {
-                hideModal(null);
-            };
+                modalTitle.textContent = title;
+                modalDesc.textContent = desc;
 
-            modalOverlay.classList.remove("hidden");
-            modalOverlay.classList.add("flex");
-            setTimeout(() => {
-                modalCard.classList.remove("scale-95", "opacity-0");
-                modalCard.classList.add("scale-100", "opacity-100");
                 if (showInput) {
-                    modalInputField.focus();
-                    modalInputField.select();
+                    modalInputContainer.classList.remove("hidden");
+                    modalInputField.value = defaultValue;
+                } else {
+                    modalInputContainer.classList.add("hidden");
                 }
-            }, 50);
-        });
-    }
 
-    window.hideModal = function(value) {
-        modalCard.classList.remove("scale-100", "opacity-100");
-        modalCard.classList.add("scale-95", "opacity-0");
-        setTimeout(() => {
-            modalOverlay.classList.remove("flex");
-            modalOverlay.classList.add("hidden");
-            if (modalResolve) {
-                modalResolve(value);
-                modalResolve = null;
-            }
-        }, 150);
-    }
+                modalConfirmBtn.textContent = confirmText;
+                modalConfirmBtn.className = `text-xs font-bold px-5 py-2 rounded transition-colors shadow-sm ${confirmClass}`;
 
-    // Close on ESC
-    document.addEventListener("keydown", (e) => {
-        if (e.key === "Escape" && !modalOverlay.classList.contains("hidden") && !modalConfirmBtn.disabled) {
-            hideModal(null);
+                // Handle confirm callback
+                modalConfirmBtn.onclick = () => {
+                    const hasInput = !modalInputContainer.classList.contains("hidden");
+                    const val = hasInput ? modalInputField.value : true;
+                    if (onConfirm) {
+                        onConfirm(val);
+                    } else {
+                        hideModal(val);
+                    }
+                };
+
+                // Handle cancel callback
+                modalCancelBtn.onclick = () => {
+                    hideModal(null);
+                };
+
+                modalOverlay.classList.remove("hidden");
+                modalOverlay.classList.add("flex");
+                setTimeout(() => {
+                    modalCard.classList.remove("scale-95", "opacity-0");
+                    modalCard.classList.add("scale-100", "opacity-100");
+                    if (showInput) {
+                        modalInputField.focus();
+                        modalInputField.select();
+                    }
+                }, 50);
+            });
         }
+
+        window.hideModal = function (value) {
+            modalCard.classList.remove("scale-100", "opacity-100");
+            modalCard.classList.add("scale-95", "opacity-0");
+            setTimeout(() => {
+                modalOverlay.classList.remove("flex");
+                modalOverlay.classList.add("hidden");
+                if (modalResolve) {
+                    modalResolve(value);
+                    modalResolve = null;
+                }
+            }, 150);
+        }
+
+        // Close on ESC
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "Escape" && !modalOverlay.classList.contains("hidden") && !modalConfirmBtn.disabled) {
+                hideModal(null);
+            }
+        });
     });
-});
 </script>
 
 <!-- Custom Reusable Modal HTML -->
@@ -806,9 +818,9 @@ document.addEventListener("DOMContentLoaded", function() {
             <h3 class="text-sm font-bold text-slate-800" id="modal-title">หัวข้อ</h3>
             <p class="text-xs text-slate-500 mt-1" id="modal-desc">รายละเอียดข้อความ...</p>
         </div>
-        
+
         <div class="px-lg pb-md hidden" id="modal-input-container">
-            <input type="text" id="modal-input-field" class="w-full px-3 py-2 border border-slate-200 rounded text-xs focus:ring-1 focus:ring-primary focus:border-primary outline-none" />
+            <input type="text" id="modal-input-field" class="w-full px-3 py-2 border border-slate-200 rounded text-xs focus:ring-1 focus:ring-primary focus:border-primary outline-none"/>
         </div>
 
         <div class="px-lg py-md bg-slate-50 border-t border-slate-100 flex justify-end gap-sm">
@@ -821,3 +833,7 @@ document.addEventListener("DOMContentLoaded", function() {
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+}

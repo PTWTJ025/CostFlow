@@ -3,7 +3,7 @@
     ViewData["HeaderTitle"] = "ประมาณการค่าใช้จ่ายประจำเดือน";
 }
 
-<div class="flex-1 p-md md:p-lg lg:p-xl flex flex-col gap-lg max-w-[80vw] lg:max-w-4xl xl:max-w-4xl mx-auto w-full">
+<div class="flex-1 p-md md:p-lg lg:p-xl flex flex-col gap-lg w-full max-w-[96vw] xl:max-w-[98vw] 2xl:max-w-[1600px] mx-auto">
     <!-- Unified Workspace Surface -->
     <div class="bg-white rounded border border-outline-variant shadow-sm p-md md:p-lg lg:p-xl flex flex-col flex-1">
         
@@ -81,18 +81,17 @@
                 <table class="w-full text-left border-collapse min-w-[800px] text-sm">
                     <thead class="bg-slate-50 sticky top-0 z-10 text-xs text-slate-600 font-semibold border-b border-slate-200">
                         <tr>
-                            <th class="px-4 py-3 w-12 text-center">เลือก</th>
-                            <th class="px-4 py-3 w-12 text-center">ลำดับ</th>
-                            <th class="px-4 py-3 w-28 text-left">รหัสสินค้า</th>
-                            <th id="th-product-name" class="px-4 py-3 text-left">ชื่อสินค้า / รายการอะไหล่</th>
-                            <th class="px-4 py-3 w-20 text-center">หน่วย</th>
-                            <th class="px-4 py-3 w-32 text-right">ราคาต่อหน่วย (อ้างอิง)</th>
-                            <th class="p-0"></th>
+                            <th class="px-4 py-3 w-14 text-center">เลือก</th>
+                            <th class="px-4 py-3 w-14 text-center">ลำดับ</th>
+                            <th class="px-4 py-3 w-32 text-left">รหัสสินค้า</th>
+                            <th class="px-4 py-3 text-left">ชื่อสินค้า / รายการอะไหล่</th>
+                            <th class="px-4 py-3 w-24 text-center">หน่วย</th>
+                            <th class="px-4 py-3 w-36 text-right">ราคาต่อหน่วย (อ้างอิง)</th>
                         </tr>
                     </thead>
                     <tbody id="products-tbody" class="divide-y divide-slate-200 bg-white text-sm text-slate-700">
                         <tr>
-                            <td colspan="7" class="text-center py-12 text-slate-500">
+                            <td colspan="6" class="text-center py-12 text-slate-500">
                                 <div class="flex items-center justify-center gap-2.5">
                                     <div class="w-4 h-4 border-2 border-slate-200 border-t-primary rounded-full animate-spin"></div>
                                     <span class="font-semibold">กำลังโหลดข้อมูลสินค้า...</span>
@@ -346,7 +345,6 @@
                         <td class="px-4 py-3"><div class="w-2/3 h-4 bg-slate-200/80 rounded"></div></td>
                         <td class="px-4 py-3 text-center"><div class="w-10 h-4 bg-slate-200/80 rounded mx-auto"></div></td>
                         <td class="px-4 py-3 text-right"><div class="w-16 h-4 bg-slate-200/80 rounded ml-auto"></div></td>
-                        <td class="p-0"></td>
                     </tr>
                 `;
             }
@@ -364,32 +362,15 @@
                 document.getElementById('products-current-page').textContent = currentPage;
                 document.getElementById('products-total-pages').textContent = totalPages;
 
-                // Find the longest product name on the current page to adjust name column width dynamically
-                let longestNameLen = 0;
-                data.products.forEach(p => {
-                    const len = p.productName ? p.productName.length : 0;
-                    if (len > longestNameLen) {
-                        longestNameLen = len;
-                    }
-                });
-
-                // Calculate name column width dynamically (approx 8.5px per character, min 220px, max 450px)
-                const nameColWidth = Math.max(220, Math.min(480, longestNameLen * 8.5));
-                const nameHeader = document.getElementById('th-product-name');
-                if (nameHeader) {
-                    nameHeader.style.width = `${nameColWidth}px`;
-                    nameHeader.style.maxWidth = `${nameColWidth}px`;
-                }
-
                 isLoading = false;
-                renderTable(data.products, nameColWidth);
+                renderTable(data.products);
                 renderPagination();
             } catch (err) {
                 console.error(err);
                 isLoading = false;
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="7" class="text-center py-8 text-red-500 font-semibold">
+                        <td colspan="6" class="text-center py-8 text-red-500 font-semibold">
                             เกิดข้อผิดพลาดในการโหลดข้อมูล กรุณาลองใหม่อีกครั้ง
                         </td>
                     </tr>
@@ -399,12 +380,12 @@
         }
 
         // Render table rows
-        function renderTable(products, nameColWidth) {
+        function renderTable(products) {
             const tbody = document.getElementById('products-tbody');
             if (products.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="7" class="text-center py-12 text-slate-500">
+                        <td colspan="6" class="text-center py-12 text-slate-500">
                             <div class="flex flex-col items-center justify-center gap-2">
                                 <svg class="w-8 h-8 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.602 10.602z"/>
@@ -436,10 +417,9 @@
                     </td>
                     <td class="px-4 py-2.5 text-center text-slate-500 font-mono">${rowNum}</td>
                     <td class="px-4 py-2.5 text-left font-mono font-bold text-primary">${prod.productCode}</td>
-                    <td class="px-4 py-2.5 text-left text-slate-800 font-semibold truncate" style="width: ${nameColWidth}px; max-width: ${nameColWidth}px;" title="${prod.productName}">${prod.productName}</td>
+                    <td class="px-4 py-2.5 text-left text-slate-800 font-medium">${prod.productName}</td>
                     <td class="px-4 py-2.5 text-center text-slate-600 font-medium">${prod.unit || '-'}</td>
                     <td class="px-4 py-2.5 text-right font-mono text-slate-700 font-bold">${formattedPrice}</td>
-                    <td class="p-0"></td>
                 `;
 
                 tr.addEventListener('click', () => {

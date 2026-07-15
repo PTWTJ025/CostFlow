@@ -10,17 +10,14 @@ namespace CostFlow.Data
         {
         }
 
-        public DbSet<ImportSession> ImportSessions { get; set; }
-        public DbSet<MergeResult> MergeResults { get; set; }
         public DbSet<ProductPrice> ProductPrices { get; set; }
-        public DbSet<SparePartOrderBatch> SparePartOrderBatches { get; set; }
-        public DbSet<SparePartOrder> SparePartOrders { get; set; }
         
         // New tracking system tables
         public DbSet<Report> Reports { get; set; }
         public DbSet<OrderTrackingMaster> OrderTrackingMasters { get; set; }
         public DbSet<WeeklyPlan> WeeklyPlans { get; set; }
         public DbSet<WeeklyPlanDetail> WeeklyPlanDetails { get; set; }
+        public DbSet<MonthlyOrderAction> MonthlyOrderActions { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {

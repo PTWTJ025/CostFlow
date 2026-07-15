@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace CostFlow.Controllers
 {
-    [Authorize]
+    [Authorize(Roles = "Admin")]
     public class FileMergeController : Controller
     {
         private readonly ImportStorageService _storageService;
@@ -179,15 +179,15 @@ namespace CostFlow.Controllers
             }
         }
 
-        // --- STEP 3: Upload Multiple Weekly Plan Files (สูงสุด 5 ไฟล์) ---
+        // --- STEP 3: Upload Multiple Weekly Plan Files (สูงสุด 10 ไฟล์) ---
         [HttpPost]
         public async Task<IActionResult> UploadWeeklyPlanFiles(List<Microsoft.AspNetCore.Http.IFormFile> files)
         {
             if (files == null || files.Count == 0)
                 return Json(new { success = false, error = "กรุณาเลือกไฟล์อย่างน้อย 1 ไฟล์" });
 
-            if (files.Count > 5)
-                return Json(new { success = false, error = "อัปโหลดได้สูงสุด 5 ไฟล์เท่านั้น" });
+            if (files.Count > 10)
+                return Json(new { success = false, error = "อัปโหลดได้สูงสุด 10 ไฟล์เท่านั้น" });
 
             try
             {
@@ -354,7 +354,8 @@ namespace CostFlow.Controllers
                     _context.WeeklyPlans.Add(weeklyPlan);
 
                     int fileMatchedCount = 0;
-                    var foundPOs = new List<string>(); // เก็บ PO ที่เจอ
+                    var foundPOs = new List<string>(); // เก็บ PO ที่เจอทุกแถว
+                    var matchedUniquePOsInFile = new HashSet<string>(StringComparer.OrdinalIgnoreCase); // เก็บ PO ที่จับคู่ได้แบบไม่ซ้ำ
 
                     // หา column index ของ "ใบขออนุมัติ" หรือ "เลขที่อนุมัติ" จาก header
                     int poColumnIndex = -1;
@@ -412,7 +413,7 @@ namespace CostFlow.Controllers
                         string orderStatus = GetColVal(row, 11);    // สถานะใบสั่ง (C:ปิดใบสั่ง, O:กำลังดำเนินการ)
                         string deliveryTarget = GetColVal(row, 12); // ส่งมอบ (วันที่)
 
-                        // Create WeeklyPlanDetail
+                        // Create WeeklyPlanDetail (บันทึกประวัติทุกแถวตามจริง ไม่ตัดทิ้ง เพื่อเวลาคลิกตรวจสอบจะได้เห็นครบทุกงวด/สถานะ)
                         var detail = new WeeklyPlanDetail
                         {
                             Id = Guid.NewGuid(),
@@ -429,23 +430,32 @@ namespace CostFlow.Controllers
                         };
                         _context.WeeklyPlanDetails.Add(detail);
 
-                        // Update order status if matched (and was pending)
-                        if (matchedOrder != null && matchedOrder.Status == "Pending")
+                        // Count matching order regardless of its previous status so re-uploading/overwriting reports accurate count
+                        if (matchedOrder != null)
                         {
-                            matchedOrder.Status = "Matched";
-                            matchedOrder.UpdatedAt = DateTime.Now;
+                            if (matchedOrder.Status == "Pending")
+                            {
+                                matchedOrder.Status = "Matched";
+                                matchedOrder.UpdatedAt = DateTime.Now;
+                            }
                             fileMatchedCount++;
                             totalMatched++;
+                            matchedUniquePOsInFile.Add(cleanPoInFile);
                         }
                     }
 
-                    weeklyPlan.MatchedCount = fileMatchedCount;
+                    int uniqueTotalInFile = foundPOs.Distinct(StringComparer.OrdinalIgnoreCase).Count();
+                    int uniqueMatchedInFile = matchedUniquePOsInFile.Count;
+
+                    weeklyPlan.MatchedCount = uniqueMatchedInFile; // เก็บจำนวน PO ที่ไม่ซ้ำ
                     fileResults.Add(new
                     {
                         fileName = importedFile.FileName,
                         sheetName = selectedSheet.SheetName,
-                        totalCount = foundPOs.Count,
-                        matchedCount = fileMatchedCount
+                        totalCount = uniqueTotalInFile,        // จำนวน PO ที่ไม่ซ้ำ
+                        matchedCount = uniqueMatchedInFile,    // จำนวน PO ที่จับคู่ได้ไม่ซ้ำ
+                        totalRowsCount = foundPOs.Count,       // จำนวนแถวทั้งหมดใน Excel
+                        matchedRowsCount = fileMatchedCount    // จำนวนแถวที่จับคู่ได้
                     });
 
                     // Debug: แสดง PO ที่เจอ
@@ -483,9 +493,10 @@ namespace CostFlow.Controllers
                 return Json(new
                 {
                     success = true,
-                    totalMatched = totalMatched,
+                    totalMatched = report.MatchedPOs,
+                    totalRowsProcessed = allActiveDetails.Count,
                     fileResults = fileResults,
-                    message = $"จับคู่สำเร็จทั้งหมด {totalMatched} รายการ",
+                    message = $"จับคู่สำเร็จทั้งหมด {report.MatchedPOs} ใบสั่งผลิต",
                     debug = string.Join("\n", debugInfo) // ส่ง debug info กลับไป
                 });
             }
@@ -504,15 +515,20 @@ namespace CostFlow.Controllers
             var val = GetColVal(row, columnIndex);
             if (string.IsNullOrWhiteSpace(val)) return string.Empty;
 
-            // Match เฉพาะ WO pattern: WO26010017 หรือ WO-26010017
-            // ตัวเลข 8 หลัก (2 หลักปี + 6 หลัก running number)
-            if (Regex.IsMatch(val, @"^WO-?\d{8}$", RegexOptions.IgnoreCase))
+            // ลบอักขระที่มองไม่เห็น เช่น Zero-Width Space, NBSP ที่ Excel แอบแทรกมา
+            val = val.Replace("\u200b", "").Replace("\u00a0", "").Replace("\uFEFF", "").Trim();
+
+            // Match WO pattern: WO26010017 หรือ WO-26010017
+            // ยืดหยุ่นรับตัวเลข 6-10 หลักเพื่อรองรับ WO ทุกรูปแบบที่อาจมีในไฟล์จริง
+            var match = Regex.Match(val, @"^(WO-?\d{6,10})$", RegexOptions.IgnoreCase);
+            if (match.Success)
             {
-                return val;
+                return match.Groups[1].Value;
             }
 
             return string.Empty;
         }
+
 
         private string ExtractPoNumberFromRow(List<string> row)
         {

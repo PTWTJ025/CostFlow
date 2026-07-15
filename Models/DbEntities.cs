@@ -18,33 +18,6 @@ namespace CostFlow.Models
         public DateTime CreatedAt { get; set; }
     }
 
-    public class ImportSession
-    {
-        [Key]
-        public Guid Id { get; set; }
-        public string UserId { get; set; } = string.Empty;      // FK -> AspNetUsers.Id (string)
-        public string SourceFileName { get; set; } = string.Empty;
-        public string CompareFileName { get; set; } = string.Empty;
-        public int MatchedCount { get; set; }
-        public int UnmatchedCount { get; set; }
-        public DateTime CreatedAt { get; set; }
-    }
-
-    public class MergeResult
-    {
-        [Key]
-        public int Id { get; set; }
-        public Guid ImportSessionId { get; set; }
-        public string PoNumber { get; set; } = string.Empty;
-        public string PlanOrderNo { get; set; } = string.Empty;
-        public DateTime? ApprovedDate { get; set; }
-        public string? Urgency { get; set; }
-        public decimal? Quantity { get; set; }
-        public decimal? Amount { get; set; }
-        public string? Remarks { get; set; }
-        public string? DeliveryTargetDate { get; set; }
-        public bool IsMatched { get; set; }
-    }
 
     public class ProductPrice
     {
@@ -58,33 +31,6 @@ namespace CostFlow.Models
         public string Sources { get; set; } = string.Empty;
     }
 
-    public class SparePartOrderBatch
-    {
-        [Key]
-        public Guid Id { get; set; }
-        public string BatchName { get; set; } = string.Empty;
-        public string UserId { get; set; } = string.Empty;       // FK -> AspNetUsers.Id (string)
-        public int ItemCount { get; set; }
-        public decimal TotalAmount { get; set; }
-        public DateTime CreatedAt { get; set; }
-    }
-
-    public class SparePartOrder
-    {
-        [Key]
-        public int Id { get; set; }
-        public Guid BatchId { get; set; }
-        public string ProductCode { get; set; } = string.Empty;
-        public string ProductName { get; set; } = string.Empty;
-        public string? Unit { get; set; }
-        public decimal UnitPrice { get; set; }
-        public decimal Quantity { get; set; }
-        public decimal TotalAmount { get; set; }
-        public string? ApprovalNo { get; set; }
-        public string? Remarks { get; set; }
-        public DateTime? ReceiveDate { get; set; }
-        public DateTime CreatedAt { get; set; }
-    }
     // ตารางรายงานหลัก (ไฟล์สั่งผลิต)
     public class Report
     {
@@ -175,6 +121,33 @@ namespace CostFlow.Models
         // Navigation properties
         public WeeklyPlan WeeklyPlan { get; set; } = null!;
         public OrderTrackingMaster? MatchedOrder { get; set; }
+    }
+
+    // ตารางจัดการรับมอบสินค้าประจำเดือน
+    public class MonthlyOrderAction
+    {
+        [Key]
+        public Guid Id { get; set; }
+        
+        [Required]
+        public Guid OrderTrackingMasterId { get; set; }
+        
+        [Required]
+        public string MonthYear { get; set; } = string.Empty; // e.g. "2026-07"
+        
+        [Required]
+        public string Action { get; set; } = "Pending"; // Received / Deferred / Skipped / Pending
+        
+        public decimal ActionPrice { get; set; } // มูลค่าที่ใช้คำนวณ
+        
+        public string? DeferredFromMonth { get; set; } // เดือนที่ผ่อนมา (ถ้ามี)
+        public bool IsForcedPayment { get; set; } // true = บังคับจ่ายจากการผ่อนเดือนก่อน
+        
+        public DateTime CreatedAt { get; set; }
+        public DateTime UpdatedAt { get; set; }
+        
+        // Navigation properties
+        public OrderTrackingMaster OrderTrackingMaster { get; set; } = null!;
     }
 
     public class ReportSummaryViewModel

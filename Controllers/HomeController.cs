@@ -1,13 +1,15 @@
 using System;
 using System.Diagnostics;
 using System.Linq;
+using System.Net.Http;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using CostFlow.Data;
 using CostFlow.Models;
-
 using Microsoft.AspNetCore.Identity;
 
 namespace CostFlow.Controllers
@@ -17,31 +19,56 @@ namespace CostFlow.Controllers
     {
         private readonly AppDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IHttpClientFactory _httpClientFactory;
+        private readonly IConfiguration _configuration;
 
-        public HomeController(AppDbContext context, UserManager<ApplicationUser> userManager)
+        public HomeController(AppDbContext context, UserManager<ApplicationUser> userManager,
+            IHttpClientFactory httpClientFactory, IConfiguration configuration)
         {
             _context = context;
             _userManager = userManager;
+            _httpClientFactory = httpClientFactory;
+            _configuration = configuration;
         }
 
         public async Task<IActionResult> Index()
         {
             bool isAdmin = User.IsInRole("Admin");
+            if (!isAdmin)
+            {
+                return RedirectToAction("Index", "ProductSearch");
+            }
             string currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
 
             int totalReferencePrices = await _context.ProductPrices.CountAsync();
-            
+
+            // ดึงจำนวนรายการสั่งซื้อจาก Google Sheets (Apps Script) แทน DB
             int totalSparePartOrders = 0;
-            if (isAdmin || string.IsNullOrEmpty(currentUserId))
+            try
             {
-                totalSparePartOrders = await _context.SparePartOrders.CountAsync();
+                string? appScriptUrl = _configuration["GoogleSheets:OrderHistoryAppScriptUrl"];
+                if (!string.IsNullOrWhiteSpace(appScriptUrl) && !appScriptUrl.Contains("_placeholder"))
+                {
+                    var client = _httpClientFactory.CreateClient("GoogleAppsScript");
+                    client.Timeout = TimeSpan.FromSeconds(10);
+                    var response = await client.GetAsync(appScriptUrl);
+                    if (response.IsSuccessStatusCode)
+                    {
+                        var json = await response.Content.ReadAsStringAsync();
+                        using var doc = JsonDocument.Parse(json);
+                        var root = doc.RootElement;
+                        if (root.TryGetProperty("batches", out var batchesEl))
+                        {
+                            foreach (var b in batchesEl.EnumerateArray())
+                            {
+                                if (b.TryGetProperty("TotalItems", out var ti))
+                                    totalSparePartOrders += ti.GetInt32();
+                            }
+                        }
+                    }
+                }
             }
-            else
-            {
-                totalSparePartOrders = await _context.SparePartOrders
-                    .Where(o => _context.SparePartOrderBatches.Any(b => b.Id == o.BatchId && b.UserId == currentUserId))
-                    .CountAsync();
-            }
+            catch { /* ถ้า Sheets ไม่ตอบ แสดง 0 แทน */ }
             
             // Query จาก Reports table แทน
             var groupedReports = await _context.Reports

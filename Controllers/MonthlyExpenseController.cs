@@ -46,7 +46,7 @@ namespace CostFlow.Controllers
         }
     }
 
-    [Authorize]
+    [Authorize(Roles = "Admin")]
     public class MonthlyExpenseController : Controller
     {
         private readonly AppDbContext _context;

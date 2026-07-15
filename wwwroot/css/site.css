@@ -1,3 +1,26 @@
+html,
+body,
+button,
+input,
+select,
+textarea,
+table,
+th,
+td,
+optgroup,
+option {
+  font-family:
+    "Poppins",
+    "IBM Plex Sans Thai",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial,
+    sans-serif;
+}
+
 html {
   font-size: 14px;
 }
@@ -13,7 +36,9 @@ html {
 .btn-link.nav-link:focus,
 .form-control:focus,
 .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+  box-shadow:
+    0 0 0 0.1rem white,
+    0 0 0 0.25rem #258cfb;
 }
 
 html {
@@ -29,14 +54,14 @@ svg {
   display: block;
 }
 
-.form-floating>.form-floating>.form-control-plaintext::placeholder,
-.form-floating>.form-control::placeholder {
+.form-floating > .form-floating > .form-control-plaintext::placeholder,
+.form-floating > .form-control::placeholder {
   color: var(--bs-secondary-color);
   text-align: end;
 }
 
-.form-floating>.form-control-plaintext:focus::placeholder,
-.form-floating>.form-control:focus::placeholder {
+.form-floating > .form-control-plaintext:focus::placeholder,
+.form-floating > .form-control:focus::placeholder {
   text-align: start;
 }
 
@@ -65,13 +90,18 @@ svg {
 }
 
 .progress-fill::after {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: -100%;
   width: 50%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(79, 172, 254, 0.8), transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(79, 172, 254, 0.8),
+    transparent
+  );
   animation: progressLight 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
@@ -83,10 +113,12 @@ svg {
 
 /* SweetAlert Theme Override for CostFlow */
 .swal2-popup {
-  border-radius: 16px !important;
+  border-radius: 8px !important;
   padding: 1.5rem !important;
-  width: 24rem !important;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+  max-width: 92vw !important;
+  box-shadow:
+    0 10px 25px -5px rgba(0, 0, 0, 0.1),
+    0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
   border: 1px solid #f1f5f9 !important;
 }
 
@@ -189,7 +221,9 @@ html {
   transform: translateY(-1.5px) scale(1.002);
   background-color: #f0f9ff !important;
   /* Sky-50 */
-  box-shadow: 0 6px 16px -4px rgba(14, 165, 233, 0.12), 0 2px 6px -1px rgba(0, 0, 0, 0.04);
+  box-shadow:
+    0 6px 16px -4px rgba(14, 165, 233, 0.12),
+    0 2px 6px -1px rgba(0, 0, 0, 0.04);
   position: relative;
   z-index: 5;
 }
@@ -217,7 +251,36 @@ html {
   width: 2.5em;
   height: 2.5em;
   animation-fill-mode: both;
-  animation: bblFadInOut 1.8s infinite ease-in-out;
+  animation: bouncer 1.8s infinite ease-in-out;
+}
+
+/* User's custom reload spin */
+@keyframes custom-spin {
+    from {transform: rotate(0deg); color: #fff;}
+    to {transform: rotate(360deg); color: #fff;}
+}
+
+/* Explicit fallback styling for Google Sheets sync button */
+#sync-btn {
+    background-color: #ffffff !important;
+    color: #4f46e5 !important; /* indigo-600 */
+    border: 1px solid #e0e7ff !important; /* indigo-100 */
+    transition: all 0.2s ease, transform 0.1s ease;
+}
+
+#sync-btn:hover {
+    background-color: #f5f3ff !important; /* indigo-50 tint */
+    color: #3730a3 !important; /* indigo-800 */
+    border-color: #c7d2fe !important; /* indigo-200 */
+}
+
+#sync-btn:active {
+    transform: scale(0.97);
+}
+
+#sync-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
 .loader {
@@ -236,7 +299,7 @@ html {
 
 .loader:before,
 .loader:after {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
 }
@@ -251,7 +314,6 @@ html {
 }
 
 @keyframes bblFadInOut {
-
   0%,
   80%,
   100% {
@@ -267,6 +329,9 @@ html {
   transform: scale(1.01);
   border-color: #258cfb !important;
   border-style: solid !important;
+  border-width: 2px !important;
+  background-color: rgba(37, 140, 251, 0.08) !important;
+  box-shadow: 0 10px 25px -5px rgba(37, 140, 251, 0.15) !important;
 }
 
 .dropzone-active .dropzone-icon {
@@ -274,7 +339,6 @@ html {
 }
 
 @keyframes dropzoneBounce {
-
   0%,
   100% {
     transform: translateY(0);
@@ -297,10 +361,14 @@ html {
   font-weight: 700 !important;
   /* font-bold */
   border-radius: 6px !important;
-  border-width: 1px !important;
+  border-width: 1px;
   border-style: solid !important;
   transition: all 0.15s ease-in-out !important;
   cursor: pointer;
+}
+
+.status-filter-btn.border-2 {
+  border-width: 2px !important;
 }
 
 .status-filter-btn.active {
@@ -321,7 +389,7 @@ html {
 .table-compact td,
 .table-compact th {
   padding: 0.5rem 0.75rem !important;
-  font-family: 'IBM Plex Sans Thai', 'IBM Plex Sans', 'Ubuntu', sans-serif;
+  font-family: "Poppins", "IBM Plex Sans Thai", sans-serif;
 }
 
 .table-compact th {
@@ -335,7 +403,7 @@ html {
   border-radius: 0.375rem;
   font-size: 0.75rem;
   font-weight: 600;
-  font-family: 'IBM Plex Sans Thai', sans-serif;
+  font-family: "Poppins", "IBM Plex Sans Thai", sans-serif;
 }
 
 .badge-pending {
@@ -385,6 +453,13 @@ html {
   transition: all 0.15s ease-in-out !important;
 }
 
+.btn-custom-white,
+.btn-custom-blue {
+  height: 40px !important;
+  padding: 0 20px !important;
+  font-size: 0.85rem !important;
+}
+
 .btn-custom-amber {
   background-color: #fffbeb !important;
   border: 1px solid #f59e0b !important;
@@ -420,7 +495,9 @@ html {
   background-color: #00288e !important;
   color: white !important;
   border: 1px solid #00288e !important;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -506,9 +583,19 @@ html {
   background-color: #ffffff !important;
   border: 1px solid rgba(226, 232, 240, 0.8) !important;
   border-radius: 12px !important;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05) !important;
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 8px 10px -6px rgba(0, 0, 0, 0.05) !important;
   overflow: hidden;
   animation: modalFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+  transition:
+    max-width 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    width 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.modal-container-expanded {
+  max-width: 760px !important;
+  width: min(92vw, 760px) !important;
 }
 
 @keyframes modalFadeIn {
@@ -552,4 +639,369 @@ html {
   gap: 12px !important;
   margin-left: auto !important;
   /* Forces items to the far right side */
+}
+
+/* Weekly Plan Upload - Document Registry List Layout */
+.weekly-plan-list {
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  max-height: 58vh !important;
+  overflow-y: auto !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 6px !important;
+  margin-bottom: 24px !important;
+}
+
+.weekly-plan-row {
+  display: grid !important;
+  grid-template-columns: 28px minmax(0, 1fr) 240px !important;
+  align-items: center !important;
+  gap: 12px !important;
+  padding: 12px 16px !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+  background: #ffffff !important;
+  transition: background-color 0.15s ease-in-out !important;
+}
+
+.weekly-plan-row:last-child {
+  border-bottom: none !important;
+}
+
+.weekly-plan-row:hover {
+  background: #f8fafc !important;
+}
+
+.row-index {
+  font-family: monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: #94a3b8;
+}
+
+.row-file {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+  min-width: 0 !important;
+}
+
+.row-file-line {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  min-width: 0 !important;
+}
+
+.row-status-dot {
+  width: 6px !important;
+  height: 6px !important;
+  border-radius: 50% !important;
+  background: #cbd5e1 !important;
+  flex-shrink: 0 !important;
+}
+
+.row-status-ready .row-status-dot {
+  background: #0f766e !important;
+}
+
+.row-status-pending .row-status-dot {
+  background: #b45309 !important;
+}
+
+.row-file-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.row-sheet-count {
+  font-family: monospace;
+  font-size: 11px;
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+.row-pending-note {
+  font-size: 11px;
+  color: #b45309;
+  padding-left: 14px;
+}
+
+.row-select {
+  width: 100% !important;
+  padding: 6px 10px !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 4px !important;
+  font-size: 12px !important;
+  color: #1e293b !important;
+  background: #ffffff !important;
+  transition: border-color 0.15s ease-in-out !important;
+  outline: none !important;
+  font-weight: 500;
+}
+
+.row-select:hover {
+  border-color: #94a3b8 !important;
+}
+
+.row-select:focus {
+  border-color: #00288e !important;
+  box-shadow: 0 0 0 2px rgba(0, 40, 142, 0.12) !important;
+}
+
+.row-status-pending .row-select {
+  border-color: #f59e0b !important;
+  background: #fffbeb !important;
+}
+
+/* Popup Registry List - shared by duplicate-check and success popups */
+.registry-list {
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 6px !important;
+  overflow-y: auto !important;
+}
+
+.registry-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: 10px 12px !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+}
+
+.registry-row:last-child {
+  border-bottom: none !important;
+}
+
+.registry-index {
+  font-family: monospace;
+  font-size: 11px;
+  color: #94a3b8;
+  flex-shrink: 0;
+  width: 18px;
+}
+
+.registry-dot {
+  width: 6px !important;
+  height: 6px !important;
+  border-radius: 50% !important;
+  flex-shrink: 0 !important;
+}
+
+.registry-dot.dot-amber {
+  background: #b45309 !important;
+}
+
+.registry-dot.dot-teal {
+  background: #0f766e !important;
+}
+
+.registry-dot.dot-neutral {
+  background: #cbd5e1 !important;
+}
+
+.registry-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+  text-align: left;
+}
+
+.registry-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.registry-sub {
+  font-size: 11px;
+  color: #64748b;
+  font-family: monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.registry-meta {
+  font-family: monospace;
+  font-size: 12px;
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.registry-meta.meta-teal {
+  color: #0f766e !important;
+  font-weight: 700 !important;
+}
+
+.popup-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+  text-align: left;
+}
+
+.popup-header-icon {
+  width: 18px !important;
+  height: 18px !important;
+  flex-shrink: 0;
+}
+
+.popup-header-icon.icon-amber {
+  color: #b45309;
+}
+
+.popup-header-icon.icon-teal {
+  color: #0f766e;
+}
+
+.popup-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.popup-subtitle {
+  font-size: 12px;
+  color: #64748b;
+  text-align: left;
+  line-height: 1.6;
+  margin: 6px 2px 14px;
+}
+
+.popup-footer {
+  display: flex !important;
+  justify-content: flex-end !important;
+  gap: 10px !important;
+  margin-top: 16px !important;
+  padding-top: 14px !important;
+  border-top: 1px solid #e2e8f0 !important;
+}
+
+/* Sync button spin animation */
+@keyframes sync-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* Smooth deceleration to exactly 360° when stopping */
+@keyframes sync-spin-end {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #sync-icon {
+    animation: none !important;
+    opacity: 0.6;
+  }
+}
+
+/* ============================================================
+   Global Smooth Dropdown / Select Component
+   ใช้งานได้กับทุก <select> ในโปรเจค โดยไม่ต้องแก้ทีละจุด
+   ============================================================ */
+
+/* Base — reset browser default appearance and add smooth feel */
+select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+
+  /* Custom chevron arrow via SVG data-URI */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8' stroke-width='2.5'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.55rem center;
+  background-size: 1.1em 1.1em;
+  padding-right: 2rem !important;
+
+  /* Smooth transitions on every interactive state */
+  transition:
+    border-color 0.18s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow   0.18s cubic-bezier(0.4, 0, 0.2, 1),
+    background-color 0.18s cubic-bezier(0.4, 0, 0.2, 1),
+    color        0.15s ease,
+    opacity      0.15s ease;
+
+  cursor: pointer;
+  outline: none;
+}
+
+/* Hover — subtle border lift */
+select:not(:disabled):hover {
+  border-color: #94a3b8 !important;
+}
+
+/* Focus — branded ring */
+select:not(:disabled):focus {
+  border-color: #00288e !important;
+  box-shadow: 0 0 0 3px rgba(0, 40, 142, 0.12) !important;
+  background-color: #fff !important;
+}
+
+/* Disabled — muted, no pointer */
+select:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  background-color: #f8fafc !important;
+  /* arrow stays but dims with opacity */
+}
+
+/* Forced-payment amber variant (Deferred carry-over rows) */
+select[data-forced-payment="true"]:not(:disabled) {
+  border-color: #f59e0b !important;
+  background-color: #fffbeb !important;
+  color: #92400e !important;
+}
+
+select[data-forced-payment="true"]:not(:disabled):focus {
+  border-color: #d97706 !important;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15) !important;
+}
+
+/* Smooth open animation — browsers that support it (Chromium 117+) */
+@supports (selector(:open)) {
+  select:open {
+    border-color: #00288e !important;
+    box-shadow: 0 0 0 3px rgba(0, 40, 142, 0.12) !important;
+  }
+}
+
+/* Micro pop-in for the row-status-select when it becomes enabled */
+@keyframes selectEnable {
+  from { opacity: 0.4; transform: scaleY(0.97); }
+  to   { opacity: 1;   transform: scaleY(1); }
+}
+
+.row-status-select:not(:disabled) {
+  animation: selectEnable 0.15s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Filter / toolbar selects — slightly rounded, consistent sizing */
+#filter-status,
+#sort-order {
+  min-height: 36px;
+  border-radius: 6px !important;
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+  color: #475569 !important;
+  background-color: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+#filter-status:hover,
+#sort-order:hover {
+  border-color: #94a3b8 !important;
+  color: #1e293b !important;
 }

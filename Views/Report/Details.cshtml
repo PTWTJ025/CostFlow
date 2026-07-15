@@ -5,6 +5,7 @@
     int total = Model.Count;
     int matchedCount = Model.Count(x => x.Status == "Matched");
     int pendingCount = total - matchedCount;
+    int uploadedPlansCount = ViewData["UploadedWeeklyPlansCount"] as int? ?? 0;
     double successRate = total > 0 ? (double)matchedCount / total * 100 : 0;
     ViewData["Title"] = reportName;
     ViewData["HeaderTitle"] = "รายละเอียดรายการสั่งผลิต";
@@ -46,7 +47,7 @@
                 <button class="status-filter-btn flex items-center justify-center bg-emerald-50 hover:bg-emerald-100 border border-emerald-500 text-emerald-700 transition-all" data-filter="matched">
                     ได้แผนแล้ว (@matchedCount)
                 </button>
-                <button class="status-filter-btn flex items-center justify-center bg-amber-50 hover:bg-amber-100 border border-amber-500 text-amber-700 transition-all" data-filter="pending">
+                <button class="status-filter-btn flex items-center justify-center bg-rose-50 hover:bg-rose-100 border border-red-500 text-rose-700 font-bold transition-all" data-filter="pending">
                     รอแผนผลิต (@pendingCount)
                 </button>
             </div>
@@ -54,15 +55,12 @@
             <!-- Action Buttons -->
             <div class="flex items-center gap-3 flex-wrap">
                 <button id="btn-open-upload-modal"
-                        class="flex items-center gap-2 btn-custom-amber shadow-sm transition-all active:scale-95">
+                        class="flex items-center gap-1 btn-custom-amber shadow-sm transition-all active:scale-95">
                     <svg xmlns="http://www.w3.org/2000/svg" style="color: #b45309 !important;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V3m0 0L7.5 7.5M12 3l4.5 4.5M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5" />
                     </svg>
                     <span>นำเข้าแผนผลิต</span>
-                    @if (pendingCount > 0)
-                    {
-                        <span class="bg-amber-200 text-amber-800 px-2 py-0.5 rounded-full text-xs font-bold">@pendingCount</span>
-                    }
+                    <span class="text-xs font-bold" style="color: #b45309 !important;">(@uploadedPlansCount)</span>
                 </button>
 
                 <button type="button" id="btn-export-excel"
@@ -109,7 +107,7 @@
                         var hasWeeklyPlan = order.MatchedInWeeklyPlans.Any();
                         var deliveryTarget = hasWeeklyPlan ? order.MatchedInWeeklyPlans.First().DeliveryTarget : "-";
 
-                        <tr class="order-row hover:bg-slate-50 transition-colors text-sm" data-status="@(isMatched ? "matched" : "pending")" data-po="@order.PoNumber">
+                        <tr class="order-row hover:bg-slate-50  transition-colors text-sm" data-status="@(isMatched ? "matched" : "pending")" data-po="@order.PoNumber">
                             <td class="text-secondary px-3 py-2 text-center">@(i + 1)</td>
                             <td class="px-3 py-2 text-center">
                                 @if (isMatched)
@@ -189,9 +187,9 @@
 </div>
 
 <div id="upload-modal" class="hidden fixed inset-0 modal-backdrop-premium flex items-center justify-center z-50 p-4">
-    <div class="modal-content-premium w-full max-w-lg">
+    <div id="upload-modal-container" class="modal-content-premium w-full max-w-lg transition-all duration-300">
         <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-            <h3 class="text-base font-bold text-slate-800">นำเข้าไฟล์แผนผลิตสัปดาห์ (สูงสุด 5 ไฟล์)</h3>
+            <h3 class="text-base font-bold text-slate-800">นำเข้าไฟล์แผนผลิตสัปดาห์ (สูงสุด 10 ไฟล์)</h3>
             <button id="btn-close-upload-modal" class="text-slate-400 hover:text-slate-600 transition p-1 hover:bg-slate-100 rounded-full">
                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
@@ -200,14 +198,14 @@
         </div>
         <div style="padding: 24px;">
             <div id="upload-step">
-                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider" style="margin-bottom: 12px; display: block;">อัปโหลดไฟล์ Excel (สูงสุด 5 ไฟล์)</label>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider" style="margin-bottom: 12px; display: block;">อัปโหลดไฟล์ Excel (สูงสุด 10 ไฟล์)</label>
                 <div id="dropzone-area" class="border-2 border-dashed border-slate-200 rounded flex flex-col items-center justify-center bg-slate-50/30 hover:bg-slate-50/70 hover:border-slate-400 cursor-pointer transition-all" style="padding: 36px 24px; border-radius: 8px;">
                     <input type="file" id="weeklyPlanFiles" multiple accept=".xlsx,.csv" class="hidden" />
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-slate-400" style="margin-bottom: 16px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
                     </svg>
                     <span class="text-sm font-semibold text-slate-600" style="margin-bottom: 6px; display: block; text-align: center;">ลากและวางไฟล์ที่นี่ หรือ คลิกเพื่อเลือกไฟล์</span>
-                    <span class="text-xs text-slate-400" style="text-align: center; display: block;">Excel (.xlsx) หรือ .csv สูงสุด 5 ไฟล์</span>
+                    <span class="text-xs text-slate-400" style="text-align: center; display: block;">Excel (.xlsx) หรือ .csv สูงสุด 10 ไฟล์</span>
                 </div>
                 <div id="files-list" style="margin-top: 16px; display: flex; flex-direction: column; gap: 8px;"></div>
                 <button id="btn-upload-files" class="hidden btn-custom-blue font-bold rounded shadow-sm" style="margin-top: 16px; width: 100%;">
@@ -216,15 +214,18 @@
             </div>
 
             <div id="sheet-selection-step" class="hidden">
-                <h4 class="text-sm font-bold text-slate-700" style="margin-bottom: 16px;">เลือก Sheet ที่ต้องการจากแต่ละไฟล์:</h4>
-                <div id="sheet-selectors" style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px;"></div>
-                <div style="display: flex; gap: 12px; margin-top: 24px;">
-                    <button id="btn-process-sheets" class="flex-1 btn-custom-green font-bold rounded shadow-sm">
-                        ดำเนินการจับคู่
-                    </button>
-                    <button id="btn-back-to-upload" class="flex-1 btn-custom-gray font-bold rounded">
-                        กลับไปเลือกไฟล์ใหม่
-                    </button>
+                <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+                    <div>
+                        <h4 class="text-base font-bold text-slate-800">เลือก Sheet ที่ต้องการจากแต่ละไฟล์:</h4>
+                        <p class="text-xs text-slate-500 mt-0.5">ระบบได้ตรวจจับและเลือกชีตที่คาดว่าเป็นแผนผลิตสัปดาห์ให้อัตโนมัติ กรุณาตรวจสอบก่อนดำเนินการจับคู่</p>
+                    </div>
+                </div>
+                <div id="sheet-selectors" class="mb-6"></div>
+                <!-- ลบ style="gap: 12px;" ออกไปได้เลย -->
+<div class="flex flex-col sm:flex-row items-center justify-end gap-3 pt-5 pb-1 mt-6">
+
+                    <button id="btn-back-to-files" class="btn-custom-white" style="padding: 10px 20px;">กลับไปเลือกไฟล์ใหม่</button>
+                    <button id="btn-confirm-match" class="btn-custom-blue" style="padding: 10px 22px;">ดำเนินการจับคู่</button>
                 </div>
             </div>
         </div>
@@ -237,7 +238,7 @@
 
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="~/js/weekly-plan-upload.js"></script>
+    <script src="~/js/weekly-plan-upload.js" asp-append-version="true"></script>
     <script>
         const formatPrice = (val) => {
             if (val === null || val === undefined || val === '') return '-';
@@ -261,13 +262,24 @@
         });
 
         const closeUploadModal = () => {
-            document.getElementById('upload-modal').classList.add('hidden');
-            WeeklyPlanUploader.backToUpload();
+            if (WeeklyPlanUploader.isProcessing) return;
+            WeeklyPlanUploader.closeModal();
         };
 
         document.getElementById('btn-close-upload-modal').addEventListener('click', closeUploadModal);
         document.getElementById('upload-modal').addEventListener('click', (e) => {
+            if (WeeklyPlanUploader.isProcessing) return;
             if (e.target.id === 'upload-modal') closeUploadModal();
+        });
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !document.getElementById('upload-modal').classList.contains('hidden')) {
+                if (WeeklyPlanUploader.isProcessing) {
+                    e.preventDefault();
+                } else {
+                    closeUploadModal();
+                }
+            }
         });
 
         // Detail Modal
@@ -355,8 +367,7 @@
                                                 <span style="font-size: 10px; color: #94a3b8; font-weight: 500; white-space: nowrap; flex-shrink: 0;">${item.uploadedAt}</span>
                                             </div>
                                             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
-                                                <span style="font-size: 11px; color: #94a3b8;">ชีท: <strong style="color: #64748b; font-weight: 500;">${item.sheetName}</strong> <span style="margin: 0 5px; color: #cbd5e1;">|</span> ราคาเสนอ: <strong style="color: #334155; font-weight: 600;">${formatPrice(item.price)}</strong></span>
-                                                <div>${hBadgeHtml}</div>
+                                                <span style="font-size: 11px; color: #94a3b8;">ชีท: <strong style="color: #64748b; font-weight: 500;">${item.sheetName}</strong>
                                             </div>
                                         </div>
                                     </div>

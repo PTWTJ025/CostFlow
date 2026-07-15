@@ -11,51 +11,62 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 
+using System.Net.Http;
+using System.Text;
+using System.Text.Json;
+using Microsoft.Extensions.Configuration;
+
 namespace CostFlow.Controllers
 {
     [Authorize]
     public class ProductSearchController : Controller
     {
         private readonly AppDbContext _context;
+        private readonly IHttpClientFactory _httpClientFactory;
+        private readonly IConfiguration _configuration;
 
-        public ProductSearchController(AppDbContext context)
+        public ProductSearchController(AppDbContext context, IHttpClientFactory httpClientFactory, IConfiguration configuration)
         {
             _context = context;
+            _httpClientFactory = httpClientFactory;
+            _configuration = configuration;
         }
 
-        public async Task<IActionResult> Index(Guid? editBatchId = null)
+        public async Task<IActionResult> Index(string? editBatchName = null)
         {
-            if (editBatchId.HasValue)
+            ViewData["SpreadsheetUrl"] = _configuration["GoogleSheets:SpreadsheetUrl"] ?? "https://docs.google.com/spreadsheets/d/1DJeeOYd1hGFAaRZ7emkdgLys7G88T13cylayh6Za1xc/edit";
+            if (!string.IsNullOrWhiteSpace(editBatchName))
             {
-                var batch = await _context.SparePartOrderBatches.FirstOrDefaultAsync(b => b.Id == editBatchId.Value);
-                if (batch != null)
+                // Fetch batch data from Google Apps Script
+                string? appScriptUrl = _configuration["GoogleSheets:OrderHistoryAppScriptUrl"];
+                if (!string.IsNullOrWhiteSpace(appScriptUrl) && !appScriptUrl.Contains("_placeholder"))
                 {
-                    // User Isolation Check
-                    bool isAdmin = User.IsInRole("Admin");
-                    string currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
-                    if (!isAdmin && batch.UserId != currentUserId)
+                    try
                     {
-                        return Forbid();
+                        var client = _httpClientFactory.CreateClient("GoogleAppsScript");
+                        client.Timeout = TimeSpan.FromSeconds(30);
+                        var response = await client.GetAsync(appScriptUrl);
+                        if (response.IsSuccessStatusCode)
+                        {
+                            var json = await response.Content.ReadAsStringAsync();
+                            using var doc = JsonDocument.Parse(json);
+                            var root = doc.RootElement;
+                            if (root.TryGetProperty("batches", out var batchesEl))
+                            {
+                                foreach (var b in batchesEl.EnumerateArray())
+                                {
+                                    var name = b.TryGetProperty("BatchName", out var nameProp) ? nameProp.GetString() : null;
+                                    if (name == editBatchName && b.TryGetProperty("Orders", out var ordersEl))
+                                    {
+                                        ViewData["EditBatchName"] = editBatchName;
+                                        ViewData["EditOrdersJson"] = ordersEl.GetRawText();
+                                        break;
+                                    }
+                                }
+                            }
+                        }
                     }
-
-                    var orders = await _context.SparePartOrders
-                        .Where(o => o.BatchId == editBatchId.Value)
-                        .OrderBy(o => o.Id)
-                        .ToListAsync();
-                    
-                    ViewData["EditBatchId"] = editBatchId.Value;
-                    ViewData["EditBatchName"] = batch.BatchName;
-                    ViewData["EditOrdersJson"] = System.Text.Json.JsonSerializer.Serialize(orders.Select(o => new {
-                        productCode = o.ProductCode,
-                        productName = o.ProductName,
-                        unit = o.Unit,
-                        unitPrice = (double)o.UnitPrice,
-                        quantity = (double)o.Quantity,
-                        totalAmount = (double)o.TotalAmount,
-                        approvalNo = o.ApprovalNo ?? "",
-                        remarks = o.Remarks ?? "",
-                        receiveDate = o.ReceiveDate.HasValue ? o.ReceiveDate.Value.ToString("yyyy-MM-dd") : ""
-                    }));
+                    catch { /* silently ignore; user can re-enter data */ }
                 }
             }
             return View();
@@ -85,22 +96,6 @@ namespace CostFlow.Controllers
         [HttpPost]
         public async Task<IActionResult> SaveOrders([FromBody] SaveOrdersRequest request)
         {
-            Console.WriteLine($"[DEBUG SaveOrders] Request received. Is null? {request == null}");
-            if (request != null)
-            {
-                Console.WriteLine($"[DEBUG SaveOrders] BatchId: '{request.BatchId}', BatchName: '{request.BatchName}'");
-                Console.WriteLine($"[DEBUG SaveOrders] Orders is null? {request.Orders == null}");
-                if (request.Orders != null)
-                {
-                    Console.WriteLine($"[DEBUG SaveOrders] Orders count: {request.Orders.Count}");
-                    for (int i = 0; i < request.Orders.Count; i++)
-                    {
-                        var o = request.Orders[i];
-                        Console.WriteLine($"  [{i}] Code: '{o.ProductCode}', Name: '{o.ProductName}', Price: '{o.UnitPrice}', Qty: '{o.Quantity}'");
-                    }
-                }
-            }
-
             if (request == null || request.Orders == null || !request.Orders.Any())
             {
                 return Json(new { success = false, error = "ไม่มีข้อมูลใบสั่งซื้อที่จะบันทึก" });
@@ -109,364 +104,150 @@ namespace CostFlow.Controllers
             try
             {
                 var now = DateTime.Now;
-                Guid batchId = request.BatchId ?? Guid.NewGuid();
                 var batchName = string.IsNullOrWhiteSpace(request.BatchName)
                     ? $"รายการคีย์ข้อมูลวันที่ {now.ToString("dd/MM/yyyy HH:mm")}"
                     : request.BatchName.Trim();
 
-                // Get logged in UserId or fallback
-                string userId = string.Empty;
-                var claimUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                if (!string.IsNullOrEmpty(claimUserId))
+                // --- Send directly to Google Sheets (no DB) ---
+                string? appScriptUrl = _configuration["GoogleSheets:OrderHistoryAppScriptUrl"];
+                if (string.IsNullOrWhiteSpace(appScriptUrl) || appScriptUrl.Contains("_placeholder"))
                 {
-                    userId = claimUserId;
-                }
-                else
-                {
-                    var defaultUser = _context.Users.FirstOrDefault(u => u.EmployeeCode == "ADMIN01");
-                    userId = defaultUser?.Id ?? string.Empty;
+                    return Json(new { success = false, error = "ยังไม่ได้ระบุลิงก์ Google Sheets Web App ในไฟล์ตั้งค่าระบบ" });
                 }
 
-                // If editing existing batch, clear old orders first
-                var existingBatch = request.BatchId.HasValue 
-                    ? await _context.SparePartOrderBatches.FirstOrDefaultAsync(b => b.Id == request.BatchId.Value) 
-                    : null;
-
-                if (existingBatch != null)
+                var payload = new
                 {
-                    // User Isolation Check (ป้องกัน IDOR)
-                    bool isAdmin = User.IsInRole("Admin");
-                    if (!isAdmin && existingBatch.UserId != userId)
+                    BatchName = batchName,
+                    Orders = request.Orders.Select(o => new
                     {
-                        return Json(new { success = false, message = "คุณไม่มีสิทธิ์แก้ไขแผ่นงานของผู้อื่น" });
-                    }
-
-                    var oldOrders = _context.SparePartOrders.Where(o => o.BatchId == existingBatch.Id);
-                    _context.SparePartOrders.RemoveRange(oldOrders);
-                }
-
-                decimal totalBatchAmount = 0;
-                int itemsCount = 0;
-
-                foreach (var o in request.Orders)
-                {
-                    decimal price = ParseDecimal(o.UnitPrice);
-                    decimal qty = ParseDecimal(o.Quantity);
-                    decimal rowTotal = price * qty;
-
-                    var order = new SparePartOrder
-                    {
-                        BatchId = batchId,
                         ProductCode = o.ProductCode ?? string.Empty,
                         ProductName = o.ProductName ?? string.Empty,
-                        Unit = o.Unit,
-                        UnitPrice = price,
-                        Quantity = qty,
-                        TotalAmount = rowTotal,
-                        ApprovalNo = o.ApprovalNo,
-                        Remarks = o.Remarks,
-                        ReceiveDate = ParseDateNullable(o.ReceiveDate),
-                        CreatedAt = now
-                    };
+                        Unit = o.Unit ?? string.Empty,
+                        UnitPrice = ParseDecimal(o.UnitPrice),
+                        Quantity = ParseDecimal(o.Quantity),
+                        Remarks = o.Remarks ?? string.Empty
+                    }).ToList()
+                };
 
-                    totalBatchAmount += rowTotal;
-                    itemsCount++;
+                var client = _httpClientFactory.CreateClient();
+                client.Timeout = TimeSpan.FromSeconds(30);
 
-                    _context.SparePartOrders.Add(order);
-                }
+                var jsonString = JsonSerializer.Serialize(payload);
+                var content = new StringContent(jsonString, Encoding.UTF8, "application/json");
 
-                if (existingBatch != null)
+                var response = await client.PostAsync(appScriptUrl, content);
+                if (!response.IsSuccessStatusCode)
                 {
-                    // Update existing batch metadata
-                    existingBatch.BatchName = batchName;
-                    existingBatch.ItemCount = itemsCount;
-                    existingBatch.TotalAmount = totalBatchAmount;
-                    _context.SparePartOrderBatches.Update(existingBatch);
-                }
-                else
-                {
-                    // Create the new batch record
-                    var batch = new SparePartOrderBatch
-                    {
-                        Id = batchId,
-                        BatchName = batchName,
-                        UserId = userId,
-                        ItemCount = itemsCount,
-                        TotalAmount = totalBatchAmount,
-                        CreatedAt = now
-                    };
-                    _context.SparePartOrderBatches.Add(batch);
+                    return Json(new { success = false, error = $"เกิดข้อผิดพลาดจาก Google Sheets (HTTP {(int)response.StatusCode})" });
                 }
 
-                await _context.SaveChangesAsync();
+                var responseString = await response.Content.ReadAsStringAsync();
+                using var doc = JsonDocument.Parse(responseString);
+                var root = doc.RootElement;
+
+                bool isSuccess = root.TryGetProperty("success", out var succProp) && succProp.GetBoolean();
+                if (!isSuccess)
+                {
+                    string errorMsg = root.TryGetProperty("error", out var errProp) ? errProp.GetString() ?? "" : "การบันทึกลง Google Sheets ล้มเหลว";
+                    return Json(new { success = false, error = errorMsg });
+                }
+
                 return Json(new { success = true });
             }
             catch (Exception ex)
             {
-                return Json(new { success = false, error = $"เกิดข้อผิดพลาดในการบันทึก: {ex.Message}" });
+                return Json(new { success = false, error = $"เกิดข้อผิดพลาดในการบันทึกข้อมูล: {ex.Message}" });
             }
         }
 
         // POST: /ProductSearch/DeleteBatch
         [HttpPost]
-        public async Task<IActionResult> DeleteBatch(Guid batchId)
+        public async Task<IActionResult> DeleteBatch(string batchName)
         {
-            var batch = await _context.SparePartOrderBatches.FirstOrDefaultAsync(b => b.Id == batchId);
-            if (batch == null)
+            if (string.IsNullOrWhiteSpace(batchName))
+                return Json(new { success = false, error = "ไม่ระบุชื่อแผ่นงานที่จะลบ" });
+
+            string? appScriptUrl = _configuration["GoogleSheets:OrderHistoryAppScriptUrl"];
+            if (string.IsNullOrWhiteSpace(appScriptUrl) || appScriptUrl.Contains("_placeholder"))
+                return Json(new { success = false, error = "ยังไม่ได้ตั้งค่า Google Sheets Web App URL" });
+
+            try
             {
-                return Json(new { success = false, error = "ไม่พบแผ่นงานสั่งซื้อที่ต้องการลบ" });
-            }
+                var client = _httpClientFactory.CreateClient();
+                client.Timeout = TimeSpan.FromSeconds(30);
+                var payload = new { Action = "delete", BatchName = batchName };
+                var jsonString = JsonSerializer.Serialize(payload);
+                var content = new StringContent(jsonString, Encoding.UTF8, "application/json");
+                var response = await client.PostAsync(appScriptUrl, content);
+                if (!response.IsSuccessStatusCode)
+                    return Json(new { success = false, error = $"Google Sheets ตอบกลับ HTTP {(int)response.StatusCode}" });
 
-            // User Isolation Check
-            bool isAdmin = User.IsInRole("Admin");
-            string currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
-            if (!isAdmin && batch.UserId != currentUserId)
+                return Json(new { success = true });
+            }
+            catch (Exception ex)
             {
-                return Json(new { success = false, error = "คุณไม่มีสิทธิ์ในการเข้าถึงหรือดำเนินการกับแผ่นงานสั่งซื้อนี้" });
+                return Json(new { success = false, error = ex.Message });
             }
-
-            var orders = _context.SparePartOrders.Where(o => o.BatchId == batchId);
-            _context.SparePartOrders.RemoveRange(orders);
-            _context.SparePartOrderBatches.Remove(batch);
-
-            await _context.SaveChangesAsync();
-            return Json(new { success = true });
         }
 
         // GET: /ProductSearch/SavedOrders
         [HttpGet]
         public async Task<IActionResult> SavedOrders(int? year, int? month)
         {
-            var query = _context.SparePartOrderBatches.AsQueryable();
+            var batches = new List<SavedBatchViewModel>();
+            var availableYears = new List<int> { DateTime.Now.Year };
 
-            // User Isolation: If not Admin, show only their own batches
-            bool isAdmin = User.IsInRole("Admin");
-            string currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
-
-            if (!isAdmin && !string.IsNullOrEmpty(currentUserId))
+            string? appScriptUrl = _configuration["GoogleSheets:OrderHistoryAppScriptUrl"];
+            if (!string.IsNullOrWhiteSpace(appScriptUrl) && !appScriptUrl.Contains("_placeholder"))
             {
-                query = query.Where(o => o.UserId == currentUserId);
-            }
-
-            if (year.HasValue && year.Value > 0)
-            {
-                query = query.Where(o => o.CreatedAt.Year == year.Value);
-            }
-            if (month.HasValue && month.Value > 0)
-            {
-                query = query.Where(o => o.CreatedAt.Month == month.Value);
-            }
-
-            var batches = await query
-                .OrderByDescending(b => b.CreatedAt)
-                .Select(b => new SavedBatchViewModel
+                try
                 {
-                    BatchId = b.Id,
-                    BatchName = b.BatchName,
-                    CreatedAt = b.CreatedAt,
-                    TotalItems = b.ItemCount,
-                    TotalAmount = (double)b.TotalAmount
-                })
-                .ToListAsync();
-
-            // Get unique years in db for dropdown
-            var years = await _context.SparePartOrderBatches
-                .Select(o => o.CreatedAt.Year)
-                .Distinct()
-                .OrderByDescending(y => y)
-                .ToListAsync();
-
-            var currentYear = DateTime.Now.Year;
-            if (!years.Contains(currentYear))
-            {
-                years.Add(currentYear);
-                years = years.OrderByDescending(y => y).ToList();
-            }
-
-            ViewData["SelectedYear"] = year;
-            ViewData["SelectedMonth"] = month;
-            ViewData["AvailableYears"] = years;
-
-            return View(batches);
-        }
-
-        // GET: /ProductSearch/SavedBatchDetails
-        [HttpGet]
-        public async Task<IActionResult> SavedBatchDetails(Guid batchId)
-        {
-            var batch = await _context.SparePartOrderBatches.FirstOrDefaultAsync(b => b.Id == batchId);
-            if (batch == null)
-            {
-                return NotFound("ไม่พบแผ่นงานรายการสั่งซื้อที่ระบุ");
-            }
-
-            // User Isolation Check
-            bool isAdmin = User.IsInRole("Admin");
-            string currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
-            if (!isAdmin && batch.UserId != currentUserId)
-            {
-                return Forbid();
-            }
-
-            var orders = await _context.SparePartOrders
-                .Where(o => o.BatchId == batchId)
-                .OrderBy(o => o.Id)
-                .ToListAsync();
-
-            ViewData["BatchId"] = batchId;
-            ViewData["BatchName"] = batch.BatchName;
-            ViewData["CreatedAt"] = batch.CreatedAt;
-            ViewData["TotalItems"] = batch.ItemCount;
-            ViewData["TotalAmount"] = batch.TotalAmount;
-
-            return View(orders);
-        }
-
-        // GET: /ProductSearch/ExportSavedBatch
-        [HttpGet]
-        public async Task<IActionResult> ExportSavedBatch(Guid batchId)
-        {
-            var batch = await _context.SparePartOrderBatches.FirstOrDefaultAsync(b => b.Id == batchId);
-            if (batch == null)
-            {
-                return NotFound("ไม่พบข้อมูลแผ่นงานเพื่อส่งออก");
-            }
-
-            // User Isolation Check
-            bool isAdmin = User.IsInRole("Admin");
-            string currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
-            if (!isAdmin && batch.UserId != currentUserId)
-            {
-                return Forbid();
-            }
-
-            var orders = await _context.SparePartOrders
-                .Where(o => o.BatchId == batchId)
-                .OrderBy(o => o.Id)
-                .ToListAsync();
-
-            using (var workbook = new ClosedXML.Excel.XLWorkbook())
-            {
-                var worksheet = workbook.Worksheets.Add("รายการคีย์ข้อมูล");
-
-                // Set Font Name
-                worksheet.Style.Font.FontName = "Segoe UI";
-                
-                // Add header title block
-                worksheet.Cell(1, 1).Value = "แผ่นงานคีย์สั่งซื้ออะไหล่";
-                worksheet.Cell(1, 1).Style.Font.Bold = true;
-                worksheet.Cell(1, 1).Style.Font.FontSize = 15;
-                worksheet.Cell(1, 1).Style.Font.FontColor = ClosedXML.Excel.XLColor.FromHtml("#1E293B");
-
-                worksheet.Cell(2, 1).Value = $"ชื่อแผ่นงาน: {batch.BatchName}";
-                worksheet.Cell(2, 1).Style.Font.FontSize = 10;
-                worksheet.Cell(2, 1).Style.Font.FontColor = ClosedXML.Excel.XLColor.FromHtml("#475569");
-
-                worksheet.Cell(3, 1).Value = $"วันที่บันทึกเข้าระบบ: {batch.CreatedAt.ToString("dd MMMM yyyy เวลา HH:mm น.", new System.Globalization.CultureInfo("th-TH"))}";
-                worksheet.Cell(3, 1).Style.Font.FontSize = 10;
-                worksheet.Cell(3, 1).Style.Font.FontColor = ClosedXML.Excel.XLColor.FromHtml("#475569");
-
-                // Add header row
-                string[] headers = {
-                    "ลำดับ", "รหัสสินค้า", "รายการ", "หน่วย", "ราคาต่อหน่วย", "จำนวน", "มูลค่ารวม", "เลขที่อนุมัติ", "หมายเหตุ", "รับ วันที่"
-                };
-
-                int startRow = 5;
-                worksheet.Row(startRow).Height = 26;
-
-                for (int c = 0; c < headers.Length; c++)
-                {
-                    var cell = worksheet.Cell(startRow, c + 1);
-                    cell.Value = headers[c];
-                    cell.Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Center;
-                    cell.Style.Alignment.Vertical = ClosedXML.Excel.XLAlignmentVerticalValues.Center;
-                }
-
-                // Style headers
-                var headerRange = worksheet.Range(startRow, 1, startRow, headers.Length);
-                headerRange.Style.Font.Bold = true;
-                headerRange.Style.Font.FontSize = 11;
-                headerRange.Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.FromHtml("#1E3A8A"); // Navy blue
-                headerRange.Style.Font.FontColor = ClosedXML.Excel.XLColor.White;
-
-                int row = startRow + 1;
-                for (int i = 0; i < orders.Count; i++)
-                {
-                    var o = orders[i];
-                    worksheet.Row(row).Height = 20;
-
-                    worksheet.Cell(row, 1).Value = i + 1;
-                    worksheet.Cell(row, 2).Value = o.ProductCode;
-                    worksheet.Cell(row, 3).Value = o.ProductName;
-                    worksheet.Cell(row, 4).Value = o.Unit;
-                    worksheet.Cell(row, 5).Value = o.UnitPrice;
-                    worksheet.Cell(row, 6).Value = o.Quantity;
-                    worksheet.Cell(row, 7).Value = o.TotalAmount;
-                    worksheet.Cell(row, 8).Value = o.ApprovalNo ?? "-";
-                    worksheet.Cell(row, 9).Value = o.Remarks ?? "-";
-                    worksheet.Cell(row, 10).Value = o.ReceiveDate.HasValue ? o.ReceiveDate.Value.ToString("dd/MM/yyyy") : "-";
-
-                    // Alignments
-                    worksheet.Cell(row, 1).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Center;
-                    worksheet.Cell(row, 2).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Center;
-                    worksheet.Cell(row, 3).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Left;
-                    worksheet.Cell(row, 4).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Center;
-                    worksheet.Cell(row, 5).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Right;
-                    worksheet.Cell(row, 6).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Right;
-                    worksheet.Cell(row, 7).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Right;
-                    worksheet.Cell(row, 8).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Center;
-                    worksheet.Cell(row, 9).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Left;
-                    worksheet.Cell(row, 10).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Center;
-
-                    // Numeric formatting
-                    worksheet.Cell(row, 5).Style.NumberFormat.Format = "฿#,##0.00";
-                    worksheet.Cell(row, 6).Style.NumberFormat.Format = "#,##0";
-                    worksheet.Cell(row, 7).Style.NumberFormat.Format = "฿#,##0.00";
-
-                    // Zebra striping for even rows
-                    if (i % 2 == 1)
+                    var client = _httpClientFactory.CreateClient();
+                    client.Timeout = TimeSpan.FromSeconds(30);
+                    var response = await client.GetAsync(appScriptUrl);
+                    if (response.IsSuccessStatusCode)
                     {
-                        for (int c = 1; c <= headers.Length; c++)
+                        var json = await response.Content.ReadAsStringAsync();
+                        using var doc = JsonDocument.Parse(json);
+                        var root = doc.RootElement;
+                        if (root.TryGetProperty("batches", out var batchesEl))
                         {
-                            worksheet.Cell(row, c).Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.FromHtml("#F8FAFC"); // Slate-50
+                            foreach (var b in batchesEl.EnumerateArray())
+                            {
+                                var batchName = b.TryGetProperty("BatchName", out var np) ? np.GetString() ?? "" : "";
+                                var createdAtStr = b.TryGetProperty("CreatedAt", out var cp) ? cp.GetString() ?? "" : "";
+                                var totalItems = b.TryGetProperty("TotalItems", out var tip) ? tip.GetInt32() : 0;
+                                var totalAmount = b.TryGetProperty("TotalAmount", out var tap) ? tap.GetDouble() : 0;
+
+                                DateTime.TryParse(createdAtStr, out var createdAt);
+
+                                // Filter by year/month if requested
+                                if (year.HasValue && year.Value > 0 && createdAt.Year != year.Value) continue;
+                                if (month.HasValue && month.Value > 0 && createdAt.Month != month.Value) continue;
+
+                                batches.Add(new SavedBatchViewModel
+                                {
+                                    BatchName = batchName,
+                                    CreatedAt = createdAt,
+                                    TotalItems = totalItems,
+                                    TotalAmount = totalAmount
+                                });
+
+                                if (!availableYears.Contains(createdAt.Year))
+                                    availableYears.Add(createdAt.Year);
+                            }
                         }
                     }
-
-                    row++;
                 }
-
-                // Add grand total row
-                worksheet.Row(row).Height = 22;
-                worksheet.Cell(row, 6).Value = "ยอดรวมทั้งหมด";
-                worksheet.Cell(row, 6).Style.Font.Bold = true;
-                worksheet.Cell(row, 6).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Right;
-                worksheet.Cell(row, 7).FormulaA1 = $"=SUM(G{startRow + 1}:G{row - 1})";
-                worksheet.Cell(row, 7).Style.Font.Bold = true;
-                worksheet.Cell(row, 7).Style.NumberFormat.Format = "฿#,##0.00";
-                worksheet.Cell(row, 7).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Right;
-
-                // Highlight total row
-                var totalRowRange = worksheet.Range(row, 1, row, headers.Length);
-                totalRowRange.Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.FromHtml("#F1F5F9");
-                totalRowRange.Style.Border.BottomBorder = ClosedXML.Excel.XLBorderStyleValues.Double;
-
-                // Add gridlines & borders
-                var tableRange = worksheet.Range(startRow, 1, row, headers.Length);
-                tableRange.Style.Border.OutsideBorder = ClosedXML.Excel.XLBorderStyleValues.Thin;
-                tableRange.Style.Border.OutsideBorderColor = ClosedXML.Excel.XLColor.FromHtml("#CBD5E1");
-                tableRange.Style.Border.InsideBorder = ClosedXML.Excel.XLBorderStyleValues.Thin;
-                tableRange.Style.Border.InsideBorderColor = ClosedXML.Excel.XLColor.FromHtml("#E2E8F0");
-
-                worksheet.Columns().AdjustToContents();
-
-                using (var stream = new MemoryStream())
-                {
-                    workbook.SaveAs(stream);
-                    var content = stream.ToArray();
-                    string safeFileName = string.Join("_", batch.BatchName.Split(Path.GetInvalidFileNameChars()));
-                    return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"OrderExport_{safeFileName}_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
-                }
+                catch { /* fail gracefully */ }
             }
+
+            availableYears = availableYears.OrderByDescending(y => y).ToList();
+            ViewData["SelectedYear"] = year;
+            ViewData["SelectedMonth"] = month;
+            ViewData["AvailableYears"] = availableYears;
+
+            return View(batches);
         }
 
 
@@ -494,7 +275,6 @@ namespace CostFlow.Controllers
 
     public class SaveOrdersRequest
     {
-        public Guid? BatchId { get; set; }
         public string BatchName { get; set; } = string.Empty;
         public List<SparePartOrderSaveModel> Orders { get; set; } = new();
     }
@@ -513,7 +293,6 @@ namespace CostFlow.Controllers
 
     public class SavedBatchViewModel
     {
-        public Guid BatchId { get; set; }
         public string BatchName { get; set; } = string.Empty;
         public DateTime CreatedAt { get; set; }
         public int TotalItems { get; set; }
