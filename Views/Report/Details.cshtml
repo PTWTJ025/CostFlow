@@ -617,6 +617,8 @@
         // Handle export Excel with custom name prompt
         document.getElementById('btn-export-excel').addEventListener('click', function() {
             const reportName = "@Html.Raw(reportName)";
+            const currentMonth = "@currentMonth";
+            const currentYear  = "@currentYear";
             const defaultExportName = `รายงาน_${reportName}_${new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' }).replace(/ /g, '_')}`;
 
             Swal.fire({
@@ -637,7 +639,14 @@
             }).then((result) => {
                 if (result.isConfirmed) {
                     const customName = result.value.trim();
-                    const exportUrl = `@Url.Action("ExportToExcel", "Report")?fileName=${encodeURIComponent(reportName)}&customName=${encodeURIComponent(customName)}`;
+                    let exportUrl;
+                    if (currentMonth && currentYear) {
+                        // month/year mode
+                        exportUrl = `/Report/ExportToExcel?month=${encodeURIComponent(currentMonth)}&year=${encodeURIComponent(currentYear)}&customName=${encodeURIComponent(customName)}`;
+                    } else {
+                        // legacy fileName mode
+                        exportUrl = `/Report/ExportToExcel?fileName=${encodeURIComponent(reportName)}&customName=${encodeURIComponent(customName)}`;
+                    }
                     window.location.href = exportUrl;
                 }
             });

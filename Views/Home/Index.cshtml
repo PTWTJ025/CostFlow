@@ -4,161 +4,154 @@
     ViewData["HeaderTitle"] = "หน้าหลัก (Dashboard)";
 }
 
-<div class="flex-1 p-md md:p-lg lg:p-xl flex flex-col gap-lg max-w-[88vw] mx-auto w-full">
-    
+<div class="flex-1 p-md md:p-lg lg:p-xl flex flex-col gap-xl max-w-[1440px] mx-auto w-full">
+
     <!-- Welcome Header / Hero Banner -->
-    <div class="bg-gradient-to-r from-primary to-primary-container text-white rounded border border-outline-variant shadow-sm p-lg relative overflow-hidden flex justify-between items-center fade-in-up">
+    <div class="bg-gradient-to-r from-primary to-primary-container text-white rounded border border-outline-variant shadow-sm p-lg h-56 relative overflow-hidden flex justify-between items-center fade-in-up">
         <div class="z-10 max-w-xl">
             <h2 class="font-headline-md text-headline-md font-bold mb-xs">ระบบบริหารจัดการและวิเคราะห์ต้นทุน (DEMO)</h2>
             <p class="text-xs text-white/80 leading-relaxed">ยินดีต้อนรับสู่แดชบอร์ดสรุปผลการจับคู่ใบสั่งงานผลิตอะไหล่, เปรียบเทียบใบขออนุมัติ, ตรวจสอบข้อมูลราคากลางประวัติจัดซื้อย้อนหลัง และบันทึกคำสั่งซื้อโรงงานครบวงจร</p>
         </div>
         <div class="hidden lg:block z-0 opacity-10 absolute right-10 top-0 bottom-0 flex items-center">
             <svg class="w-64 h-64 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6a7.5 7.5 0 1 0 7.5 7.5h-7.5V6Z" />
-                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 10.5H21A7.5 7.5 0 0 0 13.5 3v7.5Z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6a7.5 7.5 0 1 0 7.5 7.5h-7.5V6Z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 10.5H21A7.5 7.5 0 0 0 13.5 3v7.5Z"/>
             </svg>
         </div>
     </div>
 
     <!-- Quick Stats Metric Row -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-md">
+    <section aria-label="สถิติข้อมูล" class="grid grid-cols-2 lg:grid-cols-4 gap-sm md:gap-md mt-6">
         <!-- Stat 1: Merged Reports -->
-        <div class="bg-white rounded border border-outline-variant shadow-sm p-md flex justify-between items-start hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 group cursor-default fade-in-up delay-75">
-            <div class="flex-1">
-                <span class="text-slate-500 font-semibold text-[10px] uppercase tracking-wider block mb-1 group-hover:text-primary transition-colors">รายงานเปรียบเทียบที่บันทึก</span>
-                <span class="text-2xl font-black text-slate-800 font-mono tracking-tight block">@Model.TotalMergedReports.ToString("N0")</span>
-                <div class="text-[11px] text-slate-400 mt-3 flex items-center gap-1.5">
-                    <span class="w-1.5 h-1.5 rounded-full bg-primary/70"></span>
-                    <span>แฟ้มประวัติรวมงานผลิต</span>
-                </div>
+        <a href="/Report" class="bg-blue-50/60 rounded-lg border border-blue-200/80 px-md py-sm flex items-center gap-sm relative hover:bg-blue-50 transition-colors group">
+            <div class="w-9 h-9 rounded-md bg-blue-100 flex items-center justify-center text-blue-600 flex-shrink-0 group-hover:scale-105 transition-transform">
+                <i class="fi fi-rs-document-signed text-base"></i>
             </div>
-            <div class="w-10 h-10 rounded-full bg-blue-50/80 text-primary flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
-                <i class="fi fi-rs-document-signed text-base leading-none"></i>
+            <div class="min-w-0">
+                <div class="font-headline-sm text-headline-sm text-blue-900 tabular-nums tracking-tight leading-none">@Model.TotalMergedReports.ToString("N0")</div>
+                <div class="font-label-sm text-label-sm text-blue-700/70 mt-0.5 truncate">รายงานที่บันทึก</div>
             </div>
-        </div>
+        </a>
 
-        <!-- Stat 2: Avg Match Accuracy -->
-        <div class="bg-white rounded border border-outline-variant shadow-sm p-md flex justify-between items-start hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 group cursor-default fade-in-up delay-150">
-            <div class="flex-1 mr-2">
-                <span class="text-slate-500 font-semibold text-[10px] uppercase tracking-wider block mb-1 group-hover:text-emerald-600 transition-colors">ความถูกต้องจับคู่เฉลี่ย</span>
-                <span class="text-2xl font-black text-emerald-600 font-mono tracking-tight block">@Model.AvgMatchSuccessRate%</span>
-                <div class="w-full bg-slate-100 rounded-full h-1.5 mt-3 overflow-hidden">
-                    <div class="bg-emerald-500 h-full rounded-full transition-all duration-500" style="width: @Model.AvgMatchSuccessRate%"></div>
-                </div>
+        <!-- Stat 2: Yearly Cost / Expense -->
+        <a href="/MonthlyCost" class="bg-purple-50/60 rounded-lg border border-purple-200/80 px-md py-sm flex items-center gap-sm relative hover:bg-purple-50 transition-colors group">
+            <div class="w-9 h-9 rounded-md bg-purple-100 flex items-center justify-center text-purple-600 flex-shrink-0 group-hover:scale-105 transition-transform">
+                <i class="fi fi-rs-coins text-base"></i>
             </div>
-            <div class="w-10 h-10 rounded-full bg-emerald-50/80 text-emerald-600 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
-                <i class="fi fi-rs-chart-pie-alt text-base leading-none"></i>
+            <div class="min-w-0">
+                <div class="font-headline-sm text-headline-sm text-purple-900 tabular-nums tracking-tight leading-none truncate">฿@Model.TotalYearlyCost.ToString("N0")</div>
+                <div class="font-label-sm text-label-sm text-purple-700/70 mt-0.5 truncate">ค่าใช้จ่ายประจำปี</div>
             </div>
-        </div>
+        </a>
 
         <!-- Stat 3: Saved Spare Part Orders -->
-        <div class="bg-white rounded border border-outline-variant shadow-sm p-md flex justify-between items-start hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 group cursor-default fade-in-up delay-225">
-            <div class="flex-1">
-                <span class="text-slate-500 font-semibold text-[10px] uppercase tracking-wider block mb-1 group-hover:text-indigo-600 transition-colors">รายการสั่งซื้อสะสม</span>
-                <span class="text-2xl font-black text-slate-800 font-mono tracking-tight block">@Model.TotalSparePartOrders.ToString("N0")</span>
-                <div class="text-[11px] text-slate-400 mt-3 flex items-center gap-1.5">
-                    <span class="w-1.5 h-1.5 rounded-full bg-indigo-500/70"></span>
-                    <span>บันทึกประวัติการคีย์คำสั่งซื้อ</span>
-                </div>
+        <a href="/FileMerge" class="bg-sky-50/60 rounded-lg border border-sky-200/80 px-md py-sm flex items-center gap-sm relative hover:bg-sky-50 transition-colors group">
+            <div class="w-9 h-9 rounded-md bg-sky-100 flex items-center justify-center text-sky-600 flex-shrink-0 group-hover:scale-105 transition-transform">
+                <i class="fi fi-rs-shopping-cart text-base"></i>
             </div>
-            <div class="w-10 h-10 rounded-full bg-indigo-50/80 text-indigo-600 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
-                <i class="fi fi-rs-shopping-cart text-base leading-none"></i>
+            <div class="min-w-0">
+                <div class="font-headline-sm text-headline-sm text-sky-900 tabular-nums tracking-tight leading-none">@Model.TotalSparePartOrders.ToString("N0")</div>
+                <div class="font-label-sm text-label-sm text-sky-700/70 mt-0.5 truncate">รายการสั่งซื้อสะสม</div>
             </div>
-        </div>
+        </a>
 
         <!-- Stat 4: Reference Prices count -->
-        <div class="bg-white rounded border border-outline-variant shadow-sm p-md flex justify-between items-start hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 group cursor-default fade-in-up delay-300">
-            <div class="flex-1">
-                <span class="text-slate-500 font-semibold text-[10px] uppercase tracking-wider block mb-1 group-hover:text-violet-600 transition-colors">ราคากลางอ้างอิงในระบบ</span>
-                <span class="text-2xl font-black text-slate-800 font-mono tracking-tight block">@Model.TotalReferencePrices.ToString("N0")</span>
-                <div class="text-[11px] text-slate-400 mt-3 flex items-center gap-1.5">
-                    <span class="w-1.5 h-1.5 rounded-full bg-violet-500/70"></span>
-                    <span>รายการราคากลางรวมสะสม</span>
-                </div>
+        <a href="/PriceReference" class="bg-amber-50/60 rounded-lg border border-amber-200/80 px-md py-sm flex items-center gap-sm relative hover:bg-amber-50 transition-colors group">
+            <div class="w-9 h-9 rounded-md bg-amber-100 flex items-center justify-center text-amber-600 flex-shrink-0 group-hover:scale-105 transition-transform">
+                <i class="fi fi-rs-database text-base"></i>
             </div>
-            <div class="w-10 h-10 rounded-full bg-violet-50/80 text-violet-600 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
-                <i class="fi fi-rs-database text-base leading-none"></i>
+            <div class="min-w-0">
+                <div class="font-headline-sm text-headline-sm text-amber-900 tabular-nums tracking-tight leading-none">@Model.TotalReferencePrices.ToString("N0")</div>
+                <div class="font-label-sm text-label-sm text-amber-700/70 mt-0.5 truncate">ราคากลางอ้างอิง</div>
             </div>
-        </div>
-    </div>
+        </a>
+    </section>
 
-    <!-- Quick Navigation Bento Grid -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-lg">
-        
+    <!-- Quick Navigation and Recent Reports -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-lg lg:gap-xl mt-6">
+
         <!-- Left 2 cols: Main Functions Navigation -->
-        <div class="lg:col-span-2 flex flex-col gap-md bg-white rounded border border-outline-variant shadow-sm p-md md:p-lg lg:p-xl fade-in-up delay-375">
-            <div>
-                <h3 class="font-headline-sm text-headline-sm text-on-surface mb-xs">เมนูและเครื่องมือเข้าใช้งานด่วน</h3>
-                <p class="text-xs text-secondary">เข้าใช้งานฟังก์ชันต่างๆ ของระบบได้อย่างรวดเร็ว</p>
-            </div>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-sm">
+        <section aria-label="เครื่องมือเข้าใช้งานด่วน" class="lg:col-span-2 flex flex-col gap-md">
+            <header>
+                <h2 class="font-headline-sm text-headline-sm text-on-surface mb-xs">เข้าใช้งานด่วน</h2>
+                <p class="font-body-md text-body-md text-on-surface-variant">เลือกทำรายการที่คุณต้องการได้อย่างรวดเร็ว</p>
+            </header>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-md mt-2">
                 <!-- Nav Card 1 -->
-                <a href="/FileMerge" class="border border-slate-200 hover:border-primary/80 rounded p-md hover:shadow-md hover:-translate-y-1 transition-all duration-300 ease-out flex gap-md items-start group transform bg-white">
-                    <div class="w-10 h-10 rounded bg-blue-50 text-primary flex items-center justify-center flex-shrink-0 group-hover:bg-primary group-hover:text-white group-hover:scale-105 group-hover:rotate-3 transition-all duration-300 ease-out">
-                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+                <a href="/FileMerge" class="group flex gap-md items-start p-md lg:p-lg rounded-lg bg-surface-container-lowest border border-outline-variant/60 hover:bg-primary/5 hover:border-primary/40 transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+                    <div class="w-12 h-12 rounded-md bg-primary/10 text-primary flex items-center justify-center flex-shrink-0 group-hover:bg-primary group-hover:text-white transition-colors">
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5"/>
                         </svg>
                     </div>
-                    <div class="transition-transform duration-300 ease-out group-hover:translate-x-1">
-                        <h4 class="font-bold text-slate-800 text-xs mb-1 group-hover:text-primary transition-colors">นำเข้า & เปรียบเทียบข้อมูลไฟล์ผลิต</h4>
-                        <p class="text-[11px] text-slate-500">เปรียบเทียบข้อมูล "แผนผลิตประจำสัปดาห์" เข้ากับ "ใบขออนุมัติสั่งผลิตชิ้นส่วน"</p>
+                    <div>
+                        <h3 class="font-label-bold text-label-bold text-on-surface group-hover:text-primary transition-colors mb-1">นำเข้า & เปรียบเทียบข้อมูลไฟล์ผลิต</h3>
+                        <p class="font-body-md text-body-md text-on-surface-variant line-clamp-2">เปรียบเทียบข้อมูลแผนผลิตประจำสัปดาห์ เข้ากับใบขออนุมัติสั่งผลิตชิ้นส่วน</p>
                     </div>
                 </a>
 
                 <!-- Nav Card 2 -->
-                <a href="/ProductSearch" class="border border-slate-200 hover:border-primary/80 rounded p-md hover:shadow-md hover:-translate-y-1 transition-all duration-300 ease-out flex gap-md items-start group transform bg-white">
-                    <div class="w-10 h-10 rounded bg-blue-50 text-primary flex items-center justify-center flex-shrink-0 group-hover:bg-primary group-hover:text-white group-hover:scale-105 group-hover:rotate-3 transition-all duration-300 ease-out">
-                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m3.75 9v6m3-3v3m-7.5-6v6m1.5-12H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                <a href="/ProductSearch" class="group flex gap-md items-start p-md lg:p-lg rounded-lg bg-surface-container-lowest border border-outline-variant/60 hover:bg-primary/5 hover:border-primary/40 transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+                    <div class="w-12 h-12 rounded-md bg-primary/10 text-primary flex items-center justify-center flex-shrink-0 group-hover:bg-primary group-hover:text-white transition-colors">
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m3.75 9v6m3-3v3m-7.5-6v6m1.5-12H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
                         </svg>
                     </div>
-                    <div class="transition-transform duration-300 ease-out group-hover:translate-x-1">
-                        <h4 class="font-bold text-slate-800 text-xs mb-1 group-hover:text-primary transition-colors">คีย์ข้อมูลใบสั่งซื้ออะไหล่โรงงาน</h4>
-                        <p class="text-[11px] text-slate-500">คีย์ข้อมูลรายการซื้ออะไหล่สะสมแบบร่าง พร้อมระบบเทียบราคากลางย้อนหลังแบบทันที</p>
+                    <div>
+                        <h3 class="font-label-bold text-label-bold text-on-surface group-hover:text-primary transition-colors mb-1">คีย์ข้อมูลใบสั่งซื้ออะไหล่โรงงาน</h3>
+                        <p class="font-body-md text-body-md text-on-surface-variant line-clamp-2">คีย์ข้อมูลรายการซื้ออะไหล่แบบร่าง พร้อมระบบเทียบราคากลางทันที</p>
                     </div>
                 </a>
 
                 <!-- Nav Card 3 -->
-                <a href="/Report" class="border border-slate-200 hover:border-primary/80 rounded p-md hover:shadow-md hover:-translate-y-1 transition-all duration-300 ease-out flex gap-md items-start group transform bg-white">
-                    <div class="w-10 h-10 rounded bg-blue-50 text-primary flex items-center justify-center flex-shrink-0 group-hover:bg-primary group-hover:text-white group-hover:scale-105 group-hover:rotate-3 transition-all duration-300 ease-out">
-                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.03 0 1.9.693 2.166 1.638m-7.377 2.24a4.008 4.008 0 0 1 1.953-3.238" />
+                <a href="/Report" class="group flex gap-md items-start p-md lg:p-lg rounded-lg bg-surface-container-lowest border border-outline-variant/60 hover:bg-primary/5 hover:border-primary/40 transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+                    <div class="w-12 h-12 rounded-md bg-primary/10 text-primary flex items-center justify-center flex-shrink-0 group-hover:bg-primary group-hover:text-white transition-colors">
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.03 0 1.9.693 2.166 1.638m-7.377 2.24a4.008 4.008 0 0 1 1.953-3.238"/>
                         </svg>
                     </div>
-                    <div class="transition-transform duration-300 ease-out group-hover:translate-x-1">
-                        <h4 class="font-bold text-slate-800 text-xs mb-1 group-hover:text-primary transition-colors">คลังข้อมูลและสรุปรายงานทางการเงิน</h4>
-                        <p class="text-[11px] text-slate-500">เรียกตรวจสอบความถูกต้องในอดีต ตรวจสอบความถูกต้องในการจัดซื้อย้อนหลัง และสั่งส่งออก Excel</p>
+                    <div>
+                        <h3 class="font-label-bold text-label-bold text-on-surface group-hover:text-primary transition-colors mb-1">คลังข้อมูลและสรุปรายงานทางการเงิน</h3>
+                        <p class="font-body-md text-body-md text-on-surface-variant line-clamp-2">ตรวจสอบความถูกต้องย้อนหลัง และส่งออกข้อมูลเป็น Excel</p>
                     </div>
                 </a>
 
                 <!-- Nav Card 4 -->
-                <a href="/PriceReference" class="border border-slate-200 hover:border-primary/80 rounded p-md hover:shadow-md hover:-translate-y-1 transition-all duration-300 ease-out flex gap-md items-start group transform bg-white">
-                    <div class="w-10 h-10 rounded bg-blue-50 text-primary flex items-center justify-center flex-shrink-0 group-hover:bg-primary group-hover:text-white group-hover:scale-105 group-hover:rotate-3 transition-all duration-300 ease-out">
-                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5h16.5m-18 3h18M3.75 10.5h16.5M3.75 13.5h16.5M7.5 12h-.008v.008H7.5V12Zm.375 0a.375 .375 0 1 1 -.75 0 .375 .375 0 0 1 .75 0Zm-.375 3h-.008v.008H7.5V15Zm.375 0a.375 .375 0 1 1 -.75 0 .375 .375 0 0 1 .75 0Zm9.625-3h-.008v.008h-.008V12Zm.375 0a.375 .375 0 1 1 -.75 0 .375 .375 0 0 1 .75 0Zm-.375 3h-.008v.008h-.008V15Zm.375 0a.375 .375 0 1 1 -.75 0 .375 .375 0 0 1 .75 0Z" />
+                <a href="/PriceReference" class="group flex gap-md items-start p-md lg:p-lg rounded-lg bg-surface-container-lowest border border-outline-variant/60 hover:bg-primary/5 hover:border-primary/40 transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+                    <div class="w-12 h-12 rounded-md bg-primary/10 text-primary flex items-center justify-center flex-shrink-0 group-hover:bg-primary group-hover:text-white transition-colors">
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5h16.5m-18 3h18M3.75 10.5h16.5M3.75 13.5h16.5M7.5 12h-.008v.008H7.5V12Zm.375 0a.375 .375 0 1 1 -.75 0 .375 .375 0 0 1 .75 0Zm-.375 3h-.008v.008H7.5V15Zm.375 0a.375 .375 0 1 1 -.75 0 .375 .375 0 0 1 .75 0Zm9.625-3h-.008v.008h-.008V12Zm.375 0a.375 .375 0 1 1 -.75 0 .375 .375 0 0 1 .75 0Zm-.375 3h-.008v.008h-.008V15Zm.375 0a.375 .375 0 1 1 -.75 0 .375 .375 0 0 1 .75 0Z"/>
                         </svg>
                     </div>
-                    <div class="transition-transform duration-300 ease-out group-hover:translate-x-1">
-                        <h4 class="font-bold text-slate-800 text-xs mb-1 group-hover:text-primary transition-colors">สืบค้นฐานข้อมูลราคากลางอะไหล่</h4>
-                        <p class="text-[11px] text-slate-500">สืบค้นและตรวจสอบฐานข้อมูลราคากลางอ้างอิง ค้นหาง่ายแบบ AJAX แสดงผลทันทีขณะพิมพ์</p>
+                    <div>
+                        <h3 class="font-label-bold text-label-bold text-on-surface group-hover:text-primary transition-colors mb-1">สืบค้นฐานข้อมูลราคากลางอะไหล่</h3>
+                        <p class="font-body-md text-body-md text-on-surface-variant line-clamp-2">สืบค้นและตรวจสอบฐานข้อมูลด้วยระบบ AJAX ทันทีขณะพิมพ์</p>
                     </div>
                 </a>
             </div>
-        </div>
+        </section>
 
         <!-- Right 1 col: Recent Saved Reports -->
-        <div class="bg-white rounded border border-outline-variant shadow-sm p-md md:p-lg flex flex-col gap-md fade-in-up delay-450">
-            <div class="flex justify-between items-center">
-                <h3 class="font-bold text-slate-800 text-xs">รายงานล่าสุด</h3>
-                <a href="/Report" class="text-[10px] text-primary hover:underline font-bold">ทั้งหมด</a>
-            </div>
+        <section aria-label="รายงานล่าสุด" class="flex flex-col gap-md">
+            <header class="flex justify-between items-end mb-xs">
+                <h2 class="font-headline-sm text-headline-sm text-on-surface">รายงานล่าสุด</h2>
+                <a href="/Report" class="font-label-bold text-label-bold text-primary hover:text-primary-container hover:underline focus-visible:outline-none focus-visible:underline">ดูทั้งหมด</a>
+            </header>
 
-            <div class="flex flex-col gap-3.5 flex-1">
+            <div class="flex flex-col gap-sm flex-1">
                 @if (Model.RecentReports == null || !Model.RecentReports.Any())
                 {
-                    <div class="text-slate-400 text-xs italic py-lg text-center flex-1 flex items-center justify-center bg-slate-50/50 rounded border border-dashed border-slate-200">
-                        ยังไม่มีรายงานบันทึกไว้ในระบบ
+                    <div class="flex flex-col items-center justify-center flex-1 p-lg bg-surface-container-lowest rounded-lg border border-dashed border-outline-variant/80 text-center min-h-[200px] shadow-sm">
+                        <div class="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-3">
+                            <i class="fi fi-rs-folder-open text-xl"></i>
+                        </div>
+                        <h3 class="font-label-bold text-label-bold text-on-surface mb-1">ยังไม่มีรายงานในระบบ</h3>
+                        <p class="font-body-md text-body-md text-on-surface-variant mb-4">เริ่มต้นตรวจสอบต้นทุนโดยเปรียบเทียบข้อมูลไฟล์ผลิตของคุณ</p>
+                        <a href="/FileMerge" class="inline-flex items-center gap-2 bg-primary hover:bg-primary-container text-white font-label-bold text-label-sm px-4 py-2 rounded-md transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+                            <span>สร้างรายงานใหม่</span>
+                            <i class="fi fi-rs-arrow-right"></i>
+                        </a>
                     </div>
                 }
                 else
@@ -167,31 +160,29 @@
                     {
                         double acc = r.TotalRows > 0 ? Math.Round((double)r.MatchedRows / r.TotalRows * 100, 1) : 0;
                         string formattedDate = r.CreatedAt.ToString("dd MMM yyyy HH:mm น.", new System.Globalization.CultureInfo("th-TH"));
-                        
-                        <a href="@Url.Action("Details", "Report", new { fileName = r.ReportName })" class="p-4 border border-slate-300 hover:border-primary/70 rounded-lg bg-slate-100/40 hover:bg-slate-100 hover:shadow-sm flex flex-col gap-2 transition-all group">
+
+                        <a href="@Url.Action("Details", "Report", new { fileName = r.ReportName })" class="group p-md border border-outline-variant/60 rounded-lg bg-surface-container-lowest hover:bg-primary/5 hover:border-primary/40 transition-colors flex flex-col gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 shadow-sm">
                             <div class="flex justify-between items-start">
-                                <span class="text-[10px] text-slate-400 font-mono">@formattedDate</span>
-                                <span class="text-[9px] font-bold text-primary opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
-                                    ดูรายละเอียด
-                                    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/>
-                                    </svg>
+                                <time datetime="@r.CreatedAt.ToString("O")" class="font-data-tabular text-data-tabular text-secondary">@formattedDate</time>
+                                <span class="font-label-bold text-[10px] text-primary opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+                                    เปิด
+                                    <i class="fi fi-rs-arrow-up-right"></i>
                                 </span>
                             </div>
-                            <span class="font-bold text-slate-700 group-hover:text-primary transition-colors text-xs truncate block" title="@Html.Raw(r.ReportName)">
+                            <h3 class="font-label-bold text-label-bold text-on-surface group-hover:text-primary transition-colors truncate" title="@Html.Raw(r.ReportName)">
                                 @Html.Raw(r.ReportName)
-                            </span>
-                            
-                            <div class="flex justify-between items-center text-[10px] text-slate-500 mt-1">
-                                <span>ตรงตามแผนผลิต @r.MatchedRows / @r.TotalRows รายการ</span>
-                                <span class="bg-blue-50 text-blue-700 font-bold px-1.5 py-0.5 rounded text-[9px]">@acc%</span>
+                            </h3>
+
+                            <div class="flex justify-between items-center mt-1">
+                                <span class="font-body-md text-body-md text-on-surface-variant">ตรงตามแผน @r.MatchedRows / @r.TotalRows</span>
+                                <span class="bg-primary/10 text-primary font-data-tabular text-[11px] px-2 py-0.5 rounded-sm inline-flex items-center">@acc%</span>
                             </div>
                         </a>
                     }
                 }
             </div>
-        </div>
-        
-    </div>
+        </section>
 
+    </div>
 </div>
+

@@ -92,15 +92,15 @@
                                     </span>
                                 }
                             </div>
-                            
+
                             <!-- ยอดรวมและยอดจ่าย -->
                             <div class="shrink-0 text-right ml-3">
                                 <div class="text-[10px] text-slate-400 font-medium mb-0.5">ยอดรวม</div>
-                                <div class="text-sm font-bold text-slate-700 mb-1.5">
+                                <div class="text-sm font-bold text-slate-700 mb-1.5" data-field="totalAmount">
                                     @card.TotalAmount.ToString("N0")
                                 </div>
                                 <div class="text-[10px] text-emerald-600 font-medium mb-0.5">ยอดจ่าย</div>
-                                <div class="text-sm font-bold text-emerald-600">
+                                <div class="text-sm font-bold text-emerald-600" data-field="paidAmount">
                                     @card.ReceivedAmount.ToString("N0")
                                 </div>
                             </div>
@@ -122,9 +122,9 @@
                                 <span>รับสินค้า</span>
                             </div>
                             <div class="text-sm font-extrabold font-mono text-slate-700 leading-none my-0.5 group-hover/pill:text-slate-800 transition-colors">
-                                @card.ReceivedCount <span class="text-[10px] font-normal text-slate-400 font-sans">รายการ</span>
+                                <span data-field="receivedCount">@card.ReceivedCount</span> <span class="text-[10px] font-normal text-slate-400 font-sans">รายการ</span>
                             </div>
-                            <div class="text-[9px] font-medium text-emerald-600 mt-0.5">
+                            <div class="text-[9px] font-medium text-emerald-600 mt-0.5" data-field="receivedAmount">
                                 @card.ReceivedAmount.ToString("N0") บาท
                             </div>
                         </div>
@@ -136,9 +136,9 @@
                                 <span>ผ่อนชำระ</span>
                             </div>
                             <div class="text-sm font-extrabold font-mono text-slate-700 leading-none my-0.5 group-hover/pill:text-slate-800 transition-colors">
-                                @card.DeferredCount <span class="text-[10px] font-normal text-slate-400 font-sans">รายการ</span>
+                                <span data-field="deferredCount">@card.DeferredCount</span> <span class="text-[10px] font-normal text-slate-400 font-sans">รายการ</span>
                             </div>
-                            <div class="text-[9px] font-medium text-amber-600 mt-0.5">
+                            <div class="text-[9px] font-medium text-amber-600 mt-0.5" data-field="deferredAmount">
                                 @card.DeferredAmount.ToString("N0") บาท
                             </div>
                         </div>
@@ -150,9 +150,9 @@
                                 <span>ไม่ต้องการสินค้า</span>
                             </div>
                             <div class="text-sm font-extrabold font-mono text-slate-700 leading-none my-0.5 group-hover/pill:text-slate-800 transition-colors">
-                                @card.SkippedCount <span class="text-[10px] font-normal text-slate-400 font-sans">รายการ</span>
+                                <span data-field="skippedCount">@card.SkippedCount</span> <span class="text-[10px] font-normal text-slate-400 font-sans">รายการ</span>
                             </div>
-                            <div class="text-[9px] font-medium text-purple-600 mt-0.5">
+                            <div class="text-[9px] font-medium text-purple-600 mt-0.5" data-field="skippedAmount">
                                 @card.SkippedAmount.ToString("N0") บาท
                             </div>
                         </div>
@@ -223,6 +223,51 @@
 
             searchInput.addEventListener('input', applyFilters);
             filterStatus.addEventListener('change', applyFilters);
+
+            // ── Realtime polling ──────────────────────────────────────────────
+            const selectedYear = @(ViewBag.SelectedYear ?? DateTime.Now.Year);
+            const POLL_INTERVAL = 30000; // 30 วินาที
+
+            function fmtN0(n) {
+                return Number(n).toLocaleString('th-TH', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+            }
+
+            function updateCards(data) {
+                data.forEach(item => {
+                    const card = grid.querySelector(`a.card-item[data-month-key="${item.monthKey}"]`);
+                    if (!card) return;
+
+                    // อัพเดตตัวเลขในแต่ละ field
+                    const set = (field, val) => {
+                        const el = card.querySelector(`[data-field="${field}"]`);
+                        if (el) el.textContent = val;
+                    };
+
+                    set('totalAmount', fmtN0(item.totalAmount));
+                    set('paidAmount', fmtN0(item.paidAmount));
+                    set('receivedCount', item.receivedCount);
+                    set('receivedAmount', fmtN0(item.receivedAmount) + ' บาท');
+                    set('deferredCount', item.deferredCount);
+                    set('deferredAmount', fmtN0(item.deferredAmount) + ' บาท');
+                    set('skippedCount', item.skippedCount);
+                    set('skippedAmount', fmtN0(item.skippedAmount) + ' บาท');
+                });
+            }
+
+            async function pollCards() {
+                try {
+                    const res = await fetch(`/MonthlyCost/GetCardsData?year=${selectedYear}`);
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    updateCards(data);
+                } catch (e) {
+                    // silent fail — ไม่รบกวน UX ถ้า network error
+                }
+            }
+
+            // Poll ทันทีหลัง load และทุก 30 วินาที
+            pollCards();
+            setInterval(pollCards, POLL_INTERVAL);
         });
     </script>
 }

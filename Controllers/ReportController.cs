@@ -250,53 +250,250 @@ namespace CostFlow.Controllers
             }
             return Json(new { success = false, error = "ไม่พบข้อมูลที่ต้องการลบ" });
         }
-        public async Task<IActionResult> ExportToExcel(string fileName, string? customName)
+        public async Task<IActionResult> ExportToExcel(string? fileName, string? customName, int? month, int? year)
         {
-            if (string.IsNullOrEmpty(fileName)) return NotFound();
-            var report = await _context.Reports
-                .Include(r => r.Orders)
-                .FirstOrDefaultAsync(r => r.ReportName == fileName);
-            if (report == null) return NotFound();
-            var orders = report.Orders
-                .OrderBy(o => o.Status == "Pending" ? 0 : 1)
-                .ThenBy(o => o.PoNumber)
-                .ToList();
+            List<OrderTrackingMaster> orders;
+            string sheetTitle;
+
+            var thaiMonths = new[] { "", "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
+                                     "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม" };
+
+            if (month.HasValue && year.HasValue)
+            {
+                // Month/Year mode
+                sheetTitle = $"{thaiMonths[month.Value]} {year.Value + 543}";
+
+                var allOrders = await _context.OrderTrackingMasters
+                    .Include(o => o.MatchedInWeeklyPlans)
+                        .ThenInclude(wpd => wpd.WeeklyPlan)
+                    .Where(o => !string.IsNullOrEmpty(o.ApprovedDate))
+                    .ToListAsync();
+
+                orders = allOrders
+                    .Where(o => {
+                        var parsed = ParseThaiDate(o.ApprovedDate);
+                        return parsed.HasValue && parsed.Value.Year == year.Value && parsed.Value.Month == month.Value;
+                    })
+                    .OrderBy(o => o.PoNumber)
+                    .ToList();
+            }
+            else if (!string.IsNullOrEmpty(fileName))
+            {
+                // FileName mode (legacy)
+                var report = await _context.Reports
+                    .Include(r => r.Orders)
+                        .ThenInclude(o => o.MatchedInWeeklyPlans)
+                            .ThenInclude(wpd => wpd.WeeklyPlan)
+                    .FirstOrDefaultAsync(r => r.ReportName == fileName);
+                if (report == null) return NotFound();
+
+                orders = report.Orders
+                    .OrderBy(o => o.Status == "Pending" ? 0 : 1)
+                    .ThenBy(o => o.PoNumber)
+                    .ToList();
+                sheetTitle = fileName;
+            }
+            else
+            {
+                return NotFound();
+            }
+
             using var workbook = new XLWorkbook();
-            var worksheet = workbook.Worksheets.Add("TrackingReport");
-            // Define headers
-            worksheet.Cell(1, 1).Value = "เลขที่ใบสั่งซื้อ (PO)";
-            worksheet.Cell(1, 2).Value = "วันที่สั่ง";
-            worksheet.Cell(1, 3).Value = "วันที่อนุมัติ";
-            worksheet.Cell(1, 4).Value = "ปภ.ความเร่งด่วน";
-            worksheet.Cell(1, 5).Value = "จำนวนเงิน";
-            worksheet.Cell(1, 6).Value = "หมายเหตุ";
-            worksheet.Cell(1, 7).Value = "จำนวนชิ้น (สกัดได้)";
-            worksheet.Cell(1, 8).Value = "สถานะ";
-            var headerRow = worksheet.Range("A1:H1");
-            headerRow.Style.Font.Bold = true;
-            headerRow.Style.Fill.BackgroundColor = XLColor.LightGray;
-            // Fill data
+            var ws = workbook.Worksheets.Add("รายการสั่งผลิต");
+
+            // ── Font & style constants ───────────────────────────────────────
+            var fontName    = "TH SarabunPSK";     // ฟอนต์ไทย/อังกฤษมาตรฐาน
+            var colorHeader = XLColor.FromHtml("#1E3A5F");   // navy
+            var colorSubH   = XLColor.FromHtml("#2563EB");   // blue-600
+            var colorAlt    = XLColor.FromHtml("#F0F4FA");   // สีแถวคู่
+            var colorBorder = XLColor.FromHtml("#CBD5E1");   // slate-300
+            var colorMatched = XLColor.FromHtml("#D1FAE5");  // emerald-100
+            var colorPending = XLColor.FromHtml("#FEE2E2");  // red-100
+            var colorTextDark = XLColor.FromHtml("#1E293B");
+            var colorTextGray = XLColor.FromHtml("#64748B");
+            var colorGreen   = XLColor.FromHtml("#065F46");
+            var colorRed     = XLColor.FromHtml("#991B1B");
+
+            int totalRows = orders.Count;
+            int matchedCount = orders.Count(o => o.Status == "Matched");
+            int pendingCount = totalRows - matchedCount;
+            decimal totalAmount = orders.Sum(o => decimal.TryParse(o.Amount, out var a) ? a : 0m);
+
+            // ── Row 1: Title ─────────────────────────────────────────────────
+            ws.Cell(1, 1).Value = $"รายงานใบสั่งผลิต — {sheetTitle}";
+            var titleCell = ws.Cell(1, 1);
+            titleCell.Style.Font.FontName = fontName;
+            titleCell.Style.Font.FontSize = 16;
+            titleCell.Style.Font.Bold = true;
+            titleCell.Style.Font.FontColor = colorHeader;
+            ws.Range(1, 1, 1, 10).Merge();
+
+            // ── Row 2: Sub-info ──────────────────────────────────────────────
+            ws.Cell(2, 1).Value = $"วันที่ส่งออก: {DateTime.Now:dd/MM/yyyy HH:mm}    " +
+                                   $"รายการทั้งหมด: {totalRows}    " +
+                                   $"ได้แผนผลิตแล้ว: {matchedCount}    " +
+                                   $"ยังไม่มีแผนผลิต: {pendingCount}    " +
+                                   $"ยอดรวม: {totalAmount:N2} บาท";
+            ws.Cell(2, 1).Style.Font.FontName = fontName;
+            ws.Cell(2, 1).Style.Font.FontSize = 11;
+            ws.Cell(2, 1).Style.Font.FontColor = colorTextGray;
+            ws.Range(2, 1, 2, 10).Merge();
+
+            // ── Row 3: blank spacer ──────────────────────────────────────────
+            ws.Row(3).Height = 6;
+
+            // ── Row 4: Column Headers ────────────────────────────────────────
+            int headerRow = 4;
+            var headers = new[]
+            {
+                "ลำดับ", "สถานะ", "เลขที่อนุมัติ (PO)", "วันที่สั่ง",
+                "วันที่อนุมัติ", "ปภ.ความเร่งด่วน", "จำนวนเงิน (บาท)",
+                "รายละเอียด / หมายเหตุ", "จำนวน (ชิ้น)", "เป้าหมายส่งมอบ"
+            };
+
+            for (int c = 0; c < headers.Length; c++)
+            {
+                var cell = ws.Cell(headerRow, c + 1);
+                cell.Value = headers[c];
+                cell.Style.Font.FontName  = fontName;
+                cell.Style.Font.FontSize  = 12;
+                cell.Style.Font.Bold      = true;
+                cell.Style.Font.FontColor = colorHeader;
+                cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                cell.Style.Alignment.Vertical   = XLAlignmentVerticalValues.Center;
+                cell.Style.Border.OutsideBorder  = XLBorderStyleValues.Thin;
+                cell.Style.Border.OutsideBorderColor = colorBorder;
+            }
+            ws.Row(headerRow).Height = 22;
+
+            // ── Data Rows ────────────────────────────────────────────────────
             for (int i = 0; i < orders.Count; i++)
             {
                 var order = orders[i];
-                var row = i + 2;
-                worksheet.Cell(row, 1).Value = order.PoNumber;
-                worksheet.Cell(row, 2).Value = order.RequestDate;
-                worksheet.Cell(row, 3).Value = order.ApprovedDate;
-                worksheet.Cell(row, 4).Value = order.Urgency;
-                worksheet.Cell(row, 5).Value = order.Amount;
-                worksheet.Cell(row, 6).Value = order.Remarks;
-                worksheet.Cell(row, 7).Value = order.RemarksQuantity;
-                worksheet.Cell(row, 8).Value = order.Status == "Matched" ? "ได้แผนผลิตแล้ว" : "ยังไม่มีแผนผลิต";
+                int row = headerRow + 1 + i;
+                bool isMatched = order.Status == "Matched";
+
+                var deliveryTarget = order.MatchedInWeeklyPlans.Any()
+                    ? order.MatchedInWeeklyPlans
+                        .OrderByDescending(wpd => wpd.WeeklyPlan.UploadedAt)
+                        .First().DeliveryTarget ?? "-"
+                    : "-";
+
+                var proposedPrice = order.MatchedInWeeklyPlans.Any()
+                    ? order.MatchedInWeeklyPlans
+                        .OrderByDescending(wpd => wpd.WeeklyPlan.UploadedAt)
+                        .First().Price ?? order.Amount ?? "-"
+                    : order.Amount ?? "-";
+
+                decimal priceVal = 0m;
+                bool hasPriceVal = decimal.TryParse(
+                    (proposedPrice ?? "").Replace("฿", "").Replace(",", "").Trim(),
+                    out priceVal);
+
+                var values = new object?[]
+                {
+                    i + 1,
+                    isMatched ? "ได้แผนผลิตแล้ว" : "ยังไม่มีแผนผลิต",
+                    order.PoNumber,
+                    order.RequestDate ?? "-",
+                    order.ApprovedDate ?? "-",
+                    order.Urgency ?? "-",
+                    hasPriceVal ? (object)priceVal : (proposedPrice ?? "-"),
+                    order.Remarks ?? "-",
+                    order.RemarksQuantity ?? "-",
+                    deliveryTarget
+                };
+
+                for (int c = 0; c < values.Length; c++)
+                {
+                    var cell = ws.Cell(row, c + 1);
+                    cell.Value = values[c] switch
+                    {
+                        int    iv => XLCellValue.FromObject(iv),
+                        decimal dv => XLCellValue.FromObject(dv),
+                        string sv => XLCellValue.FromObject(sv),
+                        _          => XLCellValue.FromObject(values[c]?.ToString() ?? "")
+                    };
+                    cell.Style.Font.FontName  = fontName;
+                    cell.Style.Font.FontSize  = 11;
+                    cell.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                    cell.Style.Border.OutsideBorderColor = colorBorder;
+                    cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+                    cell.Style.Alignment.WrapText = true;
+
+                    // ปรับสี text สถานะ
+                    if (c == 1)
+                    {
+                        cell.Style.Font.Bold      = true;
+                        cell.Style.Font.FontColor = isMatched ? colorGreen : colorRed;
+                        cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    }
+                    // จัด center: ลำดับ, PO, วันที่, ปภ, จำนวน, เป้าหมาย
+                    else if (c == 0 || c == 2 || c == 3 || c == 4 || c == 5 || c == 8 || c == 9)
+                    {
+                        cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    }
+                    // จัด right: ราคา
+                    else if (c == 6 && hasPriceVal)
+                    {
+                        cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+                        cell.Style.NumberFormat.Format  = "#,##0.00";
+                    }
+                }
+
+                ws.Row(row).Height = 18;
             }
-            worksheet.Columns().AdjustToContents();
+
+            // ── Summary row ──────────────────────────────────────────────────
+            int sumRow = headerRow + 1 + orders.Count + 1;
+            ws.Cell(sumRow, 6).Value = "รวมทั้งหมด";
+            ws.Cell(sumRow, 6).Style.Font.FontName  = fontName;
+            ws.Cell(sumRow, 6).Style.Font.Bold      = true;
+            ws.Cell(sumRow, 6).Style.Font.FontColor = colorHeader;
+            ws.Cell(sumRow, 6).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+
+            ws.Cell(sumRow, 7).Value = totalAmount;
+            ws.Cell(sumRow, 7).Style.Font.FontName  = fontName;
+            ws.Cell(sumRow, 7).Style.Font.Bold      = true;
+            ws.Cell(sumRow, 7).Style.Font.FontColor = colorHeader;
+            ws.Cell(sumRow, 7).Style.NumberFormat.Format  = "#,##0.00";
+            ws.Cell(sumRow, 7).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+            ws.Range(sumRow, 6, sumRow, 7).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            ws.Range(sumRow, 6, sumRow, 7).Style.Border.OutsideBorderColor = colorBorder;
+
+            // ── Column widths ────────────────────────────────────────────────
+            ws.Column(1).Width  = 7;   // ลำดับ
+            ws.Column(2).Width  = 20;  // สถานะ
+            ws.Column(3).Width  = 18;  // PO
+            ws.Column(4).Width  = 14;  // วันที่สั่ง
+            ws.Column(5).Width  = 14;  // วันที่อนุมัติ
+            ws.Column(6).Width  = 16;  // ปภ
+            ws.Column(7).Width  = 16;  // จำนวนเงิน
+            ws.Column(8).Width  = 42;  // รายละเอียด
+            ws.Column(9).Width  = 12;  // จำนวน
+            ws.Column(10).Width = 18;  // เป้าหมาย
+
+            // ── Freeze panes ─────────────────────────────────────────────────
+            ws.SheetView.FreezeRows(headerRow);
+
+            // ── Auto-filter ──────────────────────────────────────────────────
+            ws.RangeUsed()?.SetAutoFilter();
+
+            // ── Print settings ───────────────────────────────────────────────
+            ws.PageSetup.PageOrientation = XLPageOrientation.Landscape;
+            ws.PageSetup.PaperSize       = XLPaperSize.A4Paper;
+            ws.PageSetup.FitToPages(1, 0);
+
             using var stream = new MemoryStream();
             workbook.SaveAs(stream);
-            var content = stream.ToArray();
+
             string downloadName = !string.IsNullOrWhiteSpace(customName)
                 ? $"{customName.Trim()}.xlsx"
-                : $"TrackingReport_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
-            return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", downloadName);
+                : $"Report_{sheetTitle}_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
+
+            return File(stream.ToArray(),
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        downloadName);
         }
         [HttpGet]
         public async Task<IActionResult> GetWeeklyPlanDetail(Guid orderId)

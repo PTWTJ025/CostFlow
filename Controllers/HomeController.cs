@@ -98,12 +98,25 @@ namespace CostFlow.Controllers
                 avgSuccessRate = Math.Round(totalAccuracy / totalMergedReports, 1);
             }
 
+            // คำนวณยอดรวมค่าใช้จ่ายประจำปี (Yearly Cost)
+            int currentYear = DateTime.Now.Year;
+            string yearPrefix = $"{currentYear:0000}-";
+            decimal totalYearlyCost = await _context.MonthlyOrderActions
+                .Where(a => a.MonthYear.StartsWith(yearPrefix))
+                .SumAsync(a => (decimal?)a.ActionPrice) ?? 0m;
+
+            if (totalYearlyCost == 0)
+            {
+                totalYearlyCost = await _context.MonthlyOrderActions.SumAsync(a => (decimal?)a.ActionPrice) ?? 0m;
+            }
+
             var viewModel = new HomeDashboardViewModel
             {
                 TotalReferencePrices = totalReferencePrices,
                 TotalSparePartOrders = totalSparePartOrders,
                 TotalMergedReports = totalMergedReports,
                 AvgMatchSuccessRate = avgSuccessRate,
+                TotalYearlyCost = totalYearlyCost,
                 RecentReports = recentReports
             };
 
@@ -167,6 +180,7 @@ namespace CostFlow.Controllers
         public int TotalSparePartOrders { get; set; }
         public int TotalMergedReports { get; set; }
         public double AvgMatchSuccessRate { get; set; }
+        public decimal TotalYearlyCost { get; set; }
         public System.Collections.Generic.List<ReportSummaryViewModel> RecentReports { get; set; } = new();
     }
 }
