@@ -30,6 +30,9 @@ namespace CostFlow.Models
         public int DeferredCarryOver { get; set; }  // ค้างมาจากเดือนก่อน แล้วผ่อนต่ออีก (Skipped→Deferred)
         public int SkippedCarryOver { get; set; }   // ค้างมาจากเดือนก่อน แล้วยังไม่รับอีก
 
+        // ยอดรวมทั้งหมดของสินค้าในเดือนนี้ (จาก OrderTrackingMasters โดยตรง ก่อน action)
+        public decimal TotalAmount { get; set; }
+
         public double ProgressPercent => TotalItems > 0
             ? Math.Round((double)DoneItems / TotalItems * 100, 1)
             : 0;
@@ -67,6 +70,7 @@ namespace CostFlow.Models
         public string ForwardedStatus { get; set; } = string.Empty; // "Deferred", "Skipped", or ""
         public string ForwardedFromMonth { get; set; } = string.Empty; // e.g. "กรกฎาคม 2569"
         public string OriginalReportName { get; set; } = string.Empty; // e.g. "รายงานสั่งผลิต_13_ก.ค._2569"
+        public string OriginalMonth { get; set; } = string.Empty; // เดือนต้นทางที่สินค้าถูกสร้างครั้งแรก (เช่น "มิถุนายน 2569")
     }
 
     public class SavedOrderItem
@@ -90,5 +94,35 @@ namespace CostFlow.Models
         public decimal TotalPlannedAmount { get; set; }
         public int ProcessedOrders { get; set; }
         public decimal ProcessedAmount { get; set; }
+    }
+
+    public class MonthlySummaryRow
+    {
+        public string MonthKey { get; set; } = string.Empty;
+        public string MonthDisplay { get; set; } = string.Empty;
+        public int ReceivedCount { get; set; }
+        public decimal ReceivedAmount { get; set; }
+        public int DeferredCount { get; set; }
+        public decimal DeferredAmount { get; set; }
+        public int SkippedCount { get; set; }
+        public decimal TotalPaid { get; set; }
+        public decimal Cumulative { get; set; }
+        public decimal NewDebt { get; set; }
+        public decimal DebtBalance { get; set; }
+        public int CarryOverDeferredCount { get; set; }
+        public decimal CarryOverDeferredAmount { get; set; }
+        public bool HasData { get; set; }
+    }
+
+    public class MonthlySummaryViewModel
+    {
+        public int Year { get; set; }
+        public List<MonthlySummaryRow> Rows { get; set; } = new();
+        public decimal GrandTotal { get; set; }
+        public decimal TotalReceived { get; set; }
+        public decimal TotalDeferred { get; set; }
+        public decimal TotalNewDebt { get; set; }
+        public decimal CurrentDebt { get; set; }
+        public decimal DebtAtYearStart { get; set; }
     }
 }

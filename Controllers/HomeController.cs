@@ -110,10 +110,6 @@ namespace CostFlow.Controllers
             return View(viewModel);
         }
 
-        public IActionResult Privacy()
-        {
-            return View();
-        }
 
         // GET: /Home/Settings
         [HttpGet]

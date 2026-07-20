@@ -5,6 +5,18 @@ module.exports = {
     "./Views/**/*.cshtml",
     "./wwwroot/js/**/*.js"
   ],
+  safelist: [
+    // Status badges
+    'bg-emerald-50', 'text-emerald-600', 'border-emerald-200/60',
+    'bg-blue-50', 'text-blue-600', 'border-blue-200/60',
+    'bg-sky-50', 'text-sky-600', 'border-sky-200/60',
+    'bg-red-50', 'text-red-700', 'border-red-200/60',
+    // Pending badges & pulses
+    'bg-amber-50', 'text-amber-700', 'border-amber-200/60',
+    'bg-slate-100', 'text-slate-500', 'border-slate-200/60',
+    'bg-amber-500', 'text-amber-600', 'bg-slate-400',
+    'animate-pulse'
+  ],
   theme: {
     extend: {
       colors: {

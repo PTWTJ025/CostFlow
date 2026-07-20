@@ -175,6 +175,149 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Smooth Scrolling & Custom Scrollbar */
+html {
+  scroll-behavior: smooth;
+}
+
+/* ============================================================
+   Purchase System Menu (Admin Secondary Action)
+   ============================================================ */
+.purchase-menu-trigger {
+  position: relative;
+  border: 1px solid transparent;
+}
+
+.purchase-menu-trigger:hover {
+  border-color: #e2e8f0;
+}
+
+.purchase-dropdown {
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transform-origin: top;
+  transform: scaleY(0.9);
+  transition: 
+    max-height 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.purchase-dropdown-open {
+  max-height: 200px;
+  opacity: 1;
+  transform: scaleY(1);
+}
+
+.purchase-dropdown-item {
+  font-size: 12px;
+  margin-top: 2px;
+  margin-bottom: 2px;
+  border-left: 2px solid transparent;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.purchase-dropdown-item:hover {
+  border-left-color: #00288e;
+  padding-left: 14px;
+}
+
+/* Collapsed sidebar behavior for purchase menu */
+body.sidebar-collapsed .purchase-system-menu-container {
+  position: relative;
+}
+
+body.sidebar-collapsed .purchase-menu-trigger span {
+  display: none !important;
+}
+
+body.sidebar-collapsed #purchase-chevron {
+  display: none !important;
+}
+
+body.sidebar-collapsed .purchase-menu-trigger {
+  justify-content: center;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+body.sidebar-collapsed .purchase-dropdown {
+  position: absolute;
+  left: calc(100% + 14px);
+  top: 0;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+  min-width: 200px;
+  z-index: 999;
+  padding: 6px;
+}
+
+body.sidebar-collapsed .purchase-dropdown-open {
+  max-height: 500px;
+}
+
+body.sidebar-collapsed .purchase-dropdown-item {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  padding-left: 12px !important;
+  white-space: nowrap;
+}
+
+body.sidebar-collapsed .purchase-dropdown-item span {
+  display: inline !important;
+}
+
+/* Tooltip for collapsed state */
+body.sidebar-collapsed .purchase-menu-trigger[data-guide]:hover::after {
+  content: attr(data-guide);
+  position: absolute;
+  left: calc(100% + 14px);
+  top: 50%;
+  transform: translateY(-50%);
+  background-color: #0F172A;
+  color: #FFFFFF;
+  font-size: 13.5px;
+  font-weight: 600;
+  padding: 7px 14px;
+  border-radius: 8px;
+  white-space: nowrap;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.25), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  z-index: 99999;
+  pointer-events: none;
+  animation: guideTooltipFadeIn 0.16s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+body.sidebar-collapsed .purchase-menu-trigger[data-guide]:hover::before {
+  content: '';
+  position: absolute;
+  left: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  border-width: 6px;
+  border-style: solid;
+  border-color: transparent #0F172A transparent transparent;
+  z-index: 99999;
+  pointer-events: none;
+  animation: guideTooltipFadeIn 0.16s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Tablet hover behavior */
+@media (min-width: 768px) and (max-width: 1023px) {
+  #sidebar .purchase-dropdown-item span {
+    opacity: 0;
+    white-space: nowrap;
+    transition: opacity 0.15s;
+  }
+
+  #sidebar:hover .purchase-dropdown-item span {
+    opacity: 1;
+  }
+}
+
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;

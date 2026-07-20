@@ -3,10 +3,11 @@
     ViewData["Title"] = "ราคากลางอ้างอิง";
     ViewData["HeaderTitle"] = "ราคากลางอ้างอิง (Reference Price Database)";
 
-    string search = ViewData["Search"] as string ?? "";
-    int currentPage = ViewData["Page"] as int? ?? 1;
-    int totalPages = ViewData["TotalPages"] as int? ?? 1;
-    int totalCount = ViewData["TotalCount"] as int? ?? 0;
+    int totalCount = Model?.Count ?? 0;
+    int pageSize = 50;
+    int totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
+    if (totalPages == 0) totalPages = 1;
+    int currentPage = 1;
     bool isAdmin = User.IsInRole("Admin");
 }
 
@@ -41,7 +42,7 @@
         <!-- Search Form -->
         <div class="flex gap-sm max-w-xl mb-lg">
             <div class="relative flex-1">
-                <input id="search-input" value="@search" class="w-full pl-3 pr-3 py-2 border border-outline-variant rounded text-xs focus:ring-1 focus:ring-primary focus:border-primary outline-none font-semibold text-slate-700" placeholder="พิมพ์เพื่อค้นหาด้วยรหัสสินค้า หรือ ชื่อภาษาไทย/อังกฤษ ทันที..." type="text" autocomplete="off" />
+                <input id="search-input" value="" class="w-full pl-3 pr-3 py-2 border border-outline-variant rounded text-xs focus:ring-1 focus:ring-primary focus:border-primary outline-none font-semibold text-slate-700" placeholder="พิมพ์เพื่อค้นหาด้วยรหัสสินค้า หรือ ชื่อภาษาไทย/อังกฤษ ทันที..." type="text" autocomplete="off" />
             </div>
             <button id="clear-search-btn" class="px-md py-2 border border-slate-200 rounded text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors flex items-center hidden">
                 ล้างค่า
@@ -76,10 +77,10 @@
                     }
                     else
                     {
-                        int startIndex = (currentPage - 1) * 50;
-                        for (int i = 0; i < Model.Count; i++)
+                        var firstPageItems = Model.Take(50).ToList();
+                        for (int i = 0; i < firstPageItems.Count; i++)
                         {
-                            var item = Model[i];
+                            var item = firstPageItems[i];
                             <tr class="hover-row-effect animate-row divide-x divide-slate-100/60"
                                 style="animation-delay: @((i % 25) * 20)ms;"
                                 data-code="@item.ProductCode"
@@ -89,7 +90,7 @@
                                 data-qty="@item.TotalQty"
                                 data-val="@item.TotalValue"
                                 data-sources="@item.Sources">
-                                <td class="px-3 py-2 text-slate-400 font-mono">@(startIndex + i + 1)</td>
+                                <td class="px-3 py-2 text-slate-400 font-mono">@(i + 1)</td>
                                 <td class="px-3 py-2 font-mono text-primary font-bold">@item.ProductCode</td>
                                 <td class="px-3 py-2 text-left max-w-[320px] truncate" title="@item.ProductName">@item.ProductName</td>
                                 <td class="px-3 py-2 text-slate-600">@item.Unit</td>
@@ -267,10 +268,13 @@ document.addEventListener("DOMContentLoaded", function() {
     const paginationWrapper = document.getElementById("pagination-wrapper");
     const isAdmin = @(isAdmin ? "true" : "false");
 
-    let currentSearch = searchInput.value;
+    let allProducts = @Html.Raw(Json.Serialize(Model ?? new List<CostFlow.Models.ProductPrice>()));
+    let filteredProducts = [...allProducts];
+    const pageSize = 50;
+
+    let currentSearch = "";
     let currentPageNum = 1;
     let currentTotalPages = @totalPages;
-    let debounceTimeout = null;
     let syncIntervalId = null;
 
     // Toast function
@@ -379,7 +383,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 if (resData.success) {
                     showToast(isEditMode ? "แก้ไขราคากลางเรียบร้อยแล้ว" : "เพิ่มราคากลางเรียบร้อยแล้ว");
                     closeModal();
-                    fetchPriceData(currentSearch, currentPageNum);
+                    refreshProductsFromServer();
                 } else {
                     showToast(resData.error || "เกิดข้อผิดพลาดในการบันทึก", "error");
                 }
@@ -391,7 +395,6 @@ document.addEventListener("DOMContentLoaded", function() {
         let _pendingDeleteCode = null;
 
         window.deleteProductPrice = function(code) {
-            // Show custom popup instead of browser confirm()
             _pendingDeleteCode = code;
             document.getElementById('delete-confirm-code').textContent = code;
             const modal = document.getElementById('delete-confirm-modal');
@@ -427,7 +430,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 confirmBtn.textContent = 'ยืนยันการลบ';
                 if (resData.success) {
                     showToast("ลบข้อมูลราคากลางเรียบร้อยแล้ว");
-                    fetchPriceData(currentSearch, currentPageNum);
+                    refreshProductsFromServer();
                 } else {
                     showToast(resData.error || "เกิดข้อผิดพลาดในการลบ", "error");
                 }
@@ -440,15 +443,104 @@ document.addEventListener("DOMContentLoaded", function() {
             });
         };
 
-        // Close delete modal when clicking outside the box
         document.getElementById('delete-confirm-modal').addEventListener('click', function(e) {
             if (e.target === this) closeDeleteModal();
         });
     }
 
-    // Show clear button initially if there is a search term
-    if (currentSearch.trim().length > 0) {
-        clearSearchBtn.classList.remove("hidden");
+    // Refresh data from server and update UI
+    function refreshProductsFromServer() {
+        fetch('/PriceReference/SearchApi')
+            .then(res => res.json())
+            .then(items => {
+                allProducts = items;
+                filterAndPaginate();
+            })
+            .catch(() => showToast("ไม่สามารถอัปเดตข้อมูลจากเซิร์ฟเวอร์ได้", "error"));
+    }
+
+    // Client-side filtering & pagination core
+    function filterAndPaginate() {
+        const query = currentSearch.toLowerCase().trim();
+        if (query) {
+            filteredProducts = allProducts.filter(p => 
+                (p.productCode || '').toLowerCase().includes(query) || 
+                (p.productName || '').toLowerCase().includes(query)
+            );
+        } else {
+            filteredProducts = [...allProducts];
+        }
+        
+        currentTotalPages = Math.ceil(filteredProducts.length / pageSize) || 1;
+        
+        if (currentPageNum > currentTotalPages) {
+            currentPageNum = currentTotalPages;
+        }
+        if (currentPageNum < 1) {
+            currentPageNum = 1;
+        }
+
+        renderTable();
+        drawPagination(currentPageNum, currentTotalPages);
+    }
+
+    // Render table rows client-side
+    function renderTable() {
+        totalCountBadge.textContent = Number(filteredProducts.length).toLocaleString('en-US');
+        tableBody.innerHTML = "";
+        
+        let colSpanCount = isAdmin ? 9 : 8;
+        if (filteredProducts.length === 0) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="${colSpanCount}" class="py-lg text-slate-400 text-xs italic bg-slate-50/50">ไม่พบข้อมูลราคากลางอ้างอิงตรงกับคำค้นหา</td>
+                </tr>
+            `;
+            paginationWrapper.innerHTML = "";
+            return;
+        }
+
+        const startIndex = (currentPageNum - 1) * pageSize;
+        const endIndex = startIndex + pageSize;
+        const pageItems = filteredProducts.slice(startIndex, endIndex);
+
+        pageItems.forEach((item, index) => {
+            const tr = document.createElement("tr");
+            tr.className = "hover-row-effect animate-row divide-x divide-slate-100/60";
+            tr.style.animationDelay = ((index % 25) * 20) + "ms";
+            
+            let actionCol = "";
+            if (isAdmin) {
+                actionCol = `
+                    <td class="px-3 py-2 flex items-center justify-center gap-1.5">
+                        <button onclick="openEditModal(this)" class="text-primary hover:underline font-bold text-[11px] bg-slate-100 hover:bg-slate-200 px-1.5 py-0.5 rounded transition-all">แก้ไข</button>
+                        <button onclick="deleteProductPrice('${item.productCode}')" class="text-rose-600 hover:underline font-bold text-[11px] bg-rose-50 hover:bg-rose-100 px-1.5 py-0.5 rounded transition-all">ลบ</button>
+                    </td>
+                `;
+            }
+
+            tr.innerHTML = `
+                <td class="px-3 py-2 text-slate-400 font-mono">${startIndex + index + 1}</td>
+                <td class="px-3 py-2 font-mono text-primary font-bold">${item.productCode}</td>
+                <td class="px-3 py-2 text-left max-w-[320px] truncate" title="${item.productName}">${item.productName}</td>
+                <td class="px-3 py-2 text-slate-600">${item.unit}</td>
+                <td class="px-3 py-2 font-mono font-bold text-primary bg-primary/5">฿${Number(item.pricePerUnit).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                <td class="px-3 py-2 font-mono">${Number(item.totalQty).toLocaleString('en-US')}</td>
+                <td class="px-3 py-2 font-mono">฿${Number(item.totalValue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                <td class="px-3 py-2 text-left text-slate-500 text-[11px] truncate max-w-[200px]" title="${item.sources}">${item.sources || ""}</td>
+                ${actionCol}
+            `;
+            
+            tr.setAttribute("data-code", item.productCode);
+            tr.setAttribute("data-name", item.productName);
+            tr.setAttribute("data-unit", item.unit || "");
+            tr.setAttribute("data-price", item.pricePerUnit);
+            tr.setAttribute("data-qty", item.totalQty);
+            tr.setAttribute("data-val", item.totalValue);
+            tr.setAttribute("data-sources", item.sources || "");
+
+            tableBody.appendChild(tr);
+        });
     }
 
     // Dynamic autocomplete instant search
@@ -462,10 +554,7 @@ document.addEventListener("DOMContentLoaded", function() {
             clearSearchBtn.classList.add("hidden");
         }
 
-        clearTimeout(debounceTimeout);
-        debounceTimeout = setTimeout(() => {
-            fetchPriceData(currentSearch, currentPageNum);
-        }, 80);
+        filterAndPaginate();
     });
 
     // Clear search event
@@ -474,7 +563,7 @@ document.addEventListener("DOMContentLoaded", function() {
         currentSearch = "";
         currentPageNum = 1;
         this.classList.add("hidden");
-        fetchPriceData("", 1);
+        filterAndPaginate();
     });
 
     // Handle pagination button clicks
@@ -492,113 +581,16 @@ document.addEventListener("DOMContentLoaded", function() {
                 const targetPage = parseInt(this.getAttribute("data-page"));
                 currentPageNum = targetPage;
                 scrollToTableTop();
-                
-                // Immediately update UI to show new active page before fetch starts
-                drawPagination(currentPageNum, currentTotalPages, currentSearch);
-                
-                fetchPriceData(currentSearch, currentPageNum);
+                filterAndPaginate();
             });
         });
     }
 
+    // Initial setup of pagination events for server-rendered controls
     setupPaginationEvents();
 
-    function getSkeletonRows() {
-        let rowsHtml = "";
-        // Render 12 rows with realistic width variations to prevent table height collapse (Zero Layout Shift)
-        const nameWidths = ["w-3/4", "w-2/3", "w-5/6", "w-1/2", "w-4/5"];
-        const sourceWidths = ["w-1/2", "w-2/3", "w-3/5", "w-1/3", "w-3/4"];
-        
-        for (let i = 0; i < 12; i++) {
-            let nWidth = nameWidths[i % nameWidths.length];
-            let sWidth = sourceWidths[i % sourceWidths.length];
-            rowsHtml += `
-                <tr class="animate-pulse bg-white divide-x divide-slate-100">
-                    <td class="px-3 py-2.5"><div class="h-3.5 bg-slate-200/80 rounded w-5 mx-auto"></div></td>
-                    <td class="px-3 py-2.5"><div class="h-3.5 bg-slate-200/80 rounded w-16 mx-auto"></div></td>
-                    <td class="px-3 py-2.5 text-left"><div class="h-3.5 bg-slate-200 rounded ${nWidth}"></div></td>
-                    <td class="px-3 py-2.5"><div class="h-3.5 bg-slate-200/80 rounded w-8 mx-auto"></div></td>
-                    <td class="px-3 py-2.5"><div class="h-3.5 bg-slate-200 rounded w-16 mx-auto"></div></td>
-                    <td class="px-3 py-2.5"><div class="h-3.5 bg-slate-200/80 rounded w-10 mx-auto"></div></td>
-                    <td class="px-3 py-2.5"><div class="h-3.5 bg-slate-200 rounded w-16 mx-auto"></div></td>
-                    <td class="px-3 py-2.5 text-left"><div class="h-3.5 bg-slate-200/70 rounded ${sWidth}"></div></td>
-                    ${isAdmin ? '<td class="px-3 py-2.5"><div class="flex items-center justify-center gap-1.5"><div class="h-5 w-8 bg-slate-200/90 rounded"></div><div class="h-5 w-6 bg-slate-200/90 rounded"></div></div></td>' : ''}
-                </tr>
-            `;
-        }
-        return rowsHtml;
-    }
-
-    // Fetch and redraw table
-    function fetchPriceData(searchQuery, pageNum) {
-        tableBody.innerHTML = getSkeletonRows();
-        fetch(`/PriceReference/SearchApi?search=${encodeURIComponent(searchQuery)}&page=${pageNum}`)
-            .then(res => res.json())
-            .then(data => {
-                // 1. Update total count
-                totalCountBadge.textContent = Number(data.totalCount).toLocaleString('en-US');
-
-                // 2. Redraw table rows
-                tableBody.innerHTML = "";
-                let colSpanCount = isAdmin ? 9 : 8;
-                if (!data.items || data.items.length === 0) {
-                    tableBody.innerHTML = `
-                        <tr>
-                            <td colspan="${colSpanCount}" class="py-lg text-slate-400 text-xs italic bg-slate-50/50">ไม่พบข้อมูลราคากลางอ้างอิงตรงกับคำค้นหา</td>
-                        </tr>
-                    `;
-                    paginationWrapper.innerHTML = "";
-                    return;
-                }
-
-                const startIndex = (data.currentPage - 1) * 50;
-                data.items.forEach((item, index) => {
-                    const tr = document.createElement("tr");
-                    tr.className = "hover-row-effect animate-row divide-x divide-slate-100/60";
-                    tr.style.animationDelay = ((index % 25) * 20) + "ms";
-                    
-                    let actionCol = "";
-                    if (isAdmin) {
-                        actionCol = `
-                            <td class="px-3 py-2 flex items-center justify-center gap-1.5">
-                                <button onclick="openEditModal(this)" class="text-primary hover:underline font-bold text-[11px] bg-slate-100 hover:bg-slate-200 px-1.5 py-0.5 rounded transition-all">แก้ไข</button>
-                                <button onclick="deleteProductPrice('${item.productCode}')" class="text-rose-600 hover:underline font-bold text-[11px] bg-rose-50 hover:bg-rose-100 px-1.5 py-0.5 rounded transition-all">ลบ</button>
-                            </td>
-                        `;
-                    }
-
-                    tr.innerHTML = `
-                        <td class="px-3 py-2 text-slate-400 font-mono">${startIndex + index + 1}</td>
-                        <td class="px-3 py-2 font-mono text-primary font-bold">${item.productCode}</td>
-                        <td class="px-3 py-2 text-left max-w-[320px] truncate" title="${item.productName}">${item.productName}</td>
-                        <td class="px-3 py-2 text-slate-600">${item.unit}</td>
-                        <td class="px-3 py-2 font-mono font-bold text-primary bg-primary/5">฿${Number(item.pricePerUnit).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                        <td class="px-3 py-2 font-mono">${Number(item.totalQty).toLocaleString('en-US')}</td>
-                        <td class="px-3 py-2 font-mono">฿${Number(item.totalValue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                        <td class="px-3 py-2 text-left text-slate-500 text-[11px] truncate max-w-[200px]" title="${item.sources}">${item.sources || ""}</td>
-                        ${actionCol}
-                    `;
-                    
-                    // set data attributes for modal extraction
-                    tr.setAttribute("data-code", item.productCode);
-                    tr.setAttribute("data-name", item.productName);
-                    tr.setAttribute("data-unit", item.unit || "");
-                    tr.setAttribute("data-price", item.pricePerUnit);
-                    tr.setAttribute("data-qty", item.totalQty);
-                    tr.setAttribute("data-val", item.totalValue);
-                    tr.setAttribute("data-sources", item.sources || "");
-
-                    tableBody.appendChild(tr);
-                });
-
-                // 3. Redraw pagination and update total pages
-                currentTotalPages = data.totalPages;
-                drawPagination(data.currentPage, data.totalPages, searchQuery);
-            });
-    }
-
     // Dynamic pagination drawer
-    function drawPagination(currentPage, totalPages, searchQuery) {
+    function drawPagination(currentPage, totalPages) {
         paginationWrapper.innerHTML = "";
         if (totalPages <= 1) return;
 
@@ -620,9 +612,17 @@ document.addEventListener("DOMContentLoaded", function() {
             buttonsGroup.innerHTML = `<span class="px-3 py-1.5 rounded text-xs text-slate-300 border border-slate-100 bg-slate-50 cursor-not-allowed select-none">ก่อนหน้า</span>`;
         }
 
-        // Page numbers: current page as first index
-        const startPage = currentPage;
-        const endPage   = Math.min(totalPages, startPage + 4);
+        // Centered Page sliding window
+        let startPage = Math.max(1, currentPage - 2);
+        let endPage = Math.min(totalPages, currentPage + 2);
+        if (currentPage <= 3) {
+            startPage = 1;
+            endPage = Math.min(totalPages, 5);
+        } else if (currentPage >= totalPages - 2) {
+            startPage = Math.max(1, totalPages - 4);
+            endPage = totalPages;
+        }
+
         for (let p = startPage; p <= endPage; p++) {
             if (p === currentPage) {
                 buttonsGroup.innerHTML += `<span class="px-3 py-1.5 rounded text-xs font-bold bg-primary text-on-primary select-none">${p}</span>`;

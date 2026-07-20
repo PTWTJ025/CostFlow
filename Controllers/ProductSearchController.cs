@@ -286,9 +286,7 @@ namespace CostFlow.Controllers
         public string? Unit { get; set; }
         public string? UnitPrice { get; set; }
         public string? Quantity { get; set; }
-        public string? ApprovalNo { get; set; }
         public string? Remarks { get; set; }
-        public string? ReceiveDate { get; set; }
     }
 
     public class SavedBatchViewModel

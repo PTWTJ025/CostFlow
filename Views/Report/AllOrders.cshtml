@@ -1,8 +1,39 @@
 @{
     string returnReportName = ViewBag.ReturnReportName as string ?? "";
+    int? filterMonth = ViewBag.FilterMonth as int?;
+    int? filterYear = ViewBag.FilterYear as int?;
     ViewData["Title"] = "รายการใบสั่งซื้อทั้งหมดในระบบ";
     ViewData["HeaderTitle"] = "รายการใบสั่งซื้อทั้งหมด";
 }
+<!-- DEBUG: แสดงค่า month/year ที่ได้รับ -->
+<!-- filterMonth: @filterMonth, filterYear: @filterYear, returnReportName: @returnReportName -->
+<style>
+    @@keyframes timeline-pulse-ring {
+        0% {
+            transform: scale(0.5);
+            opacity: 0.8;
+        }
+
+        80%,
+        100% {
+            transform: scale(1.6);
+            opacity: 0;
+        }
+    }
+
+    @@keyframes timeline-dot-pulse {
+
+        0%,
+        100% {
+            transform: scale(1);
+        }
+
+        50% {
+            transform: scale(1.18);
+        }
+    }
+</style>
+
 <div class="flex-1 p-md md:p-lg lg:p-xl flex flex-col gap-lg w-full max-w-[96vw] xl:max-w-[98vw] 2xl:max-w-[1600px] mx-auto">
     <!-- Breadcrumb Navigation -->
     @if (!string.IsNullOrEmpty(returnReportName))
@@ -12,7 +43,7 @@
                 <li class="inline-flex items-center">
                     <a href="/" class="hover:text-primary transition-colors flex items-center gap-1">
                         <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
                         </svg>
                         หน้าแรก
                     </a>
@@ -20,15 +51,22 @@
                 <li>
                     <div class="flex items-center">
                         <svg class="w-3 h-3 text-slate-300 mx-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
                         </svg>
-                        <a href="/Report/Details?fileName=@Uri.EscapeDataString(returnReportName)" class="hover:text-primary transition-colors max-w-[150px] sm:max-w-[300px] truncate" title="@returnReportName">@returnReportName</a>
+                        @if (filterMonth.HasValue && filterYear.HasValue)
+                        {
+                            <a href="/Report/Details?month=@filterMonth&year=@filterYear" class="hover:text-primary transition-colors max-w-[150px] sm:max-w-[300px] truncate" title="@returnReportName">@returnReportName</a>
+                        }
+                        else
+                        {
+                            <a href="/Report/Details?fileName=@Uri.EscapeDataString(returnReportName)" class="hover:text-primary transition-colors max-w-[150px] sm:max-w-[300px] truncate" title="@returnReportName">@returnReportName</a>
+                        }
                     </div>
                 </li>
                 <li>
                     <div class="flex items-center">
                         <svg class="w-3 h-3 text-slate-300 mx-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
                         </svg>
                         <span class="text-slate-800 font-bold">รายการใบสั่งซื้อทั้งหมด</span>
                     </div>
@@ -43,56 +81,64 @@
             <div>
                 <h3 class="font-headline-sm text-headline-sm text-on-surface mb-xs">รายการใบสั่งซื้อทั้งหมดในระบบ</h3>
                 <p class="text-xs text-secondary">
-                    แสดงรายการใบสั่งซื้อที่นำเข้าระบบทั้งหมดพร้อมสถานะการจับคู่กับแผนสั่งผลิตประจำสัปดาห์ </p>
+                    แสดงรายการใบสั่งซื้อที่นำเข้าระบบทั้งหมดพร้อมสถานะการจับคู่กับแผนสั่งผลิตประจำสัปดาห์
+                </p>
             </div>
-            
+
             <div class="text-right shrink-0 self-start md:self-auto">
-                <span class="text-slate-400 block text-[11px] font-semibold tracking-wider uppercase">รายการทั้งหมดในระบบ</span> <div class="mt-0.5 flex items-baseline justify-end gap-1.5">
+                <span class="text-slate-400 block text-[11px] font-semibold tracking-wider uppercase">รายการทั้งหมดในระบบ</span>
+                <div class="mt-0.5 flex items-baseline justify-end gap-1.5">
                     <span id="system-orders-total-count" class="text-2xl md:text-3xl font-extrabold text-primary tracking-tight font-sans">0</span>
                     <span class="text-xs font-semibold text-slate-500">รายการ</span>
                 </div>
             </div>
-        </div> <!-- Toolbar (Filters & Search) -->
-        <div class="flex flex-col sm:flex-row justify-between items-center gap-3 bg-slate-50/50 p-3.5 border border-slate-200/60 rounded shadow-2xs w-full">
-            <!-- Search Box with Search Icon on Left -->
-            <div class="relative w-full sm:w-[340px] md:w-[380px]">
-                <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                </span>
+        </div>
+        <!-- Toolbar (Filters & Search) -->
+        <div class="flex items-center gap-3 bg-slate-50/50 p-3.5 border border-slate-200/60 rounded shadow-2xs w-full">
+
+            <!-- 1. ช่องค้นหา (Align Left, Fluid) -->
+            <div class="relative flex-1 min-w-[280px]" style="max-width: 420px;">
                 <input
                     id="system-orders-search"
                     type="text"
-                    placeholder="ค้นหาเลขที่อนุมัติ, หมายเหตุ หรือชื่อไฟล์..." class="block w-full pl-9 pr-3 py-1.5 text-xs border border-slate-300 rounded focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all bg-white"
-                    style="height: 36px;"
-                >
+                    placeholder="ค้นหาเลขที่อนุมัติ, หมายเหตุ หรือชื่อไฟล์..."
+                    class="block w-full pl-3 pr-3 py-1.5 text-xs border border-slate-300 rounded focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all bg-white"
+                    style="height: 36px;">
             </div>
-            <!-- Status Filter Dropdown on Right -->
-            <div class="w-full sm:w-[220px] md:w-[240px] shrink-0">  <select id="system-orders-status-filter" class="block w-full border border-slate-300 rounded focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-xs font-semibold text-slate-600 bg-white" style="height: 36px; padding: 0 12px;">
+
+            <!-- 2. กลุ่ม Select (Align Right, width fix พอดีเนื้อหา + tooltip กันข้อความยาวโดน truncate) -->
+            <div class="flex items-center gap-2 flex-shrink-0 ml-auto">
+                <select id="system-orders-status-filter" title="สถานะ: ทั้งหมด" class="w-[220px] border border-slate-300 rounded focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-xs font-semibold text-slate-600 bg-white truncate" style="height: 36px; padding: 0 12px;">
                     <option value="All">สถานะ: ทั้งหมด</option>
-                    <option value="Matched">สถานะ: ได้แผนผลิตแล้ว</option>
-                    <option value="Pending">สถานะ: ยังไม่มีแผนผลิต</option>
-                    <option value="Unmatched">สถานะ: มีเฉพาะในแผนผลิต</option> </select>
+                    <option value="Matched">สถานะ: จับคู่แล้ว</option>
+                    <option value="Unmatched">สถานะ: ยังไม่จับคู่</option>
+                </select>
+
+                <select id="filter-mode" title="กรองข้อมูล" class="w-[220px] border border-slate-300 rounded focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-xs font-semibold text-slate-600 bg-white truncate" style="height: 36px; padding: 0 12px;">
+                    <option value="upload" selected="@(filterMonth.HasValue && filterYear.HasValue ? "selected" : null)">อัปโหลด: -</option>
+                    <option value="all" selected="@(filterMonth.HasValue && filterYear.HasValue ? null : "selected")">ทั้งหมดในระบบ (ทุกปี)</option>
+                </select>
             </div>
+
         </div>
         <!-- Table Container -->
         <div class="border border-outline-variant rounded overflow-hidden flex flex-col min-h-[450px]">
             <div class="overflow-x-auto flex-1">
                 <table class="w-full text-left border-collapse min-w-[900px] text-sm">
                     <thead>
-                        <tr class="bg-slate-100/80 border-b border-outline-variant text-slate-600 font-bold" style="font-size: 11px;">
-                            <th class="px-4 py-3 w-12 text-center">ลำดับ</th>
-                            <th class="px-4 py-3 text-left w-36">เลขที่อนุมัติ</th>
-                            <th class="px-4 py-3 text-center w-48">วันที่อนุมัติ</th>
-                            <th class="px-4 py-3 text-center w-28">ปภ.ความเร่งด่วน</th>
-                            <th class="px-4 py-3 text-right w-44">ราคาที่ผู้ผลิตเสนอ</th>
-                            <th class="px-4 py-3 text-left">หมายเหตุ / รายละเอียด</th>
-                            <th class="px-4 py-3 text-left">ไฟล์แผนผลิต</th>
-                            <th class="px-4 py-3 text-center w-44">สถานะ</th>
-                        </tr>  </thead>
+                    <tr class="bg-slate-100/80 border-b border-outline-variant text-slate-600 font-bold" style="font-size: 11px;">
+                        <th class="px-4 py-3 w-12 text-center">ลำดับ</th>
+                        <th class="px-4 py-3 text-left w-36">เลขที่อนุมัติ</th>
+                        <th class="px-4 py-3 text-center w-48">วันที่อนุมัติ</th>
+                        <th class="px-4 py-3 text-center w-28">ปภ.ความเร่งด่วน</th>
+                        <th class="px-4 py-3 text-right w-44">ราคาที่ผู้ผลิตเสนอ</th>
+                        <th class="px-4 py-3 text-left">หมายเหตุ / รายละเอียด</th>
+                        <th class="px-4 py-3 text-left">ไฟล์แผนผลิต</th>
+                        <th class="px-4 py-3 text-center w-44">สถานะ</th>
+                    </tr>
+                    </thead>
                     <tbody id="system-orders-tbody" class="divide-y divide-slate-200 bg-white text-xs text-slate-700">
-                        <!-- Loaded dynamically -->
+                    <!-- Loaded dynamically -->
                     </tbody>
                 </table>
             </div>
@@ -107,12 +153,12 @@
                 <button id="btn-system-orders-prev" class="h-8 px-3 flex items-center justify-center border border-slate-300 rounded text-xs font-semibold bg-white hover:bg-slate-50 text-slate-700 transition disabled:opacity-40 disabled:cursor-not-allowed shadow-2xs select-none">
                     ก่อนหน้า
                 </button>
-                
+
                 <!-- ส่วนแสดงตัวเลขหน้า -->
                 <div id="system-orders-page-numbers" class="flex items-center gap-1.5">
                     <!-- Numbers -->
                 </div>
-                
+
                 <!-- ปุ่มถัดไป -->
                 <button id="btn-system-orders-next" class="h-8 px-3 flex items-center justify-center border border-slate-300 rounded text-xs font-semibold bg-white hover:bg-slate-50 text-slate-700 transition disabled:opacity-40 disabled:cursor-not-allowed shadow-2xs select-none">
                     ถัดไป
@@ -122,60 +168,96 @@
     </div>
 </div>
 @await Html.PartialAsync("_OrderDetailModal")
+
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
-        const detailModal = document.getElementById('detail-modal'); 
+        const detailModal = document.getElementById('detail-modal');
         let systemOrdersCurrentPage = 1;
         let systemOrdersTotalPages = 1;
         let systemOrdersSearchQuery = '';
         let systemOrdersStatusFilter = 'All';
         const systemOrdersPageSize = 15;
-        let isLoadingOrders = false; 
-        
+        let isLoadingOrders = false;
+
         let allFetchedItems = []; // Store all data for client-side pagination
+        let filteredItems = [];   // Store filtered items for client-side pagination
         let globalStartIdx = 1;
+
+        const filterModeSelect = document.getElementById('filter-mode');
+        // อัปเดตข้อความตัวเลือกให้แสดงชื่อเดือน
+        const reportNameParam = "@Html.Raw(returnReportName)";
+        if (reportNameParam) {
+            const uploadOption = filterModeSelect.querySelector('option[value="upload"]');
+            if (uploadOption) {
+                uploadOption.textContent = `อัปโหลด: ${reportNameParam}`;
+            }
+        }
+
+        // เพิ่มใหม่: sync title attribute ของ select ให้ตรงกับ option ที่เลือกอยู่เสมอ
+        function syncSelectTitle(selectEl) {
+            selectEl.title = selectEl.options[selectEl.selectedIndex].textContent;
+        }
+        syncSelectTitle(filterModeSelect);
+        filterModeSelect.addEventListener('change', () => syncSelectTitle(filterModeSelect));
+
+        const statusFilterSelect = document.getElementById('system-orders-status-filter');
+        syncSelectTitle(statusFilterSelect);
+        statusFilterSelect.addEventListener('change', () => syncSelectTitle(statusFilterSelect));
 
         function renderSkeletons() {
             const tbody = document.getElementById('system-orders-tbody');
-            tbody.innerHTML = ''; 
+            tbody.innerHTML = '';
             for (let i = 0; i < systemOrdersPageSize; i++) {
                 tbody.innerHTML += `
-                    <tr class="animate-pulse border-b border-slate-100">
-                        <td class="px-4 py-4 text-center"><div class="h-3.5 w-4 bg-slate-200 rounded mx-auto"></div></td> <td class="px-4 py-4"><div class="h-3.5 w-24 bg-slate-200 rounded"></div></td>
-                        <td class="px-4 py-4"><div class="h-3.5 w-24 bg-slate-200 rounded mx-auto"></div></td>
-                        <td class="px-4 py-4"><div class="h-3.5 w-12 bg-slate-200 rounded mx-auto"></div></td>
-                        <td class="px-4 py-4"><div class="h-3.5 w-16 bg-slate-200 rounded ml-auto"></div></td>
-                        <td class="px-4 py-4"><div class="h-3.5 w-48 bg-slate-200 rounded"></div></td>
-                        <td class="px-4 py-4"><div class="h-3.5 w-36 bg-slate-200 rounded"></div></td>
-                        <td class="px-4 py-4 text-center"><div class="h-6 w-24 bg-slate-100 rounded-full mx-auto"></div></td> 
-                    </tr>
-                `;
+                                                                                                                                                                <tr class="animate-pulse border-b border-slate-100">
+                                                                                                                                                                    <td class="px-4 py-4 text-center"><div class="h-3.5 w-4 bg-slate-200 rounded mx-auto"></div></td> <td class="px-4 py-4"><div class="h-3.5 w-24 bg-slate-200 rounded"></div></td>
+                                                                                                                                                                    <td class="px-4 py-4"><div class="h-3.5 w-24 bg-slate-200 rounded mx-auto"></div></td>
+                                                                                                                                                                    <td class="px-4 py-4"><div class="h-3.5 w-12 bg-slate-200 rounded mx-auto"></div></td>
+                                                                                                                                                                    <td class="px-4 py-4"><div class="h-3.5 w-16 bg-slate-200 rounded ml-auto"></div></td>
+                                                                                                                                                                    <td class="px-4 py-4"><div class="h-3.5 w-48 bg-slate-200 rounded"></div></td>
+                                                                                                                                                                    <td class="px-4 py-4"><div class="h-3.5 w-36 bg-slate-200 rounded"></div></td>
+                                                                                                                                                                    <td class="px-4 py-4 text-center"><div class="h-6 w-24 bg-slate-100 rounded-full mx-auto"></div></td> 
+                                                                                                                                                                </tr>
+                                                                                                                                                            `;
             }
         }
 
         async function fetchSystemOrdersFromServer() {
             if (isLoadingOrders) return;
-            isLoadingOrders = true; 
-            
+            isLoadingOrders = true;
+
             renderSkeletons();
             document.getElementById('btn-system-orders-prev').disabled = true;
             document.getElementById('btn-system-orders-next').disabled = true;
-            
+
             try {
                 const reportNameParam = "@Html.Raw(returnReportName)";
-                // Fetch ALL matching items (pageSize = 10000)
-                const res = await fetch(`/Report/GetUploadedWeeklyPlanEntries?page=1&pageSize=10000&search=${encodeURIComponent(systemOrdersSearchQuery)}&reportName=${encodeURIComponent(reportNameParam)}&statusFilter=${systemOrdersStatusFilter}`); 
+                const monthParam = "@(filterMonth?.ToString() ?? "")";
+                const yearParam = "@(filterYear?.ToString() ?? "")";
+                const filterModeSelect = document.getElementById('filter-mode');
+                const filterMode = filterModeSelect ? filterModeSelect.value : 'all';
+
+                // Fetch ALL matching items in one go (pageSize = 10000, empty search, status All)
+                let apiUrl = `/Report/GetUploadedWeeklyPlanEntries?page=1&pageSize=10000&search=&statusFilter=All&filterMode=${filterMode}`;
+
+                // ส่ง month/year ตาม filterMode
+                if (filterMode === 'upload' && monthParam && yearParam) {
+                    // กรองตามเดือน - ส่งทั้ง month และ year
+                    apiUrl += `&month=${monthParam}&year=${yearParam}`;
+                }
+                // ถ้าเป็น "all" ไม่ส่ง month/year
+
+                console.log('API URL:', apiUrl); // Debug log
+
+                const res = await fetch(apiUrl);
                 const data = await res.json();
-                
+
+                console.log('API Response:', data); // Debug log
+
                 if (data.success) {
                     allFetchedItems = data.items;
-                    document.getElementById('system-orders-total-count').textContent = data.totalCount;
-                    
-                    systemOrdersTotalPages = Math.ceil(data.totalCount / systemOrdersPageSize) || 1;
-                    systemOrdersCurrentPage = 1; // Reset to page 1 on new search/filter
-                    
-                    renderCurrentPage();
+                    applyClientSideFilters();
                 }
             } catch (err) {
                 console.error(err);
@@ -186,176 +268,203 @@
             }
         }
 
+        function applyClientSideFilters() {
+            const query = systemOrdersSearchQuery.toLowerCase().trim();
+            const status = systemOrdersStatusFilter;
+
+            filteredItems = allFetchedItems.filter(item => {
+                const matchesSearch = query === '' ||
+                    (item.poNumber || '').toLowerCase().includes(query) ||
+                    (item.remarks || '').toLowerCase().includes(query) ||
+                    (item.weeklyPlanFiles || []).some(file => file.toLowerCase().includes(query));
+
+                const matchesStatus = status === 'All' || item.status === status;
+
+                return matchesSearch && matchesStatus;
+            });
+
+            // Update total count count badge
+            document.getElementById('system-orders-total-count').textContent = filteredItems.length;
+
+            // Recalculate pagination
+            systemOrdersTotalPages = Math.ceil(filteredItems.length / systemOrdersPageSize) || 1;
+            systemOrdersCurrentPage = 1; // Reset to page 1 on search/filter
+
+            renderCurrentPage();
+        }
+
         function renderCurrentPage() {
             const tbody = document.getElementById('system-orders-tbody');
             tbody.innerHTML = '';
-            
+
             document.getElementById('system-orders-current-page').textContent = systemOrdersCurrentPage;
             document.getElementById('system-orders-total-pages').textContent = systemOrdersTotalPages;
-            
+
             renderPageNumbers(systemOrdersCurrentPage, systemOrdersTotalPages);
-            
+
             document.getElementById('btn-system-orders-prev').disabled = (systemOrdersCurrentPage <= 1);
             document.getElementById('btn-system-orders-next').disabled = (systemOrdersCurrentPage >= systemOrdersTotalPages);
 
-            if (allFetchedItems.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8" class="text-center py-12 text-slate-400">ไม่พบข้อมูลใบสั่งซื้อในระบบ</td></tr>`;
+            if (filteredItems.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="text-center py-12 text-slate-400">ไม่พบข้อมูลใบสั่งซื้อตรงกับคำค้นหา</td></tr>`;
                 return;
             }
 
             // Client-side slice
             const startIndex = (systemOrdersCurrentPage - 1) * systemOrdersPageSize;
             const endIndex = startIndex + systemOrdersPageSize;
-            const pageItems = allFetchedItems.slice(startIndex, endIndex);
-            
+            const pageItems = filteredItems.slice(startIndex, endIndex);
+
             let currentDisplayIdx = startIndex + 1;
 
             pageItems.forEach(item => {
                 let statusHtml = '';
                 if (item.status === 'Matched') {
                     statusHtml = `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-                         <svg style="transform: translateY(-1px);" class="w-3.5 h-3.5 shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                             <path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16zm3.857-9.809a.75.75 0 0 0-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.137-.089l4-5.5z" clip-rule="evenodd"/>
-                         </svg>
-                         ได้แผนผลิตแล้ว
-                       </span>`;
+                                                                                                                                                                     <svg style="transform: translateY(-1px);" class="w-3.5 h-3.5 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                                                                                                                                                         <path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16zm3.857-9.809a.75.75 0 0 0-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.137-.089l4-5.5z" clip-rule="evenodd"/>
+                                                                                                                                                                     </svg>
+                                                                                                                                                                     ได้แผนผลิตแล้ว
+                                                                                                                                                                   </span>`;
                 } else if (item.status === 'Unmatched') {
                     statusHtml = `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-200">
-                         <svg style="transform: translateY(-1px);" class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                             <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                         </svg>
-                         มีเฉพาะในแผนผลิต
-                       </span>`;  
+                                                                                                                                                                     <svg style="transform: translateY(-1px);" class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                                                                                                                                         <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                                                                                                                                     </svg>
+                                                                                                                                                                     มีเฉพาะในแผนผลิต
+                                                                                                                                                                   </span>`;
                 } else {
                     statusHtml = `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200">
-                         <svg style="transform: translateY(-1px);" class="w-3 h-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                         </svg>
-                         ยังไม่มีแผนผลิต
-                       </span>`;
-                }  
-                
+                                                                                                                                                                     <svg style="transform: translateY(-1px);" class="w-3 h-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                                                                                                                                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                                                                                                                                                     </svg>
+                                                                                                                                                                     ยังไม่มีแผนผลิต
+                                                                                                                                                                   </span>`;
+                }
+
                 let displayPrice = '-';
                 let rawPrice = (item.proposedPrice && item.proposedPrice !== '-') ? item.proposedPrice : item.amount;
                 if (rawPrice && rawPrice !== '-') {
                     const cleanStr = rawPrice.replace(/[^\d.-]/g, '');
                     const num = parseFloat(cleanStr);
-                    displayPrice = isNaN(num) 
-                        ? rawPrice 
+                    displayPrice = isNaN(num)
+                        ? rawPrice
                         : '฿' + num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                } 
-                
-                const planFilesText = item.weeklyPlanFiles && item.weeklyPlanFiles.length > 0 
-                    ? item.weeklyPlanFiles.join(', ') 
-                    : '-';            
-                    
+                }
+
+                const planFilesText = item.weeklyPlanFiles && item.weeklyPlanFiles.length > 0
+                    ? item.weeklyPlanFiles.join(', ')
+                    : '-';
+
                 tbody.innerHTML += `
-                    <tr class="hover:bg-slate-50/50 transition-colors cursor-pointer btn-view-detail" data-order-id="${item.id}">
-                        <td class="px-4 py-3 text-center text-slate-400 font-mono">${currentDisplayIdx++}</td>
-                        <td class="px-4 py-3 text-left font-mono font-bold text-primary hover:underline">${item.poNumber}</td>
-                        <td class="px-4 py-3 text-center text-slate-500">${item.approvedDate || '-'}</td>
-                        <td class="px-4 py-3 text-center text-slate-500">${item.urgency || '-'}</td>
-                        <td class="px-4 py-3 text-right font-mono text-slate-600">${displayPrice}</td>
-                        <td class="px-4 py-3 text-left text-slate-600 truncate max-w-[200px]" title="${item.remarks || ''}">${item.remarks || '-'}</td>
-                        <td class="px-4 py-3 text-left text-slate-500 truncate max-w-[150px]" title="${planFilesText}">${planFilesText}</td>
-                        <td class="px-4 py-3 text-center">${statusHtml}</td>
-                    </tr>
-                `;           
+                                                                                                                                                                <tr class="hover:bg-slate-50/50 transition-colors cursor-pointer btn-view-detail" data-order-id="${item.id}">
+                                                                                                                                                                    <td class="px-4 py-3 text-center text-slate-400 font-mono">${currentDisplayIdx++}</td>
+                                                                                                                                                                    <td class="px-4 py-3 text-left font-mono font-bold text-primary hover:underline">${item.poNumber}</td>
+                                                                                                                                                                    <td class="px-4 py-3 text-center text-slate-500">${item.approvedDate || '-'}</td>
+                                                                                                                                                                    <td class="px-4 py-3 text-center text-slate-500">${item.urgency || '-'}</td>
+                                                                                                                                                                    <td class="px-4 py-3 text-right font-mono text-slate-600">${displayPrice}</td>
+                                                                                                                                                                    <td class="px-4 py-3 text-left text-slate-600 truncate max-w-[200px]" title="${item.remarks || ''}">${item.remarks || '-'}</td>
+                                                                                                                                                                    <td class="px-4 py-3 text-left text-slate-500 truncate max-w-[150px]" title="${planFilesText}">${planFilesText}</td>
+                                                                                                                                                                    <td class="px-4 py-3 text-center">${statusHtml}</td>
+                                                                                                                                                                </tr>
+                                                                                                                                                            `;
             });
-            
+
             // Re-register click listeners for view detail
             document.querySelectorAll('.btn-view-detail').forEach(row => {
-                row.addEventListener('click', async function() {
+                row.addEventListener('click', async function () {
                     const orderId = this.getAttribute('data-order-id');
                     try {
                         const response = await fetch(`/Report/GetWeeklyPlanDetail?orderId=${orderId}`);
                         const data = await response.json();
                         if (data.success) {
-                             const formatPrice = (val) => {
-                                 if (val === null || val === undefined || val === '') return '-';
-                                 if (typeof val === 'number') {
-                                     return '฿' + val.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                                 }
-                                 const cleanStr = val.toString().replace(/[^\d.-]/g, '');
-                                 const num = parseFloat(cleanStr);
-                                 if (!isNaN(num)) {
-                                     return '฿' + num.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                                 }
-                                 return val;
-                             };
-                             document.getElementById('detail-department').textContent = data.department || '-';
-                             document.getElementById('detail-order-name').textContent = data.orderName || '-';
-                             document.getElementById('detail-delivery-target').textContent = data.deliveryTarget || '-';
-                             document.getElementById('detail-file-name').textContent = data.fileName || '-';
-                             document.getElementById('detail-file-name').setAttribute('title', data.fileName || '-');
-                             document.getElementById('detail-po-number').textContent = data.poNumberInFile || '-';
-                             document.getElementById('detail-weekly-price').textContent = formatPrice(data.weeklyPlanPrice || data.masterPrice);
-                             const statusContainer = document.getElementById('detail-order-status-badge');
-                             const statusVal = data.orderStatus || '';
-                             let cleanStatusVal = statusVal;
-                             if (statusVal.includes(':')) {
-                                 cleanStatusVal = statusVal.split(':').slice(1).join(':').trim();
-                             }
-                             let badgeHtml = '';
-                             if (statusVal.includes('ดำเนินการ') || statusVal.startsWith('0') || statusVal.startsWith('O:')) {
-                                 badgeHtml = `<span class="inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200"><span style="width: 6px; height: 6px; border-radius: 50%; background-color: #d97706; flex-shrink: 0;"></span>${cleanStatusVal}</span>`;
-                             } else if (statusVal.includes('ปิด') || statusVal.startsWith('C:')) {
-                                 badgeHtml = `<span class="inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200"><span style="width: 6px; height: 6px; border-radius: 50%; background-color: #e11d48; flex-shrink: 0;"></span>${cleanStatusVal}</span>`;
-                             } else {
-                                 badgeHtml = `<span class="inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-slate-50 text-slate-600 border border-slate-200"><span style="width: 6px; height: 6px; border-radius: 50%; background-color: #64748b; flex-shrink: 0;"></span>${cleanStatusVal || '-'}</span>`;
-                             }
-                             statusContainer.innerHTML = badgeHtml;
-                             const historyContainer = document.getElementById('detail-history-container');
-                             historyContainer.innerHTML = '';
-                             if (data.history && data.history.length > 0) {
-                                 const timelineOuter = document.createElement('div');
-                                 timelineOuter.style.cssText = 'position: relative; padding-left: 28px;';
-                                 const vLine = document.createElement('div');
-                                 vLine.style.cssText = 'position: absolute; left: 6px; top: 10px; bottom: 10px; width: 2px; background: #e2e8f0; border-radius: 1px;';
-                                 timelineOuter.appendChild(vLine);
-                                 data.history.forEach((item, index) => {
-                                     const hStatusVal = item.orderStatus || '';
-                                     let hCleanStatusVal = hStatusVal;
-                                     if (hStatusVal.includes(':')) {
-                                         hCleanStatusVal = hStatusVal.split(':').slice(1).join(':').trim();
-                                     }
-                                     let badgeBg, badgeText, badgeBorder, dotColor, markerColor;
-                                     if (hStatusVal.includes('ดำเนินการ') || hStatusVal.startsWith('0') || hStatusVal.startsWith('O:')) {
-                                         badgeBg = '#fffbeb'; badgeText = '#b45309'; badgeBorder = '#fde68a'; dotColor = '#f59e0b'; markerColor = '#f59e0b';
-                                     } else if (hStatusVal.includes('ปิด') || hStatusVal.startsWith('C:')) {
-                                         badgeBg = '#fff1f2'; badgeText = '#be123c'; badgeBorder = '#fecdd3'; dotColor = '#f43f5e'; markerColor = '#f43f5e';
-                                     } else {
-                                         badgeBg = '#f8fafc'; badgeText = '#475569'; badgeBorder = '#e2e8f0'; dotColor = '#94a3b8'; markerColor = '#94a3b8';
-                                     }
-                                     const hBadgeHtml = `<span style="display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: 700; background: ${badgeBg}; color: ${badgeText}; border: 1px solid ${badgeBorder};"><span style="width: 5px; height: 5px; border-radius: 50%; background: ${dotColor}; flex-shrink: 0;"></span>${hCleanStatusVal || '-'}</span>`;
-                                     const isLatest = index === 0;
-                                     const markerExtra = isLatest ? 'box-shadow: 0 0 0 3px #e2e8f0;' : '';
-                                     const itemHtml = `
-                                         <div style="position: relative; margin-bottom: 16px;">
-                                             <div style="position: absolute; left: -27px; top: 14px; width: 10px; height: 10px; border-radius: 50%; background: ${markerColor}; ${markerExtra}"></div>
-                                             <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px;">
-                                                 <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
-                                                     <span style="font-size: 12px; font-weight: 600; color: #1e293b; line-height: 1.4; word-break: break-word; max-width: 320px;" title="${item.fileName}">${item.fileName}</span>
-                                                     <span style="font-size: 10px; color: #94a3b8; font-weight: 500; white-space: nowrap; flex-shrink: 0;">${item.uploadedAt}</span>
-                                                 </div>
-                                                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
-                                                    <span style="font-size: 11px; color: #94a3b8;">ชีท: <strong style="color: #64748b; font-weight: 500;">${item.sheetName}</strong> <span style="margin: 0 5px; color: #cbd5e1;">|</span> ราคาเสนอ: <strong style="col">${formatPrice(item.price)}</strong></span>
-                                                    <div>${hBadgeHtml}</div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    `;
+                            const formatPrice = (val) => {
+                                if (val === null || val === undefined || val === '') return '-';
+                                if (typeof val === 'number') {
+                                    return '฿' + val.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                                }
+                                const cleanStr = val.toString().replace(/[^\d.-]/g, '');
+                                const num = parseFloat(cleanStr);
+                                if (!isNaN(num)) {
+                                    return '฿' + num.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                                }
+                                return val;
+                            };
+                            document.getElementById('detail-department').textContent = data.department || '-';
+                            document.getElementById('detail-order-name').textContent = data.orderName || '-';
+                            document.getElementById('detail-delivery-target').textContent = data.deliveryTarget || '-';
+                            document.getElementById('detail-file-name').textContent = data.fileName || '-';
+                            document.getElementById('detail-file-name').setAttribute('title', data.fileName || '-');
+                            document.getElementById('detail-po-number').textContent = data.poNumberInFile || '-';
+                            document.getElementById('detail-weekly-price').textContent = formatPrice(data.weeklyPlanPrice || data.masterPrice);
+                            const statusContainer = document.getElementById('detail-order-status-badge');
+                            const statusVal = data.orderStatus || '';
+                            let cleanStatusVal = statusVal;
+                            if (statusVal.includes(':')) {
+                                cleanStatusVal = statusVal.split(':').slice(1).join(':').trim();
+                            }
+                            let badgeHtml = '';
+                            if (statusVal.includes('ดำเนินการ') || statusVal.startsWith('0') || statusVal.startsWith('O:')) {
+                                badgeHtml = `<span class="inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200"><span style="width: 6px; height: 6px; border-radius: 50%; background-color: #d97706; flex-shrink: 0;"></span>${cleanStatusVal}</span>`;
+                            } else if (statusVal.includes('ปิด') || statusVal.startsWith('C:')) {
+                                badgeHtml = `<span class="inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200"><span style="width: 6px; height: 6px; border-radius: 50%; background-color: #e11d48; flex-shrink: 0;"></span>${cleanStatusVal}</span>`;
+                            } else {
+                                badgeHtml = `<span class="inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-slate-50 text-slate-600 border border-slate-200"><span style="width: 6px; height: 6px; border-radius: 50%; background-color: #64748b; flex-shrink: 0;"></span>${cleanStatusVal || '-'}</span>`;
+                            }
+                            statusContainer.innerHTML = badgeHtml;
+                            const historyContainer = document.getElementById('detail-history-container');
+                            historyContainer.innerHTML = '';
+                            if (data.history && data.history.length > 0) {
+                                const timelineOuter = document.createElement('div');
+                                timelineOuter.style.cssText = 'position: relative; padding-left: 28px;';
+                                const vLine = document.createElement('div');
+                                vLine.style.cssText = 'position: absolute; left: 6px; top: 10px; bottom: 10px; width: 2px; background: #e2e8f0; border-radius: 1px;';
+                                timelineOuter.appendChild(vLine);
+                                data.history.forEach((item, index) => {
+                                    const hStatusVal = item.orderStatus || '';
+                                    let hCleanStatusVal = hStatusVal;
+                                    if (hStatusVal.includes(':')) {
+                                        hCleanStatusVal = hStatusVal.split(':').slice(1).join(':').trim();
+                                    }
+                                    let badgeBg, badgeText, badgeBorder, dotColor, markerColor;
+                                    if (hStatusVal.includes('ดำเนินการ') || hStatusVal.startsWith('0') || hStatusVal.startsWith('O:')) {
+                                        badgeBg = '#fffbeb'; badgeText = '#b45309'; badgeBorder = '#fde68a'; dotColor = '#f59e0b'; markerColor = '#f59e0b';
+                                    } else if (hStatusVal.includes('ปิด') || hStatusVal.startsWith('C:')) {
+                                        badgeBg = '#fff1f2'; badgeText = '#be123c'; badgeBorder = '#fecdd3'; dotColor = '#f43f5e'; markerColor = '#f43f5e';
+                                    } else {
+                                        badgeBg = '#f8fafc'; badgeText = '#475569'; badgeBorder = '#e2e8f0'; dotColor = '#94a3b8'; markerColor = '#94a3b8';
+                                    }
+                                    const hBadgeHtml = `<span class="inline-flex items-center justify-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border mt-1.5 shrink-0" style="background: ${badgeBg}; color: ${badgeText}; border-color: ${badgeBorder};"><span class="w-1.5 h-1.5 rounded-full shrink-0" style="background: ${dotColor};"></span>${hCleanStatusVal || '-'}</span>`;
+                                    // เอฟเฟกต์วงแหวนและจุดกระพริบสำหรับทุกรายการพร้อมหน่วงเวลา (Staggered Animation)
+                                    const pulseRingHtml = `
+                                                <span class="absolute" style="left: -33px; top: 8px; width: 22px; height: 22px; border-radius: 50%; background: ${markerColor}; opacity: 0.45; animation: timeline-pulse-ring 2.2s cubic-bezier(0.24, 0, 0.38, 1) infinite; animation-delay: ${index * 0.35}s; pointer-events: none;"></span>
+                                            `;
+                                    const itemHtml = `
+                                                                                                                                                                                    <div style="position: relative; margin-bottom: 16px;">
+                                                                                                                                                                                        ${pulseRingHtml}
+                                                                                                                                                                                        <div style="position: absolute; left: -27px; top: 14px; width: 10px; height: 10px; border-radius: 50%; background: ${markerColor}; box-shadow: 0 0 0 3px #e2e8f0; animation: timeline-dot-pulse 2.2s infinite; animation-delay: ${index * 0.35}s;"></div>
+                                                                                                                                                                                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px;">
+                                                                                                                                                                                            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+                                                                                                                                                                                                <span style="font-size: 12px; font-weight: 600; color: #1e293b; line-height: 1.4; word-break: break-word; max-width: 320px;" title="${item.fileName}">${item.fileName}</span>
+                                                                                                                                                                                        </div>
+                                                                                                                                                                                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+                                                                                                                                                                                                <span style="font-size: 11px; color: #94a3b8;">ชีท: <strong style="color: #64748b; font-weight: 500;">${item.sheetName}</strong> <span style="margin: 0 5px; color: #cbd5e1;">
+                                                                                                                                                                                                <div>${hBadgeHtml}</div>
+                                                                                                                                                                                            </div>
+                                                                                                                                                                                        </div>
+                                                                                                                                                                                    </div>
+                                                                                                                                                                                `;
                                     timelineOuter.insertAdjacentHTML('beforeend', itemHtml);
                                 });
-                                 historyContainer.appendChild(timelineOuter);
-                             } else {
-                                 historyContainer.innerHTML = '<div style="text-align: center; font-size: 12px; color: #94a3b8; padding: 16px 0;">ไม่มีข้อมูลประวัติแผนผลิต</div>';
-                             }
-                             const historyWrapper = document.getElementById('history-wrapper');
-                             const chevronHistory = document.getElementById('chevron-history');
-                             if (historyWrapper) historyWrapper.style.display = 'none';
-                             if (chevronHistory) chevronHistory.style.transform = 'rotate(0deg)';
-                             detailModal.classList.remove('hidden');
+                                historyContainer.appendChild(timelineOuter);
+                            } else {
+                                historyContainer.innerHTML = '<div style="text-align: center; font-size: 12px; color: #94a3b8; padding: 16px 0;">ไม่มีข้อมูลประวัติแผนผลิต</div>';
+                            }
+                            const historyWrapper = document.getElementById('history-wrapper');
+                            const chevronHistory = document.getElementById('chevron-history');
+                            if (historyWrapper) historyWrapper.style.display = 'none';
+                            if (chevronHistory) chevronHistory.style.transform = 'rotate(0deg)';
+                            detailModal.classList.remove('hidden');
                         } else {
                             Swal.fire('ไม่พบข้อมูล', 'ไม่พบข้อมูลแผนผลิตคู่ของใบขออนุมัตินี้', 'warning');
                         }
@@ -383,18 +492,20 @@
         document.getElementById('btn-close-detail-modal').addEventListener('click', () => { detailModal.classList.add('hidden'); });
         document.getElementById('btn-close-detail').addEventListener('click', () => { detailModal.classList.add('hidden'); });
         detailModal.addEventListener('click', (e) => { if (e.target === detailModal) detailModal.classList.add('hidden'); });
-        
-        let systemSearchTimeout;
-        document.getElementById('system-orders-search').addEventListener('input', function() {
-            clearTimeout(systemSearchTimeout);
-            systemSearchTimeout = setTimeout(() => {
-                systemOrdersSearchQuery = this.value;
-                fetchSystemOrdersFromServer();
-            }, 300);
+
+        document.getElementById('system-orders-search').addEventListener('input', function () {
+            systemOrdersSearchQuery = this.value;
+            applyClientSideFilters();
         });
-        
-        document.getElementById('system-orders-status-filter').addEventListener('change', function() {
+
+        document.getElementById('system-orders-status-filter').addEventListener('change', function () {
             systemOrdersStatusFilter = this.value;
+            applyClientSideFilters();
+        });
+
+        // เพิ่ม event listener สำหรับ filter mode
+        document.getElementById('filter-mode').addEventListener('change', function () {
+            // เมื่อเปลี่ยน filter mode ให้โหลดข้อมูลใหม่
             fetchSystemOrdersFromServer();
         });
 
@@ -402,23 +513,23 @@
             const container = document.getElementById('system-orders-page-numbers');
             if (!container) return;
             container.innerHTML = '';
-            
+
             let startPage = currentPage;
             let endPage = Math.min(totalPages, startPage + 4);
             if (endPage - startPage < 4) {
                 startPage = Math.max(1, endPage - 4);
             }
-            
+
             for (let i = startPage; i <= endPage; i++) {
                 const btn = document.createElement('button');
                 btn.textContent = i;
-                
+
                 if (i === currentPage) {
                     btn.className = 'h-8 w-8 flex items-center justify-center border-2 border-primary rounded-lg text-xs font-bold bg-primary text-white transition';
                 } else {
                     btn.className = 'h-8 w-8 flex items-center justify-center border border-slate-300 rounded-lg text-xs font-semibold bg-white hover:bg-slate-50 text-slate-700 transition cursor-pointer';
                 }
-                
+
                 btn.addEventListener('click', () => {
                     systemOrdersCurrentPage = i;
                     renderCurrentPage(); // Instant Client-Side Switch
@@ -434,13 +545,13 @@
                 renderCurrentPage(); // Instant Client-Side Switch
             }
         });
-        
+
         document.getElementById('btn-system-orders-next').addEventListener('click', () => {
             if (systemOrdersCurrentPage < systemOrdersTotalPages) {
                 systemOrdersCurrentPage++;
                 renderCurrentPage(); // Instant Client-Side Switch
             }
-        }); 
+        });
 
         // Initial Load
         fetchSystemOrdersFromServer();

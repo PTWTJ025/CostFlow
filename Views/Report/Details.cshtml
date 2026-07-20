@@ -1,4 +1,25 @@
 @model List<CostFlow.Models.OrderTrackingMaster>
+@functions {
+    private string GetIsoDate(string? dateStr)
+    {
+        if (string.IsNullOrWhiteSpace(dateStr) || dateStr == "-") return "";
+        dateStr = dateStr.Trim().Split(' ')[0];
+        var parts = dateStr.Split('/');
+        if (parts.Length == 3 && 
+            int.TryParse(parts[0], out var day) && 
+            int.TryParse(parts[1], out var month) && 
+            int.TryParse(parts[2], out var year))
+        {
+            if (year > 2500) year -= 543;
+            try
+            {
+                return new DateTime(year, month, day).ToString("yyyy-MM-dd");
+            }
+            catch {}
+        }
+        return "";
+    }
+}
 @{
     string reportName = ViewData["ReportName"] as string ?? "รายละเอียดใบสั่งผลิต";
     DateTime createdAt = ViewData["CreatedAt"] as DateTime? ?? DateTime.Now;
@@ -10,7 +31,33 @@
     ViewData["Title"] = reportName;
     ViewData["HeaderTitle"] = "รายละเอียดรายการสั่งผลิต";
     var sortedModel = Model.OrderBy(x => x.Status == "Matched" ? 1 : 0).ThenBy(x => x.PoNumber).ToList();
+    
+    // ดึงค่า month และ year จาก query string (ถ้ามี)
+    var currentMonth = Context.Request.Query["month"].ToString();
+    var currentYear = Context.Request.Query["year"].ToString();
 }
+
+<style>
+    @@keyframes timeline-pulse-ring {
+        0% {
+            transform: scale(0.5);
+            opacity: 0.8;
+        }
+        80%, 100% {
+            transform: scale(1.6);
+            opacity: 0;
+        }
+    }
+    
+    @@keyframes timeline-dot-pulse {
+        0%, 100% {
+            transform: scale(1);
+        }
+        50% {
+            transform: scale(1.18);
+        }
+    }
+</style>
 
 <div class="flex-1 p-md md:p-lg flex flex-col gap-md max-w-container-max mx-auto w-full">
     <div class="flex items-center gap-sm mb-xs">
@@ -27,27 +74,36 @@
     </div>
 
     <div class="bg-white rounded border border-outline-variant shadow-sm p-4 custom-toolbar">
-        <!-- Left Side: Search Input Box only -->
-        <div class="w-64 flex-shrink-0">
-            <input
-                id="po-search"
-                type="text"
-                placeholder="ค้นหาเลขที่อนุมัติ..."
-                class="block w-full border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-            >
+        <!-- Left Side: Search and Sort Filters -->
+        <div class="flex items-center gap-3 flex-wrap">
+            <div class="w-64 flex-shrink-0">
+                <input
+                    id="po-search"
+                    type="text"
+                    placeholder="ค้นหาเลขที่อนุมัติ..."
+                    class="block w-full border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-white"
+                    style="height: 36px; padding: 6px 12px; font-size: 13px;"
+                >
+            </div>
+            <div class="w-56 flex-shrink-0">
+                <select id="sort-order" class="block w-full border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-white cursor-pointer" style="height: 36px; padding: 6px 12px; font-size: 13px; font-weight: 500;">
+                    <option value="default">เรียงลำดับ: เริ่มต้น</option>
+                    <option value="approved-desc">วันที่อนุมัติ: ใหม่ล่าสุด</option>
+                    <option value="approved-asc">วันที่อนุมัติ: เก่าสุด</option>
+                    <option value="delivery-desc">เป้าหมายส่งมอบ: ใหม่ล่าสุด</option>
+                    <option value="delivery-asc">เป้าหมายส่งมอบ: เก่าสุด</option>
+                </select>
+            </div>
         </div>
 
         <!-- Right Side: Both Status Filters and Action Buttons grouped together -->
         <div class="custom-toolbar-right">
             <!-- Status Filters -->
             <div class="flex gap-2">
-                <button class="status-filter-btn active flex items-center justify-center bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 transition-all" data-filter="all">
-                    ทั้งหมด (@total)
-                </button>
-                <button class="status-filter-btn flex items-center justify-center bg-emerald-50 hover:bg-emerald-100 border border-emerald-500 text-emerald-700 transition-all" data-filter="matched">
+                <button class="status-filter-btn flex items-center justify-center bg-white hover:bg-emerald-50 border-2 border-emerald-500 text-emerald-700 transition-all" data-filter="matched" style="padding: 8px 16px; font-size: 13px; font-weight: 600; border-radius: 8px;">
                     ได้แผนแล้ว (@matchedCount)
                 </button>
-                <button class="status-filter-btn flex items-center justify-center bg-rose-50 hover:bg-rose-100 border border-red-500 text-rose-700 font-bold transition-all" data-filter="pending">
+                <button class="status-filter-btn flex items-center justify-center bg-white hover:bg-rose-50 border-2 border-rose-500 text-rose-700 transition-all" data-filter="pending" style="padding: 8px 16px; font-size: 13px; font-weight: 600; border-radius: 8px;">
                     รอแผนผลิต (@pendingCount)
                 </button>
             </div>
@@ -63,20 +119,21 @@
                     <span class="text-xs font-bold" style="color: #b45309 !important;">(@uploadedPlansCount)</span>
                 </button>
 
-                <button type="button" id="btn-export-excel"
-                        class="flex items-center gap-2 btn-custom-blue-soft shadow-sm transition-all active:scale-95">
-                    <svg xmlns="http://www.w3.org/2000/svg" style="color: #1d4ed8 !important;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v13.5m0 0L7.5 12m4.5 4.5L16.5 12M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5" />
-                    </svg>
-                    <span>ส่งออก Excel</span>
-                </button>
-
                 <button type="button" id="btn-view-all-system"
                         class="flex items-center gap-2 btn-custom-white shadow-sm transition-all active:scale-95">
                     <svg xmlns="http://www.w3.org/2000/svg" style="color: #475569 !important;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 12h16.5m-16.5-5.25h16.5m-16.5 10.5h16.5" />
                     </svg>
                     <span>ดูรายการทั้งหมด</span>
+                </button>
+
+                <button type="button" id="btn-export-excel"
+                        title="ส่งออก Excel"
+                        class="flex items-center justify-center btn-custom-green shadow-sm transition-all active:scale-95"
+                        style="width: 36px !important; padding: 0 !important;">
+                    <svg xmlns="http://www.w3.org/2000/svg" x="0px" y="0px" viewBox="0 0 48 48" style="width: 20px !important; height: 20px !important;">
+                        <path fill="#169154" d="M29,6H15.744C14.781,6,14,6.781,14,7.744v7.259h15V6z"></path><path fill="#18482a" d="M14,33.054v7.202C14,41.219,14.781,42,15.743,42H29v-8.946H14z"></path><path fill="#0c8045" d="M14 15.003H29V24.005000000000003H14z"></path><path fill="#17472a" d="M14 24.005H29V33.055H14z"></path><g><path fill="#29c27f" d="M42.256,6H29v9.003h15V7.744C44,6.781,43.219,6,44,6z"></path><path fill="#27663f" d="M29,33.054V42h13.257C43.219,42,44,41.219,44,40.257v-7.202H29z"></path><path fill="#19ac65" d="M29 15.003H44V24.005000000000003H29z"></path><path fill="#129652" d="M29 24.005H44V33.055H29z"></path></g><path fill="#0c7238" d="M22.319,34H5.681C4.753,34,4,33.247,4,32.319V15.681C4,14.753,4.753,14,5.681,14h16.638 C23.247,14,24,14.753,24,15.681v16.638C24,33.247,23.247,34,22.319,34z"></path><path fill="#fff" d="M9.807 19L12.193 19 14.129 22.754 16.175 19 18.404 19 15.333 24 18.474 29 16.123 29 14.013 25.07 11.912 29 9.526 29 12.719 23.982z"></path>
+                    </svg>
                 </button>
             </div>
         </div>
@@ -107,7 +164,12 @@
                         var hasWeeklyPlan = order.MatchedInWeeklyPlans.Any();
                         var deliveryTarget = hasWeeklyPlan ? order.MatchedInWeeklyPlans.First().DeliveryTarget : "-";
 
-                        <tr class="order-row hover:bg-slate-50  transition-colors text-sm" data-status="@(isMatched ? "matched" : "pending")" data-po="@order.PoNumber">
+                        <tr class="order-row hover:bg-slate-50  transition-colors text-sm" 
+                            data-status="@(isMatched ? "matched" : "pending")" 
+                            data-po="@order.PoNumber"
+                            data-approved-date="@GetIsoDate(order.ApprovedDate)"
+                            data-delivery-target="@GetIsoDate(deliveryTarget)"
+                            data-index="@(i + 1)">
                             <td class="text-secondary px-3 py-2 text-center">@(i + 1)</td>
                             <td class="px-3 py-2 text-center">
                                 @if (isMatched)
@@ -352,13 +414,16 @@
                                 
                                 const hBadgeHtml = `<span style="display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: 700; background: ${badgeBg}; color: ${badgeText}; border: 1px solid ${badgeBorder};"><span style="width: 5px; height: 5px; border-radius: 50%; background: ${dotColor}; flex-shrink: 0;"></span>${hCleanStatusVal || '-'}</span>`;
                                 
-                                const isLatest = index === 0;
-                                const markerExtra = isLatest ? 'box-shadow: 0 0 0 3px #e2e8f0;' : '';
+                                // เอฟเฟกต์วงแหวนและจุดกระพริบสำหรับทุกรายการพร้อมหน่วงเวลา (Staggered Animation)
+                                const pulseRingHtml = `
+                                    <span class="absolute" style="left: -33px; top: 8px; width: 22px; height: 22px; border-radius: 50%; background: ${markerColor}; opacity: 0.45; animation: timeline-pulse-ring 2.2s cubic-bezier(0.24, 0, 0.38, 1) infinite; animation-delay: ${index * 0.35}s; pointer-events: none;"></span>
+                                `;
 
                                 const itemHtml = `
                                     <div style="position: relative; margin-bottom: 16px;">
                                         <!-- Marker dot -->
-                                        <div style="position: absolute; left: -27px; top: 14px; width: 10px; height: 10px; border-radius: 50%; background: ${markerColor}; ${markerExtra}"></div>
+                                        ${pulseRingHtml}
+                                        <div style="position: absolute; left: -27px; top: 14px; width: 10px; height: 10px; border-radius: 50%; background: ${markerColor}; box-shadow: 0 0 0 3px #e2e8f0; animation: timeline-dot-pulse 2.2s infinite; animation-delay: ${index * 0.35}s;"></div>
                                         
                                         <!-- Card -->
                                         <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px;">
@@ -419,40 +484,133 @@
             detailModal.classList.add('hidden');
         });
 
-        // Status Filter
+        // Status Filter with Mutually Exclusive functionality
+        let activeFilter = null; // เก็บ filter ที่เปิดอยู่ (ตัวเดียว)
+
         document.querySelectorAll('.status-filter-btn').forEach(btn => {
             btn.addEventListener('click', function() {
-                document.querySelectorAll('.status-filter-btn').forEach(b => b.classList.remove('active'));
-                this.classList.add('active');
-
                 const filter = this.getAttribute('data-filter');
+                
+                // If clicking the same filter, toggle it off
+                if (activeFilter === filter) {
+                    activeFilter = null;
+                    // Reset to default state (white bg with colored border)
+                    if (filter === 'matched') {
+                        this.style.background = '#ffffff';
+                        this.style.color = '#047857';
+                        this.style.borderColor = '#10b981';
+                    } else if (filter === 'pending') {
+                        this.style.background = '#ffffff';
+                        this.style.color = '#be123c';
+                        this.style.borderColor = '#f43f5e';
+                    }
+                } else {
+                    // Reset all buttons to default state first
+                    document.querySelectorAll('.status-filter-btn').forEach(b => {
+                        const bFilter = b.getAttribute('data-filter');
+                        if (bFilter === 'matched') {
+                            b.style.background = '#ffffff';
+                            b.style.color = '#047857';
+                            b.style.borderColor = '#10b981';
+                        } else if (bFilter === 'pending') {
+                            b.style.background = '#ffffff';
+                            b.style.color = '#be123c';
+                            b.style.borderColor = '#f43f5e';
+                        }
+                    });
+
+                    // Set the clicked button as active
+                    activeFilter = filter;
+                    // Active state (filled with respective color)
+                    if (filter === 'matched') {
+                        this.style.background = '#10b981'; // emerald-500
+                        this.style.color = '#ffffff';
+                        this.style.borderColor = '#10b981';
+                    } else if (filter === 'pending') {
+                        this.style.background = '#f43f5e'; // rose-500
+                        this.style.color = '#ffffff';
+                        this.style.borderColor = '#f43f5e';
+                    }
+                }
+
+                // Filter rows based on active filter
                 const rows = document.querySelectorAll('.order-row');
+                const searchTerm = document.getElementById('po-search').value.toLowerCase().trim();
 
                 rows.forEach(row => {
                     const status = row.getAttribute('data-status');
-                    if (filter === 'all') {
-                        row.style.display = '';
-                    } else {
-                        row.style.display = status === filter ? '' : 'none';
-                    }
+                    const poNumber = row.getAttribute('data-po').toLowerCase();
+                    
+                    const matchSearch = searchTerm === '' || poNumber.includes(searchTerm);
+                    const matchFilter = activeFilter === null || activeFilter === status;
+
+                    row.style.display = (matchSearch && matchFilter) ? '' : 'none';
                 });
             });
         });
 
-        // Search
+        // Search (updated to work with mutually exclusive filter logic)
         document.getElementById('po-search').addEventListener('input', function(e) {
             const searchTerm = e.target.value.toLowerCase().trim();
             const rows = document.querySelectorAll('.order-row');
-            const activeFilter = document.querySelector('.status-filter-btn.active').getAttribute('data-filter');
 
             rows.forEach(row => {
                 const poNumber = row.getAttribute('data-po').toLowerCase();
                 const rowStatus = row.getAttribute('data-status');
 
                 const matchSearch = poNumber.includes(searchTerm);
-                const matchFilter = (activeFilter === 'all' || rowStatus === activeFilter);
+                const matchFilter = activeFilter === null || activeFilter === rowStatus;
 
                 row.style.display = (matchSearch && matchFilter) ? '' : 'none';
+            });
+        });
+
+        // Sorting functionality
+        document.getElementById('sort-order').addEventListener('change', function() {
+            const val = this.value;
+            const tbody = document.querySelector('table tbody');
+            const rows = Array.from(tbody.querySelectorAll('.order-row'));
+            
+            rows.sort((a, b) => {
+                if (val === 'default') {
+                    const indexA = parseInt(a.getAttribute('data-index'));
+                    const indexB = parseInt(b.getAttribute('data-index'));
+                    return indexA - indexB;
+                }
+                
+                if (val.startsWith('approved')) {
+                    const dateA = a.getAttribute('data-approved-date') || '';
+                    const dateB = b.getAttribute('data-approved-date') || '';
+                    
+                    if (dateA === dateB) return 0;
+                    if (!dateA) return 1;
+                    if (!dateB) return -1;
+                    
+                    return val === 'approved-desc' ? dateB.localeCompare(dateA) : dateA.localeCompare(dateB);
+                }
+                
+                if (val.startsWith('delivery')) {
+                    const dateA = a.getAttribute('data-delivery-target') || '';
+                    const dateB = b.getAttribute('data-delivery-target') || '';
+                    
+                    if (dateA === dateB) return 0;
+                    if (!dateA) return 1;
+                    if (!dateB) return -1;
+                    
+                    return val === 'delivery-desc' ? dateB.localeCompare(dateA) : dateA.localeCompare(dateB);
+                }
+                
+                return 0;
+            });
+            
+            // Re-append sorted rows to tbody
+            rows.forEach((row, i) => {
+                tbody.appendChild(row);
+                // Update numbering
+                const numberCell = row.querySelector('td:first-child');
+                if (numberCell) {
+                    numberCell.textContent = i + 1;
+                }
             });
         });
 
@@ -493,7 +651,16 @@
         // Redirect to All Orders page
         document.getElementById('btn-view-all-system').addEventListener('click', () => {
             const reportName = "@Html.Raw(reportName)";
-            window.location.href = `/Report/AllOrders?returnReportName=${encodeURIComponent(reportName)}`;
+            const month = "@currentMonth";
+            const year = "@currentYear";
+            
+            // ถ้ามาจาก month/year mode ให้ส่ง month & year ไปด้วย
+            if (month && year) {
+                window.location.href = `/Report/AllOrders?returnReportName=${encodeURIComponent(reportName)}&month=${month}&year=${year}`;
+            } else {
+                // ถ้าเป็น fileName mode ปกติ
+                window.location.href = `/Report/AllOrders?returnReportName=${encodeURIComponent(reportName)}`;
+            }
         });
     </script>
 }

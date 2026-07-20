@@ -1,977 +1,774 @@
 @model CostFlow.Models.MonthlyCostDetailViewModel
 @{
-    ViewData["Title"] = "จัดการค่าใช้จ่าย";
+    ViewData["Title"] = "จัดการค่าใช้จ่าย - " + Model.MonthYear;
+    ViewData["HeaderTitle"] = "จัดการค่าใช้จ่าย - " + Model.MonthYear;
 }
 
-<div class="flex-1 py-md md:py-lg flex flex-col gap-md w-full h-full min-h-0 overflow-hidden bg-background" style="padding-left: clamp(1.5rem, 6vw, 6rem); padding-right: clamp(1.5rem, 6vw, 6rem);">
+<style>
+    .order-card {
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
 
-<!-- Header Area -->
-<div class="flex items-center justify-between shrink-0">
-    <div class="flex flex-col gap-1">
-        <div class="flex items-center gap-2 text-sm text-on-surface-variant">
-            <a href="/MonthlyCost" class="hover:text-primary transition-colors flex items-center gap-1">
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
-                </svg>
-                <span>หน้าแรก</span>
-            </a>
-            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-            </svg>
-            <a href="/MonthlyCost" class="hover:text-primary transition-colors">รายงานสั่งผลิต_13_ก.ค._25...</a>
-            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-            </svg>
-            <span class="font-semibold text-on-surface">รายการใบสั่งซื้อทั้งหมด</span>
-        </div>
-    </div>
+    .order-card:hover {
+        border-color: #94a3b8;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.07);
+    }
 
-    <!-- Overall month summary, moved to top so it's visible regardless of scroll position -->
-    <div class="flex items-center gap-lg">
-        <div class="flex flex-col items-end">
-            <span class="text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider">แผนผลิตทั้งเดือน</span>
-            <span class="text-sm font-black text-slate-800 font-mono">฿@Model.Stats.TotalPlannedAmount.ToString("N2")</span>
-        </div>
-        <div class="w-px h-8 bg-outline-variant"></div>
-        <div class="flex flex-col items-end">
-            <span class="text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider">ดำเนินการแล้ว</span>
-            <span class="text-sm font-black text-emerald-600 font-mono">฿@Model.Stats.ProcessedAmount.ToString("N2")</span>
-        </div>
-    </div>
-</div>
+    .order-card.in-cart {
+        opacity: 0.45;
+        pointer-events: none;
+    }
 
-<!-- Single Table Card -->
-<div class="flex-1 flex flex-col bg-surface border border-outline-variant rounded-lg overflow-hidden min-h-0">
+    /* Action pill toggle */
+    .action-pill {
+        cursor: pointer;
+        border: 1.5px solid #e2e8f0;
+        border-radius: 6px;
+        padding: 6px 10px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        transition: all 0.12s ease;
+        user-select: none;
+        background: white;
+        color: #64748b;
+        white-space: nowrap;
+    }
 
-<!-- Tab Navigation: Swiss Style, Sliding Indicator -->
-<div class="bg-surface px-6 pt-3.5 pb-0 border-b border-outline-variant shrink-0">
-    <div class="flex items-center justify-between gap-6 flex-wrap">
-        <!-- Tabs -->
-        <div id="tab-group" class="relative flex items-stretch gap-0 -mb-px shrink-0">
-            <!-- Sliding active-indicator (background + underline) -->
-            <div id="tab-indicator"
-                 class="absolute top-0 h-full bg-primary/[0.07] border-b-[3px] border-primary transition-transform duration-300 ease-[cubic-bezier(0.65,0,0.35,1)]"
-                 style="width:0px; transform:translateX(0px);">
-            </div>
+    .action-pill input[type="radio"] {
+        display: none;
+    }
 
-            <button type="button" id="tab-pending-btn"
-                    class="group relative z-10 px-5 py-3 text-sm font-bold uppercase tracking-wide text-primary transition-colors duration-200 cursor-pointer inline-flex items-center">
-                <span>รอดำเนินการ</span>
-                <span id="pending-count-display" class="ml-2 inline-flex items-center justify-center min-w-[22px] h-[22px] px-1.5 rounded-full text-xs font-bold font-mono bg-primary text-white transition-colors duration-200">@Model.PendingOrders.Count</span>
-            </button>
-            <button type="button" id="tab-saved-btn"
-                    class="group relative z-10 px-5 py-3 text-sm font-bold uppercase tracking-wide text-slate-400 hover:text-slate-600 transition-colors duration-200 cursor-pointer inline-flex items-center">
-                <span>บันทึกแล้ว (ประวัติ)</span>
-                <span id="saved-count-badge" class="ml-2 inline-flex items-center justify-center min-w-[22px] h-[22px] px-1.5 rounded-full text-xs font-bold font-mono bg-slate-200 text-slate-600 transition-colors duration-200">@Model.SavedOrders.Count</span>
-            </button>
-        </div>
+    .action-pill:hover {
+        border-color: #94a3b8;
+        color: #334155;
+    }
 
-        <!-- Search Boxes (เดิม ไม่แก้) -->
-        <div class="py-1.5 shrink-0 pr-1">
-            <div id="pending-search-container" class="relative w-64">
-                <input type="text" id="pending-search-input" placeholder="ค้นหารหัส หรือชื่อสินค้า..."
-                       class="w-full pr-9 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-slate-800 placeholder-slate-400 transition-all"/>
-                <button type="button" id="pending-search-clear"
-                        class="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 rounded hover:bg-slate-100 hidden transition-colors"
-                        title="ล้างการค้นหา">
-                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-                    </svg>
-                </button>
-            </div>
+    .action-pill.active-receive {
+        border-color: #10b981;
+        background: #ecfdf5;
+        color: #065f46;
+    }
 
-            <div id="saved-search-container" class="relative w-64 hidden">
-                <input type="text" id="saved-search-input" placeholder="ค้นหาในประวัติที่บันทึก..."
-                       class="w-full pl-3.5 pr-9 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-slate-800 placeholder-slate-400 transition-all"/>
-                <button type="button" id="saved-search-clear"
-                        class="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 rounded hover:bg-slate-100 hidden transition-colors"
-                        title="ล้างการค้นหา">
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-<!-- Bulk Action Bar: ฝั่งสีน้ำเงิน ปรับดีไซน์ตามสีแดง และใช้ไอคอนลูกศรไปข้างหน้าที่ส่งมา -->
-<div id="bulk-action-bar" class="bg-blue-50 border-b border-blue-200 px-6 py-2.5 shrink-0 hidden flex flex-wrap items-center justify-between gap-4 tab-pending-section transition-all shadow-xs">
-    <div class="flex items-center gap-3">
-        <span class="text-[13px] font-bold text-blue-900" id="bulk-selected-count">เลือกแล้ว 0 รายการ</span>
-        <span class="text-blue-300 font-light">|</span>
-        <button type="button" id="bulk-clear-btn" class="text-[12px] font-semibold text-blue-700 hover:text-blue-900 transition-colors cursor-pointer">ยกเลิกการเลือก</button>
-    </div>
-    <div class="flex items-center gap-2">
-        <button type="button" id="btn-submit" class="inline-flex items-center justify-center gap-2 text-[13px] font-bold bg-primary text-white px-5 py-2 rounded hover:bg-primary/90 active:scale-98 shadow-sm transition-all cursor-pointer focus:outline-none group disabled:opacity-50 disabled:shadow-none disabled:pointer-events-none">
-            <!-- ข้อความช่องไฟสมดุล -->
-            <div class="flex items-center space-x-1.5">
-                <span>บันทึกรายการที่เลือก</span>
-            </div>
-            <!-- ไอคอนที่ส่งมา: ปรับ stroke-width เป็น 2.5 และใส่ group-hover:translate-x-0.5 เพื่อให้ขยับไปข้างหน้าตามทิศทางลูกศร -->
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4 transition-transform duration-200 group-hover:translate-x-0.5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="m15 15 6-6m0 0-6-6m6 6H9a6 6 0 0 0 0 12h3"/>
-            </svg>
-        </button>
-    </div>
-</div>
+    .action-pill.active-defer {
+        border-color: #f59e0b;
+        background: #fffbeb;
+        color: #78350f;
+    }
 
-<!-- Saved Bulk Action Bar: appears at the top when saved items are selected -->
-@if (!Model.IsLocked)
-{
-    <div id="saved-bulk-action-bar" class="bg-rose-50 border-b border-rose-300 px-6 py-2.5 shrink-0 flex flex-wrap items-center justify-between gap-4 tab-saved-section transition-all shadow-xs">
-        <div class="flex items-center gap-3">
-            <span class="text-[13px] font-bold text-rose-900" id="saved-bulk-selected-count">เลือกแล้ว 0 รายการ</span>
-            <span class="text-rose-300 font-light">|</span>
-            <button type="button" id="saved-bulk-clear-btn" class="text-[12px] font-semibold text-rose-700 hover:text-rose-900 transition-colors cursor-pointer">ยกเลิกการเลือก</button>
-        </div>
-        <div class="flex items-center gap-2">
-            <button type="button" id="saved-bulk-revert-btn" class="inline-flex items-center justify-center gap-2 text-[13px] font-bold bg-rose-600 text-white px-5 py-2 rounded hover:bg-rose-700 active:scale-98 shadow-sm transition-all cursor-pointer focus:outline-none group">
-                <!-- ไอคอนลูกศร -->
-                <svg xmlns="http://w3.org" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" class="w-4 h-4 transition-transform group-hover:-translate-x-0.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3"/>
-                </svg>
-                <!-- ข้อความและตัวเลขช่องไฟสมดุล -->
-                <div class="flex items-center space-x-1.5">
-                    <span>คืนค่าที่เลือก</span>
-                    <span class="text-white/90">(<span id="saved-revert-btn-count">31</span>)</span>
-                </div>
-            </button>
-        </div>
-    </div>
-}
-else
-{
-    <div class="bg-slate-100 border-b border-slate-200/80 px-6 py-3 tab-saved-section hidden items-center justify-between gap-4 shrink-0">
-        <div class="flex items-center gap-2.5 text-slate-700">
-            <div class="w-7 h-7 rounded-full bg-slate-200/80 flex items-center justify-center text-slate-600 shrink-0">
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
-                </svg>
-            </div>
-            <div>
-                <span class="text-xs font-bold block">🔒 งวดบัญชีนี้ปิดยอดเสร็จสมบูรณ์เรียบร้อยแล้ว (Completed)</span>
-                <span class="text-[11px] text-slate-500 font-normal">รายการในเดือนนี้ถูกบันทึกเป็นประวัติศาสตร์หรือยกยอดค้างรับไปยังงวดถัดไปแล้ว จึงไม่สามารถกดคืนค่าย้อนหลังได้</span>
-            </div>
-        </div>
-    </div>
-}
+    .action-pill.active-skip {
+        border-color: #8b5cf6;
+        background: #f5f3ff;
+        color: #4c1d95;
+    }
 
-<!-- Table Container: Pending Orders -->
-<div class="flex-1 overflow-auto relative min-h-0 tab-pending-section" id="pending-scroll-container">
-    <table class="w-full text-[14px]">
-        <thead>
-        <tr class="text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider">
-            <th class="sticky top-0 bg-surface-container border-b border-outline-variant z-20 py-2 px-3 text-left w-8">
-                <input type="checkbox" id="select-all-checkbox"
-                       class="w-4 h-4 text-primary rounded border-outline focus:ring-primary cursor-pointer"/>
-            </th>
-            <th class="sticky top-0 bg-surface-container border-b border-outline-variant z-20 py-2 px-3 text-left">เลขที่อนุมัติ</th>
-            <th class="sticky top-0 bg-surface-container border-b border-outline-variant z-20 py-2 px-3 text-left">ชื่อสินค้า</th>
-            <th class="sticky top-0 bg-surface-container border-b border-outline-variant z-20 py-2 px-3 text-right">จำนวน</th>
-            <th class="sticky top-0 bg-surface-container border-b border-outline-variant z-20 py-2 px-3 text-right">ราคารวม</th>
-            <th class="sticky top-0 bg-surface-container border-b border-outline-variant z-20 py-2 px-3 text-right">เป้าหมายส่งมอบ</th>
-            <th class="sticky top-0 bg-surface-container border-b border-outline-variant z-20 py-2 px-3 text-left w-48">สถานะ</th>
-        </tr>
-        </thead>
-        <tbody id="pending-tbody">
-        @if (Model.PendingOrders.Any())
-        {
-            @foreach (var order in Model.PendingOrders)
-            {
-                <tr class="border-b border-outline-variant hover:bg-surface-container-high transition-colors pending-row cursor-pointer select-none"
-                    data-order-id="@order.OrderId"
-                    data-po="@order.PoNumber"
-                    data-name="@order.OrderName"
-                    data-qty="@order.Quantity"
-                    data-price="@order.TotalPrice"
-                    data-delivery="@order.DeliveryTarget"
-                    data-dept="@order.Department"
-                    data-forwarded-status="@order.ForwardedStatus"
-                    data-forwarded-month="@order.ForwardedFromMonth"
-                    data-report-name="@order.OriginalReportName">
-                    <td class="py-1.5 px-3">
-                        <input type="checkbox"
-                               class="w-4 h-4 text-primary rounded border-outline focus:ring-primary cursor-pointer select-item"
-                               value="@order.OrderId"/>
-                    </td>
-                    <td class="py-1.5 px-3 text-[14px]">
-                        <div class="font-semibold text-on-surface">@order.PoNumber</div>
-                        @if (!string.IsNullOrEmpty(order.ForwardedStatus))
-                        {
-                            if (order.ForwardedStatus == "Deferred")
-                            {
-                                <div class="mt-1">
-                                    <span class="inline-flex items-center gap-1 max-w-[200px] px-1.5 py-0.5 rounded text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/70"
-                                          title="ผ่อนชำระจากเดือน @order.ForwardedFromMonth (@order.OriginalReportName)">
-                                        <svg class="w-3 h-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                        </svg>
-                                        <span class="truncate">ผ่อนชำระจาก @order.ForwardedFromMonth</span>
-                                    </span>
-                                </div>
-                            }
-                            else if (order.ForwardedStatus == "Skipped")
-                            {
-                                <div class="mt-1">
-                                    <span class="inline-flex items-center gap-1 max-w-[200px] px-1.5 py-0.5 rounded text-[11px] font-semibold bg-purple-50 text-purple-700 border border-purple-200/70"
-                                          title="ยังไม่ต้องการสินค้าจากเดือน @order.ForwardedFromMonth (มีสต็อกเดิม - @order.OriginalReportName)">
-                                        <svg class="w-3 h-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0v10l-8 4m8-14l-8 4m0 10l-8-4V7m8 10V11m0 0L4 7"/>
-                                        </svg>
-                                        <span class="truncate">ค้างสต็อกจาก @order.ForwardedFromMonth</span>
-                                    </span>
-                                </div>
-                            }
-                        }
-                    </td>
-                    <td class="py-1.5 px-3 text-on-surface max-w-[180px] sm:max-w-[260px] text-[14px]">
-                        <div class="truncate w-full" title="@order.OrderName">@order.OrderName</div>
-                    </td>
-                    <td class="py-1.5 px-3 text-right font-mono text-on-surface text-[14px]">@order.Quantity</td>
-                    <td class="py-1.5 px-3 text-right font-mono font-semibold text-on-surface text-[14px]">@order.TotalPrice.ToString("N2")</td>
-                    <td class="py-1.5 px-3 text-right text-[11px] text-on-surface-variant max-w-[140px] sm:max-w-[160px]">
-                        <div class="truncate w-full ml-auto" title="@order.DeliveryTarget">@order.DeliveryTarget</div>
-                    </td>
-                    <td class="py-1.5 px-3">
-                        @if (order.ForwardedStatus == "Deferred")
-                        {
-                            <!-- ผ่อนชำระมาแล้ว 1 เดือน — บังคับชำระเต็มเท่านั้น -->
-                            <select class="row-status-select w-full text-[13px] border border-amber-400 rounded pl-2.5 py-1 bg-amber-50 focus:border-amber-500 focus:ring-1 focus:ring-amber-400 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                                    data-order-id="@order.OrderId"
-                                    data-forced-payment="true"
-                                    disabled>
-                                <option value="ReceivedFull">ชำระเต็ม (บังคับ)</option>
-                            </select>
-                        }
-                        else
-                        {
-                            <select class="row-status-select w-full text-[13px] border border-outline rounded pl-2.5 py-1 bg-white focus:border-primary focus:ring-1 focus:ring-primary transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:bg-slate-50"
-                                    data-order-id="@order.OrderId" disabled>
-                                <option value="ReceivedFull">รับสินค้า (ชำระเต็ม)</option>
-                                <option value="Deferred">รับสินค้า (ผ่อนชำระ)</option>
-                                <option value="Skipped">ยังไม่ต้องการสินค้า</option>
-                            </select>
-                        }
-                    </td>
-                </tr>
-            }
+    .cart-item {
+        animation: slideIn 0.18s ease forwards;
+    }
+
+    @@keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(-6px);
         }
-        else
-        {
-            <tr id="empty-pending-state">
-                <td colspan="7" class="py-12 text-center text-xs text-on-surface-variant">
-                    ไม่มีรายการรอดำเนินการในเดือนนี้
-                </td>
-            </tr>
-        }
-        <!-- Row displayed when search/filter yields zero results -->
-        <tr id="no-search-results" class="hidden">
-            <td colspan="7" class="py-10 text-center text-xs text-on-surface-variant bg-surface-container-low/40">
-                <div class="flex flex-col items-center gap-1.5">
-                    <svg class="w-8 h-8 text-outline opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/>
-                    </svg>
-                    <span class="font-semibold text-on-surface">ไม่พบรายการที่ค้นหา</span>
-                    <span class="text-[11px]">ลองตรวจสอบตัวสะกด หรือใช้คำอื่นในการค้นหา</span>
-                </div>
-            </td>
-        </tr>
-        </tbody>
-    </table>
 
-    <!-- Floating Scroll-to-Top Button -->
-    <button id="pending-scroll-top-btn" type="button" title="ขึ้นบนสุด"
-            class="sticky bottom-4 ml-auto mr-4 bg-primary text-on-primary p-2 rounded-full shadow-lg hover:bg-primary/90 hover:scale-110 active:scale-95 transition-all duration-300 opacity-0 pointer-events-none z-30 flex items-center justify-center border border-white/20">
-        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7"/>
-        </svg>
-    </button>
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .deferred-note {
+        display: none;
+    }
+
+    .deferred-note.open {
+        display: flex;
+    }
+
+    @@media (prefers-reduced-motion: reduce) {
+        .cart-item {
+            animation: none;
+        }
+
+        .order-card,
+        .action-pill,
+        .deferred-input-wrap {
+            transition: none;
+        }
+    }
+
+    /* Scrollable panels */
+    .panel-body {
+        overflow-y: auto;
+        flex: 1;
+        min-height: 0;
+    }
+
+    .panel-body::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    .panel-body::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+
+    /* Remove button */
+    .remove-btn {
+        width: 22px;
+        height: 22px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 5px;
+        color: #ef4444;
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        transition: background 0.12s ease, transform 0.12s ease;
+        flex-shrink: 0;
+    }
+
+    .remove-btn:hover {
+        background: #fef2f2;
+        transform: scale(1.15);
+    }
+
+    .remove-btn:active {
+        transform: scale(0.9);
+    }
+
+    @@media (prefers-reduced-motion: reduce) {
+        .remove-btn {
+            transition: background 0.12s ease;
+        }
+
+        .remove-btn:hover,
+        .remove-btn:active {
+            transform: none;
+        }
+    }
+</style>
+
+<div class="flex-1 flex flex-col min-h-0 p-4 md:p-6 gap-4">
+
+<!-- ── Header + Summary bar ── -->
+<div class="flex items-center justify-between gap-4 flex-wrap">
+    <!-- Left: breadcrumb + subtitle -->
+    <div>
+        <div class="flex items-center gap-2 mb-0.5">
+            <a href="/MonthlyCost" class="text-slate-400 hover:text-slate-600 transition-colors text-sm">คิดค่าใช้จ่าย</a>
+            <span class="text-slate-300">/</span>
+            <span class="text-slate-700 font-semibold text-sm">@Model.MonthYear</span>
+        </div>
+        <p class="text-slate-500 text-xs">เลือกรายการที่ต้องการดำเนินการ แล้วกำหนดประเภทการจ่ายชำระ</p>
+    </div>
+
+    <!-- Right: summary pills -->
+    <div class="flex items-center gap-2 flex-wrap">
+        <!-- ทั้งหมด -->
+        <div class="flex items-center gap-1.5 bg-white border border-slate-200 rounded-md px-3 py-1.5 shadow-sm">
+            <svg class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 12h.007v.008H3.75V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm-.375 5.25h.007v.008H3.75v-.008Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"/>
+            </svg>
+            <span class="text-[11px] text-slate-500 font-medium">ทั้งหมด</span>
+            <span class="text-sm font-bold text-slate-700">@Model.Stats.TotalOrders</span>
+        </div>
+
+        <!-- รอดำเนินการ -->
+        <div class="flex items-center gap-1.5 bg-amber-50 border border-amber-200 rounded-md px-3 py-1.5 shadow-sm">
+            <svg class="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+            </svg>
+            <span class="text-[11px] text-amber-600 font-medium">รอดำเนินการ</span>
+            <span class="text-sm font-bold text-amber-700">@Model.PendingOrders.Count</span>
+        </div>
+
+        <!-- ดำเนินการแล้ว -->
+        <div class="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 rounded-md px-3 py-1.5 shadow-sm">
+            <svg class="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+            </svg>
+            <span class="text-[11px] text-emerald-600 font-medium">บันทึกแล้ว</span>
+            <span class="text-sm font-bold text-emerald-700">@Model.SavedOrders.Count</span>
+        </div>
+
+        <!-- ยอดคงเหลือ -->
+        @{
+            var remainingAmount = Model.Stats.TotalPlannedAmount - Model.Stats.ProcessedAmount;
+        }
+        <div class="flex items-center gap-1.5 bg-purple-50 border border-purple-200 rounded-md px-3 py-1.5 shadow-sm">
+            <svg class="w-4 h-4 text-purple-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm3 0h.008v.008H18V10.5Zm-12 0h.008v.008H6V10.5Z"/>
+            </svg>
+            <span class="text-[11px] text-purple-600 font-medium">เหลือยอด</span>
+            <span class="text-xs font-bold text-purple-700">@remainingAmount.ToString("N0") บาท</span>
+        </div>
+    </div>
 </div>
 
-<!-- Table Container: Saved Orders History -->
-<div class="flex-1 overflow-auto relative min-h-0 tab-saved-section hidden" id="saved-scroll-container">
-    <table class="w-full text-[14px]">
-        <thead>
-        <tr class="text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider">
-            <th class="sticky top-0 bg-surface-container border-b border-outline-variant z-20 py-2 px-3 text-center w-10">
-                @if (!Model.IsLocked)
-                {
-                    <input type="checkbox" id="saved-select-all-checkbox"
-                           class="w-4 h-4 text-rose-600 rounded border-outline focus:ring-rose-500 cursor-pointer"/>
-                }
-                else
-                {
-                    <span class="text-slate-300 font-bold">-</span>
-                }
-            </th>
-            <th class="sticky top-0 bg-surface-container border-b border-outline-variant z-20 py-2 px-3 text-center w-12">ลำดับ</th>
-            <th class="sticky top-0 bg-surface-container border-b border-outline-variant z-20 py-2 px-3 text-left">เวลาที่บันทึก</th>
-            <th class="sticky top-0 bg-surface-container border-b border-outline-variant z-20 py-2 px-3 text-left">เลขที่อนุมัติ</th>
-            <th class="sticky top-0 bg-surface-container border-b border-outline-variant z-20 py-2 px-3 text-left">ชื่อสินค้า</th>
-            <th class="sticky top-0 bg-surface-container border-b border-outline-variant z-20 py-2 px-3 text-right">จำนวน</th>
-            <th class="sticky top-0 bg-surface-container border-b border-outline-variant z-20 py-2 px-3 text-right">ราคารวม</th>
-            <th class="sticky top-0 bg-surface-container border-b border-outline-variant z-20 py-2 px-3 text-center w-48">สถานะที่บันทึก</th>
-            <th class="sticky top-0 bg-surface-container border-b border-outline-variant z-20 py-2 px-3 text-center w-28">จัดการ</th>
-        </tr>
-        </thead>
-        <tbody id="saved-tbody">
-        @if (Model.SavedOrders.Any())
-        {
-            var idx = 1;
-            @foreach (var saved in Model.SavedOrders)
-            {
-                var statusBadgeClass = "bg-slate-50 text-slate-700 border-slate-200";
-                var statusText = "ไม่ระบุ";
+<!-- ── Split screen ── -->
+<div class="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-2 gap-6" style="min-height: 480px;">
 
-                if (saved.Action == "ReceivedFull")
-                {
-                    statusBadgeClass = "bg-emerald-50 text-emerald-700 border-emerald-200/80";
-                    statusText = "รับสินค้า (ชำระเต็ม)";
-                }
-                else if (saved.Action == "Deferred")
-                {
-                    statusBadgeClass = "bg-amber-50 text-amber-700 border-amber-200/80";
-                    statusText = "รับสินค้า (ผ่อนชำระ)";
-                }
-                else if (saved.Action == "Skipped")
-                {
-                    statusBadgeClass = "bg-purple-50 text-purple-700 border-purple-200/80";
-                    statusText = "ยังไม่ต้องการสินค้า";
-                }
+    <!-- LEFT: รายการรอดำเนินการ -->
+    <div class="bg-white border border-slate-200 rounded-md flex flex-col min-h-0 overflow-hidden">
 
-                <tr class="border-b border-outline-variant hover:bg-surface-container-high transition-colors saved-row"
-                    data-action-id="@saved.ActionId"
-                    data-po="@saved.PoNumber"
-                    data-name="@saved.OrderName">
-                    <td class="py-2 px-3 text-center">
-                        @if (!Model.IsLocked)
-                        {
-                            <input type="checkbox"
-                                   class="w-4 h-4 text-rose-600 rounded border-outline focus:ring-rose-500 cursor-pointer select-saved-item"
-                                   value="@saved.ActionId"/>
-                        }
-                        else
-                        {
-                            <span class="text-slate-300 font-bold">-</span>
-                        }
-                    </td>
-                    <td class="py-2 px-3 text-center font-mono text-xs text-on-surface-variant">@(idx++)</td>
-                    <td class="py-2 px-3 text-xs text-on-surface-variant font-mono">
-                        @saved.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
-                    </td>
-                    <td class="py-2 px-3 text-[14px] font-semibold text-on-surface">@saved.PoNumber</td>
-                    <td class="py-2 px-3 text-[14px] text-on-surface max-w-[180px] sm:max-w-[260px]">
-                        <div class="truncate w-full" title="@saved.OrderName">@saved.OrderName</div>
-                    </td>
-                    <td class="py-2 px-3 text-[14px] text-right font-mono text-on-surface">@saved.Quantity</td>
-                    <td class="py-2 px-3 text-[14px] text-right font-mono font-bold text-primary">฿@saved.ActionPrice.ToString("N2")</td>
-                    <td class="py-2 px-3 text-center">
-                        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-xs font-bold border @statusBadgeClass shadow-2xs">
-                            <span>@statusText</span>
-                        </span>
-                    </td>
-                    <td class="py-2 px-3 text-center">
-                        @if (Model.IsLocked)
-                        {
-                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold text-slate-400 bg-slate-50 border border-slate-200 cursor-not-allowed" title="ปิดงวดบัญชีและยกยอดไปแล้ว ไม่สามารถคืนค่าย้อนหลังได้">
-                                <svg class="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
-                                </svg>
-                                <span>ปิดยอดแล้ว</span>
-                            </span>
-                        }
-                        else
-                        {
-                            <button type="button" class="btn-revert inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-all cursor-pointer shadow-2xs"
-                                    data-action-id="@saved.ActionId" data-po="@saved.PoNumber" title="คืนค่ากลับเป็นรอดำเนินการ">
-                                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
-                                </svg>
-                                <span>คืนค่า</span>
-                            </button>
-                        }
-                    </td>
-                </tr>
-            }
-        }
-        else
-        {
-            <tr id="empty-saved-state">
-                <td colspan="9" class="py-12 text-center text-xs text-on-surface-variant">
-                    <div class="flex flex-col items-center gap-2">
-                        <svg class="w-10 h-10 text-outline opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+        <!-- Panel header with tabs -->
+        <div class="px-4 pt-3 border-b border-slate-100 bg-slate-50/60 shrink-0">
+            <div class="flex items-center justify-between mb-2">
+                <!-- Tabs -->
+                <div class="flex gap-2">
+                    <button id="tab-pending" onclick="switchTab('pending')"
+                            class="flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold border transition-all"
+                            style="background:#fffbeb;border-color:#fcd34d;color:#92400e;">
+                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
                         </svg>
-                        <span class="font-bold text-on-surface text-sm">ยังไม่มีประวัติการบันทึกในเดือนนี้</span>
-                        <span>เมื่อคุณทำการบันทึกสถานะรายการในแท็บ "รอดำเนินการ" รายการจะย้ายมาเก็บที่ประวัตินี้</span>
-                    </div>
-                </td>
-            </tr>
-        }
-        <!-- Row displayed when search in saved yields zero results -->
-        <tr id="no-saved-search-results" class="hidden">
-            <td colspan="8" class="py-10 text-center text-xs text-on-surface-variant bg-surface-container-low/40">
-                <div class="flex flex-col items-center gap-1.5">
-                    <svg class="w-8 h-8 text-outline opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/>
-                    </svg>
-                    <span class="font-semibold text-on-surface">ไม่พบรายการในประวัติที่ค้นหา</span>
-                    <span class="text-[11px]">ลองตรวจสอบตัวสะกด หรือใช้คำอื่นในการค้นหา</span>
+                        รอดำเนินการ
+                        <span class="px-1.5 rounded-full text-[10px] font-bold" id="tab-pending-count"
+                              style="background:#fbbf24;color:#78350f;">
+                            @Model.PendingOrders.Count
+                        </span>
+                    </button>
+                    <button id="tab-saved" onclick="switchTab('saved')"
+                            class="flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold border transition-all"
+                            style="background:#f8fafc;border-color:#e2e8f0;color:#94a3b8;">
+                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+                        </svg>
+                        บันทึกแล้ว
+                        <span class="px-1.5 rounded-full text-[10px] font-bold" id="tab-saved-count"
+                              style="background:#e2e8f0;color:#475569;">
+                            @Model.SavedOrders.Count
+                        </span>
+                    </button>
                 </div>
-            </td>
-        </tr>
-        </tbody>
-    </table>
-</div>
-</div>
+                <!-- Search (only shown on pending tab) -->
+                <div class="relative" id="search-wrap">
+                    <input type="text" id="search-pending" placeholder="ค้นหา..."
+                           class="pr-3 py-1.5 text-xs border border-slate-200 rounded-md w-40 focus:ring-1 focus:ring-primary focus:border-primary outline-none bg-white">
+                </div>
+            </div>
+        </div>
+
+        <!-- Pending list panel -->
+        <div class="panel-body p-3 space-y-4" id="panel-pending">
+
+            @if (Model.PendingOrders.Any())
+            {
+                foreach (var order in Model.PendingOrders)
+                {
+                    var fwdBadge = "";
+                    if (order.ForwardedStatus == "Deferred")
+                        fwdBadge = $"<span class=\"ml-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-700\">ผ่อนจาก {order.ForwardedFromMonth}</span>";
+                    else if (order.ForwardedStatus == "Skipped")
+                        fwdBadge = $"<span class=\"ml-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-purple-100 text-purple-700\">ค้างจาก {order.ForwardedFromMonth}</span>";
+
+                    <div class="order-card border border-slate-200 rounded p-3 bg-white"
+                         data-order-id="@order.OrderId"
+                         data-po-number="@order.PoNumber"
+                         data-order-name="@order.OrderName"
+                         data-price="@order.TotalPrice"
+                         data-quantity="@order.Quantity"
+                         data-department="@order.Department"
+                         data-delivery="@order.DeliveryTarget"
+                         data-forwarded-status="@order.ForwardedStatus"
+                         data-forwarded-from="@order.ForwardedFromMonth">
+
+                        <div class="flex items-start gap-3">
+                            <!-- Info -->
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center flex-wrap gap-1 mb-0.5">
+                                    <span class="font-bold text-[13px] text-slate-800">@order.PoNumber</span>
+                                    @Html.Raw(fwdBadge)
+                                </div>
+                                
+                                <p class="text-xs text-slate-500 leading-snug line-clamp-2">@order.OrderName</p>
+
+                                @if (order.ForwardedStatus == "Deferred")
+                                {
+                                    <div class="mt-1.5 mb-1.5 text-[11px] font-bold text-amber-600 bg-amber-50/70 border border-amber-100 rounded-md px-2.5 py-1 inline-flex items-center gap-1.5">
+                                        <span>⚠️</span>
+                                        <span>รายการผ่อนสะสม: ตรวจสอบการรับสินค้า</span>
+                                    </div>
+                                }
+
+                                <div class="flex items-center gap-1.5">
+                                    <svg class="w-3 h-3 text-slate-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"/>
+                                    </svg>
+                                    @if (order.DeliveryTarget != "-" && !string.IsNullOrEmpty(order.DeliveryTarget))
+                                    {
+                                        <span class="text-[11px] text-slate-400">เป้าหมายส่งมอบ: <span class="font-medium text-indigo-600">@order.DeliveryTarget</span> </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-[11px] text-red-600 italic">ยังไม่มีแผนผลิตที่จับคู่</span>
+                                    }
+                                </div>
+                            </div>
+                            <!-- Price + Add btn -->
+                            <div class="shrink-0 flex flex-col items-end gap-2">
+                                <span class="font-bold text-sm text-slate-800">฿@order.TotalPrice.ToString("N2")</span>
+                                <button type="button"
+                                        onclick="addToCart(this)"
+                                        class="add-btn px-3 py-1.5 rounded-md text-xs font-bold bg-primary text-white hover:bg-primary/90 active:scale-95 transition-all">
+                                    + เพิ่ม
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="flex flex-col items-center justify-center h-full min-h-[200px] text-slate-300">
+                    <svg class="w-10 h-10 mb-2" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+                    </svg>
+                    <p class="text-sm font-medium text-slate-400">ไม่มีรายการรอดำเนินการ</p>
+                </div>
+            }
+        </div>
+
+        <!-- Saved list panel (hidden by default) -->
+        <div class="panel-body p-3 space-y-4 hidden" id="panel-saved">
+            @if (Model.SavedOrders.Any())
+            {
+                foreach (var saved in Model.SavedOrders)
+                {
+                    var actionBg = saved.Action == "ReceivedFull" ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+                        : saved.Action == "Deferred" ? "bg-amber-50 border-amber-200 text-amber-700"
+                        : "bg-purple-50 border-purple-200 text-purple-700";
+                    var actionLabel = saved.Action == "ReceivedFull" ? "รับสินค้าแล้ว"
+                        : saved.Action == "Deferred" ? "ผ่อน → เดือนหน้า"
+                        : "ไม่ต้องการสินค้า";
+
+                    <div class="border border-slate-200 rounded-lg p-3 bg-white">
+                        <div class="flex items-start justify-between gap-2">
+                            <div class="flex-1 min-w-0">
+                                <div class="font-bold text-[13px] text-slate-800 mb-0.5">@saved.PoNumber</div>
+                                <p class="text-xs text-slate-500 leading-snug line-clamp-2">@saved.OrderName</p>
+                                <div class="flex items-center gap-1.5 mt-1.5">
+                                    <svg class="w-3 h-3 text-slate-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"/>
+                                    </svg>
+                                    <span class="text-[11px] text-slate-400">@(saved.DeliveryTarget != "-" ? saved.DeliveryTarget : "ไม่ระบุ")</span>
+                                </div>
+                            </div>
+                            <div class="shrink-0 flex flex-col items-end gap-1.5">
+                                @if (saved.Action == "ReceivedFull")
+                                {
+                                    <span class="font-bold text-sm text-slate-700">฿@saved.ActionPrice.ToString("N2")</span>
+                                }
+                                else if (saved.Action == "Deferred")
+                                {
+                                    <span class="font-bold text-sm text-amber-600">฿@saved.ActionPrice.ToString("N2")</span>
+                                }
+                                else
+                                {
+                                    <span class="font-bold text-sm text-slate-400">฿0.00</span>
+                                }
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border @actionBg">
+                                    @actionLabel
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="flex flex-col items-center justify-center py-16 text-slate-300">
+                    <svg class="w-10 h-10 mb-2" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+                    </svg>
+                    <p class="text-sm font-medium text-slate-400">ยังไม่มีรายการที่บันทึก</p>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- RIGHT: รายการที่เลือก -->
+    <div class="bg-white border border-blue-200 rounded-md flex flex-col min-h-0 overflow-hidden">
+
+        <!-- Panel header -->
+        <div class="px-4 py-3 border-b border-blue-100 bg-blue-50/60 shrink-0">
+            <span class="font-bold text-blue-800 text-sm">รายการที่เลือก</span>
+            <span class="ml-2 text-xs text-blue-400" id="cart-count-label">0 รายการ</span>
+        </div>
+
+        <!-- Cart list -->
+        <div class="panel-body p-3 space-y-4" id="cart-list">
+            <div id="cart-empty" class="flex flex-col items-center justify-center h-full min-h-[200px] text-slate-300">
+                <p class="text-sm font-medium text-slate-400">ยังไม่ได้เลือกรายการ</p>
+                <p class="text-xs text-slate-300 mt-1">กด <span class="font-bold">+ เพิ่ม</span> จากรายการซ้าย</p>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="shrink-0 border-t border-slate-200 bg-slate-50 px-4 py-3" id="cart-footer">
+            <!-- Breakdown -->
+            <div class="flex flex-col gap-2 mb-3">
+                <!-- Received Full -->
+                <div class="flex items-center justify-between text-xs" id="breakdown-received" style="display:none;">
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                        <span class="text-slate-600">รับสินค้าชำระเต็ม</span>
+                    </div>
+                    <span class="font-bold text-emerald-700" id="total-received">฿0.00</span>
+                </div>
+                <!-- Deferred -->
+                <div class="flex items-center justify-between text-xs" id="breakdown-deferred" style="display:none;">
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                        <span class="text-slate-600">ผ่อนชำระ → เดือนหน้า</span>
+                    </div>
+                    <span class="font-bold text-amber-700" id="total-deferred">฿0.00</span>
+                </div>
+            </div>
+
+            <!-- Total + Save Button -->
+            <div class="flex items-center justify-between gap-3 pt-3 border-t border-slate-200">
+                <div>
+                    <div class="text-[10px] font-bold text-slate-500 uppercase tracking-wide">ยอดรวมทั้งหมด</div>
+                    <div class="text-lg font-black text-slate-800" id="cart-total">฿0.00</div>
+                </div>
+                <button type="button" id="save-btn" disabled
+                        class="px-5 py-2.5 rounded-lg font-bold text-sm text-white bg-primary hover:bg-primary/90 disabled:bg-slate-300 disabled:cursor-not-allowed active:scale-95 transition-all">
+                    บันทึกทั้งหมด
+                </button>
+            </div>
+        </div>
+    </div>
+
+</div><!-- /split screen -->
 </div>
 
 @section Scripts {
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // State: orderId -> { po, name, qty, price, status }
-            const selectedItems = new Map();
-            const selectedSavedActions = new Set();
-            let currentTab = 'pending';
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" type="text/javascript"></script>
+    <script type="text/javascript">
+        // ─── Tab switching ────────────────────────────────────────────────────────────
+        function switchTab(tab) {
+            const pendingPanel = document.getElementById('panel-pending');
+            const savedPanel = document.getElementById('panel-saved');
+            const searchWrap = document.getElementById('search-wrap');
+            const btnPending = document.getElementById('tab-pending');
+            const btnSaved = document.getElementById('tab-saved');
+            const badgePending = document.getElementById('tab-pending-count');
+            const badgeSaved = document.getElementById('tab-saved-count');
 
-            // DOM refs
-            const btnSubmit = document.getElementById('btn-submit');
-            const selectAllCheckbox = document.getElementById('select-all-checkbox');
-            const bulkBar = document.getElementById('bulk-action-bar');
-            const bulkSelectedCount = document.getElementById('bulk-selected-count');
-            // const bulkSelectedBadge = document.getElementById('bulk-selected-badge');
-            const bulkClearBtn = document.getElementById('bulk-clear-btn');
+            if (tab === 'pending') {
+                pendingPanel.classList.remove('hidden');
+                savedPanel.classList.add('hidden');
+                searchWrap.classList.remove('hidden');
+                // pending = active (amber)
+                btnPending.style.cssText = 'background:#fffbeb;border-color:#fcd34d;color:#92400e;';
+                btnSaved.style.cssText = 'background:#f8fafc;border-color:#e2e8f0;color:#94a3b8;';
+                badgePending.style.cssText = 'background:#fbbf24;color:#78350f;';
+                badgeSaved.style.cssText = 'background:#e2e8f0;color:#475569;';
+            } else {
+                savedPanel.classList.remove('hidden');
+                pendingPanel.classList.add('hidden');
+                searchWrap.classList.add('hidden');
+                // saved = active (emerald)
+                btnSaved.style.cssText = 'background:#ecfdf5;border-color:#6ee7b7;color:#065f46;';
+                btnPending.style.cssText = 'background:#f8fafc;border-color:#e2e8f0;color:#94a3b8;';
+                badgeSaved.style.cssText = 'background:#34d399;color:#064e3b;';
+                badgePending.style.cssText = 'background:#e2e8f0;color:#475569;';
+            }
+        }
 
-            const savedBulkBar = document.getElementById('saved-bulk-action-bar');
-            const savedBulkSelectedCount = document.getElementById('saved-bulk-selected-count');
-            const savedBulkBadge = document.getElementById('saved-bulk-badge');
-            const savedRevertBtnCount = document.getElementById('saved-revert-btn-count');
-            const savedSelectAllCheckbox = document.getElementById('saved-select-all-checkbox');
+        // ─── State ────────────────────────────────────────────────────────────────────
+        const cart = {}; // orderId → { poNumber, orderName, price, department, delivery, action, actionPrice }
 
-            const formatMoney = (amount) => '฿' + amount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        // ─── Helpers ─────────────────────────────────────────────────────────────────
+        function fmt(n) {
+            return '฿' + Number(n).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
 
-            const rowStatusSelect = (orderId) => document.querySelector(`.row-status-select[data-order-id="${orderId}"]`);
-            const rowCheckbox = (orderId) => document.querySelector(`.select-item[value="${orderId}"]`);
+        function updateSummary() {
+            const ids = Object.keys(cart);
+            const total = ids.reduce((s, id) => s + (cart[id].actionPrice || 0), 0);
 
-            const updateUI = () => {
-                const count = selectedItems.size;
-                if (btnSubmit) btnSubmit.disabled = count === 0;
+            // Calculate breakdown by action type
+            const receivedTotal = ids.filter(id => cart[id].action === 'ReceivedFull')
+                .reduce((s, id) => s + (cart[id].actionPrice || 0), 0);
+            const deferredTotal = ids.filter(id => cart[id].action === 'Deferred')
+                .reduce((s, id) => s + (cart[id].actionPrice || 0), 0);
 
-                const savedCount = selectedSavedActions.size;
+            // Show/hide breakdown rows
+            const receivedRow = document.getElementById('breakdown-received');
+            const deferredRow = document.getElementById('breakdown-deferred');
 
-                if (currentTab === 'pending') {
-                    if (bulkBar) bulkBar.classList.toggle('hidden', count === 0);
-                    if (savedBulkBar) savedBulkBar.classList.add('hidden');
-                } else {
-                    if (bulkBar) bulkBar.classList.add('hidden');
-                    if (savedBulkBar) savedBulkBar.classList.toggle('hidden', savedCount === 0);
-                }
+            if (receivedTotal > 0) {
+                receivedRow.style.display = 'flex';
+                document.getElementById('total-received').textContent = fmt(receivedTotal);
+            } else {
+                receivedRow.style.display = 'none';
+            }
 
-                if (bulkSelectedCount) bulkSelectedCount.textContent = `เลือกแล้ว ${count} รายการ`;
-                // if (bulkSelectedBadge) bulkSelectedBadge.textContent = count;
-                if (savedBulkSelectedCount) savedBulkSelectedCount.textContent = `เลือกแล้ว ${savedCount} รายการ`;
-                if (savedBulkBadge) savedBulkBadge.textContent = savedCount;
-                if (savedRevertBtnCount) savedRevertBtnCount.textContent = savedCount;
+            if (deferredTotal > 0) {
+                deferredRow.style.display = 'flex';
+                document.getElementById('total-deferred').textContent = fmt(deferredTotal);
+            } else {
+                deferredRow.style.display = 'none';
+            }
 
-                // Pending checkboxes indeterminate check
-                const allVisibleCheckboxes = Array.from(document.querySelectorAll('.pending-row'))
-                    .filter(row => row.style.display !== 'none')
-                    .map(row => row.querySelector('.select-item'));
-                const checkedVisible = allVisibleCheckboxes.filter(cb => cb.checked).length;
+            // Update totals (ลบ stat-count ออกเพราะไม่มี element นี้)
+            document.getElementById('cart-count-label').textContent = ids.length + ' รายการ';
+            document.getElementById('cart-total').textContent = fmt(total);
+            document.getElementById('save-btn').disabled = ids.length === 0;
+        }
 
-                if (selectAllCheckbox) {
-                    if (allVisibleCheckboxes.length > 0) {
-                        selectAllCheckbox.checked = checkedVisible === allVisibleCheckboxes.length;
-                        selectAllCheckbox.indeterminate = checkedVisible > 0 && checkedVisible < allVisibleCheckboxes.length;
-                    } else {
-                        selectAllCheckbox.checked = false;
-                        selectAllCheckbox.indeterminate = false;
-                    }
-                }
+        // ─── Add to cart ─────────────────────────────────────────────────────────────
+        function addToCart(btn) {
+            const card = btn.closest('.order-card');
+            const orderId = card.dataset.orderId;
+            if (cart[orderId]) return; // already added
 
-                // Saved checkboxes indeterminate check
-                const allVisibleSavedCheckboxes = Array.from(document.querySelectorAll('.saved-row'))
-                    .filter(row => row.style.display !== 'none')
-                    .map(row => row.querySelector('.select-saved-item'))
-                    .filter(Boolean);
-                const checkedVisibleSaved = allVisibleSavedCheckboxes.filter(cb => cb.checked).length;
-
-                if (savedSelectAllCheckbox) {
-                    if (allVisibleSavedCheckboxes.length > 0) {
-                        savedSelectAllCheckbox.checked = checkedVisibleSaved === allVisibleSavedCheckboxes.length;
-                        savedSelectAllCheckbox.indeterminate = checkedVisibleSaved > 0 && checkedVisibleSaved < allVisibleSavedCheckboxes.length;
-                    } else {
-                        savedSelectAllCheckbox.checked = false;
-                        savedSelectAllCheckbox.indeterminate = false;
-                    }
-                }
+            cart[orderId] = {
+                orderId: orderId,
+                poNumber: card.dataset.poNumber,
+                orderName: card.dataset.orderName,
+                price: parseFloat(card.dataset.price) || 0,
+                quantity: parseInt(card.dataset.quantity) || 1,
+                department: card.dataset.department,
+                delivery: card.dataset.delivery,
+                forwardedStatus: card.dataset.forwardedStatus || '',
+                forwardedFrom: card.dataset.forwardedFrom || '',
+                action: 'ReceivedFull',
+                actionPrice: parseFloat(card.dataset.price) || 0
             };
 
-            const setRowSelected = (checkbox, isSelected) => {
-                const row = checkbox.closest('.pending-row');
-                const orderId = checkbox.value;
-                const statusSelect = rowStatusSelect(orderId);
-                const isForced = statusSelect?.dataset.forcedPayment === 'true';
+            card.classList.add('in-cart');
+            btn.textContent = '✓ เพิ่มแล้ว';
 
-                if (isSelected) {
-                    statusSelect.disabled = false;
-                    const item = {
-                        orderId,
-                        po: row.dataset.po,
-                        name: row.dataset.name,
-                        qty: parseInt(row.dataset.qty),
-                        price: parseFloat(row.dataset.price),
-                        status: statusSelect.value
-                    };
-                    selectedItems.set(orderId, item);
-                    row.classList.add('bg-primary-container/10');
-                } else {
-                    statusSelect.disabled = true;
-                    // Only reset to ReceivedFull for non-forced rows; forced rows stay at ReceivedFull anyway
-                    if (!isForced) statusSelect.value = 'ReceivedFull';
-                    selectedItems.delete(orderId);
-                    row.classList.remove('bg-primary-container/10');
-                }
-            };
+            renderCartItem(orderId);
+            document.getElementById('cart-empty').style.display = 'none';
+            updateSummary();
+        }
 
-            // Individual row checkbox
-            document.querySelectorAll('.select-item').forEach(checkbox => {
-                checkbox.addEventListener('change', function () {
-                    setRowSelected(this, this.checked);
-                    updateUI();
-                });
+        // ─── Render one cart item ─────────────────────────────────────────────────────
+        function renderCartItem(orderId) {
+            const item = cart[orderId];
+            const el = document.createElement('div');
+            el.className = 'cart-item border border-slate-200 rounded-lg bg-white';
+            el.id = 'ci-' + orderId;
+            el.dataset.id = orderId;
+
+            const isDeferredCarryOver = item.forwardedStatus === 'Deferred';
+            const isSkippedCarryOver = item.forwardedStatus === 'Skipped';
+            const isCarryOver = isDeferredCarryOver || isSkippedCarryOver;
+            let receiveLabel = "รับสินค้า";
+            let deferLabel = "ผ่อนชำระ";
+            let deferNoteText = `ยอด <b>${fmt(item.price)}</b> จะถูกนำไปคิดในเดือนถัดไป`;
+
+            if (isDeferredCarryOver) {
+                receiveLabel = "ได้รับสินค้าแล้ว";
+                deferLabel = "ยังไม่ได้รับสินค้า";
+                deferNoteText = `สินค้ายังไม่มาส่ง ยอด <b>${fmt(item.price)}</b> จะถูกเลื่อนไปคิดในเดือนถัดไป`;
+            }
+
+            // Note สำหรับ carry-over: ยอดนี้ไม่นับในเดือนนี้
+            let carryOverNoteHtml = '';
+            if (isDeferredCarryOver) {
+                // Deferred carry-over = สีเหลือง (amber)
+                carryOverNoteHtml = `
+                <div class="mt-2 flex items-center gap-1.5 bg-amber-50 border border-amber-200 rounded-md px-2.5 py-1.5">
+                    <svg class="w-3 h-3 text-amber-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"/>
+                    </svg>
+                    <span class="text-[11px] text-amber-700">ผ่อนจาก <b>${item.forwardedFrom}</b> — ยอดนี้ไม่นับในเดือนปัจจุบัน</span>
+                </div>
+                <div class="mt-1.5 flex items-center gap-1.5 bg-yellow-50 border border-yellow-300 border-dashed rounded-md px-2.5 py-1.5">
+                    <span class="text-[11px]">📝</span>
+                    <span class="text-[11px] text-yellow-700 font-semibold">รอถามพี่เขา</span>
+                </div>`;
+            } else if (isSkippedCarryOver) {
+                // Skipped carry-over = สีม่วง (purple)
+                carryOverNoteHtml = `
+                <div class="mt-2 flex items-center gap-1.5 bg-purple-50 border border-purple-200 rounded-md px-2.5 py-1.5">
+                    <svg class="w-3 h-3 text-purple-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"/>
+                    </svg>
+                    <span class="text-[11px] text-purple-600">ค้างจาก <b>${item.forwardedFrom}</b> — ยอดนี้ไม่นับในเดือนปัจจุบัน</span>
+                </div>`;
+            }
+
+            el.innerHTML = `
+                                                <div class="p-3 pb-2">
+                                                    <div class="flex items-start justify-between gap-2 mb-2">
+                                                        <div class="flex-1 min-w-0">
+                                                            <div class="font-bold text-[13px] text-slate-800">${item.poNumber}</div>
+                                                            <p class="text-xs text-slate-500 leading-snug line-clamp-2 mt-0.5">${item.orderName}</p>
+                                                        </div>
+                                                        <div class="shrink-0 flex flex-col items-end gap-1.5">
+                                                            <span class="font-bold text-sm text-slate-700">${fmt(item.price)}</span>
+                                                            <button type="button"
+                                                                onclick="removeFromCart('${orderId}')"
+                                                                class="remove-btn">
+                                                                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
+                                                                </svg>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                        
+                                                    <!-- Action pills -->
+                                                    <div class="flex flex-wrap gap-1.5" id="pills-${orderId}">
+                                                        <label class="action-pill active-receive" id="pill-receive-${orderId}">
+                                                            <input type="radio" name="act_${orderId}" value="ReceivedFull" checked onchange="setAction('${orderId}','ReceivedFull')">
+                                                            <span>${receiveLabel}</span>
+                                                            <span class="font-bold ml-1">${fmt(item.price)}</span>
+                                                        </label>
+                                                        <label class="action-pill" id="pill-defer-${orderId}">
+                                                            <input type="radio" name="act_${orderId}" value="Deferred" onchange="setAction('${orderId}','Deferred')">
+                                                            <span>${deferLabel}</span>
+                                                            <span class="font-bold ml-1">${fmt(item.price)}</span>
+                                                        </label>
+                                                    </div>
+                                        
+                                                    <!-- Deferred note (hidden by default, no input needed) -->
+                                                    <div class="deferred-note mt-2 items-center gap-2 bg-amber-50 border border-amber-200 rounded-md px-3 py-2" id="defer-wrap-${orderId}">
+                                                        <svg class="w-3.5 h-3.5 text-amber-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+                                                        </svg>
+                                                        <span class="text-[11px] text-amber-700">${deferNoteText}</span>
+                                                    </div>
+                                                    ${carryOverNoteHtml}
+                                                </div>
+                                            `;
+
+            document.getElementById('cart-list').appendChild(el);
+        }
+
+        // ─── Remove from cart ─────────────────────────────────────────────────────────
+        function removeFromCart(orderId) {
+            delete cart[orderId];
+
+            // Remove cart item DOM
+            const ci = document.getElementById('ci-' + orderId);
+            if (ci) ci.remove();
+
+            // Re-enable pending card
+            const card = document.querySelector(`.order-card[data-order-id="${orderId}"]`);
+            if (card) {
+                card.classList.remove('in-cart');
+                const btn = card.querySelector('.add-btn');
+                if (btn) btn.textContent = '+ เพิ่ม';
+            }
+
+            // Show empty state if cart is empty
+            if (Object.keys(cart).length === 0) {
+                document.getElementById('cart-empty').style.display = '';
+            }
+
+            updateSummary();
+        }
+
+        // ─── Set action ───────────────────────────────────────────────────────────────
+        function setAction(orderId, action) {
+            if (!cart[orderId]) return;
+            cart[orderId].action = action;
+
+            const item = cart[orderId];
+
+            // Update pill active classes
+            document.getElementById('pill-receive-' + orderId)?.classList.toggle('active-receive', action === 'ReceivedFull');
+            document.getElementById('pill-defer-' + orderId)?.classList.toggle('active-defer', action === 'Deferred');
+            document.getElementById('pill-skip-' + orderId)?.classList.toggle('active-skip', action === 'Skipped');
+            document.getElementById('pill-receive-' + orderId)?.classList.toggle('action-pill', true);
+            document.getElementById('pill-defer-' + orderId)?.classList.toggle('action-pill', true);
+            document.getElementById('pill-skip-' + orderId)?.classList.toggle('action-pill', true);
+
+            // Deferred note visibility
+            const wrap = document.getElementById('defer-wrap-' + orderId);
+            if (wrap) {
+                wrap.classList.toggle('open', action === 'Deferred');
+            }
+
+            // Update action price
+            if (action === 'ReceivedFull') {
+                cart[orderId].actionPrice = item.price;
+            } else if (action === 'Deferred') {
+                cart[orderId].actionPrice = item.price; // แสดงราคาผ่อนชำระในยอดรวม
+            } else if (action === 'Skipped') {
+                cart[orderId].actionPrice = 0;
+            }
+
+            updateSummary();
+        }
+
+
+        // ─── Search ───────────────────────────────────────────────────────────────────
+        document.getElementById('search-pending').addEventListener('input', function () {
+            const q = this.value.toLowerCase();
+            let visible = 0;
+            document.querySelectorAll('.order-card').forEach(card => {
+                const match = card.dataset.poNumber.toLowerCase().includes(q) ||
+                    card.dataset.orderName.toLowerCase().includes(q);
+                card.style.display = match ? '' : 'none';
+                if (match) visible++;
+            });
+            document.getElementById('tab-pending-count').textContent = visible;
+        });
+
+        // ─── Save ─────────────────────────────────────────────────────────────────────
+        document.getElementById('save-btn').addEventListener('click', async function () {
+            const ids = Object.keys(cart);
+            if (!ids.length) return;
+
+            const total = ids.reduce((s, id) => s + (cart[id].actionPrice || 0), 0);
+
+            const result = await Swal.fire({
+                title: 'ยืนยันการบันทึก',
+                html: `บันทึก <b>${ids.length}</b> รายการ<br><span class="text-slate-500 text-sm">ยอดรวม: ${fmt(total)}</span>`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'บันทึก',
+                cancelButtonText: 'ยกเลิก',
+                confirmButtonColor: '#2563eb',
             });
 
-            // Click anywhere on the pending row to toggle selection
-            document.querySelectorAll('.pending-row').forEach(row => {
-                row.style.cursor = 'pointer';
-                row.addEventListener('click', function (e) {
-                    // Don't trigger if clicking directly on the checkbox, select, or a link
-                    if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'A' || e.target.tagName === 'OPTION') return;
-                    // Don't trigger if the row is filtered out
-                    if (row.style.display === 'none') return;
+            if (!result.isConfirmed) return;
 
-                    const checkbox = row.querySelector('.select-item');
-                    if (!checkbox) return;
-
-                    checkbox.checked = !checkbox.checked;
-                    setRowSelected(checkbox, checkbox.checked);
-                    updateUI();
+            try {
+                // รวบรวม ALL pending order IDs (ทั้งที่อยู่ใน cart และที่ไม่ได้เลือก)
+                const allPendingIds = @Html.Raw(Json.Serialize(Model.PendingOrders.Select(o => o.OrderId)));
+                
+                console.log('=== Frontend Debug ===');
+                console.log('All Pending IDs from Model:', allPendingIds);
+                console.log('Selected IDs from cart:', ids);
+                console.log('======================');
+                
+                const resp = await fetch('/MonthlyCost/SaveActions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        monthYear: '@Html.Raw(Model.MonthYear)',
+                        allPendingOrderIds: allPendingIds, // ส่ง list ทั้งหมด
+                        actions: ids.map(id => ({
+                            orderId: cart[id].orderId,
+                            action: cart[id].action,
+                            price: cart[id].actionPrice
+                        }))
+                    })
                 });
-            });
 
-            // Individual row status dropdown
-            document.querySelectorAll('.row-status-select').forEach(select => {
-                select.addEventListener('change', function () {
-                    const item = selectedItems.get(this.dataset.orderId);
-                    if (item) item.status = this.value;
-                });
-            });
-
-            // Select-all (only affects currently visible/filtered rows)
-            selectAllCheckbox.addEventListener('change', function () {
-                const visibleCheckboxes = Array.from(document.querySelectorAll('.pending-row'))
-                    .filter(row => row.style.display !== 'none')
-                    .map(row => row.querySelector('.select-item'));
-
-                visibleCheckboxes.forEach(cb => {
-                    cb.checked = this.checked;
-                    setRowSelected(cb, this.checked);
-                });
-                updateUI();
-            });
-
-
-            // Bulk clear selection
-            bulkClearBtn.addEventListener('click', () => {
-                selectedItems.forEach((_, orderId) => {
-                    const cb = rowCheckbox(orderId);
-                    if (cb) {
-                        cb.checked = false;
-                        setRowSelected(cb, false);
-                    }
-                });
-                updateUI();
-            });
-
-            // Submit
-            btnSubmit.addEventListener('click', async () => {
-                if (selectedItems.size === 0) return;
-
-                const actions = Array.from(selectedItems.values()).map(item => ({
-                    orderId: item.orderId,
-                    action: item.status,
-                    price: item.price
-                }));
-
-                try {
-                    const response = await fetch('/MonthlyCost/SaveActions', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            monthYear: '@Model.MonthYear',
-                            actions: actions
-                        })
-                    });
-
-                    if (!response.ok) throw new Error('Save failed');
-
-                    await Swal.fire({
-                        icon: 'success',
-                        title: 'บันทึกสำเร็จ',
-                        text: `บันทึก ${actions.length} รายการเรียบร้อย`,
-                        confirmButtonColor: '#00288e'
-                    });
-
+                const data = await resp.json();
+                if (data.success) {
+                    await Swal.fire({ title: 'บันทึกสำเร็จ', icon: 'success', timer: 1500, showConfirmButton: false });
                     location.reload();
-                } catch (error) {
-                    console.error('Save error:', error);
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'เกิดข้อผิดพลาด',
-                        text: 'ไม่สามารถบันทึกข้อมูลได้',
-                        confirmButtonColor: '#00288e'
-                    });
-                }
-            });
-
-            // ---- Search (Pending) ----
-            const searchInput = document.getElementById('pending-search-input');
-            const searchClear = document.getElementById('pending-search-clear');
-            const noSearchResults = document.getElementById('no-search-results');
-            const pendingCountDisplay = document.getElementById('pending-count-display');
-            const allPendingRows = Array.from(document.querySelectorAll('.pending-row'));
-            const totalPendingCount = allPendingRows.length;
-
-            function applyFilters() {
-                const query = searchInput.value.trim().toLowerCase();
-                let visibleCount = 0;
-
-                searchClear.classList.toggle('hidden', query.length === 0);
-
-                allPendingRows.forEach(row => {
-                    const po = (row.dataset.po || '').toLowerCase();
-                    const name = (row.dataset.name || '').toLowerCase();
-
-                    const matches = query.length === 0 || po.includes(query) || name.includes(query);
-
-                    row.style.display = matches ? '' : 'none';
-                    if (matches) visibleCount++;
-                });
-
-                const hasActiveFilter = query.length > 0;
-                noSearchResults.classList.toggle('hidden', !(visibleCount === 0 && totalPendingCount > 0 && hasActiveFilter));
-
-                pendingCountDisplay.textContent = hasActiveFilter
-                    ? `${visibleCount}/${totalPendingCount}`
-                    : `${totalPendingCount}`;
-
-                updateUI();
-            }
-
-            searchInput.addEventListener('input', applyFilters);
-            searchClear.addEventListener('click', () => {
-                searchInput.value = '';
-                searchInput.focus();
-                applyFilters();
-            });
-
-            // ---- Scroll-to-top floating button ----
-            const scrollContainer = document.getElementById('pending-scroll-container');
-            const scrollTopBtn = document.getElementById('pending-scroll-top-btn');
-
-            scrollContainer.addEventListener('scroll', () => {
-                const show = scrollContainer.scrollTop > 120;
-                scrollTopBtn.classList.toggle('opacity-0', !show);
-                scrollTopBtn.classList.toggle('pointer-events-none', !show);
-                scrollTopBtn.classList.toggle('opacity-100', show);
-                scrollTopBtn.classList.toggle('pointer-events-auto', show);
-            });
-
-            scrollTopBtn.addEventListener('click', () => {
-                scrollContainer.scrollTo({ top: 0, behavior: 'smooth' });
-            });
-
-            // ---- Tab Switching (Swiss Sliding Indicator) ----
-            const tabPendingBtn = document.getElementById('tab-pending-btn');
-            const tabSavedBtn = document.getElementById('tab-saved-btn');
-            const tabIndicator = document.getElementById('tab-indicator');
-            const savedCountBadge = document.getElementById('saved-count-badge');
-            const pendingSearchContainer = document.getElementById('pending-search-container');
-            const savedSearchContainer = document.getElementById('saved-search-container');
-            const pendingSections = document.querySelectorAll('.tab-pending-section');
-            const savedSections = document.querySelectorAll('.tab-saved-section');
-
-            const activeTextClass = 'group relative z-10 px-5 py-3 text-sm font-bold uppercase tracking-wide text-primary transition-colors duration-200 cursor-pointer inline-flex items-center leading-none';
-            const inactiveTextClass = 'group relative z-10 px-5 py-3 text-sm font-bold uppercase tracking-wide text-slate-400 hover:text-slate-600 transition-colors duration-200 cursor-pointer inline-flex items-center leading-none';
-            const activeBadgeClass = 'ml-2 inline-flex items-center justify-center min-w-[22px] h-[22px] px-1.5 rounded-full text-xs font-bold font-mono bg-primary text-white transition-colors duration-200';
-            const inactiveBadgeClass = 'ml-2 inline-flex items-center justify-center min-w-[22px] h-[22px] px-1.5 rounded-full text-xs font-bold font-mono bg-slate-200 text-slate-600 transition-colors duration-200';
-
-            function moveIndicatorTo(btn) {
-                if (!btn || !tabIndicator) return;
-                tabIndicator.style.width = btn.offsetWidth + 'px';
-                tabIndicator.style.transform = `translateX(${btn.offsetLeft}px)`;
-            }
-
-            function switchTab(tab) {
-                currentTab = tab;
-                const activeBtn = tab === 'pending' ? tabPendingBtn : tabSavedBtn;
-
-                tabPendingBtn.className = tab === 'pending' ? activeTextClass : inactiveTextClass;
-                tabSavedBtn.className = tab === 'saved' ? activeTextClass : inactiveTextClass;
-                pendingCountDisplay.className = tab === 'pending' ? activeBadgeClass : inactiveBadgeClass;
-                savedCountBadge.className = tab === 'saved' ? activeBadgeClass : inactiveBadgeClass;
-
-                moveIndicatorTo(activeBtn);
-
-                if (tab === 'pending') {
-                    pendingSearchContainer.classList.remove('hidden');
-                    savedSearchContainer.classList.add('hidden');
-                    pendingSections.forEach(s => s.classList.remove('hidden'));
-                    savedSections.forEach(s => s.classList.add('hidden'));
                 } else {
-                    savedSearchContainer.classList.remove('hidden');
-                    pendingSearchContainer.classList.add('hidden');
-                    pendingSections.forEach(s => s.classList.add('hidden'));
-                    savedSections.forEach(s => s.classList.remove('hidden'));
-                    if (bulkBar) bulkBar.classList.add('hidden');
+                    await Swal.fire('เกิดข้อผิดพลาด', data.error || 'ไม่สามารถบันทึกได้', 'error');
                 }
-                updateUI();
+            } catch (e) {
+                await Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์', 'error');
             }
-
-            if (tabPendingBtn && tabSavedBtn) {
-                tabPendingBtn.addEventListener('click', () => switchTab('pending'));
-                tabSavedBtn.addEventListener('click', () => switchTab('saved'));
-                // จัดตำแหน่ง indicator ครั้งแรกหลัง DOM วาดเสร็จ
-                requestAnimationFrame(() => moveIndicatorTo(tabPendingBtn));
-                window.addEventListener('resize', () => {
-                    moveIndicatorTo(currentTab === 'pending' ? tabPendingBtn : tabSavedBtn);
-                });
-            }
-
-            // ---- Saved Search Logic ----
-            const savedSearchInput = document.getElementById('saved-search-input');
-            const savedSearchClear = document.getElementById('saved-search-clear');
-            const noSavedSearchResults = document.getElementById('no-saved-search-results');
-            const allSavedRows = Array.from(document.querySelectorAll('.saved-row'));
-            const totalSavedCount = allSavedRows.length;
-
-            function applySavedFilters() {
-                const query = savedSearchInput.value.trim().toLowerCase();
-                let visibleCount = 0;
-
-                if (savedSearchClear) savedSearchClear.classList.toggle('hidden', query.length === 0);
-
-                allSavedRows.forEach(row => {
-                    const po = (row.dataset.po || '').toLowerCase();
-                    const name = (row.dataset.name || '').toLowerCase();
-
-                    const matches = query.length === 0 || po.includes(query) || name.includes(query);
-
-                    row.style.display = matches ? '' : 'none';
-                    if (matches) visibleCount++;
-                });
-
-                const hasActiveFilter = query.length > 0;
-                if (noSavedSearchResults) noSavedSearchResults.classList.toggle('hidden', !(visibleCount === 0 && totalSavedCount > 0 && hasActiveFilter));
-
-                if (savedCountBadge) {
-                    savedCountBadge.textContent = hasActiveFilter
-                        ? `${visibleCount}/${totalSavedCount}`
-                        : `${totalSavedCount}`;
-                }
-                updateUI();
-            }
-
-            if (savedSearchInput) {
-                savedSearchInput.addEventListener('input', applySavedFilters);
-                if (savedSearchClear) {
-                    savedSearchClear.addEventListener('click', () => {
-                        savedSearchInput.value = '';
-                        savedSearchInput.focus();
-                        applySavedFilters();
-                    });
-                }
-            }
-
-            // ---- Saved History Checkboxes & Bulk Revert ----
-            document.querySelectorAll('.select-saved-item').forEach(checkbox => {
-                checkbox.addEventListener('change', function () {
-                    const row = this.closest('.saved-row');
-                    if (this.checked) {
-                        selectedSavedActions.add(this.value);
-                        row?.classList.add('bg-rose-50/60');
-                    } else {
-                        selectedSavedActions.delete(this.value);
-                        row?.classList.remove('bg-rose-50/60');
-                    }
-                    updateUI();
-                });
-            });
-
-            if (savedSelectAllCheckbox) {
-                savedSelectAllCheckbox.addEventListener('change', function () {
-                    const visibleSavedCheckboxes = Array.from(document.querySelectorAll('.saved-row'))
-                        .filter(row => row.style.display !== 'none')
-                        .map(row => row.querySelector('.select-saved-item'))
-                        .filter(Boolean);
-
-                    visibleSavedCheckboxes.forEach(cb => {
-                        cb.checked = this.checked;
-                        const row = cb.closest('.saved-row');
-                        if (this.checked) {
-                            selectedSavedActions.add(cb.value);
-                            row?.classList.add('bg-rose-50/60');
-                        } else {
-                            selectedSavedActions.delete(cb.value);
-                            row?.classList.remove('bg-rose-50/60');
-                        }
-                    });
-                    updateUI();
-                });
-            }
-
-            const savedBulkClearBtn = document.getElementById('saved-bulk-clear-btn');
-            if (savedBulkClearBtn) {
-                savedBulkClearBtn.addEventListener('click', () => {
-                    selectedSavedActions.forEach(actionId => {
-                        const cb = document.querySelector(`.select-saved-item[value="${actionId}"]`);
-                        if (cb) {
-                            cb.checked = false;
-                            cb.closest('.saved-row')?.classList.remove('bg-rose-50/60');
-                        }
-                    });
-                    selectedSavedActions.clear();
-                    updateUI();
-                });
-            }
-
-            const savedBulkRevertBtn = document.getElementById('saved-bulk-revert-btn');
-            if (savedBulkRevertBtn) {
-                savedBulkRevertBtn.addEventListener('click', async () => {
-                    if (selectedSavedActions.size === 0) return;
-
-                    const res = await Swal.fire({
-                        icon: 'warning',
-                        title: 'ยืนยันคืนค่าที่เลือก?',
-                        html: `
-                                                            <div style="text-align:center; line-height:1.5;">
-                                                                ต้องการคืนค่าประวัติที่เลือก <b>${selectedSavedActions.size}</b> รายการ
-                                                                <br>
-                                                                กลับไปที่ <strong>"รอดำเนินการ"</strong> ใช่หรือไม่?
-                                                            </div>
-                                                            `, showCancelButton: true,
-                        confirmButtonColor: '#e11d48',
-                        cancelButtonColor: '#64748b',
-                        confirmButtonText: 'ใช่, คืนค่าทันที',
-                        cancelButtonText: 'ยกเลิก'
-                    });
-
-                    if (!res.isConfirmed) return;
-
-                    try {
-                        const response = await fetch('/MonthlyCost/BulkRevertAction', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ actionIds: Array.from(selectedSavedActions) })
-                        });
-
-                        const result = await response.json();
-                        if (result.success) {
-                            await Swal.fire({
-                                icon: 'success',
-                                title: 'คืนค่าสำเร็จ',
-                                text: `คืนค่า ${selectedSavedActions.size} รายการกลับเป็นรอดำเนินการเรียบร้อยแล้ว`,
-                                confirmButtonColor: '#00288e',
-                                timer: 1400,
-                                showConfirmButton: false
-                            });
-                            location.reload();
-                        } else {
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'เกิดข้อผิดพลาด',
-                                text: result.error || 'ไม่สามารถคืนค่ารายการได้',
-                                confirmButtonColor: '#00288e'
-                            });
-                        }
-                    } catch (error) {
-                        console.error('Bulk revert error:', error);
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'เกิดข้อผิดพลาด',
-                            text: 'ไม่สามารถเชื่อมต่อระบบได้: ' + error.message,
-                            confirmButtonColor: '#00288e'
-                        });
-                    }
-                });
-            }
-
-            // ---- Revert Action Handling (Single row button) ----
-            document.querySelectorAll('.btn-revert').forEach(btn => {
-                btn.addEventListener('click', async (e) => {
-                    const actionId = btn.dataset.actionId;
-                    const po = btn.dataset.po || 'รายการนี้';
-
-                    const res = await Swal.fire({
-                        icon: 'warning',
-                        title: `คืนค่ารายการ "${po}"?`,
-                        text: 'รายการนี้จะถูกย้ายกลับไปที่แท็บ "รอดำเนินการ"',
-                        showCancelButton: true,
-                        confirmButtonColor: '#e11d48',
-                        cancelButtonColor: '#64748b',
-                        confirmButtonText: 'ใช่, คืนค่าทันที',
-                        cancelButtonText: 'ยกเลิก'
-                    });
-
-                    if (!res.isConfirmed) return;
-
-                    btn.disabled = true;
-                    btn.classList.add('opacity-50');
-
-                    try {
-                        const response = await fetch('/MonthlyCost/RevertAction', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({ actionId: actionId })
-                        });
-
-                        const result = await response.json();
-                        if (result.success) {
-                            await Swal.fire({
-                                icon: 'success',
-                                title: 'คืนค่าสำเร็จ',
-                                text: `คืนค่ารายการ "${po}" กลับเป็นรอดำเนินการแล้ว`,
-                                confirmButtonColor: '#00288e',
-                                timer: 1200,
-                                showConfirmButton: false
-                            });
-                            window.location.reload();
-                        } else {
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'เกิดข้อผิดพลาด',
-                                text: result.error || 'เกิดข้อผิดพลาดในการคืนค่ารายการ',
-                                confirmButtonColor: '#00288e'
-                            });
-                            btn.disabled = false;
-                            btn.classList.remove('opacity-50');
-                        }
-                    } catch (error) {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'เกิดข้อผิดพลาด',
-                            text: 'ไม่สามารถเชื่อมต่อระบบได้: ' + error.message,
-                            confirmButtonColor: '#00288e'
-                        });
-                        btn.disabled = false;
-                        btn.classList.remove('opacity-50');
-                    }
-                });
-            });
-
-            // Initial state
-            updateUI();
         });
     </script>
 }

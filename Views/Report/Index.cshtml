@@ -1,256 +1,300 @@
-@model List<CostFlow.Models.ReportSummaryViewModel>
+@model List<dynamic>
 @{
-    ViewData["Title"] = "รายงานการติดตามแผนผลิต";
-    ViewData["HeaderTitle"] = "รายงานการติดตามแผนผลิต";
+    ViewData["Title"] = "รายงานการติดตามแผนผลิตรายเดือน";
+    ViewData["HeaderTitle"] = "รายงานการติดตามแผนผลิตรายเดือน";
 
-    var culture = new System.Globalization.CultureInfo("th-TH");
-    var grouped = (Model ?? new List<CostFlow.Models.ReportSummaryViewModel>())
-        .OrderByDescending(r => r.CreatedAt)
-        .GroupBy(r => new { r.CreatedAt.Year, r.CreatedAt.Month })
-        .Select(g => new {
-            Label = g.Key.Month.ToString() == "" ? "" : new DateTime(g.Key.Year, g.Key.Month, 1).ToString("MMMM yyyy", culture),
-            Items = g.ToList()
-        })
-        .ToList();
+    var selectedYear = (int)ViewData["SelectedYear"]!;
+    var currentYear = (int)ViewData["CurrentYear"]!;
+    var availableYears = (List<int>)ViewData["AvailableYears"]!;
 }
 
 <div class="flex-1 p-md md:p-lg lg:p-xl flex flex-col gap-lg max-w-container-max mx-auto w-full">
+
+    <!-- Page Header -->
     <div class="flex justify-between items-end mb-xs">
         <div>
-            <h3 class="font-headline-sm text-headline-sm text-on-surface mb-xs">ภาพรวมข้อมูลการสั่งผลิต</h3>
-            <p class="text-secondary text-sm">รวมประวัติการอัปโหลดใบสั่งผลิตทั้งหมดในระบบ</p>
+            <h3 class="font-headline-sm text-headline-sm text-on-surface mb-xs">รายงานการสั่งผลิตรายเดือน</h3>
+            <p class="text-secondary text-sm">ภาพรวมใบสั่งผลิตแยกตามเดือน (กรองตาม "วันที่อนุมัติขอสั่งผลิต")</p>
         </div>
-        <a href="@Url.Action("Index", "FileMerge")" class="bg-primary hover:bg-primary/95 text-on-primary px-md py-2 rounded text-xs font-bold shadow-sm transition-colors flex items-center gap-sm">
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-            </svg>
-            นำเข้าไฟล์สั่งผลิตใหม่
-        </a>
-    </div>
+        <div class="flex gap-sm items-center">
+            <!-- Year Filter Custom Dropdown -->
+            <div class="relative" id="year-dropdown-wrapper">
+                <!-- Year Dropdown Button -->
+                <button id="year-dropdown-btn"
+                        class="h-10 flex items-center gap-2 px-4 bg-white border border-outline-variant
+               rounded-lg text-sm font-semibold text-slate-700
+               hover:border-primary hover:text-primary
+               transition-all duration-200 shadow-sm
+               min-w-[160px] justify-between">
+                    <div class="flex items-center gap-2">
+                        <svg class="w-4 h-4 text-slate-400"
+                             fill="none"
+                             viewBox="0 0 24 24"
+                             stroke="currentColor"
+                             stroke-width="1.5">
+                            <path stroke-linecap="round"
+                                  stroke-linejoin="round"
+                                  d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"/>
+                        </svg>
 
-    @if (Model == null || !Model.Any())
-    {
-        <div class="bg-white rounded border border-outline-variant shadow-sm p-xl flex flex-col items-center justify-center text-center min-h-[300px]">
-            <div class="w-16 h-16 bg-slate-50 border border-outline-variant rounded-full flex items-center justify-center mb-md">
-                <svg class="w-8 h-8 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
+                        <span id="year-dropdown-label" class="whitespace-nowrap">
+                            ปี @(selectedYear + 543) (@selectedYear)
+                        </span>
+                    </div>
+
+                    <svg id="year-chevron"
+                         class="w-4 h-4 text-slate-400 transition-transform duration-200"
+                         fill="none"
+                         viewBox="0 0 24 24"
+                         stroke="currentColor"
+                         stroke-width="2">
+                        <path stroke-linecap="round"
+                              stroke-linejoin="round"
+                              d="m19.5 8.25-7.5 7.5-7.5-7.5"/>
+                    </svg>
+                </button>
+
+                <!-- Dropdown Panel -->
+                <div id="year-dropdown-panel"
+                     class="absolute right-0 mt-1.5 w-full bg-white border border-slate-200 rounded-lg shadow-lg z-50 overflow-hidden
+                            opacity-0 scale-95 pointer-events-none
+                            transition-all duration-200 origin-top">
+                    @foreach (var yr in availableYears)
+                    {
+                        <button type="button"
+                                data-year="@yr"
+                                class="year-option w-full flex items-center justify-between px-4 py-2.5 text-sm hover:bg-primary/5 transition-colors duration-150
+                                       @(yr == selectedYear ? "font-bold text-primary bg-primary/5" : "font-medium text-slate-700")">
+                            <span>ปี @(yr + 543)</span>
+                            <span class="text-xs text-slate-400">(@yr)</span>
+                        </button>
+                    }
+                </div>
             </div>
-            <h4 class="font-headline-sm text-headline-sm text-on-surface mb-xs">ยังไม่มีประวัติการนำเข้า</h4>
-            <p class="text-secondary text-sm mb-lg max-w-md">เริ่มต้นโดยอัปโหลดไฟล์สั่งผลิตเข้าระบบ เพื่อติดตามความคืบหน้า</p>
-            <a href="@Url.Action("Index", "FileMerge")" class="bg-primary hover:bg-primary/95 text-on-primary px-lg py-2.5 rounded text-sm font-bold shadow-sm transition-colors">
-                เริ่มนำเข้าไฟล์
+
+            <!-- Import Button -->
+            <a href="@Url.Action("Index", "FileMerge")"
+               class="h-10 flex items-center justify-center gap-2 px-4
+          bg-primary hover:bg-primary/95 text-on-primary
+          rounded-lg text-sm font-bold shadow-sm
+          transition-colors whitespace-nowrap">
+                <svg class="w-4 h-4 shrink-0"
+                     fill="none"
+                     viewBox="0 0 24 24"
+                     stroke="currentColor"
+                     stroke-width="2">
+                    <path stroke-linecap="round"
+                          stroke-linejoin="round"
+                          d="M12 4v16m8-8H4"/>
+                </svg>
+
+                นำเข้าไฟล์สั่งผลิตใหม่
             </a>
         </div>
-    }
-    else
-    {
-        <!-- Toolbar: search + sort + filter -->
-        <div class="bg-white rounded border border-outline-variant shadow-sm p-md flex flex-col md:flex-row gap-sm md:items-center md:justify-between">
-            <div class="relative flex-1 max-w-sm">
-                <input id="report-search" type="text" placeholder="ค้นหาชื่อไฟล์..." class="w-full pl-3 pr-3 py-2 border border-outline-variant rounded text-sm focus:ring-1 focus:ring-primary focus:border-primary outline-none" />
-            </div>
-            <div class="flex gap-sm">
-                <select id="filter-month" class="px-3 py-2 border border-outline-variant rounded text-xs font-semibold text-slate-600 outline-none">
-                    <option value="">ทุกเดือน</option>
-                    @foreach (var g in grouped)
-                    {
-                        <option value="@g.Label">@g.Label</option>
-                    }
-                </select>
-                <select id="sort-order" class="px-3 py-2 border border-outline-variant rounded text-xs font-semibold text-slate-600 outline-none">
-                    <option value="newest">ล่าสุดก่อน</option>
-                    <option value="oldest">เก่าสุดก่อน</option>
-                    <option value="name">ชื่อไฟล์ (A-Z)</option>
-                    <option value="pending">ค้างแผนผลิตมากสุด</option>
-                </select>
-            </div>
-        </div>
+    </div>
 
-        <div id="report-groups" class="flex flex-col gap-lg">
-            @foreach (var group in grouped)
-            {
-                <div class="report-month-group" data-month="@group.Label">
-                    <div class="flex items-center gap-sm mb-sm">
-                        <h4 class="text-sm font-bold text-slate-700">@group.Label</h4>
-                        <span class="text-[11px] text-secondary bg-slate-100 px-2 py-0.5 rounded">@group.Items.Count ไฟล์</span>
-                        <div class="flex-1 h-px bg-slate-100"></div>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-md">
-                        @foreach (var report in group.Items)
-                        {
-                            double accuracy = report.TotalRows > 0 ? Math.Round((double)report.MatchedRows / report.TotalRows * 100, 1) : 0;
-                            int pendingCount = report.TotalRows - report.MatchedRows;
+    <!-- Monthly Cards Grid (12 เดือน - 4 columns responsive) -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-lg">
+        @foreach (var card in Model)
+        {
+            var month = (int)card.Month;
+            var year = (int)card.Year;
+            var totalOrders = (int)card.TotalOrders;
+            var totalAmount = (decimal)card.TotalAmount;
+            var statusCode = (string)card.StatusCode;
+            var statusLabel = (string)card.StatusLabel;
+            var monthDisplay = (string)card.MonthYearDisplay;
 
-                            <div class="report-card bg-white rounded-lg border border-slate-200 shadow-sm hover:shadow-md hover:border-primary/30 hover:-translate-y-1 transition-all duration-300 group flex flex-col cursor-pointer fade-in-up"
-                                 data-name="@report.ReportName.ToLower()"
-                                 data-timestamp="@report.CreatedAt.Ticks"
-                                 data-pending="@pendingCount"
-                                 onclick="if(!event.target.closest('button')) window.location.href='@Url.Action("Details", new { fileName = report.ReportName })'">
-                                <div class="p-md flex-1 flex flex-col justify-between">
-                                    <div>
-                                        <div class="flex justify-between items-start mb-sm">
-                                            <div class="flex items-center gap-sm">
-                                                <div class="overflow-hidden">
-                                                    <h4 class="font-bold text-slate-800 text-sm truncate max-w-[240px] group-hover:text-primary transition-colors duration-300" title="@report.ReportName">@report.ReportName</h4>
-                                                    <span class="text-[10px] text-secondary block mt-0.5">นำเข้าเมื่อ @report.CreatedAt.ToString("dd/MM/yyyy HH:mm")</span>
-                                                </div>
-                                            </div>
-                                            <button class="text-slate-400 hover:text-red-500 transition-colors p-1.5 rounded-full hover:bg-red-50 z-10" onclick="deleteReport('@report.ReportName'); event.stopPropagation();" title="ลบข้อมูลชุดนี้">
-                                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                </svg>
-                                            </button>
-                                        </div>
+            var isEmpty = statusCode == "empty";
+            var isActive = statusCode == "active";
+            var isCompleted = statusCode == "completed";
 
-                                        <div class="mb-sm">
-                                            <div class="mb-1 flex justify-between text-xs font-bold">
-                                                <span class="text-slate-500">ความสำเร็จการได้แผนผลิต</span>
-                                                <span class="@(accuracy == 100 ? "text-emerald-600 font-bold" : "text-primary font-bold")">@accuracy%</span>
-                                            </div>
-                                            <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden border border-slate-100">
-                                                <div class="h-1.5 rounded-full @(accuracy == 100 ? "bg-emerald-500" : "bg-primary") transition-all duration-500" style="width: @accuracy%"></div>
-                                            </div>
-                                        </div>
-                                    </div>
+            var cardBg = isEmpty ? "bg-gradient-to-br from-slate-50 to-slate-100 border-slate-200" : "bg-white border-slate-200 hover:border-primary/60 hover:shadow-xl hover:shadow-primary/10 hover:scale-[1.02] hover:-translate-y-1";
+            var statusBg = isEmpty ? "bg-slate-200/50 text-slate-500 border-slate-300"
+                : isActive ? "bg-emerald-100 text-emerald-700 border-emerald-300"
+                : "bg-blue-100 text-blue-700 border-blue-300";
 
-                                    <div class="grid grid-cols-2 gap-sm text-center">
-                                        <div class="bg-slate-50/80 p-sm rounded-lg border border-slate-200 flex flex-col justify-center">
-                                            <div class="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-0.5">รายการทั้งหมด</div>
-                                            <div class="text-lg font-black text-slate-700 leading-tight">@report.TotalRows</div>
-                                        </div>
-                                        <div class="@(pendingCount > 0 ? "bg-amber-50/70 border-amber-200" : "bg-slate-50/80 border-slate-200") p-sm rounded-lg border flex flex-col justify-center relative">
-                                            @if (pendingCount > 0)
-                                            {
-                                                <span class="absolute top-1.5 right-1.5 flex h-1.5 w-1.5">
-                                                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                                                    <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-amber-500"></span>
-                                                </span>
-                                            }
-                                            <div class="@(pendingCount > 0 ? "text-amber-500 font-bold" : "text-slate-400") text-[10px] uppercase font-bold tracking-wider mb-0.5">รอแผนผลิต</div>
-                                            <div class="text-lg font-black @(pendingCount > 0 ? "text-amber-700" : "text-slate-700") leading-tight">@pendingCount</div>
-                                        </div>
-                                    </div>
-                                </div>
+            <a href="@(isEmpty ? "javascript:void(0)" : Url.Action("Details", new { month = month, year = year }))"
+               class="group @cardBg rounded border shadow-sm transition-all duration-300 ease-out flex flex-col justify-between p-md min-h-[180px] animate-card-fade-in @(isEmpty ? "cursor-default" : "cursor-pointer")">
+
+                <div>
+                    <!-- Header -->
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="overflow-hidden flex-1">
+                            <div class="flex items-center gap-2 mb-1">
+                                <h4 class="font-bold @(isEmpty ? "text-slate-400" : "text-slate-800 group-hover:text-primary") text-base transition-colors duration-300">
+                                    @monthDisplay
+                                </h4>
                             </div>
-                        }
+                        </div>
                     </div>
+
+                    @if (!isEmpty)
+                    {
+                        <!-- Stats -->
+                        <div class="space-y-2.5">
+                            <div class="flex justify-between items-baseline">
+                                <span class="text-xs text-slate-500 font-semibold">จำนวนใบสั่งผลิต</span>
+                                <span class="text-xl font-black text-slate-800 font-mono group-hover:text-primary transition-colors duration-300">@totalOrders</span>
+                            </div>
+                            <div class="flex justify-between items-baseline">
+                                <span class="text-xs text-slate-500 font-semibold">มูลค่ารวม</span>
+                                <span class="text-base font-bold text-primary font-mono group-hover:scale-105 transition-transform duration-300">@totalAmount.ToString("N2") ฿</span>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <!-- Empty State -->
+                        <div class="mt-4 min-h-[100px]
+            flex flex-col items-center justify-center
+            pt-6 pb-4 text-center">
+
+                            <div class="w-14 h-14 rounded-full bg-slate-200/50
+                flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
+
+                                <svg class="w-7 h-7 text-slate-400 group-hover:text-slate-500 transition-colors duration-300"
+                                     xmlns="http://www.w3.org/2000/svg"
+                                     fill="none"
+                                     viewBox="0 0 24 24"
+                                     stroke-width="1.5"
+                                     stroke="currentColor">
+
+                                    <path stroke-linecap="round"
+                                          stroke-linejoin="round"
+                                          d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z"/>
+                                </svg>
+                            </div>
+
+                            <p class="text-sm font-semibold text-slate-500 leading-6">
+                                ไม่มีข้อมูล
+                            </p>
+                        </div>
+                    }
                 </div>
+
+                @if (!isEmpty)
+                {
+                    <!-- Footer / Arrow -->
+                    <div class="mt-3 pt-3 border-t border-slate-100 flex justify-end">
+                        <span class="text-xs text-slate-400 group-hover:text-primary transition-colors flex items-center gap-1.5 group-hover:translate-x-1 transition-transform duration-300">
+                            ดูรายละเอียด
+                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                            </svg>
+                        </span>
+                    </div>
+                }
+            </a>
+        }
+    </div>
+
+    <style>
+        @@keyframes cardFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
             }
-            <p id="no-results" class="hidden text-center text-secondary text-sm py-lg">ไม่พบไฟล์ที่ตรงกับคำค้นหา</p>
-        </div>
-    }
+    
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    
+        .animate-card-fade-in {
+            animation: cardFadeIn 0.5s ease-out forwards;
+        }
+    
+        .animate-card-fade-in:nth-child(1) {
+            animation-delay: 0.05s;
+        }
+    
+        .animate-card-fade-in:nth-child(2) {
+            animation-delay: 0.1s;
+        }
+    
+        .animate-card-fade-in:nth-child(3) {
+            animation-delay: 0.15s;
+        }
+    
+        .animate-card-fade-in:nth-child(4) {
+            animation-delay: 0.2s;
+        }
+    
+        .animate-card-fade-in:nth-child(5) {
+            animation-delay: 0.25s;
+        }
+    
+        .animate-card-fade-in:nth-child(6) {
+            animation-delay: 0.3s;
+        }
+    
+        .animate-card-fade-in:nth-child(7) {
+            animation-delay: 0.35s;
+        }
+    
+        .animate-card-fade-in:nth-child(8) {
+            animation-delay: 0.4s;
+        }
+    
+        .animate-card-fade-in:nth-child(9) {
+            animation-delay: 0.45s;
+        }
+    
+        .animate-card-fade-in:nth-child(10) {
+            animation-delay: 0.5s;
+        }
+    
+        .animate-card-fade-in:nth-child(11) {
+            animation-delay: 0.55s;
+        }
+    
+        .animate-card-fade-in:nth-child(12) {
+            animation-delay: 0.6s;
+        }
+    </style>
+
 </div>
 
 @section Scripts {
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
-        let isDeleting = false;
-        
-        function deleteReport(fileName) {
-            if (isDeleting) {
-                return;
-            }
-            
-            Swal.fire({
-                title: 'ยืนยันการลบ?',
-                text: "ข้อมูลใบสั่งผลิต นี้ทั้งหมดจะถูกลบออกจากระบบ!",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#ef4444',
-                cancelButtonColor: '#94a3b8',
-                confirmButtonText: 'ใช่, ลบเลย!',
-                cancelButtonText: 'ยกเลิก'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    isDeleting = true;
-                    
-                    // Show loading
-                    Swal.fire({
-                        title: 'กำลังลบข้อมูล...',
-                        html: 'กรุณารอสักครู่',
-                        allowOutsideClick: false,
-                        allowEscapeKey: false,
-                        didOpen: () => {
-                            Swal.showLoading();
-                        }
-                    });
-                    
-                    fetch('/Report/DeleteReport?fileName=' + encodeURIComponent(fileName), { method: 'POST' })
-                        .then(res => res.json())
-                        .then(data => {
-                            if (data.success) {
-                                Swal.fire({
-                                    icon: 'success',
-                                    title: 'ลบสำเร็จ!',
-                                    text: 'ข้อมูลถูกลบออกจากระบบแล้ว',
-                                    timer: 1500,
-                                    showConfirmButton: false
-                                }).then(() => {
-                                    window.location.reload();
-                                });
-                            } else {
-                                isDeleting = false;
-                                Swal.fire('เกิดข้อผิดพลาด', data.error, 'error');
-                            }
-                        })
-                        .catch(error => {
-                            isDeleting = false;
-                            Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถลบข้อมูลได้', 'error');
-                        });
-                }
-            });
+        // ── Year Dropdown ──────────────────────────────────────────────
+        const btn = document.getElementById('year-dropdown-btn');
+        const panel = document.getElementById('year-dropdown-panel');
+        const chevron = document.getElementById('year-chevron');
+        let isOpen = false;
+
+        function openDropdown() {
+            isOpen = true;
+            panel.classList.remove('opacity-0', 'scale-95', 'pointer-events-none');
+            panel.classList.add('opacity-100', 'scale-100');
+            chevron.style.transform = 'rotate(180deg)';
         }
 
-        document.addEventListener("DOMContentLoaded", function () {
-            const searchInput = document.getElementById("report-search");
-            const monthFilter = document.getElementById("filter-month");
-            const sortOrder = document.getElementById("sort-order");
-            const groupsContainer = document.getElementById("report-groups");
-            const noResults = document.getElementById("no-results");
+        function closeDropdown() {
+            isOpen = false;
+            panel.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+            panel.classList.remove('opacity-100', 'scale-100');
+            chevron.style.transform = 'rotate(0deg)';
+        }
 
-            function applyFilters() {
-                const query = (searchInput.value || "").toLowerCase().trim();
-                const monthVal = monthFilter.value;
-                let visibleCount = 0;
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            isOpen ? closeDropdown() : openDropdown();
+        });
 
-                document.querySelectorAll(".report-month-group").forEach(group => {
-                    const groupMonth = group.getAttribute("data-month");
-                    const monthMatches = !monthVal || monthVal === groupMonth;
-                    let groupHasVisible = false;
-
-                    group.querySelectorAll(".report-card").forEach(card => {
-                        const nameMatches = !query || card.getAttribute("data-name").includes(query);
-                        const show = monthMatches && nameMatches;
-                        card.style.display = show ? "" : "none";
-                        if (show) { groupHasVisible = true; visibleCount++; }
-                    });
-
-                    group.style.display = groupHasVisible ? "" : "none";
-                });
-
-                noResults.classList.toggle("hidden", visibleCount > 0);
+        document.addEventListener('click', (e) => {
+            if (!document.getElementById('year-dropdown-wrapper').contains(e.target)) {
+                closeDropdown();
             }
+        });
 
-            function applySort() {
-                const mode = sortOrder.value;
-                document.querySelectorAll(".report-month-group").forEach(group => {
-                    const grid = group.querySelector(".grid");
-                    const cards = Array.from(grid.querySelectorAll(".report-card"));
-                    cards.sort((a, b) => {
-                        if (mode === "newest") return b.dataset.timestamp - a.dataset.timestamp;
-                        if (mode === "oldest") return a.dataset.timestamp - b.dataset.timestamp;
-                        if (mode === "name") return a.dataset.name.localeCompare(b.dataset.name, "th");
-                        if (mode === "pending") return b.dataset.pending - a.dataset.pending;
-                        return 0;
-                    });
-                    cards.forEach(c => grid.appendChild(c));
-                });
-            }
-
-            searchInput.addEventListener("input", applyFilters);
-            monthFilter.addEventListener("change", applyFilters);
-            sortOrder.addEventListener("change", applySort);
+        document.querySelectorAll('.year-option').forEach(opt => {
+            opt.addEventListener('click', () => {
+                const year = opt.dataset.year;
+                window.location.href = '@Url.Action("Index")?year=' + year;
+            });
         });
     </script>
 }

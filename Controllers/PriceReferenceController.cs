@@ -37,60 +37,24 @@ namespace CostFlow.Controllers
         }
 
         // GET: /PriceReference
-        public async Task<IActionResult> Index(string search, int page = 1)
+        public async Task<IActionResult> Index()
         {
-            const int pageSize = 50;
-            var query = _priceRepository.Query();
-
-            if (!string.IsNullOrWhiteSpace(search))
-            {
-                var cleanSearch = search.Trim().ToLower();
-                query = query.Where(p => p.ProductCode.ToLower().Contains(cleanSearch) || 
-                                         p.ProductName.ToLower().Contains(cleanSearch));
-            }
-
-            int totalCount = await query.CountAsync();
-            var items = await query
+            var items = await _priceRepository.Query()
                 .OrderBy(p => p.ProductCode)
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
                 .ToListAsync();
-
-            ViewData["Search"] = search;
-            ViewData["Page"] = page;
-            ViewData["TotalPages"] = (totalCount + pageSize - 1) / pageSize;
-            ViewData["TotalCount"] = totalCount;
 
             return View(items);
         }
 
         // GET: /PriceReference/SearchApi
         [HttpGet]
-        public async Task<IActionResult> SearchApi(string search, int page = 1)
+        public async Task<IActionResult> SearchApi()
         {
-            const int pageSize = 50;
-            var query = _priceRepository.Query();
-
-            if (!string.IsNullOrWhiteSpace(search))
-            {
-                var cleanSearch = search.Trim().ToLower();
-                query = query.Where(p => p.ProductCode.ToLower().Contains(cleanSearch) || 
-                                         p.ProductName.ToLower().Contains(cleanSearch));
-            }
-
-            int totalCount = await query.CountAsync();
-            var items = await query
+            var items = await _priceRepository.Query()
                 .OrderBy(p => p.ProductCode)
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
                 .ToListAsync();
 
-            return Json(new {
-                items = items,
-                currentPage = page,
-                totalPages = (totalCount + pageSize - 1) / pageSize,
-                totalCount = totalCount
-            });
+            return Json(items);
         }
 
         // GET: /PriceReference/Export

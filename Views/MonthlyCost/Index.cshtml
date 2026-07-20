@@ -21,17 +21,23 @@
                    class="w-full pl-3 pr-3 py-2 border border-outline-variant rounded text-sm focus:ring-1 focus:ring-primary focus:border-primary outline-none"/>
         </div>
         <div class="flex flex-wrap gap-sm ml-auto sm:ml-auto">
+            @{
+                var availableYears = ViewBag.AvailableYears as List<int> ?? new List<int>();
+                var selectedYear = (int)(ViewBag.SelectedYear ?? DateTime.Now.Year);
+            }
+            <select id="year-filter" onchange="window.location.href='/MonthlyCost?year=' + this.value" class="px-3 py-2 border border-outline-variant rounded text-xs font-semibold text-slate-600 outline-none cursor-pointer bg-white hover:border-primary/50 transition-colors">
+                @foreach (var y in availableYears)
+                {
+                    var buddhistYear = y + 543;
+                    <option value="@y" selected="@(y == selectedYear)">พ.ศ. @buddhistYear (@y)</option>
+                }
+            </select>
+
             <select id="filter-status" class="px-3 py-2 border border-outline-variant rounded text-xs font-semibold text-slate-600 outline-none cursor-pointer">
                 <option value="all">ทุกสถานะ</option>
                 <option value="active">กำลังดำเนินการ</option>
                 <option value="completed">เสร็จสมบูรณ์</option>
                 <option value="pending">ค้างดำเนินการ</option>
-            </select>
-            <select id="sort-order" class="px-3 py-2 border border-outline-variant rounded text-xs font-semibold text-slate-600 outline-none cursor-pointer">
-                <option value="month-asc">เรียงตามเดือน (ก่อน -> หลัง)</option>
-                <option value="month-desc">เรียงตามเดือน (หลัง -> ก่อน)</option>
-                <option value="progress-high">ความคืบหน้าสูงสุด</option>
-                <option value="progress-low">ความคืบหน้าต่ำสุด</option>
             </select>
         </div>
     </div>
@@ -45,7 +51,9 @@
             {
                 var statusBg = card.StatusCode == "active" ? "bg-emerald-50 text-emerald-600 border-emerald-200/60"
                     : card.StatusCode == "completed" ? "bg-blue-50 text-blue-600 border-blue-200/60"
-                    : "bg-amber-50 text-amber-700 border-amber-200/60";
+                    : card.StatusCode == "future" ? "bg-slate-50 text-slate-500 border-slate-200/60"
+                    : "bg-red-50 text-red-700 border-red-200/60";
+
 
                 var progressColor = card.StatusCode == "active" ? "bg-gradient-to-r from-primary to-primary-container"
                     : card.StatusCode == "completed" ? "bg-blue-600"
@@ -72,10 +80,9 @@
 
                     <div>
                         <div class="flex justify-between items-start mb-3">
-                            <div class="overflow-hidden">
+                            <div class="overflow-hidden flex-1">
                                 <div class="flex items-center gap-2">
                                     <h4 class="font-bold text-slate-800 text-sm group-hover:text-primary transition-colors duration-300">@card.MonthYearDisplay</h4>
-                                    <span class="px-2 py-0.5 rounded text-[10px] font-extrabold border @statusBg">@card.StatusLabel</span>
                                 </div>
                                 @if (!string.IsNullOrEmpty(card.FileName))
                                 {
@@ -85,70 +92,69 @@
                                     </span>
                                 }
                             </div>
+                            
+                            <!-- ยอดรวมและยอดจ่าย -->
+                            <div class="shrink-0 text-right ml-3">
+                                <div class="text-[10px] text-slate-400 font-medium mb-0.5">ยอดรวม</div>
+                                <div class="text-sm font-bold text-slate-700 mb-1.5">
+                                    @card.TotalAmount.ToString("N0")
+                                </div>
+                                <div class="text-[10px] text-emerald-600 font-medium mb-0.5">ยอดจ่าย</div>
+                                <div class="text-sm font-bold text-emerald-600">
+                                    @card.ReceivedAmount.ToString("N0")
+                                </div>
+                            </div>
                         </div>
 
-                        <!-- Progress Bar & Summary -->
+                        <!-- ความคืบหน้า (ไม่มี bar และ %) -->
                         <div class="mb-3">
-                            <div class="mb-1.5 flex justify-between items-baseline text-xs font-bold">
-                                <div class="flex items-center gap-1 text-slate-600">
-                                    <span>ความคืบหน้า</span>
-                                </div>
-                                <div class="flex items-center gap-1.5">
-                                    <span class="font-black font-mono text-[13px] @progressTextColor">@card.ProgressPercent%</span>
-                                </div>
-                            </div>
-                            <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden border border-slate-200/60 shadow-inner">
-                                <div class="h-full rounded-full @progressColor transition-all duration-500" style="width: @card.ProgressPercent%"></div>
-                            </div>
+                            <div class="text-xs font-bold text-slate-600">ความคืบหน้า</div>
                         </div>
                     </div>
 
                     <!-- Status Breakdown Pills -->
                     <div class="pt-3 border-t border-slate-100 flex flex-row gap-2">
-                        <div class="flex-1 min-w-0 bg-emerald-50/50 hover:bg-emerald-50/90 border border-emerald-200/70 rounded-lg py-2 px-2 flex flex-col items-center justify-center text-center transition-all duration-200 group/pill">
-                            <div class="flex items-center gap-1 text-[10px] font-bold text-emerald-700 uppercase tracking-tight mb-0.5">
+                        <!-- Received Pill -->
+                        <div class="flex-1 min-w-0 bg-slate-50/40 hover:bg-slate-100/60 border border-slate-200/40 rounded-lg py-2 px-2 flex flex-col items-center justify-center text-center transition-all duration-200 group/pill relative"
+                             title="รับสินค้าชำระเต็ม: @card.ReceivedCount รายการ | @card.ReceivedAmount.ToString("N2") บาท">
+                            <div class="flex items-center gap-1 text-[10px] font-bold text-slate-500 uppercase tracking-tight mb-0.5">
                                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
                                 <span>รับสินค้า</span>
                             </div>
-                            <div class="text-sm font-black font-mono text-slate-800 leading-none my-0.5 group-hover/pill:text-emerald-950 transition-colors">
-                                @card.ReceivedCount <span class="text-[10px] font-semibold text-slate-400 font-sans">รายการ</span>
+                            <div class="text-sm font-extrabold font-mono text-slate-700 leading-none my-0.5 group-hover/pill:text-slate-800 transition-colors">
+                                @card.ReceivedCount <span class="text-[10px] font-normal text-slate-400 font-sans">รายการ</span>
                             </div>
-                            @if (card.ReceivedCarryOver > 0)
-                            {
-                                <div class="text-[10px] font-semibold text-emerald-600/70 leading-none mt-0.5">
-                                    +@card.ReceivedCarryOver ค้างเดิม
-                                </div>
-                            }
+                            <div class="text-[9px] font-medium text-emerald-600 mt-0.5">
+                                @card.ReceivedAmount.ToString("N0") บาท
+                            </div>
                         </div>
-                        <div class="flex-1 min-w-0 bg-amber-50/50 hover:bg-amber-50/90 border border-amber-200/70 rounded-lg py-2 px-2 flex flex-col items-center justify-center text-center transition-all duration-200 group/pill">
-                            <div class="flex items-center gap-1 text-[10px] font-bold text-amber-700 uppercase tracking-tight mb-0.5">
+                        <!-- Deferred Pill -->
+                        <div class="flex-1 min-w-0 bg-slate-50/40 hover:bg-slate-100/60 border border-slate-200/40 rounded-lg py-2 px-2 flex flex-col items-center justify-center text-center transition-all duration-200 group/pill relative"
+                             title="ผ่อนชำระ: @card.DeferredCount รายการ | @card.DeferredAmount.ToString("N2") บาท">
+                            <div class="flex items-center gap-1 text-[10px] font-bold text-slate-500 uppercase tracking-tight mb-0.5">
                                 <span class="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0"></span>
                                 <span>ผ่อนชำระ</span>
                             </div>
-                            <div class="text-sm font-black font-mono text-slate-800 leading-none my-0.5 group-hover/pill:text-amber-950 transition-colors">
-                                @card.DeferredCount <span class="text-[10px] font-semibold text-slate-400 font-sans">รายการ</span>
+                            <div class="text-sm font-extrabold font-mono text-slate-700 leading-none my-0.5 group-hover/pill:text-slate-800 transition-colors">
+                                @card.DeferredCount <span class="text-[10px] font-normal text-slate-400 font-sans">รายการ</span>
                             </div>
-                            @if (card.DeferredCarryOver > 0)
-                            {
-                                <div class="text-[10px] font-semibold text-amber-600/70 leading-none mt-0.5">
-                                    +@card.DeferredCarryOver ค้างเดิม
-                                </div>
-                            }
+                            <div class="text-[9px] font-medium text-amber-600 mt-0.5">
+                                @card.DeferredAmount.ToString("N0") บาท
+                            </div>
                         </div>
-                        <div class="flex-1 min-w-0 bg-purple-50/50 hover:bg-purple-50/90 border border-purple-200/70 rounded-lg py-2 px-2 flex flex-col items-center justify-center text-center transition-all duration-200 group/pill">
-                            <div class="flex items-center gap-1 text-[10px] font-bold text-purple-700 uppercase tracking-tight mb-0.5">
+                        <!-- Skipped Pill -->
+                        <div class="flex-1 min-w-0 bg-slate-50/40 hover:bg-slate-100/60 border border-slate-200/40 rounded-lg py-2 px-2 flex flex-col items-center justify-center text-center transition-all duration-200 group/pill relative"
+                             title="ไม่ต้องการสินค้า: @card.SkippedCount รายการ | @card.SkippedAmount.ToString("N2") บาท">
+                            <div class="flex items-center gap-1 text-[10px] font-bold text-slate-500 uppercase tracking-tight mb-0.5">
                                 <span class="w-1.5 h-1.5 rounded-full bg-purple-500 shrink-0"></span>
-                                <span>ยังไม่รับ</span>
+                                <span>ไม่ต้องการสินค้า</span>
                             </div>
-                            <div class="text-sm font-black font-mono text-slate-800 leading-none my-0.5 group-hover/pill:text-purple-950 transition-colors">
-                                @card.SkippedCount <span class="text-[10px] font-semibold text-slate-400 font-sans">รายการ</span>
+                            <div class="text-sm font-extrabold font-mono text-slate-700 leading-none my-0.5 group-hover/pill:text-slate-800 transition-colors">
+                                @card.SkippedCount <span class="text-[10px] font-normal text-slate-400 font-sans">รายการ</span>
                             </div>
-                            @if (card.SkippedCarryOver > 0)
-                            {
-                                <div class="text-[10px] font-semibold text-purple-600/70 leading-none mt-0.5">
-                                    +@card.SkippedCarryOver ค้างเดิม
-                                </div>
-                            }
+                            <div class="text-[9px] font-medium text-purple-600 mt-0.5">
+                                @card.SkippedAmount.ToString("N0") บาท
+                            </div>
                         </div>
                     </div>
                 </a>
@@ -182,7 +188,6 @@
         document.addEventListener('DOMContentLoaded', function () {
             const searchInput = document.getElementById('search-input');
             const filterStatus = document.getElementById('filter-status');
-            const sortOrder = document.getElementById('sort-order');
             const grid = document.getElementById('cards-grid');
             const emptyState = document.getElementById('empty-search-state');
             const allCards = Array.from(grid.querySelectorAll('a.card-item'));
@@ -190,7 +195,6 @@
             function applyFilters() {
                 const term = searchInput.value.toLowerCase().trim();
                 const status = filterStatus.value;
-                const sortBy = sortOrder.value;
 
                 let visible = allCards.filter(card => {
                     const matchSearch = !term
@@ -200,13 +204,11 @@
                     return matchSearch && matchStatus;
                 });
 
+                // เรียงลำดับตามปฏิทิน (มกราคม -> ธันวาคม)
                 visible.sort((a, b) => {
                     const keyA = a.dataset.monthKey || a.dataset.month;
                     const keyB = b.dataset.monthKey || b.dataset.month;
-                    if (sortBy === 'month-desc' || sortBy === 'newest') return keyB.localeCompare(keyA);
-                    if (sortBy === 'progress-high') return parseFloat(b.dataset.progress) - parseFloat(a.dataset.progress);
-                    if (sortBy === 'progress-low') return parseFloat(a.dataset.progress) - parseFloat(b.dataset.progress);
-                    return keyA.localeCompare(keyB); // month-asc (default calendar order)
+                    return keyA.localeCompare(keyB);
                 });
 
                 allCards.forEach(c => { c.style.display = 'none'; });
@@ -221,7 +223,6 @@
 
             searchInput.addEventListener('input', applyFilters);
             filterStatus.addEventListener('change', applyFilters);
-            sortOrder.addEventListener('change', applyFilters);
         });
     </script>
 }

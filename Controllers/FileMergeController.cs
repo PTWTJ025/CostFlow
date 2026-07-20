@@ -86,7 +86,7 @@ namespace CostFlow.Controllers
 
         // --- STEP 2: Save Master File ---
         [HttpPost]
-        public IActionResult ConfirmSaveMaster(Guid sessionId, string? reportName)
+        public IActionResult ConfirmSaveMaster(Guid sessionId)
         {
             try
             {
@@ -96,7 +96,8 @@ namespace CostFlow.Controllers
                     return Json(new { success = false, error = "เซสชันไฟล์หมดอายุ (เกิน 30 นาที) กรุณาอัปโหลดใหม่" });
                 }
 
-                string baseReportName = !string.IsNullOrWhiteSpace(reportName) ? reportName.Trim() : file.FileName;
+                // สร้างชื่อรายงานจากวันที่ปัจจุบัน (ใช้ format ตัวเลขเพื่อความปลอดภัย)
+                string baseReportName = $"รายงานสั่งผลิต_{DateTime.Now:dd_MM_yyyy_HH_mm}";
                 
                 // Check for duplicate report name and auto-increment
                 string finalReportName = baseReportName;
@@ -144,11 +145,28 @@ namespace CostFlow.Controllers
                 };
                 _context.Reports.Add(newReport);
 
-                // Create OrderTrackingMaster records
+                // Get existing PO numbers from database to check for duplicates
+                var existingPoNumbers = _context.OrderTrackingMasters
+                    .Select(o => o.PoNumber)
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+                // Create OrderTrackingMaster records (skip duplicates)
+                int insertCount = 0;
+                int skippedCount = 0;
+                var skippedPOs = new List<string>();
+
                 foreach (var kvp in distinctRows)
                 {
                     string poNum = kvp.Key;
                     var row = kvp.Value;
+
+                    // Check if PO already exists
+                    if (existingPoNumbers.Contains(poNum))
+                    {
+                        skippedCount++;
+                        skippedPOs.Add(poNum);
+                        continue; // Skip duplicate PO
+                    }
 
                     var newOrder = new OrderTrackingMaster
                     {
@@ -166,12 +184,33 @@ namespace CostFlow.Controllers
                         UpdatedAt = DateTime.Now
                     };
                     _context.OrderTrackingMasters.Add(newOrder);
+                    insertCount++;
                 }
+
+                // Update report total POs to reflect actual inserted count
+                newReport.TotalPOs = insertCount;
 
                 _context.SaveChanges();
                 _storageService.DeleteImport(sessionId);
 
-                return Json(new { success = true, insertCount = distinctRows.Count, updateCount = 0, totalCount = distinctRows.Count, fileName = finalReportName });
+                var message = insertCount > 0 
+                    ? $"นำเข้าสำเร็จ {insertCount} รายการ" 
+                    : "ไม่มีรายการใหม่ถูกนำเข้า";
+                
+                if (skippedCount > 0)
+                {
+                    message += $" (ข้าม {skippedCount} รายการที่มีอยู่แล้ว)";
+                }
+
+                return Json(new { 
+                    success = true, 
+                    insertCount = insertCount, 
+                    skippedCount = skippedCount,
+                    totalCount = distinctRows.Count, 
+                    fileName = finalReportName,
+                    message = message,
+                    skippedPOs = skippedPOs.Take(10).ToList() // Show first 10 skipped POs for debugging
+                });
             }
             catch (Exception ex)
             {
@@ -247,10 +286,6 @@ namespace CostFlow.Controllers
 
             try
             {
-                var report = _context.Reports.FirstOrDefault(r => r.ReportName == request.ReportName);
-                if (report == null)
-                    return Json(new { success = false, error = "ไม่พบรายงานหลัก" });
-
                 var duplicates = new List<string>();
 
                 foreach (var fileInfo in request.Files)
@@ -258,9 +293,9 @@ namespace CostFlow.Controllers
                     var importedFile = _storageService.GetImport(fileInfo.SessionId);
                     if (importedFile == null) continue;
 
+                    // Check if this filename+sheet combination already exists (across all reports)
                     var existingPlan = _context.WeeklyPlans
-                        .FirstOrDefault(wp => wp.ReportId == report.Id && 
-                                              wp.FileName == importedFile.FileName && 
+                        .FirstOrDefault(wp => wp.FileName == importedFile.FileName && 
                                               wp.SheetName == fileInfo.SelectedSheet);
                     
                     if (existingPlan != null)
@@ -286,14 +321,14 @@ namespace CostFlow.Controllers
 
             try
             {
-                var report = _context.Reports.FirstOrDefault(r => r.ReportName == request.ReportName);
+                // Get the first (most recent) report as the primary report for linking WeeklyPlans
+                // This is needed because WeeklyPlan table has ReportId as required FK
+                var report = _context.Reports.OrderByDescending(r => r.CreatedAt).FirstOrDefault();
                 if (report == null)
-                    return Json(new { success = false, error = "ไม่พบรายงานหลัก" });
+                    return Json(new { success = false, error = "ไม่พบรายงานสั่งผลิตในระบบ กรุณานำเข้าไฟล์สั่งผลิตก่อน" });
 
-                // Get all orders from this report
-                var allOrders = _context.OrderTrackingMasters
-                    .Where(o => o.ReportId == report.Id)
-                    .ToList();
+                // Get ALL orders from the system (not limited to specific report)
+                var allOrders = _context.OrderTrackingMasters.ToList();
 
                 int totalMatched = 0;
                 var fileResults = new List<object>();
@@ -473,10 +508,8 @@ namespace CostFlow.Controllers
                 // Save changes to commit the new plan and details first
                 _context.SaveChanges();
 
-                // Reconcile order statuses based on all active WeeklyPlanDetails for this report in the DB
-                var allActiveDetails = _context.WeeklyPlanDetails
-                    .Where(d => d.WeeklyPlan.ReportId == report.Id)
-                    .ToList();
+                // Reconcile order statuses based on ALL active WeeklyPlanDetails in the system
+                var allActiveDetails = _context.WeeklyPlanDetails.ToList();
 
                 foreach (var order in allOrders)
                 {
@@ -485,18 +518,23 @@ namespace CostFlow.Controllers
                     order.UpdatedAt = DateTime.Now;
                 }
 
-                // Update report matched count
-                report.MatchedPOs = allOrders.Count(o => o.Status == "Matched");
+                // Update ALL reports matched count (not just one report)
+                var allReports = _context.Reports.ToList();
+                foreach (var rpt in allReports)
+                {
+                    var ordersInThisReport = allOrders.Where(o => o.ReportId == rpt.Id).ToList();
+                    rpt.MatchedPOs = ordersInThisReport.Count(o => o.Status == "Matched");
+                }
 
                 _context.SaveChanges();
 
                 return Json(new
                 {
                     success = true,
-                    totalMatched = report.MatchedPOs,
+                    totalMatched = allOrders.Count(o => o.Status == "Matched"),
                     totalRowsProcessed = allActiveDetails.Count,
                     fileResults = fileResults,
-                    message = $"จับคู่สำเร็จทั้งหมด {report.MatchedPOs} ใบสั่งผลิต",
+                    message = $"จับคู่สำเร็จทั้งหมด {allOrders.Count(o => o.Status == "Matched")} ใบสั่งผลิต",
                     debug = string.Join("\n", debugInfo) // ส่ง debug info กลับไป
                 });
             }
