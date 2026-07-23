@@ -770,16 +770,16 @@ body.sidebar-collapsed .purchase-menu-trigger[data-guide]:hover::before {
   display: flex !important;
   justify-content: space-between !important;
   align-items: center !important;
-  flex-wrap: wrap !important;
-  gap: 12px !important;
+  flex-wrap: nowrap !important;
+  gap: 8px !important;
   width: 100% !important;
 }
 
 .custom-toolbar-right {
   display: flex !important;
   align-items: center !important;
-  flex-wrap: wrap !important;
-  gap: 12px !important;
+  flex-wrap: nowrap !important;
+  gap: 8px !important;
   margin-left: auto !important;
   /* Forces items to the far right side */
 }
