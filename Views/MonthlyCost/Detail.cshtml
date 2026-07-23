@@ -485,7 +485,7 @@
                 </button>
                 <button type="button" id="close-month-btn"
                         title="บันทึกรายการที่เลือก และยกยอดรายการที่เหลือส่งต่อไปยังเดือนถัดไป"
-                        class="px-6 py-2.5 rounded-lg font-bold text-xs text-white bg-rose-600 hover:bg-rose-700 active:scale-95 transition-all cursor-pointer shadow-sm whitespace-nowrap">
+                        class="px-6 py-2.5 rounded-lg font-bold text-xs text-white bg-rose-600 hover:bg-rose-700 disabled:bg-slate-300 disabled:cursor-not-allowed disabled:hover:bg-slate-300 active:scale-95 disabled:active:scale-100 transition-all shadow-sm whitespace-nowrap">
                     บันทึกและปิดยอดเดือน
                 </button>
             </div>
@@ -570,6 +570,12 @@
             document.getElementById('cart-count-label').textContent = ids.length + ' รายการ';
             document.getElementById('cart-total').textContent = fmt(total);
             document.getElementById('save-btn').disabled = ids.length === 0;
+            
+            const allPendingCount = @Model.PendingOrders.Count;
+            const closeBtn = document.getElementById('close-month-btn');
+            if (closeBtn) {
+                closeBtn.disabled = allPendingCount === 0;
+            }
 
             const clearBtn = document.getElementById('clear-cart-btn');
             if (clearBtn) {
@@ -993,6 +999,9 @@
                 set('tab-saved-count', d.savedCount);
             } catch (e) { /* silent */ }
         }
+
+        // Initialize summary UI on page load
+        updateSummary();
 
         // Poll ครั้งแรกหลัง 5 วินาที แล้วทุก 20 วินาที
         setTimeout(() => {
