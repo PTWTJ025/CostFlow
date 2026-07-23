@@ -494,10 +494,17 @@ namespace CostFlow.Controllers
 
                 if (priorAction != null)
                 {
+                    var approvedMonthStr = string.Empty;
+                    var parsedApprovedDate = ParseThaiDate(otm.ApprovedDate);
+                    if (parsedApprovedDate.HasValue) 
+                    {
+                        approvedMonthStr = ConvertKeyToThaiMonth($"{parsedApprovedDate.Value.Year:0000}-{parsedApprovedDate.Value.Month:00}");
+                    }
+                    
                     if (priorAction.Action == "Deferred")
                     {
                         forwardedStatus = "Deferred";
-                        forwardedFromMonth = ConvertKeyToThaiMonth(priorAction.MonthYear);
+                        forwardedFromMonth = !string.IsNullOrEmpty(approvedMonthStr) ? approvedMonthStr : ConvertKeyToThaiMonth(priorAction.MonthYear);
                         // Bug Fix: Inherit ActionPrice จาก Deferred record เดิม
                         // ราคาที่ตกลงกันไว้ต้องคงที่ตลอดจนกว่าจะ ReceivedFull
                         if (priorAction.ActionPrice > 0)
@@ -508,7 +515,7 @@ namespace CostFlow.Controllers
                     else if (priorAction.Action == "Skipped")
                     {
                         forwardedStatus = "Skipped";
-                        forwardedFromMonth = ConvertKeyToThaiMonth(priorAction.MonthYear);
+                        forwardedFromMonth = !string.IsNullOrEmpty(approvedMonthStr) ? approvedMonthStr : ConvertKeyToThaiMonth(priorAction.MonthYear);
                         // Bug Fix: ถ้า Skipped แต่เคยมี Deferred ก่อนหน้า ให้ดึง ActionPrice จาก Deferred เดิม
                         // เหตุผล: auto-Skipped กลางทาง ไม่ควรทำให้ราคาที่ตกลงกันหาย
                         var earlierDeferred = priorActions
