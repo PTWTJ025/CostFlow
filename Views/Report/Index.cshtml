@@ -94,7 +94,7 @@
     </div>
 
     <!-- Monthly Cards Grid (12 เดือน - 4 columns responsive) -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-lg">
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-md">
         @foreach (var card in Model)
         {
             var month = (int)card.Month;
@@ -109,80 +109,74 @@
             var isActive = statusCode == "active";
             var isCompleted = statusCode == "completed";
 
-            var cardBg = isEmpty ? "bg-gradient-to-br from-slate-50 to-slate-100 border-slate-200" : "bg-white border-slate-200 hover:border-primary/60 hover:shadow-xl hover:shadow-primary/10 hover:scale-[1.02] hover:-translate-y-1";
-            var statusBg = isEmpty ? "bg-slate-200/50 text-slate-500 border-slate-300"
-                : isActive ? "bg-emerald-100 text-emerald-700 border-emerald-300"
-                : "bg-blue-100 text-blue-700 border-blue-300";
+            // ประเมิน "ความสำเร็จ" จาก TotalOrders เทียบกับ avg (แสดงเป็น filled bar ถ้ามีข้อมูล)
+            // ใช้ข้อมูลที่มี: completed = 100%, active = จาก ratio วันที่ผ่านไปในเดือน
+            var now = DateTime.Now;
+            int progressPct = 0;
+            if (!isEmpty)
+            {
+                if (isCompleted)
+                {
+                    progressPct = 100;
+                }
+                else if (isActive)
+                {
+                    // estimate: สัดส่วนวันที่ผ่านไปในเดือนนี้
+                    int daysInMonth = DateTime.DaysInMonth(year, month);
+                    progressPct = (int)Math.Round((double)now.Day / daysInMonth * 100);
+                }
+            }
 
             <a href="@(isEmpty ? "javascript:void(0)" : Url.Action("Details", new { month = month, year = year }))"
-               class="group @cardBg rounded border shadow-sm transition-all duration-300 ease-out flex flex-col justify-between p-md min-h-[180px] animate-card-fade-in @(isEmpty ? "cursor-default" : "cursor-pointer")">
+               class="month-card group bg-white rounded-xl border border-slate-200 shadow-sm p-md flex flex-col gap-3 animate-card-in
+                      @(isEmpty ? "cursor-default opacity-60" : "cursor-pointer hover:border-primary/50 hover:shadow-md transition-all duration-200")">
 
-                <div>
-                    <!-- Header -->
-                    <div class="flex justify-between items-start mb-3">
-                        <div class="overflow-hidden flex-1">
-                            <div class="flex items-center gap-2 mb-1">
-                                <h4 class="font-bold @(isEmpty ? "text-slate-400" : "text-slate-800 group-hover:text-primary") text-base transition-colors duration-300">
-                                    @monthDisplay
-                                </h4>
-                            </div>
-                        </div>
+                <!-- Header: ชื่อเดือน + status badge -->
+                <div class="flex items-start justify-between gap-2">
+                    <div>
+                        <h4 class="font-semibold text-sm @(isEmpty ? "text-slate-400" : "text-slate-800 group-hover:text-primary transition-colors duration-200") leading-tight">
+                            @monthDisplay
+                        </h4>
+                        @if (!isEmpty)
+                        {
+                            <p class="text-xs text-slate-400 mt-0.5">@totalOrders ใบสั่งผลิต</p>
+                        }
                     </div>
-
                     @if (!isEmpty)
                     {
-                        <!-- Stats -->
-                        <div class="space-y-2.5">
-                            <div class="flex justify-between items-baseline">
-                                <span class="text-xs text-slate-500 font-semibold">จำนวนใบสั่งผลิต</span>
-                                <span class="text-xl font-black text-slate-800 font-mono group-hover:text-primary transition-colors duration-300">@totalOrders</span>
-                            </div>
-                            <div class="flex justify-between items-baseline">
-                                <span class="text-xs text-slate-500 font-semibold">มูลค่ารวม</span>
-                                <span class="text-base font-bold text-primary font-mono group-hover:scale-105 transition-transform duration-300">@totalAmount.ToString("N2") ฿</span>
-                            </div>
-                        </div>
-                    }
-                    else
-                    {
-                        <!-- Empty State -->
-                        <div class="mt-4 min-h-[100px]
-            flex flex-col items-center justify-center
-            pt-6 pb-4 text-center">
-
-                            <div class="w-14 h-14 rounded-full bg-slate-200/50
-                flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
-
-                                <svg class="w-7 h-7 text-slate-400 group-hover:text-slate-500 transition-colors duration-300"
-                                     xmlns="http://www.w3.org/2000/svg"
-                                     fill="none"
-                                     viewBox="0 0 24 24"
-                                     stroke-width="1.5"
-                                     stroke="currentColor">
-
-                                    <path stroke-linecap="round"
-                                          stroke-linejoin="round"
-                                          d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z"/>
-                                </svg>
-                            </div>
-
-                            <p class="text-sm font-semibold text-slate-500 leading-6">
-                                ไม่มีข้อมูล
-                            </p>
-                        </div>
+                        <span class="shrink-0 inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border
+                                     @(isActive ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-blue-50 text-blue-700 border-blue-200")">
+                            @if (isActive)
+                            {
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                            }
+                            @statusLabel
+                        </span>
                     }
                 </div>
 
                 @if (!isEmpty)
                 {
-                    <!-- Footer / Arrow -->
-                    <div class="mt-3 pt-3 border-t border-slate-100 flex justify-end">
-                        <span class="text-xs text-slate-400 group-hover:text-primary transition-colors flex items-center gap-1.5 group-hover:translate-x-1 transition-transform duration-300">
-                            ดูรายละเอียด
-                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                            </svg>
-                        </span>
+                    <!-- Stat pills -->
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="bg-slate-50 rounded-lg px-3 py-2 text-center border border-slate-100">
+                            <div class="text-[10px] text-slate-500 font-medium mb-0.5">ใบสั่งผลิต</div>
+                            <div class="text-lg font-black text-slate-800 tabular-nums leading-none">@totalOrders</div>
+                        </div>
+                        <div class="bg-slate-50 rounded-lg px-3 py-2 text-center border border-slate-100">
+                            <div class="text-[10px] text-slate-500 font-medium mb-0.5">มูลค่ารวม</div>
+                            <div class="text-xs font-bold text-primary tabular-nums leading-tight mt-1">@totalAmount.ToString("N2")</div>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <!-- Empty State -->
+                    <div class="flex flex-col items-center justify-center py-4 gap-2 text-center flex-1">
+                        <svg class="w-8 h-8 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z"/>
+                        </svg>
+                        <p class="text-xs font-medium text-slate-400">ไม่มีข้อมูล</p>
                     </div>
                 }
             </a>
@@ -190,10 +184,10 @@
     </div>
 
     <style>
-        @@keyframes cardFadeIn {
+        @@keyframes cardIn {
             from {
                 opacity: 0;
-                transform: translateY(20px);
+                transform: translateY(12px);
             }
     
             to {
@@ -202,56 +196,62 @@
             }
         }
     
-        .animate-card-fade-in {
-            animation: cardFadeIn 0.5s ease-out forwards;
+        .animate-card-in {
+            animation: cardIn 0.35s ease-out both;
         }
     
-        .animate-card-fade-in:nth-child(1) {
-            animation-delay: 0.05s;
+        .month-card:nth-child(1) {
+            animation-delay: 0.03s;
         }
     
-        .animate-card-fade-in:nth-child(2) {
-            animation-delay: 0.1s;
+        .month-card:nth-child(2) {
+            animation-delay: 0.06s;
         }
     
-        .animate-card-fade-in:nth-child(3) {
+        .month-card:nth-child(3) {
+            animation-delay: 0.09s;
+        }
+    
+        .month-card:nth-child(4) {
+            animation-delay: 0.12s;
+        }
+    
+        .month-card:nth-child(5) {
             animation-delay: 0.15s;
         }
     
-        .animate-card-fade-in:nth-child(4) {
-            animation-delay: 0.2s;
+        .month-card:nth-child(6) {
+            animation-delay: 0.18s;
         }
     
-        .animate-card-fade-in:nth-child(5) {
-            animation-delay: 0.25s;
+        .month-card:nth-child(7) {
+            animation-delay: 0.21s;
         }
     
-        .animate-card-fade-in:nth-child(6) {
-            animation-delay: 0.3s;
+        .month-card:nth-child(8) {
+            animation-delay: 0.24s;
         }
     
-        .animate-card-fade-in:nth-child(7) {
-            animation-delay: 0.35s;
+        .month-card:nth-child(9) {
+            animation-delay: 0.27s;
         }
     
-        .animate-card-fade-in:nth-child(8) {
-            animation-delay: 0.4s;
+        .month-card:nth-child(10) {
+            animation-delay: 0.30s;
         }
     
-        .animate-card-fade-in:nth-child(9) {
-            animation-delay: 0.45s;
+        .month-card:nth-child(11) {
+            animation-delay: 0.33s;
         }
     
-        .animate-card-fade-in:nth-child(10) {
-            animation-delay: 0.5s;
+        .month-card:nth-child(12) {
+            animation-delay: 0.36s;
         }
     
-        .animate-card-fade-in:nth-child(11) {
-            animation-delay: 0.55s;
-        }
-    
-        .animate-card-fade-in:nth-child(12) {
-            animation-delay: 0.6s;
+        @@media (prefers-reduced-motion: reduce) {
+            .animate-card-in {
+                animation: none;
+            }
         }
     </style>
 

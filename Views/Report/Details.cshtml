@@ -1,25 +1,64 @@
 @model List<CostFlow.Models.OrderTrackingMaster>
+
 @functions {
+
+    private DateTime? ParseThaiDate(string? thaiDateStr)
+    {
+        if (string.IsNullOrWhiteSpace(thaiDateStr)) return null;
+        thaiDateStr = thaiDateStr.Trim();
+        if (thaiDateStr == "-") return null;
+        if (thaiDateStr.Contains(' ')) thaiDateStr = thaiDateStr.Split(' ')[0];
+        thaiDateStr = thaiDateStr.Replace('-', '/');
+        
+        var parts = thaiDateStr.Split('/');
+        if (parts.Length == 3 && 
+            int.TryParse(parts[0], out var p1) && 
+            int.TryParse(parts[1], out var p2) && 
+            int.TryParse(parts[2], out var p3))
+        {
+            int day = p1, month = p2, year = p3;
+
+            if (p1 > 1000)
+            {
+                year = p1;
+                month = p2;
+                day = p3;
+            }
+            else if (p2 > 12 && p1 <= 12)
+            {
+                day = p2;
+                month = p1;
+                year = p3;
+            }
+
+            if (year > 2500) year -= 543;
+            
+            try 
+            {
+                return new DateTime(year, month, day);
+            }
+            catch 
+            {
+                return null;
+            }
+        }
+        return null;
+    }
+
     private string GetIsoDate(string? dateStr)
     {
-        if (string.IsNullOrWhiteSpace(dateStr) || dateStr == "-") return "";
-        dateStr = dateStr.Trim().Split(' ')[0];
-        var parts = dateStr.Split('/');
-        if (parts.Length == 3 && 
-            int.TryParse(parts[0], out var day) && 
-            int.TryParse(parts[1], out var month) && 
-            int.TryParse(parts[2], out var year))
-        {
-            if (year > 2500) year -= 543;
-            try
-            {
-                return new DateTime(year, month, day).ToString("yyyy-MM-dd");
-            }
-            catch {}
-        }
-        return "";
+        var dt = ParseThaiDate(dateStr);
+        return dt.HasValue ? dt.Value.ToString("yyyy-MM-dd") : "";
     }
+
+    private int GetMonth(string? dateStr)
+    {
+        var dt = ParseThaiDate(dateStr);
+        return dt.HasValue ? dt.Value.Month : 0;
+    }
+
 }
+
 @{
     string reportName = ViewData["ReportName"] as string ?? "รายละเอียดใบสั่งผลิต";
     DateTime createdAt = ViewData["CreatedAt"] as DateTime? ?? DateTime.Now;
@@ -31,7 +70,7 @@
     ViewData["Title"] = reportName;
     ViewData["HeaderTitle"] = "รายละเอียดรายการสั่งผลิต";
     var sortedModel = Model.OrderBy(x => x.Status == "Matched" ? 1 : 0).ThenBy(x => x.PoNumber).ToList();
-    
+
     // ดึงค่า month และ year จาก query string (ถ้ามี)
     var currentMonth = Context.Request.Query["month"].ToString();
     var currentYear = Context.Request.Query["year"].ToString();
@@ -43,16 +82,21 @@
             transform: scale(0.5);
             opacity: 0.8;
         }
-        80%, 100% {
+
+        80%,
+        100% {
             transform: scale(1.6);
             opacity: 0;
         }
     }
-    
+
     @@keyframes timeline-dot-pulse {
-        0%, 100% {
+
+        0%,
+        100% {
             transform: scale(1);
         }
+
         50% {
             transform: scale(1.18);
         }
@@ -67,9 +111,9 @@
         </div>
         <div class="flex items-center gap-2 shrink-0">
             <div class="w-32 bg-slate-200 rounded-full h-2 overflow-hidden">
-                <div class="h-2 rounded-full transition-all @(successRate == 100 ? "bg-emerald-500" : "bg-primary")" style="width: @successRate.ToString("0.0")%"></div>
+                <div id="success-rate-bar" class="h-2 rounded-full transition-all @(successRate == 100 ? "bg-emerald-500" : "bg-primary")" style="width: @successRate.ToString("0.0")%"></div>
             </div>
-            <span class="text-sm font-bold @(successRate == 100 ? "text-emerald-600" : "text-primary") whitespace-nowrap">@successRate.ToString("0.0")% (@matchedCount/@total)</span>
+            <span id="success-rate-text" class="text-sm font-bold @(successRate == 100 ? "text-emerald-600" : "text-primary") whitespace-nowrap">@successRate.ToString("0.0")% (@matchedCount/@total)</span>
         </div>
     </div>
 
@@ -82,16 +126,14 @@
                     type="text"
                     placeholder="ค้นหาเลขที่อนุมัติ..."
                     class="block w-full border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-white"
-                    style="height: 36px; padding: 6px 12px; font-size: 13px;"
-                >
+                    style="height: 36px; padding: 6px 12px; font-size: 13px;">
             </div>
             <div class="w-56 flex-shrink-0">
                 <select id="sort-order" class="block w-full border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-white cursor-pointer" style="height: 36px; padding: 6px 12px; font-size: 13px; font-weight: 500;">
-                    <option value="default">เรียงลำดับ: เริ่มต้น</option>
+                    <option value="default">รายการเฉพาะเดือนที่เลือก (เริ่มต้น)</option>
+                    <option value="show-all">รายการสะสมทั้งปี (เรียงตามเลขอนุมัติ)</option>
                     <option value="approved-desc">วันที่อนุมัติ: ใหม่ล่าสุด</option>
                     <option value="approved-asc">วันที่อนุมัติ: เก่าสุด</option>
-                    <option value="delivery-desc">เป้าหมายส่งมอบ: ใหม่ล่าสุด</option>
-                    <option value="delivery-asc">เป้าหมายส่งมอบ: เก่าสุด</option>
                 </select>
             </div>
         </div>
@@ -101,10 +143,10 @@
             <!-- Status Filters -->
             <div class="flex gap-2">
                 <button class="status-filter-btn flex items-center justify-center bg-white hover:bg-emerald-50 border-2 border-emerald-500 text-emerald-700 transition-all" data-filter="matched" style="padding: 8px 16px; font-size: 13px; font-weight: 600; border-radius: 8px;">
-                    ได้แผนแล้ว (@matchedCount)
+                    ได้แผนแล้ว (<span id="count-matched">@matchedCount</span>)
                 </button>
                 <button class="status-filter-btn flex items-center justify-center bg-white hover:bg-rose-50 border-2 border-rose-500 text-rose-700 transition-all" data-filter="pending" style="padding: 8px 16px; font-size: 13px; font-weight: 600; border-radius: 8px;">
-                    รอแผนผลิต (@pendingCount)
+                    รอแผนผลิต (<span id="count-pending">@pendingCount</span>)
                 </button>
             </div>
 
@@ -113,7 +155,7 @@
                 <button id="btn-open-upload-modal"
                         class="flex items-center gap-1 btn-custom-amber shadow-sm transition-all active:scale-95">
                     <svg xmlns="http://www.w3.org/2000/svg" style="color: #b45309 !important;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V3m0 0L7.5 7.5M12 3l4.5 4.5M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V3m0 0L7.5 7.5M12 3l4.5 4.5M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5"/>
                     </svg>
                     <span>นำเข้าแผนผลิต</span>
                     <span class="text-xs font-bold" style="color: #b45309 !important;">(@uploadedPlansCount)</span>
@@ -122,7 +164,7 @@
                 <button type="button" id="btn-view-all-system"
                         class="flex items-center gap-2 btn-custom-white shadow-sm transition-all active:scale-95">
                     <svg xmlns="http://www.w3.org/2000/svg" style="color: #475569 !important;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 12h16.5m-16.5-5.25h16.5m-16.5 10.5h16.5" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 12h16.5m-16.5-5.25h16.5m-16.5 10.5h16.5"/>
                     </svg>
                     <span>ดูรายการทั้งหมด</span>
                 </button>
@@ -132,7 +174,10 @@
                         class="flex items-center justify-center btn-custom-green shadow-sm transition-all active:scale-95"
                         style="width: 36px !important; padding: 0 !important;">
                     <svg xmlns="http://www.w3.org/2000/svg" x="0px" y="0px" viewBox="0 0 48 48" style="width: 20px !important; height: 20px !important;">
-                        <path fill="#169154" d="M29,6H15.744C14.781,6,14,6.781,14,7.744v7.259h15V6z"></path><path fill="#18482a" d="M14,33.054v7.202C14,41.219,14.781,42,15.743,42H29v-8.946H14z"></path><path fill="#0c8045" d="M14 15.003H29V24.005000000000003H14z"></path><path fill="#17472a" d="M14 24.005H29V33.055H14z"></path><g><path fill="#29c27f" d="M42.256,6H29v9.003h15V7.744C44,6.781,43.219,6,44,6z"></path><path fill="#27663f" d="M29,33.054V42h13.257C43.219,42,44,41.219,44,40.257v-7.202H29z"></path><path fill="#19ac65" d="M29 15.003H44V24.005000000000003H29z"></path><path fill="#129652" d="M29 24.005H44V33.055H29z"></path></g><path fill="#0c7238" d="M22.319,34H5.681C4.753,34,4,33.247,4,32.319V15.681C4,14.753,4.753,14,5.681,14h16.638 C23.247,14,24,14.753,24,15.681v16.638C24,33.247,23.247,34,22.319,34z"></path><path fill="#fff" d="M9.807 19L12.193 19 14.129 22.754 16.175 19 18.404 19 15.333 24 18.474 29 16.123 29 14.013 25.07 11.912 29 9.526 29 12.719 23.982z"></path>
+                        <path fill="#169154" d="M29,6H15.744C14.781,6,14,6.781,14,7.744v7.259h15V6z"></path><path fill="#18482a" d="M14,33.054v7.202C14,41.219,14.781,42,15.743,42H29v-8.946H14z"></path><path fill="#0c8045" d="M14 15.003H29V24.005000000000003H14z"></path><path fill="#17472a" d="M14 24.005H29V33.055H14z"></path>
+                        <g>
+                            <path fill="#29c27f" d="M42.256,6H29v9.003h15V7.744C44,6.781,43.219,6,44,6z"></path><path fill="#27663f" d="M29,33.054V42h13.257C43.219,42,44,41.219,44,40.257v-7.202H29z"></path><path fill="#19ac65" d="M29 15.003H44V24.005000000000003H29z"></path><path fill="#129652" d="M29 24.005H44V33.055H29z"></path>
+                        </g><path fill="#0c7238" d="M22.319,34H5.681C4.753,34,4,33.247,4,32.319V15.681C4,14.753,4.753,14,5.681,14h16.638 C23.247,14,24,14.753,24,15.681v16.638C24,33.247,23.247,34,22.319,34z"></path><path fill="#fff" d="M9.807 19L12.193 19 14.129 22.754 16.175 19 18.404 19 15.333 24 18.474 29 16.123 29 14.013 25.07 11.912 29 9.526 29 12.719 23.982z"></path>
                     </svg>
                 </button>
             </div>
@@ -143,105 +188,106 @@
         <div class="overflow-x-auto">
             <table class="w-full table-compact text-sm">
                 <thead class="bg-slate-100 border-b border-outline-variant">
-                    <tr>
-                        <th class="text-center text-on-surface font-bold whitespace-nowrap">ลำดับ</th>
-                        <th class="text-center text-on-surface font-bold whitespace-nowrap">สถานะ</th>
-                        <th class="text-center text-on-surface font-bold whitespace-nowrap">เลขที่อนุมัติ</th>
-                        <th class="text-center text-on-surface font-bold whitespace-nowrap">วันที่อนุมัติ</th>
-                        <th class="text-center text-on-surface font-bold whitespace-nowrap">ปภ.ความเร่งด่วน</th>
-                        <th class="text-center text-on-surface font-bold whitespace-nowrap">ราคาที่ผู้ผลิตเสนอ</th>
-                        <th class="text-center text-on-surface font-bold whitespace-nowrap">จำนวน</th>
-                        <th class="text-center text-on-surface font-bold">รายละเอียด</th>
-                        <th class="text-center text-on-surface font-bold whitespace-nowrap">เป้าหมายส่งมอบ</th>
-                        <th class="text-center text-on-surface font-bold whitespace-nowrap">ข้อมูลแผนผลิต</th>
-                    </tr>
+                <tr>
+                    <th class="text-center text-on-surface font-bold whitespace-nowrap">ลำดับ</th>
+                    <th class="text-center text-on-surface font-bold whitespace-nowrap">สถานะ</th>
+                    <th class="text-center text-on-surface font-bold whitespace-nowrap">เลขที่อนุมัติ</th>
+                    <th class="text-center text-on-surface font-bold whitespace-nowrap">วันที่อนุมัติ</th>
+                    <th class="text-center text-on-surface font-bold whitespace-nowrap">ปภ.ความเร่งด่วน</th>
+                    <th class="text-center text-on-surface font-bold whitespace-nowrap">ราคาที่ผู้ผลิตเสนอ</th>
+                    <th class="text-center text-on-surface font-bold whitespace-nowrap">จำนวน</th>
+                    <th class="text-center text-on-surface font-bold">รายละเอียด</th>
+                    <th class="text-center text-on-surface font-bold whitespace-nowrap">เป้าหมายส่งมอบ</th>
+                    <th class="text-center text-on-surface font-bold whitespace-nowrap">ข้อมูลแผนผลิต</th>
+                </tr>
                 </thead>
                 <tbody class="divide-y divide-outline-variant">
-                    @for (int i = 0; i < sortedModel.Count; i++)
-                    {
-                        var order = sortedModel[i];
-                        var isMatched = order.Status == "Matched";
-                        var hasWeeklyPlan = order.MatchedInWeeklyPlans.Any();
-                        var deliveryTarget = hasWeeklyPlan ? order.MatchedInWeeklyPlans.First().DeliveryTarget : "-";
+                @for (int i = 0; i < sortedModel.Count; i++)
+                {
+                    var order = sortedModel[i];
+                    var isMatched = order.Status == "Matched";
+                    var hasWeeklyPlan = order.MatchedInWeeklyPlans.Any();
+                    var deliveryTarget = hasWeeklyPlan ? order.MatchedInWeeklyPlans.First().DeliveryTarget : "-";
 
-                        <tr class="order-row hover:bg-slate-50  transition-colors text-sm" 
-                            data-status="@(isMatched ? "matched" : "pending")" 
-                            data-po="@order.PoNumber"
-                            data-approved-date="@GetIsoDate(order.ApprovedDate)"
-                            data-delivery-target="@GetIsoDate(deliveryTarget)"
-                            data-index="@(i + 1)">
-                            <td class="text-secondary px-3 py-2 text-center">@(i + 1)</td>
-                            <td class="px-3 py-2 text-center">
-                                @if (isMatched)
-                                {
-                                    <span class="badge-status badge-matched inline-flex items-center justify-center gap-1 px-2.5 py-1 text-xs font-medium rounded-lg whitespace-nowrap">
-                                        <svg style="transform: translateY(-1.5px);" class="w-3.5 h-3.5 shrink-0 !inline-block" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16zm3.857-9.809a.75.75 0 0 0-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.137-.089l4-5.5z" clip-rule="evenodd"/>
-                                        </svg>
-                                        <span class="leading-none">ได้แผนผลิตแล้ว</span>
-                                    </span>
-                                }
-                                else
-                                {
-                                    <span class="badge-status badge-pending inline-flex items-center justify-center gap-1 px-2.5 py-1 text-xs font-medium rounded-lg whitespace-nowrap">
-                                        <svg style="transform: translateY(-1.5px);" class="w-3.5 h-3.5 shrink-0 !inline-block" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                                        </svg>
-                                        <span class="leading-none">ยังไม่มีแผนผลิต</span>
-                                    </span>
-                                }
-                            </td>
-                            <td class="font-medium text-on-surface text-center">@order.PoNumber</td>
-                            <td class="text-center text-secondary">@order.ApprovedDate</td>
-                            <td class="text-center text-secondary">@order.Urgency</td>
-                            @{
-                                var proposedPrice = hasWeeklyPlan 
-                                    ? order.MatchedInWeeklyPlans.OrderByDescending(wpd => wpd.WeeklyPlan.UploadedAt).First().Price 
-                                    : order.Amount;
-                                
-                                if (string.IsNullOrEmpty(proposedPrice) || proposedPrice == "-")
-                                {
-                                    proposedPrice = order.Amount;
-                                }
-
-                                decimal tempPrice;
-                                string displayProposedPrice = proposedPrice ?? "-";
-                                if (!string.IsNullOrEmpty(proposedPrice) && decimal.TryParse(proposedPrice.Replace("฿", "").Replace(",", "").Trim(), out tempPrice))
-                                {
-                                    displayProposedPrice = "฿" + tempPrice.ToString("N2");
-                                }
-                                else
-                                {
-                                    displayProposedPrice = "-";
-                                }
+                    <tr class="order-row hover:bg-slate-50  transition-colors text-sm"
+                        data-status="@(isMatched ? "matched" : "pending")"
+                        data-po="@order.PoNumber"
+                        data-approved-date="@GetIsoDate(order.ApprovedDate)"
+                        data-delivery-target="@GetIsoDate(deliveryTarget)"
+                        data-month="@GetMonth(order.ApprovedDate)"
+                        data-index="@(i + 1)">
+                        <td class="text-secondary px-3 py-2 text-center">@(i + 1)</td>
+                        <td class="px-3 py-2 text-center">
+                            @if (isMatched)
+                            {
+                                <span class="badge-status badge-matched inline-flex items-center justify-center gap-1 px-2.5 py-1 text-xs font-medium rounded-lg whitespace-nowrap">
+                                    <svg style="transform: translateY(-1.5px);" class="w-3.5 h-3.5 shrink-0 !inline-block" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16zm3.857-9.809a.75.75 0 0 0-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.137-.089l4-5.5z" clip-rule="evenodd"/>
+                                    </svg>
+                                    <span class="leading-none">ได้แผนผลิตแล้ว</span>
+                                </span>
                             }
-                            <td class="text-right font-medium text-on-surface">@displayProposedPrice</td>
-                            <td class="text-center text-secondary">@order.RemarksQuantity</td>
-                            <td class="text-secondary detail-cell text-left">@order.Remarks</td>
-                            <td class="text-center">
-                                @if (hasWeeklyPlan)
-                                {
-                                    <span class="text-xs font-bold text-blue-700">@deliveryTarget</span>
-                                }
-                                else
-                                {
-                                    <span class="text-secondary text-xs">-</span>
-                                }
-                            </td>
-                            <td class="text-center">
-                                @if (hasWeeklyPlan)
-                                {
-                                    <button class="btn-view-detail px-3 py-1 bg-primary hover:bg-primary/90 text-white text-xs font-bold rounded transition-colors" data-order-id="@order.Id">
-                                        ตรวจสอบ
-                                    </button>
-                                }
-                                else
-                                {
-                                    <span class="text-secondary text-xs">-</span>
-                                }
-                            </td>
-                        </tr>
-                    }
+                            else
+                            {
+                                <span class="badge-status badge-pending inline-flex items-center justify-center gap-1 px-2.5 py-1 text-xs font-medium rounded-lg whitespace-nowrap">
+                                    <svg style="transform: translateY(-1.5px);" class="w-3.5 h-3.5 shrink-0 !inline-block" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+                                    </svg>
+                                    <span class="leading-none">ยังไม่มีแผนผลิต</span>
+                                </span>
+                            }
+                        </td>
+                        <td class="font-medium text-on-surface text-center">@order.PoNumber</td>
+                        <td class="text-center text-secondary">@order.ApprovedDate</td>
+                        <td class="text-center text-secondary">@order.Urgency</td>
+                        @{
+                            var proposedPrice = hasWeeklyPlan
+                                ? order.MatchedInWeeklyPlans.OrderByDescending(wpd => wpd.WeeklyPlan.UploadedAt).First().Price
+                                : order.Amount;
+
+                            if (string.IsNullOrEmpty(proposedPrice) || proposedPrice == "-")
+                            {
+                                proposedPrice = order.Amount;
+                            }
+
+                            decimal tempPrice;
+                            string displayProposedPrice = proposedPrice ?? "-";
+                            if (!string.IsNullOrEmpty(proposedPrice) && decimal.TryParse(proposedPrice.Replace("฿", "").Replace(",", "").Trim(), out tempPrice))
+                            {
+                                displayProposedPrice = "฿" + tempPrice.ToString("N2");
+                            }
+                            else
+                            {
+                                displayProposedPrice = "-";
+                            }
+                        }
+                        <td class="text-right font-medium text-on-surface">@displayProposedPrice</td>
+                        <td class="text-center text-secondary">@order.RemarksQuantity</td>
+                        <td class="text-secondary detail-cell text-left">@order.Remarks</td>
+                        <td class="text-center">
+                            @if (hasWeeklyPlan)
+                            {
+                                <span class="text-xs font-bold text-blue-700">@deliveryTarget</span>
+                            }
+                            else
+                            {
+                                <span class="text-secondary text-xs">-</span>
+                            }
+                        </td>
+                        <td class="text-center">
+                            @if (hasWeeklyPlan)
+                            {
+                                <button class="btn-view-detail px-3 py-1 bg-primary hover:bg-primary/90 text-white text-xs font-bold rounded transition-colors" data-order-id="@order.Id">
+                                    ตรวจสอบ
+                                </button>
+                            }
+                            else
+                            {
+                                <span class="text-secondary text-xs">-</span>
+                            }
+                        </td>
+                    </tr>
+                }
                 </tbody>
             </table>
         </div>
@@ -262,9 +308,9 @@
             <div id="upload-step">
                 <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider" style="margin-bottom: 12px; display: block;">อัปโหลดไฟล์ Excel (สูงสุด 10 ไฟล์)</label>
                 <div id="dropzone-area" class="border-2 border-dashed border-slate-200 rounded flex flex-col items-center justify-center bg-slate-50/30 hover:bg-slate-50/70 hover:border-slate-400 cursor-pointer transition-all" style="padding: 36px 24px; border-radius: 8px;">
-                    <input type="file" id="weeklyPlanFiles" multiple accept=".xlsx,.csv" class="hidden" />
+                    <input type="file" id="weeklyPlanFiles" multiple accept=".xlsx,.csv" class="hidden"/>
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-slate-400" style="margin-bottom: 16px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z"/>
                     </svg>
                     <span class="text-sm font-semibold text-slate-600" style="margin-bottom: 6px; display: block; text-align: center;">ลากและวางไฟล์ที่นี่ หรือ คลิกเพื่อเลือกไฟล์</span>
                     <span class="text-xs text-slate-400" style="text-align: center; display: block;">Excel (.xlsx) หรือ .csv สูงสุด 10 ไฟล์</span>
@@ -284,7 +330,7 @@
                 </div>
                 <div id="sheet-selectors" class="mb-6"></div>
                 <!-- ลบ style="gap: 12px;" ออกไปได้เลย -->
-<div class="flex flex-col sm:flex-row items-center justify-end gap-3 pt-5 pb-1 mt-6">
+                <div class="flex flex-col sm:flex-row items-center justify-end gap-3 pt-5 pb-1 mt-6">
 
                     <button id="btn-back-to-files" class="btn-custom-white" style="padding: 10px 20px;">กลับไปเลือกไฟล์ใหม่</button>
                     <button id="btn-confirm-match" class="btn-custom-blue" style="padding: 10px 22px;">ดำเนินการจับคู่</button>
@@ -346,9 +392,9 @@
 
         // Detail Modal
         const detailModal = document.getElementById('detail-modal');
-        
+
         document.querySelectorAll('.btn-view-detail').forEach(btn => {
-            btn.addEventListener('click', async function() {
+            btn.addEventListener('click', async function () {
                 const orderId = this.getAttribute('data-order-id');
 
                 try {
@@ -370,7 +416,7 @@
                         if (statusVal.includes(':')) {
                             cleanStatusVal = statusVal.split(':').slice(1).join(':').trim();
                         }
-                        
+
                         let badgeHtml = '';
                         if (statusVal.includes('ดำเนินการ') || statusVal.startsWith('0') || statusVal.startsWith('O:')) {
                             badgeHtml = `<span class="inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200"><span style="width: 6px; height: 6px; border-radius: 50%; background-color: #d97706; flex-shrink: 0;"></span>${cleanStatusVal}</span>`;
@@ -384,12 +430,12 @@
                         // Render timeline history
                         const historyContainer = document.getElementById('detail-history-container');
                         historyContainer.innerHTML = '';
-                        
+
                         if (data.history && data.history.length > 0) {
                             // Build timeline wrapper with vertical line
                             const timelineOuter = document.createElement('div');
                             timelineOuter.style.cssText = 'position: relative; padding-left: 28px;';
-                            
+
                             // Vertical timeline line
                             const vLine = document.createElement('div');
                             vLine.style.cssText = 'position: absolute; left: 6px; top: 10px; bottom: 10px; width: 2px; background: #e2e8f0; border-radius: 1px;';
@@ -401,7 +447,7 @@
                                 if (hStatusVal.includes(':')) {
                                     hCleanStatusVal = hStatusVal.split(':').slice(1).join(':').trim();
                                 }
-                                
+
                                 // Determine status badge colors
                                 let badgeBg, badgeText, badgeBorder, dotColor, markerColor;
                                 if (hStatusVal.includes('ดำเนินการ') || hStatusVal.startsWith('0') || hStatusVal.startsWith('O:')) {
@@ -411,35 +457,35 @@
                                 } else {
                                     badgeBg = '#f8fafc'; badgeText = '#475569'; badgeBorder = '#e2e8f0'; dotColor = '#94a3b8'; markerColor = '#94a3b8';
                                 }
-                                
+
                                 const hBadgeHtml = `<span style="display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: 700; background: ${badgeBg}; color: ${badgeText}; border: 1px solid ${badgeBorder};"><span style="width: 5px; height: 5px; border-radius: 50%; background: ${dotColor}; flex-shrink: 0;"></span>${hCleanStatusVal || '-'}</span>`;
-                                
+
                                 // เอฟเฟกต์วงแหวนและจุดกระพริบสำหรับทุกรายการพร้อมหน่วงเวลา (Staggered Animation)
                                 const pulseRingHtml = `
-                                    <span class="absolute" style="left: -33px; top: 8px; width: 22px; height: 22px; border-radius: 50%; background: ${markerColor}; opacity: 0.45; animation: timeline-pulse-ring 2.2s cubic-bezier(0.24, 0, 0.38, 1) infinite; animation-delay: ${index * 0.35}s; pointer-events: none;"></span>
-                                `;
+                                            <span class="absolute" style="left: -33px; top: 8px; width: 22px; height: 22px; border-radius: 50%; background: ${markerColor}; opacity: 0.45; animation: timeline-pulse-ring 2.2s cubic-bezier(0.24, 0, 0.38, 1) infinite; animation-delay: ${index * 0.35}s; pointer-events: none;"></span>
+                                        `;
 
                                 const itemHtml = `
-                                    <div style="position: relative; margin-bottom: 16px;">
-                                        <!-- Marker dot -->
-                                        ${pulseRingHtml}
-                                        <div style="position: absolute; left: -27px; top: 14px; width: 10px; height: 10px; border-radius: 50%; background: ${markerColor}; box-shadow: 0 0 0 3px #e2e8f0; animation: timeline-dot-pulse 2.2s infinite; animation-delay: ${index * 0.35}s;"></div>
-                                        
-                                        <!-- Card -->
-                                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px;">
-                                            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
-                                                <span style="font-size: 12px; font-weight: 600; color: #1e293b; line-height: 1.4; word-break: break-word; max-width: 320px;" title="${item.fileName}">${item.fileName}</span>
-                                                <span style="font-size: 10px; color: #94a3b8; font-weight: 500; white-space: nowrap; flex-shrink: 0;">${item.uploadedAt}</span>
+                                            <div style="position: relative; margin-bottom: 16px;">
+                                                <!-- Marker dot -->
+                                                ${pulseRingHtml}
+                                                <div style="position: absolute; left: -27px; top: 14px; width: 10px; height: 10px; border-radius: 50%; background: ${markerColor}; box-shadow: 0 0 0 3px #e2e8f0; animation: timeline-dot-pulse 2.2s infinite; animation-delay: ${index * 0.35}s;"></div>
+                                                
+                                                <!-- Card -->
+                                                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px;">
+                                                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+                                                        <span style="font-size: 12px; font-weight: 600; color: #1e293b; line-height: 1.4; word-break: break-word; max-width: 320px;" title="${item.fileName}">${item.fileName}</span>
+                                                        <span style="font-size: 10px; color: #94a3b8; font-weight: 500; white-space: nowrap; flex-shrink: 0;">${item.uploadedAt}</span>
+                                                    </div>
+                                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+                                                        <span style="font-size: 11px; color: #94a3b8;">ชีท: <strong style="color: #64748b; font-weight: 500;">${item.sheetName}</strong>
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
-                                                <span style="font-size: 11px; color: #94a3b8;">ชีท: <strong style="color: #64748b; font-weight: 500;">${item.sheetName}</strong>
-                                            </div>
-                                        </div>
-                                    </div>
-                                `;
+                                        `;
                                 timelineOuter.insertAdjacentHTML('beforeend', itemHtml);
                             });
-                            
+
                             historyContainer.appendChild(timelineOuter);
                         } else {
                             historyContainer.innerHTML = '<div style="text-align: center; font-size: 12px; color: #94a3b8; padding: 16px 0;">ไม่มีข้อมูลประวัติแผนผลิต</div>';
@@ -488,9 +534,9 @@
         let activeFilter = null; // เก็บ filter ที่เปิดอยู่ (ตัวเดียว)
 
         document.querySelectorAll('.status-filter-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
+            btn.addEventListener('click', function () {
                 const filter = this.getAttribute('data-filter');
-                
+
                 // If clicking the same filter, toggle it off
                 if (activeFilter === filter) {
                     activeFilter = null;
@@ -533,92 +579,115 @@
                     }
                 }
 
-                // Filter rows based on active filter
-                const rows = document.querySelectorAll('.order-row');
-                const searchTerm = document.getElementById('po-search').value.toLowerCase().trim();
-
-                rows.forEach(row => {
-                    const status = row.getAttribute('data-status');
-                    const poNumber = row.getAttribute('data-po').toLowerCase();
-                    
-                    const matchSearch = searchTerm === '' || poNumber.includes(searchTerm);
-                    const matchFilter = activeFilter === null || activeFilter === status;
-
-                    row.style.display = (matchSearch && matchFilter) ? '' : 'none';
-                });
+                // Apply filter
+                updateView();
             });
         });
 
-        // Search (updated to work with mutually exclusive filter logic)
-        document.getElementById('po-search').addEventListener('input', function(e) {
-            const searchTerm = e.target.value.toLowerCase().trim();
-            const rows = document.querySelectorAll('.order-row');
-
-            rows.forEach(row => {
-                const poNumber = row.getAttribute('data-po').toLowerCase();
-                const rowStatus = row.getAttribute('data-status');
-
-                const matchSearch = poNumber.includes(searchTerm);
-                const matchFilter = activeFilter === null || activeFilter === rowStatus;
-
-                row.style.display = (matchSearch && matchFilter) ? '' : 'none';
-            });
-        });
-
-        // Sorting functionality
-        document.getElementById('sort-order').addEventListener('change', function() {
-            const val = this.value;
+        // Consolidated function for filtering and sorting
+        function updateView() {
+            const searchTerm = document.getElementById('po-search').value.toLowerCase().trim();
+            const sortVal = document.getElementById('sort-order').value;
+            const currentMonth = "@currentMonth";
+            
             const tbody = document.querySelector('table tbody');
             const rows = Array.from(tbody.querySelectorAll('.order-row'));
             
+            let visibleIndex = 1;
+
+            // Sort first
             rows.sort((a, b) => {
-                if (val === 'default') {
+                if (sortVal === 'default' || sortVal === 'show-all') {
                     const indexA = parseInt(a.getAttribute('data-index'));
                     const indexB = parseInt(b.getAttribute('data-index'));
                     return indexA - indexB;
                 }
-                
-                if (val.startsWith('approved')) {
+
+                if (sortVal.startsWith('approved')) {
                     const dateA = a.getAttribute('data-approved-date') || '';
                     const dateB = b.getAttribute('data-approved-date') || '';
-                    
                     if (dateA === dateB) return 0;
                     if (!dateA) return 1;
                     if (!dateB) return -1;
-                    
-                    return val === 'approved-desc' ? dateB.localeCompare(dateA) : dateA.localeCompare(dateB);
+                    return sortVal === 'approved-desc' ? dateB.localeCompare(dateA) : dateA.localeCompare(dateB);
                 }
-                
-                if (val.startsWith('delivery')) {
-                    const dateA = a.getAttribute('data-delivery-target') || '';
-                    const dateB = b.getAttribute('data-delivery-target') || '';
-                    
-                    if (dateA === dateB) return 0;
-                    if (!dateA) return 1;
-                    if (!dateB) return -1;
-                    
-                    return val === 'delivery-desc' ? dateB.localeCompare(dateA) : dateA.localeCompare(dateB);
-                }
-                
+
                 return 0;
             });
-            
-            // Re-append sorted rows to tbody
-            rows.forEach((row, i) => {
+
+            let totalVisible = 0;
+            let matchedVisible = 0;
+            let pendingVisible = 0;
+
+            // Re-append and apply filters
+            rows.forEach(row => {
                 tbody.appendChild(row);
-                // Update numbering
-                const numberCell = row.querySelector('td:first-child');
-                if (numberCell) {
-                    numberCell.textContent = i + 1;
+                
+                const status = row.getAttribute('data-status');
+                const poNumber = row.getAttribute('data-po').toLowerCase();
+                const rowMonth = row.getAttribute('data-month');
+
+                const matchSearch = searchTerm === '' || poNumber.includes(searchTerm);
+                const matchStatusFilter = activeFilter === null || activeFilter === status;
+                
+                // If show-all is selected, show all months. Otherwise, only show currentMonth
+                const matchMonth = (sortVal === 'show-all') || (!currentMonth) || (parseInt(rowMonth, 10) === parseInt(currentMonth, 10));
+
+                if (matchSearch && matchMonth) {
+                    if (status === 'matched') matchedVisible++;
+                    else pendingVisible++;
+
+                    if (matchStatusFilter) {
+                        row.style.display = '';
+                        const numberCell = row.querySelector('td:first-child');
+                        if (numberCell) {
+                            numberCell.textContent = visibleIndex++;
+                        }
+                        totalVisible++;
+                    } else {
+                        row.style.display = 'none';
+                    }
+                } else {
+                    row.style.display = 'none';
                 }
             });
-        });
+
+            // Update UI counts
+            document.getElementById('count-matched').textContent = matchedVisible;
+            document.getElementById('count-pending').textContent = pendingVisible;
+            
+            const successRate = totalVisible > 0 ? (matchedVisible / totalVisible * 100).toFixed(1) : "0.0";
+            const successText = document.getElementById('success-rate-text');
+            const successBar = document.getElementById('success-rate-bar');
+            
+            if (successText && successBar) {
+                successText.textContent = `${successRate}% (${matchedVisible}/${totalVisible})`;
+                successBar.style.width = `${successRate}%`;
+                
+                if (parseFloat(successRate) === 100) {
+                    successText.className = "text-sm font-bold text-emerald-600 whitespace-nowrap";
+                    successBar.className = "h-2 rounded-full transition-all bg-emerald-500";
+                } else {
+                    successText.className = "text-sm font-bold text-primary whitespace-nowrap";
+                    successBar.className = "h-2 rounded-full transition-all bg-primary";
+                }
+            }
+        }
+
+        // Search
+        document.getElementById('po-search').addEventListener('input', updateView);
+
+        // Sorting
+        document.getElementById('sort-order').addEventListener('change', updateView);
+
+        // Initial view setup
+        updateView();
 
         // Handle export Excel with custom name prompt
-        document.getElementById('btn-export-excel').addEventListener('click', function() {
+        document.getElementById('btn-export-excel').addEventListener('click', function () {
             const reportName = "@Html.Raw(reportName)";
             const currentMonth = "@currentMonth";
-            const currentYear  = "@currentYear";
+            const currentYear = "@currentYear";
             const defaultExportName = `รายงาน_${reportName}_${new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' }).replace(/ /g, '_')}`;
 
             Swal.fire({
@@ -662,7 +731,7 @@
             const reportName = "@Html.Raw(reportName)";
             const month = "@currentMonth";
             const year = "@currentYear";
-            
+
             // ถ้ามาจาก month/year mode ให้ส่ง month & year ไปด้วย
             if (month && year) {
                 window.location.href = `/Report/AllOrders?returnReportName=${encodeURIComponent(reportName)}&month=${month}&year=${year}`;

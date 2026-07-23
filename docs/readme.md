@@ -6,10 +6,11 @@
 
 ## สารบัญเอกสาร (Table of Contents)
 
+### 📘 คู่มืออธิบายการทำงานของระบบ (System Guide)
+*   **[CostFlow_System_Guide.md](CostFlow_System_Guide.md)** — คู่มืออธิบายการทำงานของระบบ CostFlow ฉบับอ่านง่าย สไตล์ภาษาปาก กันเอง
+
 ### 📘 โครงสร้างโปรเจกต์และสถาปัตยกรรม (Architecture & Project Structure)
 *   **[00_project_structure_and_architecture.md](00_project_structure_and_architecture.md)** — อธิบายโครงสร้างโฟลเดอร์ โค้ดแต่ละส่วน ระบบ MVC สถาปัตยกรรมระบบ และโฟลว์การทำงานหลักแบบละเอียดกระชับ
-
-### 📗 คู่มือตรรกะการทำงานแต่ละโมดูล (Module Logic Guides)
 *   **[01_file_merge.md](01_file_merge.md)** — ระบบอัปโหลดและเปรียบเทียบไฟล์แผนผลิตกับใบขออนุมัติสั่งผลิต (File Merge & Price Matching)
 *   **[02_export_excel.md](02_export_excel.md)** — ระบบการออกรายงานและดาวน์โหลดไฟล์สรุปผล Excel (ClosedXML Export)
 *   **[03_purchase_order.md](03_purchase_order.md)** — ระบบค้นหาอะไหล่อัตโนมัติ (AJAX) และบันทึกใบสั่งซื้อสะสม

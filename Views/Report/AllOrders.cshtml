@@ -395,8 +395,8 @@
                             document.getElementById('detail-delivery-target').textContent = data.deliveryTarget || '-';
                             document.getElementById('detail-file-name').textContent = data.fileName || '-';
                             document.getElementById('detail-file-name').setAttribute('title', data.fileName || '-');
-                            document.getElementById('detail-po-number').textContent = data.poNumberInFile || '-';
-                            document.getElementById('detail-weekly-price').textContent = formatPrice(data.weeklyPlanPrice || data.masterPrice);
+                            const modalPrice = (data.weeklyPlanPrice && data.weeklyPlanPrice !== '-') ? data.weeklyPlanPrice : data.masterPrice;
+                            document.getElementById('detail-weekly-price').textContent = formatPrice(modalPrice);
                             const statusContainer = document.getElementById('detail-order-status-badge');
                             const statusVal = data.orderStatus || '';
                             let cleanStatusVal = statusVal;

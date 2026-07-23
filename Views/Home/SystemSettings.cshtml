@@ -1,0 +1,205 @@
+@model CostFlow.Models.SettingsViewModel
+@{
+    ViewData["Title"] = "ตั้งค่า & สำรองข้อมูล";
+    ViewData["HeaderTitle"] = "ตั้งค่าระบบและย้ายสำรองข้อมูล (Settings & Archiving)";
+}
+
+<div class="flex-1 p-md md:p-lg lg:p-xl flex flex-col gap-xl max-w-[1440px] mx-auto w-full">
+
+    <!-- Header Banner -->
+    <div class="bg-gradient-to-r from-primary to-primary-container text-white rounded border border-outline-variant shadow-sm p-lg relative overflow-hidden flex justify-between items-center fade-in-up">
+        <div class="z-10 max-w-2xl">
+            <div class="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full text-[12px] font-bold text-white mb-3">
+                <i class="fi fi-rs-shield-check"></i>
+                <span>ระบบบริหารจัดการข้อมูลเก่า (Data Retention & Archiving)</span>
+            </div>
+            <h2 class="font-headline-md text-headline-md font-bold mb-xs">ตั้งค่าระบบและการย้ายสำรองข้อมูล</h2>
+            <p class="text-xs text-white/80 leading-relaxed">
+                ระบบถูกตั้งค่าให้เก็บข้อมูลไว้ในฐานข้อมูลสูงสุด <strong>@Model.RetentionMonths เดือน (@(Model.RetentionMonths / 12) ปี)</strong> 
+                ข้อมูลที่เก่ากว่าวันตัดข้อมูลจะถูกส่งไปสำรองใน Google Sheet ปลายทางอย่างปลอดภัยก่อนลบออกจากระบบ
+            </p>
+        </div>
+        <div class="hidden lg:block z-0 opacity-10 absolute right-8 top-0 bottom-0 flex items-center">
+            <i class="fi fi-rs-database text-[140px] text-white"></i>
+        </div>
+    </div>
+
+    <!-- Status Cards Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-md">
+        <!-- Card 1: Retention Period -->
+        <div class="bg-surface-container-lowest p-md rounded-lg border border-outline-variant/60 shadow-sm flex items-center gap-md">
+            <div class="w-12 h-12 rounded-lg bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
+                <i class="fi fi-rs-calendar-clock text-xl"></i>
+            </div>
+            <div>
+                <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">ระยะเวลาเก็บข้อมูล (Retention)</div>
+                <div class="font-headline-sm text-headline-sm text-on-surface font-bold">@Model.RetentionMonths เดือน (@(Model.RetentionMonths / 12) ปี)</div>
+            </div>
+        </div>
+
+        <!-- Card 2: Cutoff Date -->
+        <div class="bg-surface-container-lowest p-md rounded-lg border border-outline-variant/60 shadow-sm flex items-center gap-md">
+            <div class="w-12 h-12 rounded-lg bg-blue-500/10 text-blue-600 flex items-center justify-center flex-shrink-0">
+                <i class="fi fi-rs-clock text-xl"></i>
+            </div>
+            <div>
+                <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">วันตัดข้อมูลเก่า (Cutoff Date)</div>
+                <div class="font-headline-sm text-headline-sm text-on-surface font-bold">ก่อน @Model.CutoffDateDisplay</div>
+            </div>
+        </div>
+
+        <!-- Card 3: Pending Archive Count -->
+        <div class="bg-surface-container-lowest p-md rounded-lg border border-outline-variant/60 shadow-sm flex items-center gap-md">
+            <div class="w-12 h-12 rounded-lg bg-amber-500/10 text-amber-600 flex items-center justify-center flex-shrink-0">
+                <i class="fi fi-rs-box text-xl"></i>
+            </div>
+            <div>
+                <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">รายการเก่าที่พร้อมสำรอง</div>
+                <div class="font-headline-sm text-headline-sm text-on-surface font-bold">
+                    @(Model.EligiblePlanCount + Model.EligibleOrderCount) รายการ
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Action Card -->
+    <div class="bg-surface-container-lowest rounded-lg border border-outline-variant/60 shadow-sm p-lg flex flex-col gap-md">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-md pb-md border-b border-outline-variant/60">
+            <div>
+                <h3 class="font-headline-sm text-headline-sm text-on-surface font-bold mb-1 flex items-center gap-2">
+                    <i class="fi fi-rs-file-spreadsheet text-emerald-600"></i>
+                    <span>สำรองและลบข้อมูลเก่าลง Google Sheet (Backup & Purge)</span>
+                </h3>
+                <p class="font-body-md text-body-md text-on-surface-variant">
+                    กดปุ่มเพื่อย้ายข้อมูลที่เก่ากว่า <strong>@Model.CutoffDateDisplay</strong> ลงใน Google Sheet และทำความสะอาดฐานข้อมูลทันที
+                </p>
+            </div>
+            @if (!string.IsNullOrWhiteSpace(Model.ArchiveSheetUrl))
+            {
+                <a href="@Model.ArchiveSheetUrl" target="_blank" class="inline-flex items-center gap-2 px-4 py-2 text-[13px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-md transition-colors shadow-sm">
+                    <i class="fi fi-rs-link"></i>
+                    <span>เปิดดู Google Sheet สำรอง</span>
+                </a>
+            }
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-md my-2">
+            <div class="p-md rounded-md bg-slate-50 border border-slate-200 flex flex-col gap-2">
+                <div class="font-bold text-[13px] text-slate-700 flex items-center gap-2">
+                    <i class="fi fi-rs-document text-primary"></i>
+                    <span>แผนการผลิตประจำสัปดาห์ (WeeklyPlan)</span>
+                </div>
+                <div class="text-[20px] font-bold text-slate-900">@Model.EligiblePlanCount <span class="text-[12px] font-normal text-slate-500">ไฟล์เก่าพร้อมย้าย</span></div>
+                <div class="text-[11px] text-slate-500">จะถูกย้ายไปบันทึกในชีท <strong>WeeklyPlan_Matching</strong></div>
+            </div>
+
+            <div class="p-md rounded-md bg-slate-50 border border-slate-200 flex flex-col gap-2">
+                <div class="font-bold text-[13px] text-slate-700 flex items-center gap-2">
+                    <i class="fi fi-rs-receipt text-primary"></i>
+                    <span>รายการสั่งซื้อและประวัติชำระ (MonthlyCost Actions)</span>
+                </div>
+                <div class="text-[20px] font-bold text-slate-900">@Model.EligibleOrderCount <span class="text-[12px] font-normal text-slate-500">รายการเก่าพร้อมย้าย</span></div>
+                <div class="text-[11px] text-slate-500">จะถูกย้ายไปบันทึกในชีท <strong>MonthlyCost_Actions</strong></div>
+            </div>
+        </div>
+
+        <!-- Execute Action Area -->
+        <div class="mt-2 flex flex-col sm:flex-row items-center justify-between gap-md pt-md border-t border-outline-variant/60 bg-amber-50/50 -mx-lg -mb-lg p-lg rounded-b-lg">
+            <div class="flex items-center gap-3 text-amber-900 text-[13px]">
+                <i class="fi fi-rs-info text-lg text-amber-600 flex-shrink-0"></i>
+                <span>มีระบบ <strong>Fail-Safe Guard</strong> ป้องกันข้อมูลสูญหาย — หาก Google Sheet บันทึกไม่สำเร็จ ข้อมูลใน DB จะไม่ถูกลบ</span>
+            </div>
+            <button id="btn-start-archive" onclick="openArchiveModal()" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[14px] px-6 py-3 rounded-md transition-all shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2">
+                <i class="fi fi-rs-cloud-upload text-lg"></i>
+                <span>เริ่มทำการสำรองและลบข้อมูลเก่าทันที</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal ยืนยันการทำ Archive & Purge -->
+<div id="archive-modal" class="fixed inset-0 z-50 hidden overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg max-w-md w-full shadow-2xl overflow-hidden transform transition-all border border-slate-200">
+        <!-- Modal Header -->
+        <div class="p-lg bg-emerald-600 text-white flex justify-between items-center">
+            <h4 class="font-bold text-[16px] flex items-center gap-2">
+                <i class="fi fi-rs-cloud-upload"></i>
+                <span>ยืนยันการสำรองและลบข้อมูล</span>
+            </h4>
+            <button onclick="closeArchiveModal()" class="text-white/80 hover:text-white text-lg">&times;</button>
+        </div>
+
+        <!-- Modal Body -->
+        <div class="p-lg space-y-4">
+            <p class="text-[13px] text-slate-700 leading-relaxed">
+                คุณต้องการย้ายสำรองข้อมูลที่มีอายุเก่ากว่า <strong>@Model.RetentionMonths เดือน</strong> (ก่อนวันที่ <strong>@Model.CutoffDateDisplay</strong>) ลง Google Sheet และลบออกจากฐานข้อมูลหรือไม่?
+            </p>
+            <div class="p-3 bg-slate-100 rounded text-[12px] text-slate-600 space-y-1">
+                <div>• สำรองลง Google Sheet ทั้ง 2 ชีท</div>
+                <div>• ตรวจสอบความถูกต้องก่อนลบออกจาก DB</div>
+                <div>• ไม่กระทบกับข้อมูลย้อนหลัง 2 ปีล่าสุด</div>
+            </div>
+
+            <!-- Loading Spinner Container (hidden by default) -->
+            <div id="archive-loading" class="hidden p-4 text-center space-y-3">
+                <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-emerald-600 border-t-transparent"></div>
+                <div class="text-[13px] font-bold text-emerald-800">กำลังย้ายข้อมูลลง Google Sheet และทำความสะอาดฐานข้อมูล...</div>
+                <div class="text-[11px] text-slate-500">กรุณาอย่าปิดหน้านี้จนกว่ากระบวนการจะเสร็จสมบูรณ์</div>
+            </div>
+        </div>
+
+        <!-- Modal Footer -->
+        <div id="modal-actions" class="p-md bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
+            <button onclick="closeArchiveModal()" class="px-4 py-2 text-[13px] font-bold text-slate-600 hover:bg-slate-200 rounded-md transition-colors">
+                ยกเลิก
+            </button>
+            <button id="btn-confirm-archive" onclick="executeArchive()" class="px-5 py-2 text-[13px] font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-md shadow transition-colors">
+                ยืนยันดำเนินการ
+            </button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function openArchiveModal() {
+            document.getElementById('archive-modal').classList.remove('hidden');
+        }
+
+        function closeArchiveModal() {
+            document.getElementById('archive-modal').classList.add('hidden');
+            document.getElementById('archive-loading').classList.add('hidden');
+            document.getElementById('modal-actions').classList.remove('hidden');
+        }
+
+        async function executeArchive() {
+            const loading = document.getElementById('archive-loading');
+            const actions = document.getElementById('modal-actions');
+            
+            loading.classList.remove('hidden');
+            actions.classList.add('hidden');
+
+            try {
+                const response = await fetch('/Home/ArchiveAndPurge', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert('✅ สำรองและลบข้อมูลเรียบร้อยแล้ว!\n\n• แผนผลิต: ' + (result.archivedPlans || 0) + ' แถว\n• รายการสั่งซื้อ: ' + (result.archivedActions || 0) + ' แถว');
+                    window.location.reload();
+                } else {
+                    alert('❌ เกิดข้อผิดพลาด: ' + (result.error || 'ไม่สามารถดำเนินการได้'));
+                    closeArchiveModal();
+                }
+            } catch (err) {
+                alert('❌ เกิดข้อผิดพลาดในการเชื่อมต่อระบบ: ' + err.message);
+                closeArchiveModal();
+            }
+        }
+    </script>
+}

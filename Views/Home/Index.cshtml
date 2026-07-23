@@ -9,8 +9,37 @@
     <!-- Welcome Header / Hero Banner -->
     <div class="bg-gradient-to-r from-primary to-primary-container text-white rounded border border-outline-variant shadow-sm p-lg h-56 relative overflow-hidden flex justify-between items-center fade-in-up">
         <div class="z-10 max-w-xl">
-            <h2 class="font-headline-md text-headline-md font-bold mb-xs">ระบบบริหารจัดการและวิเคราะห์ต้นทุน (DEMO)</h2>
-            <p class="text-xs text-white/80 leading-relaxed">ยินดีต้อนรับสู่แดชบอร์ดสรุปผลการจับคู่ใบสั่งงานผลิตอะไหล่, เปรียบเทียบใบขออนุมัติ, ตรวจสอบข้อมูลราคากลางประวัติจัดซื้อย้อนหลัง และบันทึกคำสั่งซื้อโรงงานครบวงจร</p>
+            <div class="flex items-center gap-2 mb-2">
+                <h2 class="font-headline-md text-headline-md font-bold">ระบบบริหารจัดการและวิเคราะห์ต้นทุน (DEMO)</h2>
+            </div>
+            <p class="text-xs text-white/80 leading-relaxed mb-3">ยินดีต้อนรับสู่แดชบอร์ดสรุปผลการจับคู่ใบสั่งงานผลิตอะไหล่, เปรียบเทียบใบขออนุมัติ, ตรวจสอบข้อมูลราคากลางประวัติจัดซื้อย้อนหลัง และบันทึกคำสั่งซื้อโรงงานครบวงจร</p>
+            <style>
+                @@keyframes dotBlinkWhite {
+                    0%, 100% {
+                        opacity: 1;
+                        transform: scale(1.15);
+                        box-shadow: 0 0 10px rgba(255, 255, 255, 0.9);
+                    }
+                    50% {
+                        opacity: 0.2;
+                        transform: scale(0.75);
+                        box-shadow: 0 0 1px rgba(255, 255, 255, 0);
+                    }
+                }
+            
+                .dot-blink-white {
+                    display: inline-block;
+                    width: 9px;
+                    height: 9px;
+                    background-color: #ffffff;
+                    border-radius: 50%;
+                    animation: dotBlinkWhite 2.4s infinite ease-in-out;
+                }
+            </style>
+            <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium bg-white/10 backdrop-blur-sm border border-white/20 text-white shadow-xs">
+                <span class="dot-blink-white"></span>
+                <span>อัปเดตข้อมูลสถิติอัตโนมัติทุก 15 วินาที</span>
+            </div>
         </div>
         <div class="hidden lg:block z-0 opacity-10 absolute right-10 top-0 bottom-0 flex items-center">
             <svg class="w-64 h-64 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
@@ -21,50 +50,56 @@
     </div>
 
     <!-- Quick Stats Metric Row -->
-    <section aria-label="สถิติข้อมูล" class="grid grid-cols-2 lg:grid-cols-4 gap-sm md:gap-md mt-6">
-        <!-- Stat 1: Merged Reports -->
-        <a href="/Report" class="bg-blue-50/60 rounded-lg border border-blue-200/80 px-md py-sm flex items-center gap-sm relative hover:bg-blue-50 transition-colors group">
-            <div class="w-9 h-9 rounded-md bg-blue-100 flex items-center justify-center text-blue-600 flex-shrink-0 group-hover:scale-105 transition-transform">
-                <i class="fi fi-rs-document-signed text-base"></i>
-            </div>
-            <div class="min-w-0">
-                <div class="font-headline-sm text-headline-sm text-blue-900 tabular-nums tracking-tight leading-none">@Model.TotalMergedReports.ToString("N0")</div>
-                <div class="font-label-sm text-label-sm text-blue-700/70 mt-0.5 truncate">รายงานที่บันทึก</div>
-            </div>
-        </a>
+    <section aria-label="สถิติข้อมูล" class="bg-surface-container-lowest rounded-lg border border-outline-variant/60 shadow-sm overflow-hidden mt-6">
+        <div class="grid grid-cols-2 lg:grid-cols-4">
+            <!-- Stat 1: Merged Reports -->
+            <a href="/Report"
+               class="group flex items-start gap-md px-md md:px-lg py-md md:py-lg border-b lg:border-b-0 border-r border-outline-variant/60 hover:bg-primary/5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset">
+                <i class="fi fi-rs-document-signed text-xl text-primary flex-shrink-0" aria-hidden="true"></i>
+                <div class="min-w-0">
+                    <div id="stat-merged-reports" class="font-headline-sm text-headline-sm text-on-surface tabular-nums tracking-tight leading-none group-hover:text-primary transition-colors">
+                        @Model.TotalMergedReports.ToString("N0")
+                    </div>
+                    <div class="font-label-sm text-label-sm text-on-surface-variant mt-1 truncate">รายงานที่บันทึก</div>
+                </div>
+            </a>
 
-        <!-- Stat 2: Yearly Cost / Expense -->
-        <a href="/MonthlyCost" class="bg-purple-50/60 rounded-lg border border-purple-200/80 px-md py-sm flex items-center gap-sm relative hover:bg-purple-50 transition-colors group">
-            <div class="w-9 h-9 rounded-md bg-purple-100 flex items-center justify-center text-purple-600 flex-shrink-0 group-hover:scale-105 transition-transform">
-                <i class="fi fi-rs-coins text-base"></i>
-            </div>
-            <div class="min-w-0">
-                <div class="font-headline-sm text-headline-sm text-purple-900 tabular-nums tracking-tight leading-none truncate">฿@Model.TotalYearlyCost.ToString("N0")</div>
-                <div class="font-label-sm text-label-sm text-purple-700/70 mt-0.5 truncate">ค่าใช้จ่ายประจำปี</div>
-            </div>
-        </a>
+            <!-- Stat 2: Yearly Cost / Expense -->
+            <a href="/MonthlyCost"
+               class="group flex items-start gap-md px-md md:px-lg py-md md:py-lg border-b lg:border-b-0 lg:border-r border-outline-variant/60 hover:bg-primary/5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset">
+                <i class="fi fi-rs-coins text-xl text-primary flex-shrink-0" aria-hidden="true"></i>
+                <div class="min-w-0">
+                    <div id="stat-yearly-cost" class="font-headline-sm text-headline-sm text-on-surface tabular-nums tracking-tight leading-none truncate group-hover:text-primary transition-colors">
+                        ฿@Model.TotalYearlyCost.ToString("N0")
+                    </div>
+                    <div class="font-label-sm text-label-sm text-on-surface-variant mt-1 truncate">ค่าใช้จ่ายประจำปี</div>
+                </div>
+            </a>
 
-        <!-- Stat 3: Saved Spare Part Orders -->
-        <a href="/FileMerge" class="bg-sky-50/60 rounded-lg border border-sky-200/80 px-md py-sm flex items-center gap-sm relative hover:bg-sky-50 transition-colors group">
-            <div class="w-9 h-9 rounded-md bg-sky-100 flex items-center justify-center text-sky-600 flex-shrink-0 group-hover:scale-105 transition-transform">
-                <i class="fi fi-rs-shopping-cart text-base"></i>
-            </div>
-            <div class="min-w-0">
-                <div class="font-headline-sm text-headline-sm text-sky-900 tabular-nums tracking-tight leading-none">@Model.TotalSparePartOrders.ToString("N0")</div>
-                <div class="font-label-sm text-label-sm text-sky-700/70 mt-0.5 truncate">รายการสั่งซื้อสะสม</div>
-            </div>
-        </a>
+            <!-- Stat 3: Saved Spare Part Orders -->
+            <a href="/FileMerge"
+               class="group flex items-start gap-md px-md md:px-lg py-md md:py-lg border-r border-outline-variant/60 hover:bg-primary/5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset">
+                <i class="fi fi-rs-shopping-cart text-xl text-primary flex-shrink-0" aria-hidden="true"></i>
+                <div class="min-w-0">
+                    <div id="stat-spare-orders" class="font-headline-sm text-headline-sm text-on-surface tabular-nums tracking-tight leading-none group-hover:text-primary transition-colors">
+                        @Model.TotalSparePartOrders.ToString("N0")
+                    </div>
+                    <div class="font-label-sm text-label-sm text-on-surface-variant mt-1 truncate">รายการสั่งซื้อสะสม</div>
+                </div>
+            </a>
 
-        <!-- Stat 4: Reference Prices count -->
-        <a href="/PriceReference" class="bg-amber-50/60 rounded-lg border border-amber-200/80 px-md py-sm flex items-center gap-sm relative hover:bg-amber-50 transition-colors group">
-            <div class="w-9 h-9 rounded-md bg-amber-100 flex items-center justify-center text-amber-600 flex-shrink-0 group-hover:scale-105 transition-transform">
-                <i class="fi fi-rs-database text-base"></i>
-            </div>
-            <div class="min-w-0">
-                <div class="font-headline-sm text-headline-sm text-amber-900 tabular-nums tracking-tight leading-none">@Model.TotalReferencePrices.ToString("N0")</div>
-                <div class="font-label-sm text-label-sm text-amber-700/70 mt-0.5 truncate">ราคากลางอ้างอิง</div>
-            </div>
-        </a>
+            <!-- Stat 4: Reference Prices count -->
+            <a href="/PriceReference"
+               class="group flex items-start gap-md px-md md:px-lg py-md md:py-lg hover:bg-primary/5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset">
+                <i class="fi fi-rs-database text-xl text-primary flex-shrink-0" aria-hidden="true"></i>
+                <div class="min-w-0">
+                    <div id="stat-ref-prices" class="font-headline-sm text-headline-sm text-on-surface tabular-nums tracking-tight leading-none group-hover:text-primary transition-colors">
+                        @Model.TotalReferencePrices.ToString("N0")
+                    </div>
+                    <div class="font-label-sm text-label-sm text-on-surface-variant mt-1 truncate">ราคากลางอ้างอิง</div>
+                </div>
+            </a>
+        </div>
     </section>
 
     <!-- Quick Navigation and Recent Reports -->
@@ -108,7 +143,7 @@
                 <a href="/Report" class="group flex gap-md items-start p-md lg:p-lg rounded-lg bg-surface-container-lowest border border-outline-variant/60 hover:bg-primary/5 hover:border-primary/40 transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
                     <div class="w-12 h-12 rounded-md bg-primary/10 text-primary flex items-center justify-center flex-shrink-0 group-hover:bg-primary group-hover:text-white transition-colors">
                         <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.03 0 1.9.693 2.166 1.638m-7.377 2.24a4.008 4.008 0 0 1 1.953-3.238"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3h7.5M6 20.25h12A2.25 2.25 0 0 0 20.25 18V6.75A2.25 2.25 0 0 0 18 4.5H6A2.25 2.25 0 0 0 3.75 6.75v11.25A2.25 2.25 0 0 0 6 20.25Z"/>
                         </svg>
                     </div>
                     <div>
@@ -139,7 +174,7 @@
                 <a href="/Report" class="font-label-bold text-label-bold text-primary hover:text-primary-container hover:underline focus-visible:outline-none focus-visible:underline">ดูทั้งหมด</a>
             </header>
 
-            <div class="flex flex-col gap-sm flex-1">
+            <div class="flex flex-col gap-sm flex-1" id="recent-reports-container">
                 @if (Model.RecentReports == null || !Model.RecentReports.Any())
                 {
                     <div class="flex flex-col items-center justify-center flex-1 p-lg bg-surface-container-lowest rounded-lg border border-dashed border-outline-variant/80 text-center min-h-[200px] shadow-sm">
@@ -150,7 +185,6 @@
                         <p class="font-body-md text-body-md text-on-surface-variant mb-4">เริ่มต้นตรวจสอบต้นทุนโดยเปรียบเทียบข้อมูลไฟล์ผลิตของคุณ</p>
                         <a href="/FileMerge" class="inline-flex items-center gap-2 bg-primary hover:bg-primary-container text-white font-label-bold text-label-sm px-4 py-2 rounded-md transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
                             <span>สร้างรายงานใหม่</span>
-                            <i class="fi fi-rs-arrow-right"></i>
                         </a>
                     </div>
                 }
@@ -186,3 +220,75 @@
     </div>
 </div>
 
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        // --- Periodic Polling (Auto-fetch every 15 seconds) ---
+        const POLLING_INTERVAL_MS = 15000; // 15 วินาที
+
+        function fetchDashboardStats() {
+            fetch('/Home/GetDashboardApiStats')
+                .then(res => {
+                    if (!res.ok) throw new Error("HTTP error " + res.status);
+                    return res.json();
+                })
+                .then(data => {
+                    // Update stat metric cards
+                    const elReports = document.getElementById("stat-merged-reports");
+                    if (elReports) elReports.textContent = Number(data.totalMergedReports).toLocaleString();
+
+                    const elCost = document.getElementById("stat-yearly-cost");
+                    if (elCost) elCost.textContent = "฿" + (data.formattedTotalYearlyCost || Number(data.totalYearlyCost).toLocaleString());
+
+                    const elOrders = document.getElementById("stat-spare-orders");
+                    if (elOrders) elOrders.textContent = Number(data.totalSparePartOrders).toLocaleString();
+
+                    const elPrices = document.getElementById("stat-ref-prices");
+                    if (elPrices) elPrices.textContent = Number(data.totalReferencePrices).toLocaleString();
+
+                    // Update recent reports
+                    const container = document.getElementById("recent-reports-container");
+                    if (container && data.recentReports) {
+                        if (data.recentReports.length === 0) {
+                            container.innerHTML = `
+                                <div class="flex flex-col items-center justify-center flex-1 p-lg bg-surface-container-lowest rounded-lg border border-dashed border-outline-variant/80 text-center min-h-[200px] shadow-sm">
+                                    <div class="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-3">
+                                        <i class="fi fi-rs-folder-open text-xl"></i>
+                                    </div>
+                                    <h3 class="font-label-bold text-label-bold text-on-surface mb-1">ยังไม่มีรายงานในระบบ</h3>
+                                    <p class="font-body-md text-body-md text-on-surface-variant mb-4">เริ่มต้นตรวจสอบต้นทุนโดยเปรียบเทียบข้อมูลไฟล์ผลิตของคุณ</p>
+                                    <a href="/FileMerge" class="inline-flex items-center gap-2 bg-primary hover:bg-primary-container text-white font-label-bold text-label-sm px-4 py-2 rounded-md transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+                                        <span>สร้างรายงานใหม่</span>
+                                    </a>
+                                </div>`;
+                        } else {
+                            let html = "";
+                            data.recentReports.forEach(r => {
+                                html += `
+                                    <a href="${r.detailsUrl}" class="group p-md border border-outline-variant/60 rounded-lg bg-surface-container-lowest hover:bg-primary/5 hover:border-primary/40 transition-colors flex flex-col gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 shadow-sm">
+                                        <div class="flex justify-between items-start">
+                                            <time class="font-data-tabular text-data-tabular text-secondary">${r.formattedDate}</time>
+                                            <span class="font-label-bold text-[10px] text-primary opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+                                                เปิด
+                                                <i class="fi fi-rs-arrow-up-right"></i>
+                                            </span>
+                                        </div>
+                                        <h3 class="font-label-bold text-label-bold text-on-surface group-hover:text-primary transition-colors truncate" title="${r.reportName}">
+                                            ${r.reportName}
+                                        </h3>
+                                        <div class="flex justify-between items-center mt-1">
+                                            <span class="font-body-md text-body-md text-on-surface-variant">ตรงตามแผน ${r.matchedRows} / ${r.totalRows}</span>
+                                            <span class="bg-primary/10 text-primary font-data-tabular text-[11px] px-2 py-0.5 rounded-sm inline-flex items-center">${r.accuracy}%</span>
+                                        </div>
+                                    </a>`;
+                            });
+                            container.innerHTML = html;
+                        }
+                    }
+                })
+                .catch(err => console.error("Periodic Polling Error:", err));
+        }
+
+        // เริ่มต้นวนลูปดึงข้อมูลสถิติล่าสุดทุกๆ 15 วินาที
+        setInterval(fetchDashboardStats, POLLING_INTERVAL_MS);
+    });
+</script>

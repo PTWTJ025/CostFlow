@@ -1,8 +1,6 @@
 @model CostFlow.Models.ApplicationUser
 @{
-    ViewData["Title"] = "ตั้งค่าโปรไฟล์";
-    var rawRole = ViewData["RoleName"] as string ?? "Staff";
-    var roleName = rawRole == "Admin" ? "ผู้ดูแลระบบ" : "ผู้ใช้งาน";
+    ViewData["Title"] = "ตั้งค่า & สำรองข้อมูล";
 }
 
 <div class="flex-1 p-md md:p-lg lg:p-xl flex flex-col gap-lg max-w-[88vw] mx-auto w-full">
@@ -11,9 +9,9 @@
         <div class="flex items-center gap-xs text-xs text-secondary">
             <a href="/" class="hover:text-primary transition-colors">หน้าหลัก</a>
             <span>/</span>
-            <span class="text-slate-700 font-semibold">ตั้งค่าโปรไฟล์</span>
+            <span class="text-slate-700 font-semibold">ตั้งค่า & สำรองข้อมูล</span>
         </div>
-        <button onclick="window.history.back();" class="text-xs text-slate-600 hover:text-slate-800 hover:bg-slate-100 px-md py-1.5 rounded transition-all flex items-center gap-xs border border-slate-200">
+        <button onclick="window.history.back();" class="text-xs text-slate-600 hover:text-slate-800 hover:bg-slate-100 px-md py-1.5 rounded transition-all flex items-center gap-xs border border-slate-200 cursor-pointer">
             <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
             </svg>
@@ -21,135 +19,143 @@
         </button>
     </div>
 
-    <!-- Redesigned Profile Layout Grid -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-lg items-start">
-        
-        <!-- Left Side: Profile Summary Card (4 Cols) -->
-        <div class="lg:col-span-4 bg-white rounded border border-outline-variant shadow-sm p-md md:p-lg flex flex-col items-center gap-md relative overflow-hidden">
-            <!-- Decorative colored top accent -->
-            <div class="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-primary to-primary-container"></div>
-            
-            <!-- Avatar Section with Upload Mock Badge -->
-            <div class="relative mt-2">
-                <div class="w-24 h-24 rounded-full bg-slate-100 border-4 border-slate-200/50 overflow-hidden flex items-center justify-center shadow-sm">
-                    <img alt="User profile photo" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuClsteqi-YK02c9Vk9jcpsMVloDL39QjYkSap1SuZJ8EfsLBHBT1o8wyfqeSLysYaC7bvbaZsN-7DlVfuia1UvWQGeODGTwnf7Lp6HjxxHh8SQHi9D62HrlY8d6SDbvbJtzn6VhZh_Ty7_rdnHoQ-TwkrVX1K3Vs1rgwZkh6xUShdweHFaQ1sAUoAPxQcWeJHDwmkmgcrZ-jBd5pfUrdfglE0LNA2_cEaw9Njy4rk3KYDQgiZTLF2z5"/>
-                </div>
-                <button class="absolute bottom-0 right-0 bg-primary text-white p-1.5 rounded-full hover:scale-110 transition-transform shadow-md border-2 border-white cursor-pointer" title="อัปโหลดรูปภาพใหม่">
-                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" />
+    <!-- Admin Database Archival & Maintenance Section -->
+    <div class="bg-white rounded border border-outline-variant shadow-sm p-md md:p-lg lg:p-xl">
+        <div class="border-b border-slate-100 pb-md mb-md flex flex-wrap justify-between items-center gap-sm">
+            <div>
+                <h3 class="font-headline-sm text-headline-sm text-on-surface mb-xs flex items-center gap-2">
+                    <svg class="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125m16.5 5.625c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125m16.5 5.625c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" />
                     </svg>
+                    การจัดการฐานข้อมูลและการสำรองข้อมูล (Archive & Database Maintenance)
+                </h3>
+                <p class="text-xs text-secondary">ย้ายข้อมูลเก่าเกิน 2 ปีลง Google Sheet สำรอง และลบออกจากฐานข้อมูลเพื่อเพิ่มความเร็วของระบบ</p>
+            </div>
+            <span class="text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200/80 px-3 py-1 rounded-full">
+                สำหรับผู้ดูแลระบบ (Admin Only)
+            </span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-md">
+            <div class="bg-slate-50 p-md rounded border border-slate-200/80 flex flex-col justify-between">
+                <div>
+                    <span class="text-[10px] text-slate-500 font-semibold uppercase block mb-1">ระยะเวลาเก็บข้อมูลในระบบ</span>
+                    <span class="text-base font-bold text-slate-800">24 เดือน (2 ปี)</span>
+                </div>
+                <span class="text-[10px] text-slate-400 mt-2 block">ข้อมูลที่เก่ากว่า 2 ปี จะถูกย้ายลง Google Sheet</span>
+            </div>
+
+            <div class="bg-slate-50 p-md rounded border border-slate-200/80 flex flex-col justify-between">
+                <div>
+                    <span class="text-[10px] text-slate-500 font-semibold uppercase block mb-1">ไฟล์สำรองปลายทาง</span>
+                    <a href="https://docs.google.com/spreadsheets/d/1RFXMLRLjidiH6z9C6-DFHZcf8pP_K4TskJJcMVzPS5w/edit?usp=sharing" target="_blank" class="text-xs font-bold text-primary hover:underline flex items-center gap-1">
+                        เปิดดู Google Sheet สำรอง
+                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+                        </svg>
+                    </a>
+                </div>
+                <span class="text-[10px] text-slate-400 mt-2 block">บันทึก 2 ชีท: WeeklyPlan & MonthlyCost</span>
+            </div>
+
+            <div class="bg-amber-50/60 p-md rounded border border-amber-200/80 flex flex-col justify-between">
+                <div>
+                    <span class="text-[10px] text-amber-800 font-semibold uppercase block mb-1">คำสั่งล้างข้อมูล</span>
+                    <span class="text-xs text-amber-900 font-medium block">ย้ายข้อมูลย้อนหลังเกิน 2 ปีลง Sheet และลบออก</span>
+                </div>
+                <button type="button" onclick="openArchiveModal()" style="background-color: #d97706; color: #ffffff !important;" class="mt-3 font-bold text-xs px-4 py-2.5 rounded shadow-sm flex items-center justify-center gap-1.5 w-full cursor-pointer hover:opacity-90 border-none transition-all">
+                    <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5m6 4.125l2.25 2.25m0 0l2.25-2.25M12 13.875V8.25M3.75 7.5h16.5M6.75 7.5V4.875c0-.621.504-1.125 1.125-1.125h8.25c.621 0 1.125.504 1.125 1.125V7.5" />
+                    </svg>
+                    <span style="color: #ffffff !important; font-weight: 700;">สำรองและลบข้อมูลเก่า (เกิน 2 ปี) ทันที</span>
                 </button>
             </div>
- 
-            <!-- Name and Status Tag -->
-            <div class="text-center w-full">
-                <h4 class="font-bold text-slate-800 text-sm">@Model.FullName</h4>
-                <span class="text-[10px] text-slate-500 font-semibold bg-slate-100 border border-slate-200/60 px-2.5 py-0.5 rounded-full inline-block mt-1">
-                    @roleName
-                </span>
-            </div>
- 
-            <hr class="w-full border-slate-100" />
- 
-            <!-- Stats info block -->
-            <div class="w-full grid grid-cols-2 gap-sm text-center">
-                <div class="bg-slate-50 p-sm border border-slate-100 rounded">
-                    <span class="text-[9px] text-slate-400 block mb-0.5 uppercase tracking-wide">สิทธิ์การทำงาน</span>
-                    <span class="text-[11px] font-bold text-primary">@roleName</span>
-                </div>
-                <div class="bg-slate-50 p-sm border border-slate-100 rounded">
-                    <span class="text-[9px] text-slate-400 block mb-0.5 uppercase tracking-wide">สถานะบัญชี</span>
-                    <span class="text-[11px] font-bold @(Model.IsActive ? "text-emerald-600" : "text-rose-600")">@(Model.IsActive ? "ACTIVE" : "INACTIVE")</span>
-                </div>
-            </div>
         </div>
- 
-        <!-- Right Side: Edit Details Form Card (8 Cols) -->
-        <div class="lg:col-span-8 bg-white rounded border border-outline-variant shadow-sm p-md md:p-lg lg:p-xl">
-            <div class="border-b border-slate-100 pb-md mb-lg">
-                <h3 class="font-headline-sm text-headline-sm text-on-surface mb-xs">แก้ไขข้อมูลส่วนตัว</h3>
-                <p class="text-xs text-secondary">กรอกรายละเอียดสำหรับการติดต่อในระบบจัดซื้อชิ้นส่วนโรงงาน</p>
+    </div>
+</div>
+
+<!-- Modal ยืนยันการสำรองและลบข้อมูล -->
+<div id="archive-modal" class="fixed inset-0 z-50 hidden bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6 border border-slate-200 animate-in fade-in zoom-in duration-200">
+        <div class="flex items-center gap-3 text-amber-600 mb-3">
+            <div class="p-2 bg-amber-100 rounded-full">
+                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
             </div>
- 
-            <form id="settings-form" class="flex flex-col gap-md">
-                
-                <!-- Input groups grid -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-md">
-                    <!-- Name input with Icon -->
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1">ชื่อ-นามสกุล</label>
-                        <div class="relative">
-                            <span class="absolute left-3 top-2.5 text-slate-400">
-                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
-                                </svg>
-                            </span>
-                            <input id="input-fullname" class="w-full pl-9 pr-3 py-2 border border-outline-variant rounded text-xs outline-none focus:ring-1 focus:ring-primary focus:border-primary bg-white" type="text" value="@Model.FullName" required />
-                        </div>
-                    </div>
- 
-                    <!-- Email input with Icon -->
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1">อีเมลติดต่อ</label>
-                        <div class="relative">
-                            <span class="absolute left-3 top-2.5 text-slate-400">
-                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
-                                </svg>
-                            </span>
-                            <input id="input-email" class="w-full pl-9 pr-3 py-2 border border-outline-variant rounded text-xs outline-none focus:ring-1 focus:ring-primary focus:border-primary bg-white" type="email" value="@Model.Email" placeholder="เช่น somchai.j@factory.co.th" />
-                        </div>
-                    </div>
- 
-                    <!-- Readonly employee ID -->
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1">รหัสพนักงาน</label>
-                        <div class="relative">
-                            <span class="absolute left-3 top-2.5 text-slate-400">
-                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 9h3.75M15 12h3.75M15 15h3.75M4.5 19.5h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Zm6-10.125a1.875 1.875 0 1 1-3.75 0 1.875 1.875 0 0 1 3.75 0Zm-1.25 5.875c0-1.036-1.008-1.875-2.25-1.875s-2.25.839-2.25 1.875v.5c0 .276.224.5.5.5h3.5a.5 0 0 0 .5-.5v-.5Z" />
-                                </svg>
-                            </span>
-                            <input class="w-full pl-9 pr-3 py-2 border border-outline-variant rounded text-xs outline-none bg-slate-50/70 text-slate-500 cursor-not-allowed font-mono" type="text" value="@Model.EmployeeCode" readonly />
-                        </div>
-                        <span class="text-[9px] text-slate-400 mt-1 block">รหัสพนักงานตั้งมาจากแผนกบุคคล ไม่สามารถแก้ไขได้</span>
-                    </div>
- 
-                    <!-- Readonly department -->
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1">แผนกที่สังกัด</label>
-                        <div class="relative">
-                            <span class="absolute left-3 top-2.5 text-slate-400">
-                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" />
-                                </svg>
-                            </span>
-                            <input class="w-full pl-9 pr-3 py-2 border border-outline-variant rounded text-xs outline-none bg-slate-50/70 text-slate-500 cursor-not-allowed" type="text" value="ฝ่ายจัดซื้อและคุมคลังอะไหล่ (Procurement)" readonly />
-                        </div>
-                    </div>
-                </div>
- 
-                <!-- Submit Action Buttons -->
-                <div class="flex justify-end gap-sm pt-sm border-t border-slate-100 mt-md">
-                    <button type="button" onclick="window.history.back();" class="px-md py-2 border border-slate-200 rounded text-xs font-semibold text-slate-600 bg-white hover:bg-slate-50 transition-colors">
-                        ยกเลิก
-                    </button>
-                    <button type="submit" id="save-settings-btn" class="bg-primary hover:bg-primary/95 text-on-primary text-xs font-bold px-lg py-2 rounded transition-colors shadow-sm">
-                        บันทึกการตั้งค่า
-                    </button>
-                </div>
-            </form>
+            <h4 class="text-base font-bold text-slate-800">ยืนยันการสำรองและลบข้อมูลเก่า</h4>
+        </div>
+        <p class="text-xs text-slate-600 leading-relaxed mb-4">
+            ระบบจะทำการย้ายข้อมูลที่มีอายุเก่ากว่า <strong class="text-slate-900">2 ปี (24 เดือน)</strong> ไปบันทึกเก็บไว้ใน Google Sheet สำรองอย่างปลอดภัย และลบออกจากฐานข้อมูลเพื่อเพิ่มความเร็วของระบบ
+        </p>
+        <div class="bg-amber-50 border border-amber-200 rounded p-3 mb-5 text-[11px] text-amber-800">
+            <strong>⚠️ ปลอดภัยสูง (Fail-Safe):</strong> หาก Google Sheet บันทึกไม่สำเร็จ ระบบจะยกเลิกการลบใน Database ทันที ข้อมูลจะไม่สูญหาย
+        </div>
+        <div class="flex justify-end gap-2">
+            <button type="button" onclick="closeArchiveModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded border border-slate-200 transition-colors cursor-pointer">
+                ยกเลิก
+            </button>
+            <button type="button" id="confirm-archive-btn" onclick="executeArchiveAndPurge()" style="background-color: #d97706; color: #ffffff !important;" class="px-4 py-2 text-xs font-bold rounded shadow-sm transition-all flex items-center gap-1.5 cursor-pointer hover:opacity-90 border-none">
+                <span style="color: #ffffff !important; font-weight: 700;">ยืนยันการสำรองและลบข้อมูล</span>
+            </button>
         </div>
     </div>
 </div>
 
 <!-- Toast Container -->
 <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
- 
+
 <script>
+function openArchiveModal() {
+    document.getElementById("archive-modal").classList.remove("hidden");
+}
+
+function closeArchiveModal() {
+    document.getElementById("archive-modal").classList.add("hidden");
+}
+
+function executeArchiveAndPurge() {
+    const btn = document.getElementById("confirm-archive-btn");
+    btn.disabled = true;
+    btn.innerHTML = `<svg class="w-4 h-4 animate-spin text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> <span style="color:#ffffff;">กำลังสำรองข้อมูล...</span>`;
+
+    fetch('/Home/ArchiveAndPurge', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(res => res.json())
+    .then(data => {
+        btn.disabled = false;
+        btn.innerHTML = `<span style="color: #ffffff !important; font-weight: 700;">ยืนยันการสำรองและลบข้อมูล</span>`;
+        closeArchiveModal();
+
+        if (data.success) {
+            if (typeof showToast === 'function') {
+                showToast(data.message || "สำรองข้อมูลและลบรายการเก่าลง Google Sheet สำเร็จเรียบร้อย!", "success");
+            } else {
+                alert(data.message || "สำรองข้อมูลสำเร็จเรียบร้อย!");
+            }
+        } else {
+            if (typeof showToast === 'function') {
+                showToast(data.error || "เกิดข้อผิดพลาดในการสำรองข้อมูล", "error");
+            } else {
+                alert(data.error || "เกิดข้อผิดพลาดในการสำรองข้อมูล");
+            }
+        }
+    })
+    .catch(err => {
+        btn.disabled = false;
+        btn.innerHTML = `<span style="color: #ffffff !important; font-weight: 700;">ยืนยันการสำรองและลบข้อมูล</span>`;
+        closeArchiveModal();
+        if (typeof showToast === 'function') {
+            showToast("เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์", "error");
+        } else {
+            alert("เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์");
+        }
+    });
+}
+
 document.addEventListener("DOMContentLoaded", function() {
-    // Premium Toast Notification Helper
     function showToast(message, type = 'error') {
         const container = document.getElementById("toast-container");
         const toast = document.createElement("div");
@@ -162,14 +168,14 @@ document.addEventListener("DOMContentLoaded", function() {
         const icon = type === 'success'
             ? `<svg class="w-4 h-4 text-emerald-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`
             : `<svg class="w-4 h-4 text-rose-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>`;
- 
+
         toast.innerHTML = `${icon}<span>${message}</span>`;
         container.appendChild(toast);
- 
+
         setTimeout(() => {
             toast.classList.remove("translate-y-2", "opacity-0");
         }, 10);
- 
+
         setTimeout(() => {
             toast.classList.add("opacity-0", "translate-y-2");
             setTimeout(() => {
@@ -177,43 +183,6 @@ document.addEventListener("DOMContentLoaded", function() {
             }, 300);
         }, 3000);
     }
- 
-    // Handle actual submit via AJAX
-    document.getElementById("settings-form").addEventListener("submit", function(e) {
-        e.preventDefault();
-        const fullName = document.getElementById("input-fullname").value.trim();
-        const email = document.getElementById("input-email").value.trim();
- 
-        const btn = document.getElementById("save-settings-btn");
-        btn.disabled = true;
-        btn.textContent = "กำลังบันทึก...";
- 
-        fetch('/Home/SaveSettings', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams({ fullName, email })
-        })
-        .then(res => res.json())
-        .then(data => {
-            btn.disabled = false;
-            btn.textContent = "บันทึกการตั้งค่า";
-            if (data.success) {
-                showToast("บันทึกการตั้งค่าโปรไฟล์สำเร็จแล้ว!", "success");
-                // Update left card name and sidebar/header profile names dynamically
-                document.querySelector(".lg:col-span-4 h4").textContent = fullName;
-                
-                // Update header profile display text
-                const headerProfileName = document.querySelector("header .flex.flex-col span.text-xs.font-bold");
-                if (headerProfileName) headerProfileName.textContent = fullName;
-            } else {
-                showToast(data.error || "เกิดข้อผิดพลาดในการบันทึก", "error");
-            }
-        })
-        .catch(() => {
-            btn.disabled = false;
-            btn.textContent = "บันทึกการตั้งค่า";
-            showToast("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้", "error");
-        });
-    });
+    window.showToast = showToast;
 });
 </script>

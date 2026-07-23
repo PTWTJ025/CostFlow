@@ -234,7 +234,8 @@
                             tbody.innerHTML = "";
                             let idx = 1;
                             data.items.slice(0, 500).forEach(item => {
-                                const formattedAmount = item.amount ? '฿' + Number(item.amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '฿0.00';
+                                const parsedAmt = item.amount ? parseFloat(String(item.amount).replace(/,/g, '').trim()) : 0;
+                                const formattedAmount = !isNaN(parsedAmt) ? '฿' + parsedAmt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '฿0.00';
                                 tbody.innerHTML += `
                                     <tr class="hover:bg-slate-50/50 transition-colors">
                                         <td class="px-3 py-2.5 text-center text-slate-400 font-mono">${idx++}</td>

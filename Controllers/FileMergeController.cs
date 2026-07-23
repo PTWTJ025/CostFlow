@@ -51,14 +51,13 @@ namespace CostFlow.Controllers
             var previewList = new List<object>();
             var distinctRows = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
 
-            int startRowIndex = poSheet.RawRows.Count > 5 ? 5 : 0;
-            for (int r = startRowIndex; r < Math.Min(poSheet.RawRows.Count, startRowIndex + 500); r++)
+            for (int r = 0; r < poSheet.RawRows.Count; r++)
             {
                 var row = poSheet.RawRows[r];
                 if (row.Count == 0 || string.IsNullOrEmpty(row[0])) continue;
 
                 string poNum = GetColVal(row, 0).Trim();
-                if (string.IsNullOrEmpty(poNum)) continue;
+                if (string.IsNullOrEmpty(poNum) || IsHeaderRow(poNum)) continue;
 
                 if (!distinctRows.ContainsKey(poNum))
                 {
@@ -75,7 +74,7 @@ namespace CostFlow.Controllers
                     requestDate = GetColVal(row, 1),
                     approvedDate = GetColVal(row, 2),
                     urgency = GetColVal(row, 4),
-                    amount = GetColVal(row, 17),
+                    amount = CleanAmount(GetColVal(row, 17)),
                     remarks = GetColVal(row, 22),
                     quantity = ExtractQuantity(GetColVal(row, 22))
                 });
@@ -104,7 +103,7 @@ namespace CostFlow.Controllers
                 int counter = 1;
                 while (_context.Reports.Any(r => r.ReportName == finalReportName))
                 {
-                    finalReportName = $"{baseReportName} ({counter})";
+                    finalReportName = $"{baseReportName}_v{counter}";
                     counter++;
                 }
 
@@ -118,14 +117,13 @@ namespace CostFlow.Controllers
 
                 // Extract distinct PO rows
                 var distinctRows = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
-                int startRowIndex = poSheet.RawRows.Count > 5 ? 5 : 0;
-                for (int r = startRowIndex; r < poSheet.RawRows.Count; r++)
+                for (int r = 0; r < poSheet.RawRows.Count; r++)
                 {
                     var row = poSheet.RawRows[r];
                     if (row.Count == 0 || string.IsNullOrEmpty(row[0])) continue;
 
                     string poNum = GetColVal(row, 0).Trim();
-                    if (string.IsNullOrEmpty(poNum)) continue;
+                    if (string.IsNullOrEmpty(poNum) || IsHeaderRow(poNum)) continue;
                     
                     if (!distinctRows.ContainsKey(poNum))
                     {
@@ -176,7 +174,7 @@ namespace CostFlow.Controllers
                         RequestDate = GetColVal(row, 1),
                         ApprovedDate = GetColVal(row, 2),
                         Urgency = GetColVal(row, 4),
-                        Amount = GetColVal(row, 17),
+                        Amount = CleanAmount(GetColVal(row, 17)),
                         Remarks = GetColVal(row, 22),
                         RemarksQuantity = ExtractQuantity(GetColVal(row, 22)),
                         Status = "Pending",
@@ -644,6 +642,42 @@ namespace CostFlow.Controllers
                 return d2.ToString("dd/MM/yyyy");
             }
             return val.Trim();
+        }
+
+        private static bool IsHeaderRow(string poNum)
+        {
+            if (string.IsNullOrWhiteSpace(poNum)) return true;
+            poNum = poNum.Trim();
+
+            // Headers/Titles often contain spaces (e.g. "ขออนุมัติ สั่งผลิตจากต้นสังกัด", "รหัส Profit : IFA")
+            // whereas PO Numbers are single codes (e.g. "WO26010001", "WO26050273")
+            if (poNum.Contains(" ") || poNum.Contains("\t")) return true;
+
+            if (poNum.Equals("ใบขออนุมัติ", StringComparison.OrdinalIgnoreCase) ||
+                poNum.Equals("เลขที่อนุมัติ", StringComparison.OrdinalIgnoreCase) ||
+                poNum.Equals("PO Number", StringComparison.OrdinalIgnoreCase) ||
+                poNum.Equals("PO", StringComparison.OrdinalIgnoreCase) ||
+                poNum.Equals("ลำดับ", StringComparison.OrdinalIgnoreCase) ||
+                poNum.Equals("NO", StringComparison.OrdinalIgnoreCase) ||
+                poNum.Equals("NO.", StringComparison.OrdinalIgnoreCase) ||
+                poNum.StartsWith("ขออนุมัติ", StringComparison.OrdinalIgnoreCase) ||
+                poNum.StartsWith("รหัส", StringComparison.OrdinalIgnoreCase) ||
+                poNum.StartsWith("[", StringComparison.OrdinalIgnoreCase) ||
+                poNum.StartsWith("รายงาน", StringComparison.OrdinalIgnoreCase) ||
+                poNum.StartsWith("วันที่", StringComparison.OrdinalIgnoreCase) ||
+                poNum.StartsWith("ประเภท", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+            return false;
+        }
+
+        private static string CleanAmount(string val)
+        {
+            if (string.IsNullOrWhiteSpace(val)) return "0";
+            val = val.Replace(",", "").Replace("฿", "").Trim();
+            if (decimal.TryParse(val, out var d)) return d.ToString("0.00");
+            return val;
         }
     }
 }

@@ -15,6 +15,7 @@ namespace CostFlow.Controllers
     public class ReportController : Controller
     {
         private readonly AppDbContext _context;
+
         public ReportController(AppDbContext context)
         {
             _context = context;
@@ -63,36 +64,41 @@ namespace CostFlow.Controllers
                 .GroupBy(x => x.ParsedDate!.Value.Month)
                 .ToDictionary(g => g.Key, g => g.Select(x => new { x.Id, x.PoNumber, x.Amount }).ToList());
 
-            // Build 12 month cards
+            // Build 12 month cards (สะสมยอดทับกันมาเรื่อยๆ ตั้งแต่เดือนมกราคม)
             var cards = new List<object>();
+
+            int runningTotalOrders = 0;
+            decimal runningTotalAmount = 0m;
+
             for (int month = 1; month <= 12; month++)
             {
                 var monthKey = $"{selectedYear:0000}-{month:00}";
                 var monthDisplay = $"{thaiMonths[month]} {selectedYear + 543}";
                 
                 var ordersInMonth = ordersByMonth.ContainsKey(month) ? ordersByMonth[month] : [];
-                var totalOrders = ordersInMonth.Count;
-                var totalAmount = 0m;
+                var monthOrdersCount = ordersInMonth.Count;
+                var monthAmount = 0m;
                 
                 foreach (var order in ordersInMonth)
                 {
-                    if (decimal.TryParse(order.Amount, out var amt))
-                    {
-                        totalAmount += amt;
-                    }
+                    monthAmount += ParseDecimal(order.Amount);
                 }
 
+                runningTotalOrders += monthOrdersCount;
+                runningTotalAmount += monthAmount;
+
                 var isCurrentMonth = (selectedYear == now.Year && month == now.Month);
-                var statusCode = totalOrders == 0 ? "empty" : (isCurrentMonth ? "active" : "completed");
-                var statusLabel = totalOrders == 0 ? "ไม่มีข้อมูล" : (isCurrentMonth ? "กำลังดำเนินการ" : "มีข้อมูล");
+                var isEmpty = (monthOrdersCount == 0);
+                var statusCode = isEmpty ? "empty" : (isCurrentMonth ? "active" : "completed");
+                var statusLabel = isEmpty ? "ไม่มีข้อมูล" : (isCurrentMonth ? "กำลังดำเนินการ" : "มีข้อมูล");
 
                 cards.Add(new {
                     MonthYearDisplay = monthDisplay,
                     MonthYearKey = monthKey,
                     Month = month,
                     Year = selectedYear,
-                    TotalOrders = totalOrders,
-                    TotalAmount = totalAmount,
+                    TotalOrders = isEmpty ? 0 : runningTotalOrders,
+                    TotalAmount = isEmpty ? 0m : runningTotalAmount,
                     StatusCode = statusCode,
                     StatusLabel = statusLabel
                 });
@@ -200,7 +206,7 @@ namespace CostFlow.Controllers
                 var ordersInMonth = allOrders
                     .Where(o => {
                         var parsed = ParseThaiDate(o.ApprovedDate);
-                        return parsed.HasValue && parsed.Value.Year == year.Value && parsed.Value.Month == month.Value;
+                        return parsed.HasValue && parsed.Value.Year == year.Value;
                     })
                     .OrderBy(o => o.PoNumber)
                     .ToList();
@@ -879,6 +885,7 @@ namespace CostFlow.Controllers
                 string approvedDate = "-";
                 string urgency = "-";
                 Guid? matchedOrderId = null;
+                string? masterAmount = null;
 
                 // เช็คว่ามีรายการใดในกลุ่มนี้ที่จับคู่สำเร็จบ้าง (ถ้ามี ให้ใช้ข้อมูลของตัวที่จับคู่ได้)
                 var matchedDetail = sortedGroup.FirstOrDefault(d => d.IsMatched && d.MatchedOrderId.HasValue && d.MatchedOrder != null);
@@ -888,7 +895,13 @@ namespace CostFlow.Controllers
                     approvedDate = matchedDetail.MatchedOrder.ApprovedDate ?? "-";
                     urgency = matchedDetail.MatchedOrder.Urgency ?? "-";
                     matchedOrderId = matchedDetail.MatchedOrderId;
+                    masterAmount = matchedDetail.MatchedOrder.Amount;
                 }
+
+                // กำหนด proposedPrice (ถ้าไม่มีราคาในแผนผลิตสัปดาห์ ให้ใช้ราคาจากใบสั่งผลิตหลัก)
+                string proposedPrice = (!string.IsNullOrEmpty(latestDetail.Price) && latestDetail.Price != "-")
+                    ? latestDetail.Price
+                    : (!string.IsNullOrEmpty(masterAmount) && masterAmount != "-" ? masterAmount : "-");
 
                 // รวบรวมรายชื่อไฟล์แผนผลิตทั้งหมดในกลุ่มนี้แบบไม่ซ้ำ
                 var fileNames = sortedGroup
@@ -904,6 +917,7 @@ namespace CostFlow.Controllers
                     approvedDate = approvedDate,
                     urgency = urgency,
                     amount = latestDetail.Price ?? "-",
+                    proposedPrice = proposedPrice,
                     remarks = latestDetail.OrderName ?? "-",
                     status = status,
                     weeklyPlanFiles = fileNames,
@@ -958,6 +972,13 @@ namespace CostFlow.Controllers
             ViewBag.FilterMonth = month;
             ViewBag.FilterYear = year;
             return View();
+        }
+
+        private static decimal ParseDecimal(string? val)
+        {
+            if (string.IsNullOrWhiteSpace(val)) return 0m;
+            val = val.Replace(",", "").Replace("฿", "").Trim();
+            return decimal.TryParse(val, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var res) ? res : 0m;
         }
     }
 }

@@ -94,6 +94,7 @@ namespace CostFlow.Models
         public decimal TotalPlannedAmount { get; set; }
         public int ProcessedOrders { get; set; }
         public decimal ProcessedAmount { get; set; }
+        public decimal RemainingAmount => Math.Max(0m, TotalPlannedAmount - ProcessedAmount);
     }
 
     public class MonthlySummaryRow
