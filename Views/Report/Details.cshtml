@@ -193,11 +193,47 @@
                 <tr>
                     <th class="text-center text-on-surface font-bold whitespace-nowrap">ลำดับ</th>
                     <th class="text-center text-on-surface font-bold whitespace-nowrap">สถานะ</th>
-                    <th class="text-center text-on-surface font-bold whitespace-nowrap">เลขที่อนุมัติ</th>
-                    <th class="text-center text-on-surface font-bold whitespace-nowrap">วันที่อนุมัติ</th>
+                    <th class="text-center text-on-surface font-bold whitespace-nowrap cursor-pointer hover:bg-slate-200 transition-colors th-sortable group" data-sort-key="po" title="คลิกเพื่อเรียงตามเลขที่อนุมัติ">
+                        <div class="flex items-center justify-center gap-1">
+                            <span>เลขที่อนุมัติ</span>
+                            <span class="sort-icon inline-flex items-center text-slate-400">
+                                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 15L12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9" />
+                                </svg>
+                            </span>
+                        </div>
+                    </th>
+                    <th class="text-center text-on-surface font-bold whitespace-nowrap cursor-pointer hover:bg-slate-200 transition-colors th-sortable group" data-sort-key="approved-date" title="คลิกเพื่อเรียงตามวันที่อนุมัติ">
+                        <div class="flex items-center justify-center gap-1">
+                            <span>วันที่อนุมัติ</span>
+                            <span class="sort-icon inline-flex items-center text-slate-400">
+                                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 15L12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9" />
+                                </svg>
+                            </span>
+                        </div>
+                    </th>
                     <th class="text-center text-on-surface font-bold whitespace-nowrap">ปภ.ความเร่งด่วน</th>
-                    <th class="text-center text-on-surface font-bold whitespace-nowrap">ราคาที่ผู้ผลิตเสนอ</th>
-                    <th class="text-center text-on-surface font-bold whitespace-nowrap">จำนวน</th>
+                    <th class="text-center text-on-surface font-bold whitespace-nowrap cursor-pointer hover:bg-slate-200 transition-colors th-sortable group" data-sort-key="price" title="คลิกเพื่อเรียงตามราคา">
+                        <div class="flex items-center justify-center gap-1">
+                            <span>ราคาที่ผู้ผลิตเสนอ</span>
+                            <span class="sort-icon inline-flex items-center text-slate-400">
+                                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 15L12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9" />
+                                </svg>
+                            </span>
+                        </div>
+                    </th>
+                    <th class="text-center text-on-surface font-bold whitespace-nowrap cursor-pointer hover:bg-slate-200 transition-colors th-sortable group" data-sort-key="quantity" title="คลิกเพื่อเรียงตามจำนวน">
+                        <div class="flex items-center justify-center gap-1">
+                            <span>จำนวน</span>
+                            <span class="sort-icon inline-flex items-center text-slate-400">
+                                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 15L12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9" />
+                                </svg>
+                            </span>
+                        </div>
+                    </th>
                     <th class="text-center text-on-surface font-bold" style="min-width: 250px;">รายละเอียด</th>
                     <th class="text-center text-on-surface font-bold whitespace-nowrap">เป้าหมายส่งมอบ</th>
                     <th class="text-center text-on-surface font-bold whitespace-nowrap">ข้อมูลแผนผลิต</th>
@@ -211,11 +247,36 @@
                     var hasWeeklyPlan = order.MatchedInWeeklyPlans.Any();
                     var deliveryTarget = hasWeeklyPlan ? order.MatchedInWeeklyPlans.First().DeliveryTarget : "-";
 
-                    <tr class="order-row hover:bg-slate-50  transition-colors text-sm"
+                    var proposedPrice = hasWeeklyPlan
+                        ? order.MatchedInWeeklyPlans.OrderByDescending(wpd => wpd.WeeklyPlan.UploadedAt).First().Price
+                        : order.Amount;
+
+                    if (string.IsNullOrEmpty(proposedPrice) || proposedPrice == "-")
+                    {
+                        proposedPrice = order.Amount;
+                    }
+
+                    decimal tempPrice = 0;
+                    string displayProposedPrice = proposedPrice ?? "-";
+                    if (!string.IsNullOrEmpty(proposedPrice) && decimal.TryParse(proposedPrice.Replace("฿", "").Replace(",", "").Trim(), out tempPrice))
+                    {
+                        displayProposedPrice = "฿" + tempPrice.ToString("N2");
+                    }
+                    else
+                    {
+                        displayProposedPrice = "-";
+                    }
+
+                    int numericQuantity = 0;
+                    int.TryParse(order.RemarksQuantity, out numericQuantity);
+
+                    <tr class="order-row hover:bg-slate-50 transition-colors text-sm"
                         data-status="@(isMatched ? "matched" : "pending")"
                         data-po="@order.PoNumber"
                         data-approved-date="@GetIsoDate(order.ApprovedDate)"
                         data-delivery-target="@GetIsoDate(deliveryTarget)"
+                        data-price="@tempPrice.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                        data-quantity="@numericQuantity"
                         data-month="@GetMonth(order.ApprovedDate)"
                         data-index="@(i + 1)">
                         <td class="text-secondary px-3 py-2 text-center">@(i + 1)</td>
@@ -242,27 +303,6 @@
                         <td class="font-medium text-on-surface text-center whitespace-nowrap">@order.PoNumber</td>
                         <td class="text-center text-secondary whitespace-nowrap">@order.ApprovedDate</td>
                         <td class="text-center text-secondary whitespace-nowrap">@order.Urgency</td>
-                        @{
-                            var proposedPrice = hasWeeklyPlan
-                                ? order.MatchedInWeeklyPlans.OrderByDescending(wpd => wpd.WeeklyPlan.UploadedAt).First().Price
-                                : order.Amount;
-
-                            if (string.IsNullOrEmpty(proposedPrice) || proposedPrice == "-")
-                            {
-                                proposedPrice = order.Amount;
-                            }
-
-                            decimal tempPrice;
-                            string displayProposedPrice = proposedPrice ?? "-";
-                            if (!string.IsNullOrEmpty(proposedPrice) && decimal.TryParse(proposedPrice.Replace("฿", "").Replace(",", "").Trim(), out tempPrice))
-                            {
-                                displayProposedPrice = "฿" + tempPrice.ToString("N2");
-                            }
-                            else
-                            {
-                                displayProposedPrice = "-";
-                            }
-                        }
                         <td class="text-right font-medium text-on-surface whitespace-nowrap">@displayProposedPrice</td>
                         <td class="text-center text-secondary whitespace-nowrap">@order.RemarksQuantity</td>
                         <td class="text-secondary detail-cell text-left" style="min-width: 250px;">@order.Remarks</td>
@@ -586,6 +626,54 @@
             });
         });
 
+        // Table Header Column Sorting State
+        let currentTableSortKey = null;
+        let currentTableSortOrder = 'asc';
+
+        document.querySelectorAll('.th-sortable').forEach(th => {
+            th.addEventListener('click', function () {
+                const key = this.getAttribute('data-sort-key');
+                if (currentTableSortKey === key) {
+                    currentTableSortOrder = currentTableSortOrder === 'asc' ? 'desc' : 'asc';
+                } else {
+                    currentTableSortKey = key;
+                    currentTableSortOrder = (key === 'price' || key === 'approved-date') ? 'desc' : 'asc';
+                }
+
+                updateTableSortHeaderIcons();
+                updateView();
+            });
+        });
+
+        function updateTableSortHeaderIcons() {
+            document.querySelectorAll('.th-sortable').forEach(th => {
+                const key = th.getAttribute('data-sort-key');
+                const iconContainer = th.querySelector('.sort-icon');
+                if (!iconContainer) return;
+
+                if (currentTableSortKey === key) {
+                    th.classList.add('bg-blue-100/70', 'text-blue-700');
+                    if (currentTableSortOrder === 'asc') {
+                        iconContainer.innerHTML = `
+                            <svg class="w-3.5 h-3.5 text-blue-600 font-bold" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" />
+                            </svg>`;
+                    } else {
+                        iconContainer.innerHTML = `
+                            <svg class="w-3.5 h-3.5 text-blue-600 font-bold" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                            </svg>`;
+                    }
+                } else {
+                    th.classList.remove('bg-blue-100/70', 'text-blue-700');
+                    iconContainer.innerHTML = `
+                        <svg class="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 15L12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9" />
+                        </svg>`;
+                }
+            });
+        }
+
         // Consolidated function for filtering and sorting
         function updateView() {
             const searchTerm = document.getElementById('po-search').value.toLowerCase().trim();
@@ -599,6 +687,32 @@
 
             // Sort first
             rows.sort((a, b) => {
+                // Column Header Sorting Priority
+                if (currentTableSortKey) {
+                    let dir = currentTableSortOrder === 'asc' ? 1 : -1;
+                    if (currentTableSortKey === 'po') {
+                        const poA = a.getAttribute('data-po') || '';
+                        const poB = b.getAttribute('data-po') || '';
+                        return dir * poA.localeCompare(poB);
+                    } else if (currentTableSortKey === 'approved-date') {
+                        const dateA = a.getAttribute('data-approved-date') || '';
+                        const dateB = b.getAttribute('data-approved-date') || '';
+                        if (dateA === dateB) return 0;
+                        if (!dateA) return 1;
+                        if (!dateB) return -1;
+                        return dir * dateA.localeCompare(dateB);
+                    } else if (currentTableSortKey === 'price') {
+                        const priceA = parseFloat(a.getAttribute('data-price')) || 0;
+                        const priceB = parseFloat(b.getAttribute('data-price')) || 0;
+                        return dir * (priceA - priceB);
+                    } else if (currentTableSortKey === 'quantity') {
+                        const qA = parseInt(a.getAttribute('data-quantity'), 10) || 0;
+                        const qB = parseInt(b.getAttribute('data-quantity'), 10) || 0;
+                        return dir * (qA - qB);
+                    }
+                }
+
+                // Dropdown Sort Fallback
                 if (sortVal === 'default' || sortVal === 'show-all') {
                     const indexA = parseInt(a.getAttribute('data-index'));
                     const indexB = parseInt(b.getAttribute('data-index'));
@@ -679,8 +793,12 @@
         // Search
         document.getElementById('po-search').addEventListener('input', updateView);
 
-        // Sorting
-        document.getElementById('sort-order').addEventListener('change', updateView);
+        // Sorting Dropdown
+        document.getElementById('sort-order').addEventListener('change', () => {
+            currentTableSortKey = null;
+            updateTableSortHeaderIcons();
+            updateView();
+        });
 
         // Initial view setup
         updateView();
