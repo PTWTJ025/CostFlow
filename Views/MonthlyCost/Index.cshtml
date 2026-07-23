@@ -91,17 +91,30 @@
                                         @card.FileName
                                     </span>
                                 }
+                                @if (card.IsLatestWithData)
+                                {
+                                    <div class="inline-flex items-center gap-1.5 bg-blue-50/90 border border-blue-200/60 rounded px-2.5 py-1 mt-2">
+                                        <span class="text-[10px] text-blue-700 font-bold">มูลค่ารวมสะสม:</span>
+                                        <span class="text-xs font-black text-primary" data-field="totalAmount">
+                                            @card.TotalAmount.ToString("N2")
+                                        </span>
+                                    </div>
+                                }
                             </div>
 
-                            <!-- ยอดรวมและยอดจ่าย -->
-                            <div class="shrink-0 text-right ml-3">
-                                <div class="text-[10px] text-slate-400 font-medium mb-0.5">ยอดรวม</div>
-                                <div class="text-sm font-bold text-slate-700 mb-1.5" data-field="totalAmount">
-                                    @card.TotalAmount.ToString("N2")
+                            <!-- ยอดมูลค่าประจำเดือน และยอดจ่าย -->
+                            <div class="shrink-0 text-right ml-3 flex flex-col items-end gap-1.5">
+                                <div>
+                                    <div class="text-[10px] text-slate-400 font-medium mb-0.5">มูลค่าประจำเดือน</div>
+                                    <div class="text-sm font-bold text-slate-700" data-field="monthAmount">
+                                        @card.MonthAmount.ToString("N2")
+                                    </div>
                                 </div>
-                                <div class="text-[10px] text-emerald-600 font-medium mb-0.5">ยอดจ่าย</div>
-                                <div class="text-sm font-bold text-emerald-600" data-field="paidAmount">
-                                    @card.ReceivedAmount.ToString("N2")
+                                <div>
+                                    <div class="text-[10px] text-emerald-600 font-medium mb-0.5">ยอดจ่าย</div>
+                                    <div class="text-sm font-bold text-emerald-600" data-field="paidAmount">
+                                        @card.ReceivedAmount.ToString("N2")
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -243,6 +256,7 @@
                         if (el) el.textContent = val;
                     };
 
+                    set('monthAmount', fmtN2(item.monthAmount));
                     set('totalAmount', fmtN2(item.totalAmount));
                     set('paidAmount', fmtN2(item.paidAmount));
                     set('receivedCount', item.receivedCount);

@@ -32,6 +32,8 @@ namespace CostFlow.Models
 
         // ยอดรวมทั้งหมดของสินค้าในเดือนนี้ (จาก OrderTrackingMasters โดยตรง ก่อน action)
         public decimal TotalAmount { get; set; }
+        public decimal MonthAmount { get; set; }
+        public bool IsLatestWithData { get; set; }
 
         public double ProgressPercent => TotalItems > 0
             ? Math.Round((double)DoneItems / TotalItems * 100, 1)

@@ -64,7 +64,10 @@ namespace CostFlow.Controllers
                 .GroupBy(x => x.ParsedDate!.Value.Month)
                 .ToDictionary(g => g.Key, g => g.Select(x => new { x.Id, x.PoNumber, x.Amount }).ToList());
 
-            // Build 12 month cards (สะสมยอดทับกันมาเรื่อยๆ ตั้งแต่เดือนมกราคม)
+            // หาเดือนล่าสุดที่มีข้อมูลในปีที่เลือก (Latest month with data)
+            int latestMonthWithData = ordersByMonth.Keys.Any() ? ordersByMonth.Keys.Max() : 0;
+
+            // Build 12 month cards
             var cards = new List<object>();
 
             int runningTotalOrders = 0;
@@ -89,6 +92,8 @@ namespace CostFlow.Controllers
 
                 var isCurrentMonth = (selectedYear == now.Year && month == now.Month);
                 var isEmpty = (monthOrdersCount == 0);
+                var isLatestWithData = (month == latestMonthWithData && !isEmpty);
+
                 var statusCode = isEmpty ? "empty" : (isCurrentMonth ? "active" : "completed");
                 var statusLabel = isEmpty ? "ไม่มีข้อมูล" : (isCurrentMonth ? "กำลังดำเนินการ" : "มีข้อมูล");
 
@@ -97,8 +102,11 @@ namespace CostFlow.Controllers
                     MonthYearKey = monthKey,
                     Month = month,
                     Year = selectedYear,
+                    MonthOrders = monthOrdersCount,
+                    MonthAmount = monthAmount,
                     TotalOrders = isEmpty ? 0 : runningTotalOrders,
                     TotalAmount = isEmpty ? 0m : runningTotalAmount,
+                    IsLatestWithData = isLatestWithData,
                     StatusCode = statusCode,
                     StatusLabel = statusLabel
                 });

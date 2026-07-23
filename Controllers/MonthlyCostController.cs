@@ -80,6 +80,19 @@ namespace CostFlow.Controllers
                 .Select(o => new { o.Id, o.Amount, o.ApprovedDate })
                 .ToListAsync();
 
+            // หาเดือนล่าสุดที่มีข้อมูลในปีนั้น
+            int latestMonthWithData = 0;
+            for (int m = 1; m <= 12; m++)
+            {
+                var mKey = $"{selectedYear:0000}-{m:00}";
+                var hasOrders = allOrders.Any(o => { var d = ParseThaiDate(o.ApprovedDate); return d.HasValue && d.Value.Year == selectedYear && d.Value.Month == m; });
+                var hasActions = allActions.Any(a => a.MonthYear == mKey);
+                if (hasOrders || hasActions)
+                {
+                    latestMonthWithData = m;
+                }
+            }
+
             // Build cards for all 12 months
             var cards = new List<MonthlyCardViewModel>();
 
@@ -244,7 +257,9 @@ namespace CostFlow.Controllers
                     ReceivedCarryOver = receivedCarryOver,
                     DeferredCarryOver = deferredCarryOver,
                     SkippedCarryOver = skippedCarryOver,
-                    TotalAmount = monthOrdersInMonth.Count == 0 ? 0m : runningPlannedAmount,
+                    MonthAmount = monthBasePlannedAmount,
+                    TotalAmount = monthOrdersInMonth.Count == 0 && monthActions.Count == 0 ? 0m : runningPlannedAmount,
+                    IsLatestWithData = (month == latestMonthWithData && hasNewOrCarryOverOrders > 0)
                 });
             }
 
@@ -359,7 +374,8 @@ namespace CostFlow.Controllers
                     deferredAmount,
                     skippedCount,
                     skippedAmount,
-                    totalAmount    = monthOrdersInMonth.Count == 0 ? 0m : runningPlannedAmount,
+                    monthAmount    = monthBasePlannedAmount,
+                    totalAmount    = monthOrdersInMonth.Count == 0 && monthActions.Count == 0 ? 0m : runningPlannedAmount,
                     paidAmount     = receivedAmount,
                 });
             }

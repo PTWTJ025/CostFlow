@@ -99,8 +99,11 @@
         {
             var month = (int)card.Month;
             var year = (int)card.Year;
+            var monthOrders = (int)card.MonthOrders;
+            var monthAmount = (decimal)card.MonthAmount;
             var totalOrders = (int)card.TotalOrders;
             var totalAmount = (decimal)card.TotalAmount;
+            var isLatestWithData = (bool)card.IsLatestWithData;
             var statusCode = (string)card.StatusCode;
             var statusLabel = (string)card.StatusLabel;
             var monthDisplay = (string)card.MonthYearDisplay;
@@ -109,63 +112,53 @@
             var isActive = statusCode == "active";
             var isCompleted = statusCode == "completed";
 
-            // ประเมิน "ความสำเร็จ" จาก TotalOrders เทียบกับ avg (แสดงเป็น filled bar ถ้ามีข้อมูล)
-            // ใช้ข้อมูลที่มี: completed = 100%, active = จาก ratio วันที่ผ่านไปในเดือน
-            var now = DateTime.Now;
-            int progressPct = 0;
-            if (!isEmpty)
-            {
-                if (isCompleted)
-                {
-                    progressPct = 100;
-                }
-                else if (isActive)
-                {
-                    // estimate: สัดส่วนวันที่ผ่านไปในเดือนนี้
-                    int daysInMonth = DateTime.DaysInMonth(year, month);
-                    progressPct = (int)Math.Round((double)now.Day / daysInMonth * 100);
-                }
-            }
-
             <a href="@(isEmpty ? "javascript:void(0)" : Url.Action("Details", new { month = month, year = year }))"
-               class="month-card group bg-white rounded-xl border border-slate-200 shadow-sm p-md flex flex-col gap-3 animate-card-in
+               class="month-card group bg-white rounded-xl border border-slate-200 shadow-sm p-md flex flex-col justify-between h-full animate-card-in
                       @(isEmpty ? "cursor-default opacity-60" : "cursor-pointer hover:border-primary/50 hover:shadow-md transition-all duration-200")">
 
                 <!-- Header: ชื่อเดือน + status badge -->
-                <div class="flex items-start justify-between gap-2">
+                <div class="flex items-start justify-between gap-2 min-h-[58px]">
                     <div>
                         <h4 class="font-semibold text-sm @(isEmpty ? "text-slate-400" : "text-slate-800 group-hover:text-primary transition-colors duration-200") leading-tight">
                             @monthDisplay
                         </h4>
                         @if (!isEmpty)
                         {
-                            <p class="text-xs text-slate-400 mt-0.5">@totalOrders ใบสั่งผลิต</p>
+                            <p class="text-xs text-slate-400 mt-1">@monthOrders ใบสั่งผลิต</p>
                         }
                     </div>
-                    @if (!isEmpty)
-                    {
-                        <span class="shrink-0 inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border
-                                     @(isActive ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-blue-50 text-blue-700 border-blue-200")">
-                            @if (isActive)
-                            {
-                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                            }
-                            @statusLabel
-                        </span>
-                    }
+                    <div class="flex flex-col items-end gap-1 shrink-0">
+                        @if (!isEmpty)
+                        {
+                            <span class="shrink-0 inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border
+                                         @(isActive ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-blue-50 text-blue-700 border-blue-200")">
+                                @if (isActive)
+                                {
+                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                }
+                                @statusLabel
+                            </span>
+                        }
+                        @if (isLatestWithData)
+                        {
+                            <div class="bg-blue-50/90 border border-blue-200/60 rounded px-2 py-0.5 text-right mt-0.5 shadow-2xs">
+                                <div class="text-xs font-black text-primary tabular-nums">@totalAmount.ToString("N2")</div>
+                            </div>
+                        }
+                    </div>
                 </div>
 
                 @if (!isEmpty)
                 {
-                    <!-- Stat pills -->
-                    <div class="grid grid-cols-2 gap-2">
+                    <!-- Stat pills (ตรึงแนวด้านล่างการ์ดเสมอเพื่อความสมมาตร) -->
+                    <div class="grid grid-cols-2 gap-2 mt-auto pt-2">
                         <div class="bg-slate-50 rounded-lg px-3 py-2 text-center border border-slate-100">
                             <div class="text-[10px] text-slate-500 font-medium mb-0.5">ใบสั่งผลิต</div>
-                            <div class="text-lg font-black text-slate-800 tabular-nums leading-none">@totalOrders</div>
+                            <div class="text-lg font-black text-slate-800 tabular-nums leading-none">@monthOrders</div>
                         </div>
                         <div class="bg-slate-50 rounded-lg px-3 py-2 text-center border border-slate-100">
-                            <div class="text-[10px] text-slate-500 font-medium mb-0.5">มูลค่ารวม</div>
-                            <div class="text-xs font-bold text-primary tabular-nums leading-tight mt-1">@totalAmount.ToString("N2")</div>
+                            <div class="text-[10px] text-slate-500 font-medium mb-0.5">มูลค่าประจำเดือน</div>
+                            <div class="text-xs font-bold text-slate-700 tabular-nums leading-tight mt-1">@monthAmount.ToString("N2")</div>
                         </div>
                     </div>
                 }
