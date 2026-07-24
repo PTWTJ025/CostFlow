@@ -272,7 +272,7 @@
 
                 <div class="flex items-center gap-1.5 text-slate-500 bg-white border border-slate-200 rounded-md px-2 py-1 shadow-xs" style="height: 30px;">
                     <svg class="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 7.5L7.5 3m0 0L12 7.5M7.5 3v13.5m13.5 0L16.5 21m0 0L12 16.5m4.5 4.5V7.5" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 7.5L7.5 3m0 0L12 7.5M7.5 3v13.5m13.5 0L16.5 21m0 0L12 16.5m4.5 4.5V7.5"/>
                     </svg>
                     <div class="relative flex items-center h-full">
                         <select id="pending-sort-select" onchange="sortPendingOrders(this.value)"
@@ -350,7 +350,6 @@
                             @if (order.ForwardedStatus == "Deferred")
                             {
                                 <div class="mt-1.5 mb-1.5 text-[11px] font-bold text-amber-600 bg-amber-50/70 border border-amber-100 rounded-md px-2.5 py-1 inline-flex items-center gap-1.5">
-                                    <span>⚠️</span>
                                     <span>รายการผ่อนสะสม: ตรวจสอบการรับสินค้า</span>
                                 </div>
                             }
@@ -693,50 +692,50 @@
             }
 
             el.innerHTML = `
-                        <div class="p-3 pb-2">
-                            <div class="flex items-start justify-between gap-2 mb-2">
-                                <div class="flex-1 min-w-0">
-                                    <div class="flex items-center flex-wrap gap-1 mb-0.5">
-                                        <span class="font-bold text-[13px] text-slate-800">${item.poNumber}</span>
-                                        ${fwdBadgeHtml}
-                                    </div>
-                                    <p class="text-xs text-slate-500 leading-snug line-clamp-2 mt-0.5">${item.orderName}</p>
-                                </div>
-                                <div class="shrink-0 flex flex-col items-end gap-1.5">
-                                    <span class="font-bold text-sm text-slate-700">${fmt(item.price)}</span>
-                                    <button type="button"
-                                        onclick="removeFromCart('${orderId}')"
-                                        class="remove-btn">
-                                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
-                                        </svg>
-                                    </button>
-                                </div>
-                            </div>
-        
-                            <!-- Action pills -->
-                            <div class="flex flex-wrap gap-1.5" id="pills-${orderId}">
-                                <label class="action-pill active-receive" id="pill-receive-${orderId}">
-                                    <input type="radio" name="act_${orderId}" value="ReceivedFull" checked onchange="setAction('${orderId}','ReceivedFull')">
-                                    <span>${receiveLabel}</span>
-                                    <span class="font-bold ml-1">${fmt(item.price)}</span>
-                                </label>
-                                <label class="action-pill" id="pill-defer-${orderId}">
-                                    <input type="radio" name="act_${orderId}" value="Deferred" onchange="setAction('${orderId}','Deferred')">
-                                    <span>${deferLabel}</span>
-                                    <span class="font-bold ml-1">${fmt(item.price)}</span>
-                                </label>
-                            </div>
-        
-                            <!-- Deferred note (hidden by default, no input needed) -->
-                            <div class="deferred-note mt-2 items-center gap-2 bg-amber-50 border border-amber-200 rounded-md px-3 py-2" id="defer-wrap-${orderId}">
-                                <svg class="w-3.5 h-3.5 text-amber-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
-                                </svg>
-                                <span class="text-[11px] text-amber-700">${deferNoteText}</span>
-                            </div>
-                        </div>
-                    `;
+                                                <div class="p-3 pb-2">
+                                                    <div class="flex items-start justify-between gap-2 mb-2">
+                                                        <div class="flex-1 min-w-0">
+                                                            <div class="flex items-center flex-wrap gap-1 mb-0.5">
+                                                                <span class="font-bold text-[13px] text-slate-800">${item.poNumber}</span>
+                                                                ${fwdBadgeHtml}
+                                                            </div>
+                                                            <p class="text-xs text-slate-500 leading-snug line-clamp-2 mt-0.5">${item.orderName}</p>
+                                                        </div>
+                                                        <div class="shrink-0 flex flex-col items-end gap-1.5">
+                                                            <span class="font-bold text-sm text-slate-700">${fmt(item.price)}</span>
+                                                            <button type="button"
+                                                                onclick="removeFromCart('${orderId}')"
+                                                                class="remove-btn">
+                                                                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
+                                                                </svg>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                
+                                                    <!-- Action pills -->
+                                                    <div class="flex flex-wrap gap-1.5" id="pills-${orderId}">
+                                                        <label class="action-pill active-receive" id="pill-receive-${orderId}">
+                                                            <input type="radio" name="act_${orderId}" value="ReceivedFull" checked onchange="setAction('${orderId}','ReceivedFull')">
+                                                            <span>${receiveLabel}</span>
+                                                            <span class="font-bold ml-1">${fmt(item.price)}</span>
+                                                        </label>
+                                                        <label class="action-pill" id="pill-defer-${orderId}">
+                                                            <input type="radio" name="act_${orderId}" value="Deferred" onchange="setAction('${orderId}','Deferred')">
+                                                            <span>${deferLabel}</span>
+                                                            <span class="font-bold ml-1">${fmt(item.price)}</span>
+                                                        </label>
+                                                    </div>
+                                
+                                                    <!-- Deferred note (hidden by default, no input needed) -->
+                                                    <div class="deferred-note mt-2 items-center gap-2 bg-amber-50 border border-amber-200 rounded-md px-3 py-2" id="defer-wrap-${orderId}">
+                                                        <svg class="w-3.5 h-3.5 text-amber-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+                                                        </svg>
+                                                        <span class="text-[11px] text-amber-700">${deferNoteText}</span>
+                                                    </div>
+                                                </div>
+                                            `;
 
             document.getElementById('cart-list').appendChild(el);
         }
@@ -823,19 +822,61 @@
             }
         }
 
+        // ─── Search & Filter ───────────────────────────────────────────────────────────
+        function applyPendingFilters() {
+            const select = document.getElementById('pending-sort-select');
+            const filterType = select ? select.value : 'default';
+            const searchInput = document.getElementById('search-pending');
+            const q = searchInput ? searchInput.value.toLowerCase().trim() : '';
+
+            let visible = 0;
+            document.querySelectorAll('.order-card').forEach(card => {
+                const po = card.dataset.poNumber ? card.dataset.poNumber.toLowerCase() : '';
+                const name = card.dataset.orderName ? card.dataset.orderName.toLowerCase() : '';
+                const matchSearch = po.includes(q) || name.includes(q);
+
+                const fwdStatus = card.getAttribute('data-forwarded-status') || '';
+                let matchType = true;
+                if (filterType === 'this-month') matchType = (fwdStatus === '');
+                else if (filterType === 'deferred') matchType = (fwdStatus === 'Deferred');
+                else if (filterType === 'skipped') matchType = (fwdStatus === 'Skipped');
+
+                if (matchSearch && matchType) {
+                    card.style.display = '';
+                    visible++;
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+            const countEl = document.getElementById('tab-pending-count');
+            if (countEl) countEl.textContent = visible;
+            onCardCheckboxChange();
+        }
+
+        document.getElementById('search-pending').addEventListener('input', applyPendingFilters);
+
         function bulkAddToCart(action) {
             const checkedBoxes = Array.from(document.querySelectorAll('.pending-card-checkbox')).filter(cb => {
                 const card = cb.closest('.order-card');
                 return cb.checked && card && card.style.display !== 'none' && !card.classList.contains('in-cart');
             });
 
-            // ถ้าไม่มีติ๊กไว้ ให้ส่งรายการคงค้างทั้งหมดที่มองเห็นอยู่เข้าตะกร้า
             let targetCards = [];
             if (checkedBoxes.length > 0) {
                 targetCards = checkedBoxes.map(cb => cb.closest('.order-card'));
             } else {
                 targetCards = Array.from(document.querySelectorAll('.order-card')).filter(card => {
-                    return card.style.display !== 'none' && !card.classList.contains('in-cart');
+                    if (card.style.display === 'none' || card.classList.contains('in-cart')) return false;
+
+                    const fwdStatus = card.getAttribute('data-forwarded-status') || '';
+                    if (action === 'Deferred') {
+                        return fwdStatus === 'Deferred';
+                    } else if (action === 'Skipped') {
+                        return fwdStatus === 'Skipped';
+                    } else {
+                        // ReceivedFull เอาทั้งหมดที่มองเห็นอยู่
+                        return true;
+                    }
                 });
             }
 
@@ -889,18 +930,7 @@
         }
 
         // ─── Search ───────────────────────────────────────────────────────────────────
-        document.getElementById('search-pending').addEventListener('input', function () {
-            const q = this.value.toLowerCase();
-            let visible = 0;
-            document.querySelectorAll('.order-card').forEach(card => {
-                const match = card.dataset.poNumber.toLowerCase().includes(q) ||
-                    card.dataset.orderName.toLowerCase().includes(q);
-                card.style.display = match ? '' : 'none';
-                if (match) visible++;
-            });
-            document.getElementById('tab-pending-count').textContent = visible;
-            onCardCheckboxChange();
-        });
+        // (Search is now handled by applyPendingFilters which binds to search-pending)
 
         // ─── Save Actions (Draft & Close Month) ──────────────────────────────────────
         async function handleSaveProcess(isCloseMonth) {
@@ -931,65 +961,63 @@
                 confirmBtnText = 'ยืนยันบันทึก';
                 confirmBtnColor = '#2563eb';
             } else {
-                confirmTitle = `<div class="flex items-center justify-center gap-2 text-rose-600 font-black text-xl">⚠️ ยืนยันการปิดยอดเดือน ${MONTH_YEAR}</div>`;
+                confirmTitle = `<div class="flex items-center justify-center gap-2 text-rose-600 font-black text-xl">ยืนยันการปิดยอดเดือน ${MONTH_YEAR}</div>`;
 
                 let warningBoxHtml = '';
                 if (unselectedCount > 0) {
                     warningBoxHtml = `
-                                <div class="bg-rose-50 border-2 border-rose-300 rounded-xl p-4 my-3 text-left shadow-xs">
-                                    <div class="flex items-start gap-3">
-                                        <div class="p-2 bg-rose-100 text-rose-600 rounded-lg shrink-0 mt-0.5">
-                                            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-                                            </svg>
-                                        </div>
-                                        <div>
-                                            <div class="font-bold text-rose-800 text-base mb-1">คำเตือน! การปิดยอดจะสรุปและปิดงวดเดือนนี้ทันที</div>
-                                            <div class="text-sm text-slate-700 leading-relaxed">
-                                                กรุณาตรวจสอบจำนวนรายการด้านล่างก่อนยืนยัน:
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="mt-3 pt-3 border-t border-rose-200/80 space-y-2 text-sm">
-                                        <div class="flex justify-between items-center bg-white p-2.5 rounded-lg border border-rose-100 shadow-2xs">
-                                            <span class="font-medium text-slate-700">✅ รายการที่เลือกบันทึก:</span>
-                                            <span class="font-bold text-emerald-600 text-base">${ids.length} รายการ (${fmt(total)})</span>
-                                        </div>
-                                        <div class="flex justify-between items-center bg-rose-100/80 p-2.5 rounded-lg border border-rose-300 shadow-2xs">
-                                            <span class="font-bold text-rose-900">🚨 รายการคงค้างที่ไม่ถูกเลือก:</span>
-                                            <span class="font-black text-rose-600 text-lg">${unselectedCount} รายการ</span>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="mt-3 text-xs font-bold text-rose-700 bg-rose-200/60 p-2.5 rounded-lg text-center border border-rose-300/50">
-                                        📌 รายการคงค้าง ${unselectedCount} รายการ จะถูกปิดยอดและยกยอดไปเดือนถัดไปอัตโนมัติ!
-                                    </div>
-                                </div>`;
+                                                        <div class="bg-rose-50 border-2 border-rose-300 rounded-xl p-4 my-3 text-left shadow-xs">
+                                                            <div class="flex items-start gap-3">
+                                                                <div class="p-2 bg-rose-100 text-rose-600 rounded-lg shrink-0 mt-0.5">
+                                                                    
+                                                                </div>
+                                                                <div>
+                                                                    <div class="font-bold text-rose-800 text-base mb-1">คำเตือน! การปิดยอดจะสรุปและปิดงวดเดือนนี้ทันที</div>
+                                                                    <div class="text-sm text-slate-700 leading-relaxed">
+                                                                        กรุณาตรวจสอบจำนวนรายการด้านล่างก่อนยืนยัน:
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            
+                                                            <div class="mt-3 pt-3 border-t border-rose-200/80 space-y-2 text-sm">
+                                                                <div class="flex justify-between items-center bg-white p-2.5 rounded-lg border border-rose-100 shadow-2xs">
+                                                                    <span class="font-medium text-slate-700">รายการที่เลือกบันทึก:</span>
+                                                                    <span class="font-bold text-emerald-600 text-base">${ids.length} รายการ (${fmt(total)})</span>
+                                                                </div>
+                                                                <div class="flex justify-between items-center bg-rose-100/80 p-2.5 rounded-lg border border-rose-300 shadow-2xs">
+                                                                    <span class="font-bold text-rose-900">รายการคงค้างที่ไม่ถูกเลือก:</span>
+                                                                    <span class="font-black text-rose-600 text-lg">${unselectedCount} รายการ</span>
+                                                                </div>
+                                                            </div>
+                                                            
+                                                            <div class="mt-3 text-xs font-bold text-rose-700 bg-rose-200/60 p-2.5 rounded-lg text-center border border-rose-300/50">
+                                                                📌 รายการคงค้าง ${unselectedCount} รายการ จะถูกปิดยอดและยกยอดไปเดือนถัดไปอัตโนมัติ!
+                                                            </div>
+                                                        </div>`;
                 } else {
                     warningBoxHtml = `
-                                <div class="bg-emerald-50 border-2 border-emerald-300 rounded-xl p-4 my-3 text-left shadow-xs">
-                                    <div class="flex items-center gap-3">
-                                        <div class="p-2 bg-emerald-100 text-emerald-600 rounded-lg shrink-0">
-                                            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                            </svg>
-                                        </div>
-                                        <div>
-                                            <div class="font-bold text-emerald-800 text-base">ทำรายการครบถ้วนทุกรายการแล้ว!</div>
-                                            <div class="text-sm text-emerald-700">ทุกรายการถูกเลือกจัดการเรียบร้อยครบทั้ง ${ids.length} รายการ</div>
-                                        </div>
-                                    </div>
-                                </div>`;
+                                                        <div class="bg-emerald-50 border-2 border-emerald-300 rounded-xl p-4 my-3 text-left shadow-xs">
+                                                            <div class="flex items-center gap-3">
+                                                                <div class="p-2 bg-emerald-100 text-emerald-600 rounded-lg shrink-0">
+                                                                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                                    </svg>
+                                                                </div>
+                                                                <div>
+                                                                    <div class="font-bold text-emerald-800 text-base">ทำรายการครบถ้วนทุกรายการแล้ว!</div>
+                                                                    <div class="text-sm text-emerald-700">ทุกรายการถูกเลือกจัดการเรียบร้อยครบทั้ง ${ids.length} รายการ</div>
+                                                                </div>
+                                                            </div>
+                                                        </div>`;
                 }
 
                 confirmHtml = `
-                            ${warningBoxHtml}
-                            <div class="text-slate-700 text-sm font-semibold mt-2">
-                                คุณแน่ใจหรือไม่ว่าต้องการ <span class="text-rose-600 font-bold underline">"บันทึกและปิดยอดเดือน"</span> ?
-                            </div>`;
+                                                    ${warningBoxHtml}
+                                                    <div class="text-slate-700 text-sm font-semibold mt-2">
+                                                        คุณแน่ใจหรือไม่ว่าต้องการ <span class="text-rose-600 font-bold underline">"บันทึกและปิดยอดเดือน"</span> ?
+                                                    </div>`;
 
-                confirmBtnText = '⚠️ ยืนยันบันทึกและปิดยอดเดือน';
+                confirmBtnText = 'ยืนยันบันทึกและปิดยอดเดือน';
                 confirmBtnColor = '#e11d48';
             }
 
@@ -1053,33 +1081,7 @@
         }
 
         function sortPendingOrders(filterType) {
-            const container = document.getElementById('panel-pending');
-            if (!container) return;
-
-            const cards = Array.from(container.querySelectorAll('.order-card'));
-
-            cards.sort((a, b) => {
-                const fwdA = a.getAttribute('data-forwarded-status') || '';
-                const fwdB = b.getAttribute('data-forwarded-status') || '';
-
-                if (filterType === 'this-month') {
-                    const isThisMonthA = fwdA === '' ? 0 : 1;
-                    const isThisMonthB = fwdB === '' ? 0 : 1;
-                    return isThisMonthA - isThisMonthB;
-                } else if (filterType === 'deferred') {
-                    const isDefA = fwdA === 'Deferred' ? 0 : 1;
-                    const isDefB = fwdB === 'Deferred' ? 0 : 1;
-                    return isDefA - isDefB;
-                } else if (filterType === 'skipped') {
-                    const isSkipA = fwdA === 'Skipped' ? 0 : 1;
-                    const isSkipB = fwdB === 'Skipped' ? 0 : 1;
-                    return isSkipA - isSkipB;
-                } else {
-                    return 0;
-                }
-            });
-
-            cards.forEach(card => container.appendChild(card));
+            applyPendingFilters();
         }
 
         document.getElementById('save-btn').addEventListener('click', function () {
