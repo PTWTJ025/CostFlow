@@ -91,15 +91,6 @@
                                         @card.FileName
                                     </span>
                                 }
-                                @if (card.IsLatestWithData)
-                                {
-                                    <div class="inline-flex items-center gap-1.5 bg-blue-50/90 border border-blue-200/60 rounded px-2.5 py-1 mt-2">
-                                        <span class="text-[10px] text-blue-700 font-bold">มูลค่ารวมสะสม:</span>
-                                        <span class="text-xs font-black text-primary" data-field="totalAmount">
-                                            @card.TotalAmount.ToString("N2")
-                                        </span>
-                                    </div>
-                                }
                             </div>
 
                             <!-- ยอดมูลค่าประจำเดือน และยอดจ่าย -->
@@ -155,20 +146,23 @@
                                 @card.DeferredAmount.ToString("N2") บาท
                             </div>
                         </div>
-                        <!-- Skipped Pill -->
-                        <div class="flex-1 min-w-0 bg-slate-50/40 hover:bg-slate-100/60 border border-slate-200/40 rounded-lg py-2 px-2 flex flex-col items-center justify-center text-center transition-all duration-200 group/pill relative"
-                             title="ไม่ต้องการสินค้า: @card.SkippedCount รายการ | @card.SkippedAmount.ToString("N2") บาท">
-                            <div class="flex items-center gap-1 text-[10px] font-bold text-slate-500 uppercase tracking-tight mb-0.5">
-                                <span class="w-1.5 h-1.5 rounded-full bg-purple-500 shrink-0"></span>
-                                <span>ไม่ต้องการสินค้า</span>
+                        @if (card.IsLatestWithData)
+                        {
+                            <!-- Total Amount Pill -->
+                            <div class="flex-1 min-w-0 bg-blue-50/80 hover:bg-blue-100 border border-blue-200/60 rounded-lg py-2 px-2 flex flex-col items-center justify-center text-center transition-all duration-200 group/pill relative shadow-sm"
+                                 title="มูลค่ารวมสะสม: @card.TotalAmount.ToString("N2") บาท">
+                                <div class="flex items-center gap-1 text-[10px] font-black text-blue-600 uppercase tracking-tight mb-0.5">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0 animate-pulse"></span>
+                                    <span>มูลค่ารวมสะสม</span>
+                                </div>
+                                <div class="text-[13px] font-black font-mono text-blue-700 leading-none my-0.5 group-hover/pill:text-blue-800 transition-colors" data-field="totalAmount">
+                                    @card.TotalAmount.ToString("N2")
+                                </div>
+                                <div class="text-[9px] font-black text-blue-500 mt-0.5">
+                                    บาท
+                                </div>
                             </div>
-                            <div class="text-sm font-extrabold font-mono text-slate-700 leading-none my-0.5 group-hover/pill:text-slate-800 transition-colors">
-                                <span data-field="skippedCount">@card.SkippedCount</span> <span class="text-[10px] font-normal text-slate-400 font-sans">รายการ</span>
-                            </div>
-                            <div class="text-[9px] font-medium text-purple-600 mt-0.5" data-field="skippedAmount">
-                                @card.SkippedAmount.ToString("N2") บาท
-                            </div>
-                        </div>
+                        }
                     </div>
                 </a>
             }
