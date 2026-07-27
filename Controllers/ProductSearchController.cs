@@ -86,7 +86,6 @@ namespace CostFlow.Controllers
             var matches = await _context.ProductPrices
                 .Where(p => p.ProductCode.ToLower().Contains(cleanQuery) || 
                             p.ProductName.ToLower().Contains(cleanQuery))
-                .Take(15)
                 .ToListAsync();
 
             return Json(matches);
