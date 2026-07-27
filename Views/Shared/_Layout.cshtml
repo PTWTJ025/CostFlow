@@ -8,8 +8,6 @@
     string roleName = "ผู้ใช้งาน";
     bool isAdmin = false;
     bool isStaff = false;
-    string profilePic = User.FindFirstValue("ProfilePictureUrl") ??
-                        "https://img.favpng.com/9/17/18/3d-woman-avatar-cartoon-woman-with-bright-glasses-and-friendly-smile-wtuATRW2.jpg";
 
     if (User.Identity?.IsAuthenticated == true)
     {
@@ -23,6 +21,28 @@
         isAdmin = User.IsInRole("Admin");
         isStaff = User.IsInRole("Staff");
         roleName = isAdmin ? "ผู้ดูแลระบบ (Admin)" : isStaff ? "เจ้าหน้าที่ฝ่ายช่าง (Staff)" : "ผู้ตรวจสอบเครื่องจักร (Machine Inspector)";
+    }
+
+    string profilePic = User.FindFirstValue("ProfilePictureUrl");
+    if (string.IsNullOrEmpty(profilePic))
+    {
+        if (isStaff)
+        {
+            string[] staffCatPics = new[]
+            {
+                "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTDukEND1o9OJ0ERT0Csbm9mFK5WxJENappr_X5SaViAoIlbiwGHhI4xb6x&s=10",
+                "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRLFz54uCaYL0tyhkyi171ZW8Obs49WiToB3BWlzpVHpF75ASK0vo9z2b0&s=10",
+                "https://png.pngtree.com/background/20230613/original/pngtree-cat-in-mechanic-suit-repairing-motorcycle-ai-generated-picture-image_3393337.jpg",
+                "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRXwZtGgdCZRdhuxT-xIiN0Y1_scCSemWjZmposELosRUJDHD83_foRdYsj&s=10",
+                "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT7uIQzGaZnwYjDcOPmdQ7v6RXLt57pQLMcQ27_KBjRHwAn-DOMAUBJlxBn&s=10"
+            };
+            var rnd = new Random();
+            profilePic = staffCatPics[rnd.Next(staffCatPics.Length)];
+        }
+        else
+        {
+            profilePic = "https://img.favpng.com/9/17/18/3d-woman-avatar-cartoon-woman-with-bright-glasses-and-friendly-smile-wtuATRW2.jpg";
+        }
     }
 
     string GetNavClass(string targetController, string targetAction = "")
