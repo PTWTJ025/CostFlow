@@ -122,9 +122,8 @@
 </div>
 
 @section Scripts {
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/th.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/air-datepicker@3/air-datepicker.css">
+    <script src="https://cdn.jsdelivr.net/npm/air-datepicker@3"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
@@ -171,24 +170,42 @@
                     const { value: dateStr, isConfirmed } = await Swal.fire({
                         title: 'ระบุวันที่รับสินค้า',
                         html: `
-                                <p class="text-[13px] text-slate-600 mb-3">แผ่นงาน: <strong>${batchName}</strong></p>
+                                <p class="text-[13px] text-slate-600 mb-2">แผ่นงาน: <strong>${batchName}</strong></p>
                                 <p class="text-[13px] text-primary font-semibold mb-3">รายการที่เลือก: ${productCodes.length} รายการ</p>
-                                <input type="text" id="receive-date" class="swal2-input bg-white cursor-pointer" placeholder="เลือกวันที่รับสินค้า..." readonly>
+                                <input type="hidden" id="receive-date" value="${today}">
+                                <div id="adp-inline-container"></div>
+                                <p class="text-[12px] text-slate-500 mt-2">วันที่เลือก: <strong id="adp-selected-text">${today}</strong></p>
                             `,
                         showCancelButton: true,
                         confirmButtonText: 'บันทึก',
                         cancelButtonText: 'ยกเลิก',
                         focusConfirm: false,
+                        width: 380,
                         didOpen: () => {
-                            flatpickr("#receive-date", {
-                                locale: "th",
-                                dateFormat: "Y-m-d",
-                                defaultDate: today,
-                                disableMobile: true
+                            const thLocale = {
+                                days: ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'],
+                                daysShort: ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'],
+                                daysMin: ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'],
+                                months: ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'],
+                                monthsShort: ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'],
+                                today: 'วันนี้',
+                                clear: 'ล้าง',
+                                dateFormat: 'yyyy-MM-dd',
+                                firstDay: 0
+                            };
+                            new AirDatepicker('#adp-inline-container', {
+                                locale: thLocale,
+                                inline: true,
+                                selectedDates: [today],
+                                dateFormat: 'yyyy-MM-dd',
+                                onSelect: ({ formattedDate }) => {
+                                    document.getElementById('receive-date').value = formattedDate;
+                                    document.getElementById('adp-selected-text').textContent = formattedDate;
+                                }
                             });
                         },
                         preConfirm: () => {
-                            const dateInput = Swal.getPopup().querySelector('#receive-date').value;
+                            const dateInput = document.getElementById('receive-date').value;
                             if (!dateInput) {
                                 Swal.showValidationMessage('กรุณาระบุวันที่');
                             }
@@ -275,78 +292,80 @@
         }
 
         /* ==========================================
-           Flatpickr Custom Theme (คลุมโทนระบบ)
+           Air Datepicker 3 — Custom Theme (#00288e)
         ========================================== */
-        .flatpickr-calendar {
-            font-family: 'Chakra Petch', sans-serif !important;
-            border-radius: 14px !important;
-            border: 1px solid #e2e8f0 !important;
-            box-shadow: 0 10px 40px rgba(0, 40, 142, 0.12) !important;
-            overflow: hidden !important;
+        #adp-inline-container .air-datepicker {
+            --adp-font-family: 'Chakra Petch', sans-serif;
+            --adp-font-size: 13px;
+            --adp-width: 320px;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 24px rgba(0, 40, 142, 0.10);
         }
-        .flatpickr-months {
-            background: #00288e !important;
-            border-radius: 14px 14px 0 0 !important;
-            padding: 8px 0 !important;
+        #adp-inline-container .air-datepicker-nav {
+            background: #00288e;
+            border-bottom: none;
+            padding: 10px 8px;
         }
-        .flatpickr-months .flatpickr-month,
-        .flatpickr-months .flatpickr-prev-month,
-        .flatpickr-months .flatpickr-next-month {
-            color: #fff !important;
-            fill: #fff !important;
+        #adp-inline-container .air-datepicker-nav--title,
+        #adp-inline-container .air-datepicker-nav--title i {
+            color: #fff;
+            font-weight: 700;
+            font-size: 14px;
         }
-        .flatpickr-months .flatpickr-prev-month:hover svg,
-        .flatpickr-months .flatpickr-next-month:hover svg {
-            fill: #93c5fd !important;
+        #adp-inline-container .air-datepicker-nav--title:hover {
+            background: rgba(255,255,255,0.15);
+            color: #fff;
+            border-radius: 6px;
         }
-        .flatpickr-current-month .flatpickr-monthDropdown-months {
-            background: transparent !important;
-            color: #fff !important;
-            font-weight: 700 !important;
-            font-size: 14px !important;
+        #adp-inline-container .air-datepicker-nav--action svg path {
+            stroke: #fff;
         }
-        .flatpickr-current-month input.cur-year {
-            color: #fff !important;
-            font-weight: 700 !important;
+        #adp-inline-container .air-datepicker-nav--action:hover {
+            background: rgba(255,255,255,0.15);
+            border-radius: 6px;
         }
-        .flatpickr-weekdays {
-            background: #00288e !important;
+        #adp-inline-container .air-datepicker-body--day-names {
+            background: #001f6e;
+            margin: 0;
+            padding: 6px 4px;
         }
-        .flatpickr-weekday {
-            background: #00288e !important;
-            color: #bfdbfe !important;
-            font-weight: 600 !important;
-            font-size: 12px !important;
+        #adp-inline-container .air-datepicker-body--day-name {
+            color: #bfdbfe;
+            font-weight: 600;
+            font-size: 11px;
         }
-        .flatpickr-day {
-            border-radius: 8px !important;
-            font-size: 13px !important;
-            color: #1e293b !important;
-            transition: background 0.15s, color 0.15s !important;
+        #adp-inline-container .air-datepicker-body--cells.-days- {
+            padding: 8px 4px;
         }
-        .flatpickr-day:hover {
-            background: #dbeafe !important;
-            border-color: transparent !important;
+        #adp-inline-container .air-datepicker-cell.-day- {
+            border-radius: 8px;
+            font-size: 13px;
+            height: 36px;
+            line-height: 36px;
+            transition: background 0.15s, color 0.15s;
+            color: #1e293b;
+        }
+        #adp-inline-container .air-datepicker-cell.-day-:not(.-selected-):not(.-disabled-):hover {
+            background: #dbeafe;
+            color: #00288e;
+        }
+        #adp-inline-container .air-datepicker-cell.-current- {
             color: #00288e !important;
+            font-weight: 700;
+            border: 1.5px solid #00288e;
         }
-        .flatpickr-day.today {
-            border-color: #00288e !important;
-            color: #00288e !important;
-            font-weight: 700 !important;
-        }
-        .flatpickr-day.today:hover {
+        #adp-inline-container .air-datepicker-cell.-selected- {
             background: #00288e !important;
             color: #fff !important;
-        }
-        .flatpickr-day.selected,
-        .flatpickr-day.selected:hover {
-            background: #00288e !important;
+            font-weight: 700;
             border-color: #00288e !important;
-            color: #fff !important;
-            font-weight: 700 !important;
         }
-        .flatpickr-day.prevMonthDay,
-        .flatpickr-day.nextMonthDay {
-            color: #cbd5e1 !important;
+        #adp-inline-container .air-datepicker-cell.-selected-:hover {
+            background: #001f6e !important;
+        }
+        #adp-inline-container .air-datepicker-cell.-other-month- {
+            color: #cbd5e1;
         }</style>
 }
