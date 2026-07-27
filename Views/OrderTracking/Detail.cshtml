@@ -26,7 +26,7 @@
 
     <!-- Page Title -->
     <div class="shrink-0">
-        <h1 class="text-xl font-black text-on-surface">รายละเอียด: @batchName</h1>
+        <h1 class="text-xl font-bold text-on-surface">รายละเอียด: @batchName</h1>
         <p class="text-[13px] text-on-surface-variant mt-1">เลือกรายการสินค้าที่ได้รับแล้ว และกดบันทึกสถานะ</p>
     </div>
 
@@ -170,12 +170,12 @@
                     const { value: dateStr, isConfirmed } = await Swal.fire({
                         title: 'ระบุวันที่รับสินค้า',
                         html: `
-                                <p class="text-[13px] text-slate-600 mb-2">แผ่นงาน: <strong>${batchName}</strong></p>
-                                <p class="text-[13px] text-primary font-semibold mb-3">รายการที่เลือก: ${productCodes.length} รายการ</p>
-                                <input type="hidden" id="receive-date" value="${today}">
-                                <div id="adp-inline-container"></div>
-                                <p class="text-[12px] text-slate-500 mt-2">วันที่เลือก: <strong id="adp-selected-text">${today}</strong></p>
-                            `,
+                                    <p class="text-[13px] text-slate-600 mb-2">แผ่นงาน: <strong class="block truncate max-w-[280px] mx-auto text-center" title="${batchName}">${batchName}</strong></p>
+                                    <p class="text-[13px] text-primary font-semibold mb-3">รายการที่เลือก: ${productCodes.length} รายการ</p>
+                                    <input type="hidden" id="receive-date" value="${today}">
+                                    <div id="adp-inline-container" style="display:flex;justify-content:center;"></div>
+                                    <p class="text-[12px] text-slate-500 mt-2">วันที่เลือก: <strong id="adp-selected-text">${today}</strong></p>
+                                `,
                         showCancelButton: true,
                         confirmButtonText: 'บันทึก',
                         cancelButtonText: 'ยกเลิก',
@@ -264,6 +264,8 @@
         .swal-popup-custom {
             border-radius: 16px !important;
             padding: 24px !important;
+            overflow: hidden !important;
+            /* ซ่อน scrollbar */
         }
     
         .swal-btn-primary {
@@ -290,10 +292,10 @@
             border-color: #3B82F6 !important;
             box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
         }
-
+    
         /* ==========================================
-           Air Datepicker 3 — Custom Theme (#00288e)
-        ========================================== */
+               Air Datepicker 3 — Custom Theme (#00288e)
+            ========================================== */
         #adp-inline-container .air-datepicker {
             --adp-font-family: 'Chakra Petch', sans-serif;
             --adp-font-size: 13px;
@@ -303,42 +305,51 @@
             overflow: hidden;
             box-shadow: 0 4px 24px rgba(0, 40, 142, 0.10);
         }
+    
         #adp-inline-container .air-datepicker-nav {
             background: #00288e;
             border-bottom: none;
             padding: 10px 8px;
         }
+    
         #adp-inline-container .air-datepicker-nav--title,
         #adp-inline-container .air-datepicker-nav--title i {
             color: #fff;
             font-weight: 700;
             font-size: 14px;
         }
+    
         #adp-inline-container .air-datepicker-nav--title:hover {
-            background: rgba(255,255,255,0.15);
+            background: rgba(255, 255, 255, 0.15);
             color: #fff;
             border-radius: 6px;
         }
+    
         #adp-inline-container .air-datepicker-nav--action svg path {
             stroke: #fff;
         }
+    
         #adp-inline-container .air-datepicker-nav--action:hover {
-            background: rgba(255,255,255,0.15);
+            background: rgba(255, 255, 255, 0.15);
             border-radius: 6px;
         }
+    
         #adp-inline-container .air-datepicker-body--day-names {
             background: #001f6e;
             margin: 0;
             padding: 6px 4px;
         }
+    
         #adp-inline-container .air-datepicker-body--day-name {
             color: #bfdbfe;
             font-weight: 600;
             font-size: 11px;
         }
+    
         #adp-inline-container .air-datepicker-body--cells.-days- {
             padding: 8px 4px;
         }
+    
         #adp-inline-container .air-datepicker-cell.-day- {
             border-radius: 8px;
             font-size: 13px;
@@ -347,25 +358,31 @@
             transition: background 0.15s, color 0.15s;
             color: #1e293b;
         }
+    
         #adp-inline-container .air-datepicker-cell.-day-:not(.-selected-):not(.-disabled-):hover {
             background: #dbeafe;
             color: #00288e;
         }
+    
         #adp-inline-container .air-datepicker-cell.-current- {
             color: #00288e !important;
             font-weight: 700;
             border: 1.5px solid #00288e;
         }
+    
         #adp-inline-container .air-datepicker-cell.-selected- {
             background: #00288e !important;
             color: #fff !important;
             font-weight: 700;
             border-color: #00288e !important;
         }
+    
         #adp-inline-container .air-datepicker-cell.-selected-:hover {
             background: #001f6e !important;
         }
+    
         #adp-inline-container .air-datepicker-cell.-other-month- {
             color: #cbd5e1;
-        }</style>
+        }
+    </style>
 }
