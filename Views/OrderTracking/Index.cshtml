@@ -136,7 +136,16 @@
                                         <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
                                         </svg>
-                                        <span class="text-[11px] font-bold">รับแล้ว @batch.ReceiveDate</span>
+                                        <span class="text-[11px] font-bold">รับสินค้าครบแล้ว</span>
+                                    </div>
+                                }
+                                else if (batch.ReceivedItems > 0)
+                                {
+                                    <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                        <span class="text-[11px] font-bold">รับแล้ว @batch.ReceivedItems/@batch.TotalItems รายการ</span>
                                     </div>
                                 }
                                 else

@@ -46,10 +46,15 @@ namespace CostFlow.Controllers
                                 var name = GetStringProp(b, "BatchName");
                                 var createdAtStr = GetStringProp(b, "CreatedAt");
                                 var totalItems = b.TryGetProperty("TotalItems", out var tip) && tip.ValueKind == JsonValueKind.Number ? tip.GetInt32() : 0;
+                                var receivedItems = b.TryGetProperty("ReceivedItems", out var rip) && rip.ValueKind == JsonValueKind.Number ? rip.GetInt32() : 0;
                                 var totalAmount = b.TryGetProperty("TotalAmount", out var tap) && tap.ValueKind == JsonValueKind.Number ? tap.GetDouble() : 0;
                                 
+                                var isReceived = b.TryGetProperty("IsReceived", out var ir) && (ir.ValueKind == JsonValueKind.True || (ir.ValueKind == JsonValueKind.String && ir.GetString()?.ToLower() == "true"));
                                 var receiveDateStr = GetStringProp(b, "ReceiveDate");
-                                var isReceived = !string.IsNullOrEmpty(receiveDateStr);
+                                if (!isReceived && totalItems > 0 && receivedItems >= totalItems)
+                                {
+                                    isReceived = true;
+                                }
 
                                 DateTime.TryParse(createdAtStr, out var createdAt);
 
@@ -61,6 +66,7 @@ namespace CostFlow.Controllers
                                     BatchName = name,
                                     CreatedAt = createdAt,
                                     TotalItems = totalItems,
+                                    ReceivedItems = receivedItems,
                                     TotalAmount = totalAmount,
                                     IsReceived = isReceived,
                                     ReceiveDate = receiveDateStr
@@ -206,6 +212,7 @@ namespace CostFlow.Controllers
         public string BatchName { get; set; } = string.Empty;
         public DateTime CreatedAt { get; set; }
         public int TotalItems { get; set; }
+        public int ReceivedItems { get; set; }
         public double TotalAmount { get; set; }
         public bool IsReceived { get; set; }
         public string? ReceiveDate { get; set; }
