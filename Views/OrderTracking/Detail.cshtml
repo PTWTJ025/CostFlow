@@ -26,7 +26,7 @@
 
     <!-- Page Title -->
     <div class="shrink-0">
-        <h1 class="text-2xl font-black text-on-surface">รายละเอียด: @batchName</h1>
+        <h1 class="text-xl font-black text-on-surface">รายละเอียด: @batchName</h1>
         <p class="text-[13px] text-on-surface-variant mt-1">เลือกรายการสินค้าที่ได้รับแล้ว และกดบันทึกสถานะ</p>
     </div>
 
@@ -37,7 +37,7 @@
                 <thead class="bg-slate-50 sticky top-0 z-10">
                 <tr>
                     <th class="py-3 px-4 border-b border-slate-200 w-12 text-center">
-                        <input type="checkbox" id="selectAll" class="w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary focus:ring-2 cursor-pointer rounded-sm" />
+                        <input type="checkbox" id="selectAll" class="w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary focus:ring-2 cursor-pointer rounded-sm"/>
                     </th>
                     <th class="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200">รหัสสินค้า</th>
                     <th class="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200">ชื่อสินค้า</th>
@@ -56,7 +56,7 @@
                             <td class="py-3 px-4 text-center">
                                 @if (!isReceived)
                                 {
-                                    <input type="checkbox" class="item-checkbox w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary focus:ring-2 cursor-pointer rounded-sm" data-code="@item.ProductCode" />
+                                    <input type="checkbox" class="item-checkbox w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary focus:ring-2 cursor-pointer rounded-sm" data-code="@item.ProductCode"/>
                                 }
                                 else
                                 {
@@ -113,7 +113,7 @@
             <button id="btn-save-tracking" type="button" disabled
                     class="inline-flex items-center gap-2 px-5 py-2.5 rounded-md text-[14px] font-bold text-white bg-primary hover:bg-primary/90 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z"/>
                 </svg>
                 บันทึกและระบุวันที่
             </button>
@@ -122,6 +122,9 @@
 </div>
 
 @section Scripts {
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/th.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
@@ -135,9 +138,9 @@
                 const checkedBoxes = document.querySelectorAll('.item-checkbox:checked');
                 const count = checkedBoxes.length;
                 selectedCountSpan.textContent = count;
-                
+
                 btnSave.disabled = count === 0;
-                
+
                 if (itemCheckboxes.length > 0) {
                     selectAllCheckbox.checked = (count === itemCheckboxes.length);
                     selectAllCheckbox.indeterminate = count > 0 && count < itemCheckboxes.length;
@@ -168,14 +171,22 @@
                     const { value: dateStr, isConfirmed } = await Swal.fire({
                         title: 'ระบุวันที่รับสินค้า',
                         html: `
-                            <p class="text-[13px] text-slate-600 mb-3">แผ่นงาน: <strong>${batchName}</strong></p>
-                            <p class="text-[13px] text-primary font-semibold mb-3">รายการที่เลือก: ${productCodes.length} รายการ</p>
-                            <input type="date" id="receive-date" class="swal2-input" value="${today}">
-                        `,
+                                <p class="text-[13px] text-slate-600 mb-3">แผ่นงาน: <strong>${batchName}</strong></p>
+                                <p class="text-[13px] text-primary font-semibold mb-3">รายการที่เลือก: ${productCodes.length} รายการ</p>
+                                <input type="text" id="receive-date" class="swal2-input bg-white cursor-pointer" placeholder="เลือกวันที่รับสินค้า..." readonly>
+                            `,
                         showCancelButton: true,
                         confirmButtonText: 'บันทึก',
                         cancelButtonText: 'ยกเลิก',
                         focusConfirm: false,
+                        didOpen: () => {
+                            flatpickr("#receive-date", {
+                                locale: "th",
+                                dateFormat: "Y-m-d",
+                                defaultDate: today,
+                                disableMobile: true
+                            });
+                        },
                         preConfirm: () => {
                             const dateInput = Swal.getPopup().querySelector('#receive-date').value;
                             if (!dateInput) {
@@ -201,10 +212,10 @@
                             const response = await fetch('/OrderTracking/MarkItemsReceived', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ 
-                                    BatchName: batchName, 
-                                    ProductCodes: productCodes, 
-                                    ReceiveDate: dateStr 
+                                body: JSON.stringify({
+                                    BatchName: batchName,
+                                    ProductCodes: productCodes,
+                                    ReceiveDate: dateStr
                                 })
                             });
                             const result = await response.json();
@@ -237,12 +248,14 @@
             border-radius: 16px !important;
             padding: 24px !important;
         }
+    
         .swal-btn-primary {
             background-color: #3B82F6 !important;
             border-radius: 8px !important;
             padding: 10px 24px !important;
             font-weight: 600 !important;
         }
+    
         .swal-btn-cancel {
             background-color: #F1F5F9 !important;
             color: #475569 !important;
@@ -250,13 +263,90 @@
             padding: 10px 24px !important;
             font-weight: 600 !important;
         }
+    
         .swal2-input {
             border-radius: 8px !important;
             border: 1px solid #E2E8F0 !important;
         }
+    
         .swal2-input:focus {
             border-color: #3B82F6 !important;
             box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
         }
-    </style>
+
+        /* ==========================================
+           Flatpickr Custom Theme (คลุมโทนระบบ)
+        ========================================== */
+        .flatpickr-calendar {
+            font-family: 'Chakra Petch', sans-serif !important;
+            border-radius: 14px !important;
+            border: 1px solid #e2e8f0 !important;
+            box-shadow: 0 10px 40px rgba(0, 40, 142, 0.12) !important;
+            overflow: hidden !important;
+        }
+        .flatpickr-months {
+            background: #00288e !important;
+            border-radius: 14px 14px 0 0 !important;
+            padding: 8px 0 !important;
+        }
+        .flatpickr-months .flatpickr-month,
+        .flatpickr-months .flatpickr-prev-month,
+        .flatpickr-months .flatpickr-next-month {
+            color: #fff !important;
+            fill: #fff !important;
+        }
+        .flatpickr-months .flatpickr-prev-month:hover svg,
+        .flatpickr-months .flatpickr-next-month:hover svg {
+            fill: #93c5fd !important;
+        }
+        .flatpickr-current-month .flatpickr-monthDropdown-months {
+            background: transparent !important;
+            color: #fff !important;
+            font-weight: 700 !important;
+            font-size: 14px !important;
+        }
+        .flatpickr-current-month input.cur-year {
+            color: #fff !important;
+            font-weight: 700 !important;
+        }
+        .flatpickr-weekdays {
+            background: #00288e !important;
+        }
+        .flatpickr-weekday {
+            background: #00288e !important;
+            color: #bfdbfe !important;
+            font-weight: 600 !important;
+            font-size: 12px !important;
+        }
+        .flatpickr-day {
+            border-radius: 8px !important;
+            font-size: 13px !important;
+            color: #1e293b !important;
+            transition: background 0.15s, color 0.15s !important;
+        }
+        .flatpickr-day:hover {
+            background: #dbeafe !important;
+            border-color: transparent !important;
+            color: #00288e !important;
+        }
+        .flatpickr-day.today {
+            border-color: #00288e !important;
+            color: #00288e !important;
+            font-weight: 700 !important;
+        }
+        .flatpickr-day.today:hover {
+            background: #00288e !important;
+            color: #fff !important;
+        }
+        .flatpickr-day.selected,
+        .flatpickr-day.selected:hover {
+            background: #00288e !important;
+            border-color: #00288e !important;
+            color: #fff !important;
+            font-weight: 700 !important;
+        }
+        .flatpickr-day.prevMonthDay,
+        .flatpickr-day.nextMonthDay {
+            color: #cbd5e1 !important;
+        }</style>
 }
