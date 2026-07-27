@@ -18,7 +18,8 @@ try
     {
         var fontBytes = System.IO.File.ReadAllBytes(fontPath);
         var ms = new System.IO.MemoryStream(fontBytes);
-        ClosedXML.Excel.LoadOptions.DefaultGraphicEngine = ClosedXML.Graphics.DefaultGraphicEngine.CreateOnlyWithFonts(ms);
+        ClosedXML.Excel.LoadOptions.DefaultGraphicEngine =
+            ClosedXML.Graphics.DefaultGraphicEngine.CreateOnlyWithFonts(ms);
     }
 }
 catch (Exception ex)
@@ -30,14 +31,12 @@ catch (Exception ex)
 builder.Services.AddControllersWithViews();
 builder.Services.AddHttpClient();
 // Named client for Google Apps Script (must follow redirects for doGet)
-builder.Services.AddHttpClient("GoogleAppsScript", client =>
-{
-    client.Timeout = TimeSpan.FromSeconds(30);
-}).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
-{
-    AllowAutoRedirect = true,
-    MaxAutomaticRedirections = 5
-});
+builder.Services.AddHttpClient("GoogleAppsScript", client => { client.Timeout = TimeSpan.FromSeconds(30); })
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+    {
+        AllowAutoRedirect = true,
+        MaxAutomaticRedirections = 5
+    });
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -47,27 +46,27 @@ builder.Services.AddScoped<IProductPriceRepository, ProductPriceRepository>();
 
 // ASP.NET Core Identity
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
-{
-    // Password policy (ผ่อนปรนสำหรับระบบภายในองค์กร)
-    options.Password.RequireDigit = false;
-    options.Password.RequireLowercase = false;
-    options.Password.RequireUppercase = false;
-    options.Password.RequireNonAlphanumeric = false;
-    options.Password.RequiredLength = 4;
+    {
+        // Password policy (ผ่อนปรนสำหรับระบบภายในองค์กร)
+        options.Password.RequireDigit = false;
+        options.Password.RequireLowercase = false;
+        options.Password.RequireUppercase = false;
+        options.Password.RequireNonAlphanumeric = false;
+        options.Password.RequiredLength = 4;
 
-    // User settings
-    options.User.RequireUniqueEmail = false;
-})
-.AddEntityFrameworkStores<AppDbContext>()
-.AddDefaultTokenProviders()
-.AddClaimsPrincipalFactory<CustomUserClaimsPrincipalFactory>();
+        // User settings
+        options.User.RequireUniqueEmail = false;
+    })
+    .AddEntityFrameworkStores<AppDbContext>()
+    .AddDefaultTokenProviders()
+    .AddClaimsPrincipalFactory<CustomUserClaimsPrincipalFactory>();
 
 // Cookie Authentication Settings
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.Cookie.HttpOnly = true;
-    options.ExpireTimeSpan = TimeSpan.FromHours(8);   // หมดอายุ 8 ชม.
-    options.SlidingExpiration = true;                   // ต่ออายุอัตโนมัติถ้ายังใช้งานอยู่
+    options.ExpireTimeSpan = TimeSpan.FromHours(8); // หมดอายุ 8 ชม.
+    options.SlidingExpiration = true; // ต่ออายุอัตโนมัติถ้ายังใช้งานอยู่
     options.Cookie.IsEssential = true;
     options.LoginPath = "/Account/Login";
     options.AccessDeniedPath = "/Account/Login";
@@ -104,8 +103,8 @@ app.UseStaticFiles(new StaticFileOptions
 app.MapStaticAssets();
 
 app.MapControllerRoute(
-    name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}")
+        name: "default",
+        pattern: "{controller=Home}/{action=Index}/{id?}")
     .WithStaticAssets();
 
 // Auto-migrate/create Database on startup
@@ -169,13 +168,13 @@ using (var scope = app.Services.CreateScope())
     }
 
     // อ่านรหัสผ่านจาก Environment Variable หรือ Configuration (ใน Development อนุญาตให้ใช้รหัสผ่านเริ่มต้นเพื่อความสะดวก)
-    string? adminPassword = app.Configuration["Seed:AdminPassword"] 
-                         ?? Environment.GetEnvironmentVariable("ADMIN_PASSWORD") 
-                         ?? (app.Environment.IsDevelopment() ? "admin1234" : null);
+    string? adminPassword = app.Configuration["Seed:AdminPassword"]
+                            ?? Environment.GetEnvironmentVariable("ADMIN_PASSWORD")
+                            ?? (app.Environment.IsDevelopment() ? "admin1234" : null);
 
-    string? staffPassword = app.Configuration["Seed:StaffPassword"] 
-                         ?? Environment.GetEnvironmentVariable("STAFF_PASSWORD") 
-                         ?? (app.Environment.IsDevelopment() ? "123456" : null);
+    string? staffPassword = app.Configuration["Seed:StaffPassword"]
+                            ?? Environment.GetEnvironmentVariable("STAFF_PASSWORD")
+                            ?? (app.Environment.IsDevelopment() ? "123456" : null);
 
     // Seed ADMIN01
     var adminUser = await userManager.FindByNameAsync("ADMIN01");
@@ -204,7 +203,8 @@ using (var scope = app.Services.CreateScope())
             }
             else
             {
-                Console.WriteLine($"Failed to seed ADMIN01: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+                Console.WriteLine(
+                    $"Failed to seed ADMIN01: {string.Join(", ", result.Errors.Select(e => e.Description))}");
             }
         }
     }
@@ -229,8 +229,9 @@ using (var scope = app.Services.CreateScope())
             {
                 UserName = "STAFF01",
                 EmployeeCode = "STAFF01",
-                FullName = "พัชราภา เลิศวิจิตร",
-                ProfilePictureUrl = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRkt942qIdGSgY_RotRR9_HhY3bveTRjSgZZYygIyA-3JzTkNbA9PR1CbXB&s=10",
+                FullName = "เจ้าหน้าที่ฝ่ายช่าง",
+                ProfilePictureUrl =
+                    "https://png.pngtree.com/png-clipart/20240304/original/pngtree-repairman-worker-cat-sticker-png-image_14504417.png",
                 IsActive = true,
                 CreatedAt = DateTime.Now
             };
@@ -242,14 +243,16 @@ using (var scope = app.Services.CreateScope())
             }
             else
             {
-                Console.WriteLine($"Failed to seed STAFF01: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+                Console.WriteLine(
+                    $"Failed to seed STAFF01: {string.Join(", ", result.Errors.Select(e => e.Description))}");
             }
         }
     }
     else
     {
-        staffUser.FullName = "พัชราภา เลิศวิจิตร";
-        staffUser.ProfilePictureUrl = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRkt942qIdGSgY_RotRR9_HhY3bveTRjSgZZYygIyA-3JzTkNbA9PR1CbXB&s=10";
+        staffUser.FullName = "เจ้าหน้าที่ฝ่ายช่าง";
+        staffUser.ProfilePictureUrl =
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRkt942qIdGSgY_RotRR9_HhY3bveTRjSgZZYygIyA-3JzTkNbA9PR1CbXB&s=10";
         await userManager.UpdateAsync(staffUser);
     }
 }
