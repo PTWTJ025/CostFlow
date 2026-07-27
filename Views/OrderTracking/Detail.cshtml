@@ -216,7 +216,7 @@
                                     text: 'บันทึกสถานะการรับสินค้าเรียบร้อยแล้ว',
                                     confirmButtonText: 'ตกลง'
                                 });
-                                location.reload();
+                                window.location.href = '/OrderTracking';
                             } else {
                                 throw new Error(result.error || 'เกิดข้อผิดพลาดในการบันทึก');
                             }
