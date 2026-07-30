@@ -248,6 +248,20 @@
                 max-width: calc(100vw - 256px);
             }
         }
+
+        /* Modern UX/UI Safe Area & Dynamic Viewport Height for Tablet/Mobile System Bars */
+        :root {
+            --sat: env(safe-area-inset-top, 0px);
+            --sar: env(safe-area-inset-right, 0px);
+            --sab: env(safe-area-inset-bottom, 0px);
+            --sal: env(safe-area-inset-left, 0px);
+        }
+        .pb-safe {
+            padding-bottom: max(1.5rem, var(--sab, 24px)) !important;
+        }
+        .pr-safe {
+            padding-right: max(1.5rem, var(--sar, 24px)) !important;
+        }
     </style>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -262,7 +276,7 @@
     <link rel="shortcut icon" href="~/favicon.ico"/>
 </head>
 
-<body class="text-on-surface flex h-screen overflow-hidden bg-[#F8FAFC] font-sans">
+<body class="text-on-surface flex h-[100dvh] overflow-hidden bg-[#F8FAFC] font-sans">
 <script>
     (function() {
         const savedCollapsed = localStorage.getItem('costflow_sidebar_collapsed');
@@ -273,7 +287,7 @@
     })();
 </script>
 <nav id="sidebar"
-     class="flex flex-col h-screen w-64 fixed left-0 top-0 bg-surface-container-low dark:bg-inverse-surface border-r border-outline-variant shadow-sm z-40">
+     class="flex flex-col h-[100dvh] w-64 fixed left-0 top-0 bg-surface-container-low dark:bg-inverse-surface border-r border-outline-variant shadow-sm z-40">
     <!-- Redesigned Logo Header (static, no link) -->
     <div
         class="h-[64px] px-lg flex items-center gap-3 border-b border-outline-variant bg-surface-container-low/50 select-none">
@@ -501,7 +515,7 @@
 </nav>
 
 <!-- Main Content Area -->
-<main class="flex-1 md:ml-64 flex flex-col h-screen max-h-screen min-h-0 overflow-hidden">
+<main class="flex-1 md:ml-64 flex flex-col h-[100dvh] max-h-[100dvh] min-h-0 overflow-hidden">
     <!-- TopAppBar -->
     <header
         class="h-[64px] flex justify-between items-center px-4 md:px-6 w-full sticky top-0 z-30 bg-white border-b border-slate-200">
