@@ -62,7 +62,7 @@
                 <!-- Row 2: Name/Description -->
                 <div>
                     <label class="block text-sm font-semibold text-slate-700 mb-1">รายการ/ชื่อสินค้า</label>
-                    <textarea id="form-name" class="w-full px-3 py-2 border border-slate-100 rounded text-sm bg-slate-50 text-slate-600 outline-none resize-none leading-normal h-[54px]" readonly placeholder="-"></textarea>
+                    <textarea id="form-name" class="w-full px-3 py-2 border border-slate-100 rounded text-sm bg-slate-50 text-slate-600 outline-none resize-none min-h-[54px] h-auto break-words leading-normal overflow-hidden" readonly placeholder="-"></textarea>
                 </div>
 
                 <!-- Row 3: Price & Qty & Total -->
@@ -385,15 +385,16 @@
                     .then(data => {
                         suggestionsDropdown.innerHTML = "";
                         if (data && data.length > 0) {
-                            data.forEach(item => {
+                            data.forEach((item, idx) => {
                                 const option = document.createElement("div");
-                                option.className = "px-3 py-2.5 hover:bg-slate-50 cursor-pointer transition-colors flex justify-between gap-sm items-center";
+                                option.className = "suggestion-option px-3 py-2.5 hover:bg-slate-50 cursor-pointer transition-colors flex justify-between gap-sm items-center border-b border-slate-100 last:border-0";
+                                option.dataset.index = idx;
                                 option.innerHTML = `
-                                <div class="text-left">
+                                <div class="text-left flex-1 min-w-0 pr-2">
                                     <span class="font-mono text-primary font-bold block text-sm">${item.productCode}</span>
-                                    <span class="text-slate-700 block max-w-[320px] truncate text-sm">${item.productName}</span>
+                                    <span class="text-slate-700 block break-words whitespace-normal leading-snug text-xs md:text-sm mt-0.5">${item.productName}</span>
                                 </div>
-                                <span class="text-slate-500 text-xs font-mono shrink-0">${item.unit} / ฿${item.pricePerUnit.toFixed(2)}</span>
+                                <span class="text-slate-500 text-xs font-mono shrink-0 font-medium">${item.unit} / ฿${item.pricePerUnit.toFixed(2)}</span>
                             `;
                                 option.addEventListener("click", function () {
                                     selectProduct(item);
@@ -406,6 +407,25 @@
                         }
                     });
             }, 50);
+        });
+
+        // Keyboard navigation (Enter / Tab / Escape) for search input on iPad & Desktop
+        searchInput.addEventListener("keydown", function (e) {
+            if (e.key === "Enter" || e.key === "Tab") {
+                const firstOption = suggestionsDropdown.querySelector(".suggestion-option");
+                if (firstOption && !suggestionsDropdown.classList.contains("hidden")) {
+                    e.preventDefault();
+                    firstOption.click();
+                } else {
+                    suggestionsDropdown.classList.add("hidden");
+                    searchInput.blur();
+                    if (formCode.value && formCode.value !== "-") {
+                        setTimeout(() => { formQty.focus(); formQty.select(); }, 40);
+                    }
+                }
+            } else if (e.key === "Escape") {
+                suggestionsDropdown.classList.add("hidden");
+            }
         });
 
         // Close autocomplete on click outside
@@ -424,11 +444,21 @@
             formQty.value = "1";
             updateFormTotal();
 
+            // Auto-expand textarea for long names
+            formName.style.height = 'auto';
+            formName.style.height = Math.max(54, formName.scrollHeight) + 'px';
+
+            // Immediately close suggestions dropdown & blur search bar (hides iPad soft search keyboard)
             suggestionsDropdown.classList.add("hidden");
             suggestionsDropdown.innerHTML = "";
-            searchInput.value = ""; // clear search bar for clean look
+            searchInput.value = "";
+            searchInput.blur();
 
-            formQty.focus();
+            // Auto-focus and highlight quantity field for instant typing
+            setTimeout(() => {
+                formQty.focus();
+                formQty.select();
+            }, 60);
         }
 
         // Live total calculation on unit inputs
@@ -545,7 +575,7 @@
                 tr.innerHTML = `
                 <td class="px-2 py-2.5 text-slate-400 font-mono">${index + 1}</td>
                 <td class="px-2 py-2.5 font-mono text-primary">${item.productCode}</td>
-                <td class="px-2 py-2.5 text-left max-w-[200px] truncate" title="${item.productName}">${item.productName}</td>
+                <td class="px-2 py-2.5 text-left max-w-[240px] break-words whitespace-normal leading-snug font-medium text-slate-800" title="${item.productName}">${item.productName}</td>
                 <td class="px-2 py-2.5 text-slate-600">${item.unit}</td>
                 <td class="px-2 py-2.5 font-mono">฿${item.unitPrice.toFixed(2)}</td>
                 <td class="px-2 py-2.5 font-mono font-bold">${item.quantity}</td>

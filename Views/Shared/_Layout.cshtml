@@ -264,9 +264,13 @@
 
 <body class="text-on-surface flex h-screen overflow-hidden bg-[#F8FAFC] font-sans">
 <script>
-    if (localStorage.getItem('costflow_sidebar_collapsed') === 'true') {
-        document.body.classList.add('sidebar-collapsed');
-    }
+    (function() {
+        const savedCollapsed = localStorage.getItem('costflow_sidebar_collapsed');
+        const isStaffUser = @(isStaff ? "true" : "false");
+        if (savedCollapsed === 'true' || (isStaffUser && savedCollapsed !== 'false')) {
+            document.body.classList.add('sidebar-collapsed');
+        }
+    })();
 </script>
 <nav id="sidebar"
      class="flex flex-col h-screen w-64 fixed left-0 top-0 bg-surface-container-low dark:bg-inverse-surface border-r border-outline-variant shadow-sm z-40">
