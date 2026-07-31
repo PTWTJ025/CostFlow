@@ -3,6 +3,7 @@
 
 const WeeklyPlanUploader = {
   uploadedFiles: [], // เก็บข้อมูล: [{sessionId, fileName, sheets, selectedSheet}]
+  selectedFiles: [], // เก็บไฟล์ที่ผู้ใช้เลือกหรือลากมาวาง
   reportName: "",
   isProcessing: false,
 
@@ -40,6 +41,9 @@ const WeeklyPlanUploader = {
       e.preventDefault();
       dropzone.classList.remove("border-blue-400", "bg-blue-50/20");
       if (e.dataTransfer.files.length) {
+        try {
+          fileInput.files = e.dataTransfer.files;
+        } catch (err) {}
         this.handleFileSelection(e.dataTransfer.files);
       }
     });
@@ -65,6 +69,7 @@ const WeeklyPlanUploader = {
 
   handleFileSelection(files) {
     const filesArray = Array.from(files);
+    this.selectedFiles = filesArray;
 
     if (filesArray.length === 0) {
       Swal.fire("คำแนะนำ", "กรุณาเลือกไฟล์", "warning");
@@ -101,9 +106,11 @@ const WeeklyPlanUploader = {
 
   async uploadFiles() {
     const fileInput = document.getElementById("weeklyPlanFiles");
-    const files = fileInput.files;
+    const files = (this.selectedFiles && this.selectedFiles.length > 0)
+      ? this.selectedFiles
+      : Array.from(fileInput.files);
 
-    if (files.length === 0) {
+    if (!files || files.length === 0) {
       Swal.fire("คำแนะนำ", "กรุณาเลือกไฟล์ก่อนอัปโหลด", "warning");
       return;
     }
@@ -554,6 +561,7 @@ const WeeklyPlanUploader = {
     document.getElementById("files-list").innerHTML = "";
     document.getElementById("btn-upload-files").classList.add("hidden");
     this.uploadedFiles = [];
+    this.selectedFiles = [];
 
     // Contract modal width back to normal
     const modalContainer = document.getElementById("upload-modal-container");

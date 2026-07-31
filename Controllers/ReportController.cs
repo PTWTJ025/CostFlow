@@ -831,22 +831,38 @@ namespace CostFlow.Controllers
             // กรองตาม filterMode
             if (filterMode == "upload" && month.HasValue && year.HasValue)
             {
-                // กรองเฉพาะ WeeklyPlan ที่เชื่อมกับ Report ที่มีใบสั่งผลิตในเดือน/ปีที่ระบุ
-                var targetReportIds = await _context.OrderTrackingMasters
+                // กรองเฉพาะรายการที่อนุมัติในเดือน/ปีที่ระบุ
+                var targetOrders = await _context.OrderTrackingMasters
                     .Where(o => !string.IsNullOrEmpty(o.ApprovedDate))
                     .ToListAsync();
                 
-                var reportIdsInMonth = targetReportIds
+                var validOrderIdsInMonth = targetOrders
+                    .Where(o => {
+                        var parsed = ParseThaiDate(o.ApprovedDate);
+                        return parsed.HasValue && parsed.Value.Year == year.Value && parsed.Value.Month == month.Value;
+                    })
+                    .Select(o => o.Id)
+                    .ToHashSet();
+
+                var reportIdsInMonth = targetOrders
                     .Where(o => {
                         var parsed = ParseThaiDate(o.ApprovedDate);
                         return parsed.HasValue && parsed.Value.Year == year.Value && parsed.Value.Month == month.Value;
                     })
                     .Select(o => o.ReportId)
                     .Distinct()
-                    .ToList();
+                    .ToHashSet();
 
                 allWeeklyPlanDetails = allWeeklyPlanDetails
-                    .Where(d => reportIdsInMonth.Contains(d.WeeklyPlan.ReportId))
+                    .Where(d => {
+                        // ถ้าจับคู่แล้ว ต้องเป็น PO ที่อนุมัติในเดือนนี้เท่านั้น
+                        if (d.IsMatched && d.MatchedOrderId.HasValue)
+                        {
+                            return validOrderIdsInMonth.Contains(d.MatchedOrderId.Value);
+                        }
+                        // ถ้ายังไม่ได้จับคู่ ให้ดูตาม ReportId ของเดือนนั้น
+                        return reportIdsInMonth.Contains(d.WeeklyPlan.ReportId);
+                    })
                     .ToList();
             }
             else if (filterMode == "year" && year.HasValue)

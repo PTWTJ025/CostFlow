@@ -114,7 +114,7 @@
                     <option value="Unmatched">สถานะ: ยังไม่จับคู่</option>
                 </select>
 
-                <select id="filter-mode" title="กรองข้อมูล" class="w-[220px] border border-slate-300 rounded focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-xs font-semibold text-slate-600 bg-white truncate" style="height: 36px; padding: 0 12px;">
+                <select id="filter-mode" title="รายการไฟล์เป้าหมายส่งมอบทั้งหมดในระบบ (สามารถเลือกกรองตามเดือนที่อัปโหลด หรือแสดงทั้งหมดในระบบได้)" class="w-[220px] border border-slate-300 rounded focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-xs font-semibold text-slate-600 bg-white truncate" style="height: 36px; padding: 0 12px;">
                     <option value="upload" selected="@(filterMonth.HasValue && filterYear.HasValue ? "selected" : null)">อัปโหลด: -</option>
                     <option value="all" selected="@(filterMonth.HasValue && filterYear.HasValue ? null : "selected")">ทั้งหมดในระบบ (ทุกปี)</option>
                 </select>
@@ -194,8 +194,8 @@
             }
         }
 
-        // เพิ่มใหม่: sync title attribute ของ select ให้ตรงกับ option ที่เลือกอยู่เสมอ
         function syncSelectTitle(selectEl) {
+            if (selectEl.id === 'filter-mode') return; // เก็บ guide title เดิมไว้สำหรับ filter-mode
             selectEl.title = selectEl.options[selectEl.selectedIndex].textContent;
         }
         syncSelectTitle(filterModeSelect);
