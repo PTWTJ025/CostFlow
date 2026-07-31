@@ -222,280 +222,277 @@
 <!-- LEFT: รายการรอดำเนินการ -->
 <div class="bg-white border border-slate-200 rounded-md flex flex-col min-h-0 overflow-hidden">
 
-    <!-- Panel header with tabs -->
-    <div class="px-4 pt-3 border-b border-slate-100 bg-slate-50/60 shrink-0">
-        <div class="flex items-center justify-between mb-2">
-            <!-- Tabs -->
-            <div class="flex gap-2">
-                <button id="tab-pending" onclick="switchTab('pending')"
-                        class="flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold border transition-all"
-                        style="background:#fffbeb;border-color:#fcd34d;color:#92400e;">
-                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
-                    </svg>
-                    รอดำเนินการ
-                    <span class="px-1.5 rounded-full text-[10px] font-bold" id="tab-pending-count"
-                          style="background:#fbbf24;color:#78350f;">
-                        @Model.PendingOrders.Count
-                    </span>
-                </button>
-                <button id="tab-saved" onclick="switchTab('saved')"
-                        class="flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold border transition-all"
-                        style="background:#f8fafc;border-color:#e2e8f0;color:#94a3b8;">
-                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
-                    </svg>
-                    บันทึกแล้ว
-                    <span class="px-1.5 rounded-full text-[10px] font-bold" id="tab-saved-count"
-                          style="background:#e2e8f0;color:#475569;">
-                        @Model.SavedOrders.Count
-                    </span>
-                </button>
-            </div>
-            <!-- Search (only shown on pending tab) -->
-            <div class="relative" id="search-wrap">
-                <input type="text" id="search-pending" placeholder="ค้นหา..."
-                       class="pr-3 py-1.5 text-xs border border-slate-200 rounded-md w-40 focus:ring-1 focus:ring-primary focus:border-primary outline-none bg-white">
-            </div>
-        </div>
-
-        <!-- Bulk actions toolbar (shown on pending tab) -->
-        <div id="bulk-actions-toolbar" class="flex flex-wrap items-center justify-between py-2.5 px-3 border-t border-slate-200/80 bg-slate-50/80 gap-3 rounded-b-md shadow-inner text-xs">
-            <!-- Left side: Select all & Sort -->
-            <div class="flex items-center gap-4">
-                <label class="flex items-center gap-2 cursor-pointer font-medium text-slate-600 hover:text-slate-900 select-none transition-colors">
-                    <input type="checkbox" id="select-all-pending" onchange="toggleSelectAllPending(this)" class="rounded border-slate-300 text-primary focus:ring-primary w-4 h-4 transition-all">
-                    <span>เลือกทั้งหมด</span>
-                </label>
-
-                <div class="h-4 w-px bg-slate-300 hidden sm:block"></div>
-
-                <div class="flex items-center gap-1.5 text-slate-500 bg-white border border-slate-200 rounded-md px-2 py-1 shadow-xs" style="height: 30px;">
-                    <svg class="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 7.5L7.5 3m0 0L12 7.5M7.5 3v13.5m13.5 0L16.5 21m0 0L12 16.5m4.5 4.5V7.5"/>
-                    </svg>
-                    <div class="relative flex items-center h-full">
-                        <select id="pending-sort-select" onchange="sortPendingOrders(this.value)"
-                                class="appearance-none bg-transparent text-slate-700 font-bold outline-none cursor-pointer text-xs focus:ring-0 p-0 m-0 pr-4 h-full w-[120px]"
-                                style="border: none !important; box-shadow: none !important; -webkit-appearance: none; -moz-appearance: none; background-image: none;">
-                            <option value="default">เรียงตามมาตรฐาน</option>
-                            <option value="this-month">เฉพาะเดือนนี้</option>
-                            <option value="deferred">ผ่อนยกยอดมา</option>
-                            <option value="skipped">ค้างยกยอดมา</option>
-                        </select>
-                        <svg class="w-3 h-3 text-slate-400 absolute right-0 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
-                        </svg>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Right side: Bulk actions -->
-            <div class="flex items-center gap-2 shrink-0">
-                <span class="text-[11px] text-slate-400 font-medium mr-1 hidden lg:inline-block">จัดการกลุ่มที่เลือก:</span>
-                <button type="button" onclick="bulkAddToCart('ReceivedFull')"
-                        class="px-2.5 py-1.5 rounded-md font-bold bg-white text-emerald-700 border border-emerald-200 hover:bg-emerald-50 hover:border-emerald-300 shadow-sm transition-all flex items-center gap-1.5 cursor-pointer">
-                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                    รับเต็มจำนวน
-                </button>
-                <button type="button" onclick="bulkAddToCart('Deferred')"
-                        class="px-2.5 py-1.5 rounded-md font-bold bg-white text-amber-700 border border-amber-200 hover:bg-amber-50 hover:border-amber-300 shadow-sm transition-all flex items-center gap-1.5 cursor-pointer">
-                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-                    ผ่อนชำระ
-                </button>
-                <button type="button" onclick="bulkAddToCart('Skipped')"
-                        class="px-2.5 py-1.5 rounded-md font-bold bg-white text-purple-700 border border-purple-200 hover:bg-purple-50 hover:border-purple-300 shadow-sm transition-all flex items-center gap-1.5 cursor-pointer">
-                    <span class="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
-                    ยังไม่รับ
-                </button>
-            </div>
-        </div>
-
-        <!-- Bulk actions toolbar (shown on saved tab) -->
-        <div id="saved-actions-toolbar" class="flex flex-wrap items-center justify-between py-2.5 px-3 border-t border-slate-200/80 bg-slate-50/80 gap-3 rounded-b-md shadow-inner text-xs hidden">
-            <!-- Left side: Select all & count -->
-            <div class="flex items-center gap-4">
-                <label class="flex items-center gap-2 cursor-pointer font-medium text-slate-600 hover:text-slate-900 select-none transition-colors">
-                    <input type="checkbox" id="select-all-saved" onchange="toggleSelectAllSaved(this)" class="rounded border-slate-300 text-rose-600 focus:ring-rose-500 w-4 h-4 transition-all cursor-pointer">
-                    <span>เลือกทั้งหมด</span>
-                </label>
-                <div class="h-4 w-px bg-slate-300"></div>
-                <span class="text-[11px] text-slate-500 font-semibold" id="saved-selected-count">เลือกแล้ว 0 รายการ</span>
-            </div>
-
-            <!-- Right side: Bulk cancel button -->
-            <div class="flex items-center gap-2 shrink-0">
-                <button type="button" onclick="bulkCancelSavedActions()" id="bulk-cancel-saved-btn" disabled
-                        class="px-3 py-1.5 rounded-md font-bold bg-rose-600 hover:bg-rose-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white shadow-sm transition-all flex items-center gap-1.5 cursor-pointer disabled:hover:bg-slate-300">
-                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/>
-                    </svg>
-                    ยกเลิกบันทึกรายการที่เลือก
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Pending list panel -->
-    <div class="panel-body p-3 space-y-4" id="panel-pending">
-
-        @if (Model.PendingOrders.Any())
-        {
-            foreach (var order in Model.PendingOrders)
-            {
-                var fwdBadge = "";
-                if (order.ForwardedStatus == "Deferred")
-                    fwdBadge = $"<span class=\"ml-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-700\">ผ่อนจาก {order.ForwardedFromMonth}</span>";
-                else if (order.ForwardedStatus == "Skipped")
-                    fwdBadge = $"<span class=\"ml-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-purple-100 text-purple-700\">ค้างจาก {order.ForwardedFromMonth}</span>";
-
-                <div class="order-card border border-slate-200 rounded p-3 bg-white"
-                     data-order-id="@order.OrderId"
-                     data-po-number="@order.PoNumber"
-                     data-order-name="@order.OrderName"
-                     data-price="@order.TotalPrice"
-                     data-quantity="@order.Quantity"
-                     data-department="@order.Department"
-                     data-delivery="@order.DeliveryTarget"
-                     data-forwarded-status="@order.ForwardedStatus"
-                     data-forwarded-from="@order.ForwardedFromMonth">
-
-                    <div class="flex items-start gap-3">
-                        <input type="checkbox" class="pending-card-checkbox mt-1 rounded border-slate-300 text-primary focus:ring-primary shrink-0 cursor-pointer" onchange="onCardCheckboxChange()"/>
-                        <!-- Info -->
-                        <div class="flex-1 min-w-0">
-                            <div class="flex items-center flex-wrap gap-1 mb-0.5">
-                                <span class="font-bold text-[13px] text-slate-800">@order.PoNumber</span>
-                                @Html.Raw(fwdBadge)
-                            </div>
-
-                            <p class="text-xs text-slate-500 leading-snug line-clamp-2">@order.OrderName</p>
-
-                            @if (order.ForwardedStatus == "Deferred")
-                            {
-                                <div class="mt-1.5 mb-1.5 text-[11px] font-bold text-amber-600 bg-amber-50/70 border border-amber-100 rounded-md px-2.5 py-1 inline-flex items-center gap-1.5">
-                                    <span>รายการผ่อนสะสม: ตรวจสอบการรับสินค้า</span>
-                                </div>
-                            }
-
-                            <div class="flex items-center gap-1.5">
-                                <svg class="w-3 h-3 text-slate-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"/>
-                                </svg>
-                                @if (order.DeliveryTarget != "-" && !string.IsNullOrEmpty(order.DeliveryTarget))
-                                {
-                                    <span class="text-[11px] text-slate-400">เป้าหมายส่งมอบ: <span class="font-medium text-indigo-600">@order.DeliveryTarget</span> </span>
-                                }
-                                else
-                                {
-                                    <span class="text-[11px] text-red-600 italic">ยังไม่มีแผนผลิตที่จับคู่</span>
-                                }
-                            </div>
-                        </div>
-                        <!-- Price + Add btn -->
-                        <div class="shrink-0 flex flex-col items-end gap-2">
-                            <span class="font-bold text-sm text-slate-800">฿@order.TotalPrice.ToString("N2")</span>
-                            <button type="button"
-                                    onclick="addToCart(this)"
-                                    class="add-btn px-3 py-1.5 rounded-md text-xs font-bold bg-primary text-white hover:bg-primary/90 active:scale-95 transition-all cursor-pointer">
-                                + เพิ่ม
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            }
-        }
-        else
-        {
-            <div class="flex flex-col items-center justify-center h-full min-h-[200px] text-slate-300">
-                <svg class="w-10 h-10 mb-2" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+<!-- Panel header with tabs -->
+<div class="px-4 pt-3 border-b border-slate-100 bg-slate-50/60 shrink-0">
+    <div class="flex items-center justify-between mb-2">
+        <!-- Tabs -->
+        <div class="flex gap-2">
+            <button id="tab-pending" onclick="switchTab('pending')"
+                    class="flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold border transition-all"
+                    style="background:#fffbeb;border-color:#fcd34d;color:#92400e;">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
                 </svg>
-                <p class="text-sm font-medium text-slate-400">ไม่มีรายการรอดำเนินการ</p>
-            </div>
-        }
+                รอดำเนินการ
+                <span class="px-1.5 rounded-full text-[10px] font-bold" id="tab-pending-count"
+                      style="background:#fbbf24;color:#78350f;">
+                    @Model.PendingOrders.Count
+                </span>
+            </button>
+            <button id="tab-saved" onclick="switchTab('saved')"
+                    class="flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold border transition-all"
+                    style="background:#f8fafc;border-color:#e2e8f0;color:#94a3b8;">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+                </svg>
+                บันทึกแล้ว
+                <span class="px-1.5 rounded-full text-[10px] font-bold" id="tab-saved-count"
+                      style="background:#e2e8f0;color:#475569;">
+                    @Model.SavedOrders.Count
+                </span>
+            </button>
+        </div>
+        <!-- Search (only shown on pending tab) -->
+        <div class="relative" id="search-wrap">
+            <input type="text" id="search-pending" placeholder="ค้นหา..."
+                   class="pr-3 py-1.5 text-xs border border-slate-200 rounded-md w-40 focus:ring-1 focus:ring-primary focus:border-primary outline-none bg-white">
+        </div>
     </div>
 
-    <!-- Saved list panel (hidden by default) -->
-    <div class="panel-body p-3 space-y-4 hidden" id="panel-saved">
-        @if (Model.SavedOrders.Any())
+    <!-- Bulk actions toolbar (shown on pending tab) -->
+    <div id="bulk-actions-toolbar" class="flex flex-wrap items-center justify-between py-2.5 px-3 border-t border-slate-200/80 bg-slate-50/80 gap-3 rounded-b-md shadow-inner text-xs">
+        <!-- Left side: Select all & Sort -->
+        <div class="flex items-center gap-4">
+            <label class="flex items-center gap-2 cursor-pointer font-medium text-slate-600 hover:text-slate-900 select-none transition-colors">
+                <input type="checkbox" id="select-all-pending" onchange="toggleSelectAllPending(this)" class="rounded border-slate-300 text-primary focus:ring-primary w-4 h-4 transition-all">
+                <span>เลือกทั้งหมด</span>
+            </label>
+
+            <div class="h-4 w-px bg-slate-300 hidden sm:block"></div>
+
+            <div class="flex items-center gap-1.5 text-slate-500 bg-white border border-slate-200 rounded-md px-2 py-1 shadow-xs" style="height: 30px;">
+                <svg class="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 7.5L7.5 3m0 0L12 7.5M7.5 3v13.5m13.5 0L16.5 21m0 0L12 16.5m4.5 4.5V7.5"/>
+                </svg>
+                <div class="relative flex items-center h-full">
+                    <select id="pending-sort-select" onchange="sortPendingOrders(this.value)"
+                            class="appearance-none bg-transparent text-slate-700 font-bold outline-none cursor-pointer text-xs focus:ring-0 p-0 m-0 pr-4 h-full w-[120px]"
+                            style="border: none !important; box-shadow: none !important; -webkit-appearance: none; -moz-appearance: none; background-image: none;">
+                        <option value="default">เรียงตามมาตรฐาน</option>
+                        <option value="this-month">เฉพาะเดือนนี้</option>
+                        <option value="deferred">ผ่อนยกยอดมา</option>
+                        <option value="skipped">ค้างยกยอดมา</option>
+                    </select>
+                    <svg class="w-3 h-3 text-slate-400 absolute right-0 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right side: Bulk actions -->
+        <div class="flex items-center gap-2 shrink-0">
+            <span class="text-[11px] text-slate-400 font-medium mr-1 hidden lg:inline-block">จัดการกลุ่มที่เลือก:</span>
+            <button type="button" onclick="bulkAddToCart('ReceivedFull')"
+                    class="px-2.5 py-1.5 rounded-md font-bold bg-white text-emerald-700 border border-emerald-200 hover:bg-emerald-50 hover:border-emerald-300 shadow-sm transition-all flex items-center gap-1.5 cursor-pointer">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                รับเต็มจำนวน
+            </button>
+            <button type="button" onclick="bulkAddToCart('Deferred')"
+                    class="px-2.5 py-1.5 rounded-md font-bold bg-white text-amber-700 border border-amber-200 hover:bg-amber-50 hover:border-amber-300 shadow-sm transition-all flex items-center gap-1.5 cursor-pointer">
+                <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                ผ่อนชำระ
+            </button>
+            <button type="button" onclick="bulkAddToCart('Skipped')"
+                    class="px-2.5 py-1.5 rounded-md font-bold bg-white text-purple-700 border border-purple-200 hover:bg-purple-50 hover:border-purple-300 shadow-sm transition-all flex items-center gap-1.5 cursor-pointer">
+                <span class="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
+                ยังไม่รับ
+            </button>
+        </div>
+    </div>
+
+    <!-- Bulk actions toolbar (shown on saved tab) -->
+    <div id="saved-actions-toolbar" class="flex flex-wrap items-center justify-between py-2.5 px-3 border-t border-slate-200/80 bg-slate-50/80 gap-3 rounded-b-md shadow-inner text-xs hidden">
+        <!-- Left side: Select all & count -->
+        <div class="flex items-center gap-4">
+            <label class="flex items-center gap-2 cursor-pointer font-medium text-slate-600 hover:text-slate-900 select-none transition-colors">
+                <input type="checkbox" id="select-all-saved" onchange="toggleSelectAllSaved(this)" class="rounded border-slate-300 text-rose-600 focus:ring-rose-500 w-4 h-4 transition-all cursor-pointer">
+                <span>เลือกทั้งหมด</span>
+            </label>
+            <div class="h-4 w-px bg-slate-300"></div>
+            <span class="text-[11px] text-slate-500 font-semibold" id="saved-selected-count">เลือกแล้ว 0 รายการ</span>
+        </div>
+
+        <!-- Right side: Bulk cancel button -->
+        <div class="flex items-center gap-2 shrink-0">
+            <button type="button" onclick="bulkCancelSavedActions()" id="bulk-cancel-saved-btn" disabled
+                    class="px-3 py-1.5 rounded-md font-bold bg-rose-600 hover:bg-rose-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white shadow-sm transition-all flex items-center gap-1.5 cursor-pointer disabled:hover:bg-slate-300">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/>
+                </svg>
+                ยกเลิกบันทึกรายการที่เลือก
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Pending list panel -->
+<div class="panel-body p-3 space-y-4" id="panel-pending">
+
+    @if (Model.PendingOrders.Any())
+    {
+        foreach (var order in Model.PendingOrders)
         {
-            foreach (var saved in Model.SavedOrders)
-            {
-                var actionBg = saved.Action == "ReceivedFull" ? "bg-emerald-50 border-emerald-200 text-emerald-700"
-                    : saved.Action == "Deferred" ? "bg-amber-50 border-amber-200 text-amber-700"
-                    : "bg-purple-50 border-purple-200 text-purple-700";
-                var actionIcon = saved.Action == "ReceivedFull" ? "✓ "
-                    : saved.Action == "Deferred" ? "⏳ "
-                    : "✕ ";
-                var actionLabel = saved.Action == "ReceivedFull" ? "รับสินค้าแล้ว"
-                    : saved.Action == "Deferred" ? "ผ่อน → เดือนหน้า"
-                    : "ไม่ต้องการสินค้า";
+            var fwdBadge = "";
+            if (order.ForwardedStatus == "Deferred")
+                fwdBadge = $"<span class=\"ml-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-700\">ผ่อนจาก {order.ForwardedFromMonth}</span>";
+            else if (order.ForwardedStatus == "Skipped")
+                fwdBadge = $"<span class=\"ml-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-purple-100 text-purple-700\">ค้างจาก {order.ForwardedFromMonth}</span>";
 
-                <div class="saved-card border border-slate-200 rounded-lg p-3 bg-white hover:border-slate-300 transition-all shadow-2xs"
-                     data-action-id="@saved.ActionId"
-                     data-po-number="@saved.PoNumber">
-                    <div class="flex items-start gap-3">
-                        <input type="checkbox"
-                               class="saved-card-checkbox mt-1 rounded border-slate-300 text-rose-600 focus:ring-rose-500 shrink-0 cursor-pointer"
-                               data-action-id="@saved.ActionId"
-                               data-po-number="@saved.PoNumber"
-                               onchange="onSavedCardCheckboxChange()"/>
+            <div class="order-card border border-slate-200 rounded p-3 bg-white"
+                 data-order-id="@order.OrderId"
+                 data-po-number="@order.PoNumber"
+                 data-order-name="@order.OrderName"
+                 data-price="@order.TotalPrice"
+                 data-quantity="@order.Quantity"
+                 data-department="@order.Department"
+                 data-delivery="@order.DeliveryTarget"
+                 data-forwarded-status="@order.ForwardedStatus"
+                 data-forwarded-from="@order.ForwardedFromMonth">
 
-                        <div class="flex-1 min-w-0">
-                            <div class="font-bold text-[13px] text-slate-800 mb-0.5">@saved.PoNumber</div>
-                            <p class="text-xs text-slate-500 leading-snug line-clamp-2">@saved.OrderName</p>
-                            <div class="flex items-center gap-1.5 mt-1.5">
-                                <svg class="w-3 h-3 text-slate-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"/>
-                                </svg>
-                                <span class="text-[11px] text-slate-400">@(saved.DeliveryTarget != "-" ? saved.DeliveryTarget : "ไม่ระบุ")</span>
-                            </div>
+                <div class="flex items-start gap-3">
+                    <input type="checkbox" class="pending-card-checkbox mt-1 rounded border-slate-300 text-primary focus:ring-primary shrink-0 cursor-pointer" onchange="onCardCheckboxChange()"/>
+                    <!-- Info -->
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center flex-wrap gap-1 mb-0.5">
+                            <span class="font-bold text-[13px] text-slate-800">@order.PoNumber</span>
+                            @Html.Raw(fwdBadge)
                         </div>
-                        <div class="shrink-0 flex flex-col items-end gap-1.5">
-                            @if (saved.Action == "ReceivedFull")
+
+                        <p class="text-xs text-slate-500 leading-snug line-clamp-2">@order.OrderName</p>
+
+                        @if (order.ForwardedStatus == "Deferred")
+                        {
+                            <div class="mt-1.5 mb-1.5 text-[11px] font-bold text-amber-600 bg-amber-50/70 border border-amber-100 rounded-md px-2.5 py-1 inline-flex items-center gap-1.5">
+                                <span>รายการผ่อนสะสม: ตรวจสอบการรับสินค้า</span>
+                            </div>
+                        }
+
+                        <div class="flex items-center gap-1.5">
+                            <svg class="w-3 h-3 text-slate-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"/>
+                            </svg>
+                            @if (order.DeliveryTarget != "-" && !string.IsNullOrEmpty(order.DeliveryTarget))
                             {
-                                <span class="font-bold text-sm text-slate-700">฿@saved.ActionPrice.ToString("N2")</span>
-                            }
-                            else if (saved.Action == "Deferred")
-                            {
-                                <span class="font-bold text-sm text-amber-600">฿@saved.ActionPrice.ToString("N2")</span>
+                                <span class="text-[11px] text-slate-400">เป้าหมายส่งมอบ: <span class="font-medium text-indigo-600">@order.DeliveryTarget</span> </span>
                             }
                             else
                             {
-                                <span class="font-bold text-sm text-slate-400">฿0.00</span>
+                                <span class="text-[11px] text-red-600 italic">ยังไม่มีแผนผลิตที่จับคู่</span>
                             }
-                            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold border @actionBg">
-                                @actionIcon@actionLabel
-                            </span>
                         </div>
                     </div>
-
-                    <!-- Footer / Edit & Cancel button -->
-                    <div class="flex items-center justify-between gap-2 mt-2 pt-2 border-t border-slate-100 text-xs">
-                        <span class="text-[10px] text-slate-400">บันทึกเมื่อ: @saved.CreatedAt.ToString("dd/MM/yyyy HH:mm")</span>
+                    <!-- Price + Add btn -->
+                    <div class="shrink-0 flex flex-col items-end gap-2">
+                        <span class="font-bold text-sm text-slate-800">฿@order.TotalPrice.ToString("N2")</span>
                         <button type="button"
-                                onclick="cancelSavedAction('@saved.ActionId', '@saved.PoNumber')"
-                                class="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 border border-rose-200 transition-all cursor-pointer">
-                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/>
-                            </svg>
-                            แก้ไข / ยกเลิกบันทึก
+                                onclick="addToCart(this)"
+                                class="add-btn px-3 py-1.5 rounded-md text-xs font-bold bg-primary text-white hover:bg-primary/90 active:scale-95 transition-all cursor-pointer">
+                            + เพิ่ม
                         </button>
                     </div>
                 </div>
-            }
-        }
-        else
-        {
-            <div class="flex flex-col items-center justify-center py-16 text-slate-300">
-                <svg class="w-10 h-10 mb-2" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
-                </svg>
-                <p class="text-sm font-medium text-slate-400">ยังไม่มีรายการที่บันทึก</p>
             </div>
         }
-    </div>
+    }
+    else
+    {
+        <div class="flex flex-col items-center justify-center h-full min-h-[200px] text-slate-300">
+            <svg class="w-10 h-10 mb-2" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+            </svg>
+            <p class="text-sm font-medium text-slate-400">ไม่มีรายการรอดำเนินการ</p>
+        </div>
+    }
+</div>
+
+<!-- Saved list panel (hidden by default) -->
+<div class="panel-body p-3 space-y-4 hidden" id="panel-saved">
+    @if (Model.SavedOrders.Any())
+    {
+        foreach (var saved in Model.SavedOrders)
+        {
+            var actionBg = saved.Action == "ReceivedFull" ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+                : saved.Action == "Deferred" ? "bg-amber-50 border-amber-200 text-amber-700"
+                : "bg-purple-50 border-purple-200 text-purple-700";
+            var actionIcon = saved.Action == "ReceivedFull" ? "✓ "
+                : saved.Action == "Deferred" ? "⏳ "
+                : "✕ ";
+            var actionLabel = saved.Action == "ReceivedFull" ? "รับสินค้าแล้ว"
+                : saved.Action == "Deferred" ? "ผ่อน → เดือนหน้า"
+                : "ไม่ต้องการสินค้า";
+
+            <div class="saved-card border border-slate-200 rounded-lg p-3 bg-white hover:border-slate-300 transition-all shadow-2xs"
+                 data-action-id="@saved.ActionId"
+                 data-po-number="@saved.PoNumber">
+                <div class="flex items-start gap-3">
+                    <input type="checkbox"
+                           class="saved-card-checkbox mt-1 rounded border-slate-300 text-rose-600 focus:ring-rose-500 shrink-0 cursor-pointer"
+                           data-action-id="@saved.ActionId"
+                           data-po-number="@saved.PoNumber"
+                           onchange="onSavedCardCheckboxChange()"/>
+
+                    <div class="flex-1 min-w-0">
+                        <div class="font-bold text-[13px] text-slate-800 mb-0.5">@saved.PoNumber</div>
+                        <p class="text-xs text-slate-500 leading-snug line-clamp-2">@saved.OrderName</p>
+                        <div class="flex items-center gap-1.5 mt-1.5">
+                            <svg class="w-3 h-3 text-slate-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"/>
+                            </svg>
+                            <span class="text-[11px] text-slate-400">@(saved.DeliveryTarget != "-" ? saved.DeliveryTarget : "ไม่ระบุ")</span>
+                        </div>
+                    </div>
+                    <div class="shrink-0 flex flex-col items-end gap-1.5">
+                        @if (saved.Action == "ReceivedFull")
+                        {
+                            <span class="font-bold text-sm text-slate-700">฿@saved.ActionPrice.ToString("N2")</span>
+                        }
+                        else if (saved.Action == "Deferred")
+                        {
+                            <span class="font-bold text-sm text-amber-600">฿@saved.ActionPrice.ToString("N2")</span>
+                        }
+                        else
+                        {
+                            <span class="font-bold text-sm text-slate-400">฿0.00</span>
+                        }
+                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold border @actionBg">
+                            @actionIcon@actionLabel
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Footer / Edit & Cancel button -->
+                <div class="flex items-center justify-between gap-2 mt-2 pt-2 border-t border-slate-100 text-xs">
+                    <span class="text-[10px] text-slate-400">บันทึกเมื่อ: @saved.CreatedAt.ToString("dd/MM/yyyy HH:mm")</span>
+                    <button type="button"
+                            onclick="cancelSavedAction('@saved.ActionId', '@saved.PoNumber')"
+                            class="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 border border-rose-200 transition-all cursor-pointer">
+                        ยกเลิกบันทึก
+                    </button>
+                </div>
+            </div>
+        }
+    }
+    else
+    {
+        <div class="flex flex-col items-center justify-center py-16 text-slate-300">
+            <svg class="w-10 h-10 mb-2" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+            </svg>
+            <p class="text-sm font-medium text-slate-400">ยังไม่มีรายการที่บันทึก</p>
+        </div>
+    }
+</div>
 </div>
 
 <!-- RIGHT: รายการที่เลือก -->
@@ -743,50 +740,50 @@
             }
 
             el.innerHTML = `
-                                                <div class="p-3 pb-2">
-                                                    <div class="flex items-start justify-between gap-2 mb-2">
-                                                        <div class="flex-1 min-w-0">
-                                                            <div class="flex items-center flex-wrap gap-1 mb-0.5">
-                                                                <span class="font-bold text-[13px] text-slate-800">${item.poNumber}</span>
-                                                                ${fwdBadgeHtml}
+                                                        <div class="p-3 pb-2">
+                                                            <div class="flex items-start justify-between gap-2 mb-2">
+                                                                <div class="flex-1 min-w-0">
+                                                                    <div class="flex items-center flex-wrap gap-1 mb-0.5">
+                                                                        <span class="font-bold text-[13px] text-slate-800">${item.poNumber}</span>
+                                                                        ${fwdBadgeHtml}
+                                                                    </div>
+                                                                    <p class="text-xs text-slate-500 leading-snug line-clamp-2 mt-0.5">${item.orderName}</p>
+                                                                </div>
+                                                                <div class="shrink-0 flex flex-col items-end gap-1.5">
+                                                                    <span class="font-bold text-sm text-slate-700">${fmt(item.price)}</span>
+                                                                    <button type="button"
+                                                                        onclick="removeFromCart('${orderId}')"
+                                                                        class="remove-btn">
+                                                                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
+                                                                        </svg>
+                                                                    </button>
+                                                                </div>
                                                             </div>
-                                                            <p class="text-xs text-slate-500 leading-snug line-clamp-2 mt-0.5">${item.orderName}</p>
-                                                        </div>
-                                                        <div class="shrink-0 flex flex-col items-end gap-1.5">
-                                                            <span class="font-bold text-sm text-slate-700">${fmt(item.price)}</span>
-                                                            <button type="button"
-                                                                onclick="removeFromCart('${orderId}')"
-                                                                class="remove-btn">
-                                                                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
-                                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
+                                        
+                                                            <!-- Action pills -->
+                                                            <div class="flex flex-wrap gap-1.5" id="pills-${orderId}">
+                                                                <label class="action-pill active-receive" id="pill-receive-${orderId}">
+                                                                    <input type="radio" name="act_${orderId}" value="ReceivedFull" checked onchange="setAction('${orderId}','ReceivedFull')">
+                                                                    <span>${receiveLabel}</span>
+                                                                    <span class="font-bold ml-1">${fmt(item.price)}</span>
+                                                                </label>
+                                                                <label class="action-pill" id="pill-defer-${orderId}">
+                                                                    <input type="radio" name="act_${orderId}" value="Deferred" onchange="setAction('${orderId}','Deferred')">
+                                                                    <span>${deferLabel}</span>
+                                                                    <span class="font-bold ml-1">${fmt(item.price)}</span>
+                                                                </label>
+                                                            </div>
+                                        
+                                                            <!-- Deferred note (hidden by default, no input needed) -->
+                                                            <div class="deferred-note mt-2 items-center gap-2 bg-amber-50 border border-amber-200 rounded-md px-3 py-2" id="defer-wrap-${orderId}">
+                                                                <svg class="w-3.5 h-3.5 text-amber-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
                                                                 </svg>
-                                                            </button>
+                                                                <span class="text-[11px] text-amber-700">${deferNoteText}</span>
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                
-                                                    <!-- Action pills -->
-                                                    <div class="flex flex-wrap gap-1.5" id="pills-${orderId}">
-                                                        <label class="action-pill active-receive" id="pill-receive-${orderId}">
-                                                            <input type="radio" name="act_${orderId}" value="ReceivedFull" checked onchange="setAction('${orderId}','ReceivedFull')">
-                                                            <span>${receiveLabel}</span>
-                                                            <span class="font-bold ml-1">${fmt(item.price)}</span>
-                                                        </label>
-                                                        <label class="action-pill" id="pill-defer-${orderId}">
-                                                            <input type="radio" name="act_${orderId}" value="Deferred" onchange="setAction('${orderId}','Deferred')">
-                                                            <span>${deferLabel}</span>
-                                                            <span class="font-bold ml-1">${fmt(item.price)}</span>
-                                                        </label>
-                                                    </div>
-                                
-                                                    <!-- Deferred note (hidden by default, no input needed) -->
-                                                    <div class="deferred-note mt-2 items-center gap-2 bg-amber-50 border border-amber-200 rounded-md px-3 py-2" id="defer-wrap-${orderId}">
-                                                        <svg class="w-3.5 h-3.5 text-amber-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
-                                                        </svg>
-                                                        <span class="text-[11px] text-amber-700">${deferNoteText}</span>
-                                                    </div>
-                                                </div>
-                                            `;
+                                                    `;
 
             document.getElementById('cart-list').appendChild(el);
         }
@@ -1099,56 +1096,56 @@
                 let warningBoxHtml = '';
                 if (unselectedCount > 0) {
                     warningBoxHtml = `
-                                                        <div class="bg-rose-50 border-2 border-rose-300 rounded-xl p-4 my-3 text-left shadow-xs">
-                                                            <div class="flex items-start gap-3">
-                                                                <div class="p-2 bg-rose-100 text-rose-600 rounded-lg shrink-0 mt-0.5">
-                                                                    
-                                                                </div>
-                                                                <div>
-                                                                    <div class="font-bold text-rose-800 text-base mb-1">คำเตือน! การปิดยอดจะสรุปและปิดงวดเดือนนี้ทันที</div>
-                                                                    <div class="text-sm text-slate-700 leading-relaxed">
-                                                                        กรุณาตรวจสอบจำนวนรายการด้านล่างก่อนยืนยัน:
+                                                                <div class="bg-rose-50 border-2 border-rose-300 rounded-xl p-4 my-3 text-left shadow-xs">
+                                                                    <div class="flex items-start gap-3">
+                                                                        <div class="p-2 bg-rose-100 text-rose-600 rounded-lg shrink-0 mt-0.5">
+                                                                            
+                                                                        </div>
+                                                                        <div>
+                                                                            <div class="font-bold text-rose-800 text-base mb-1">คำเตือน! การปิดยอดจะสรุปและปิดงวดเดือนนี้ทันที</div>
+                                                                            <div class="text-sm text-slate-700 leading-relaxed">
+                                                                                กรุณาตรวจสอบจำนวนรายการด้านล่างก่อนยืนยัน:
+                                                                            </div>
+                                                                        </div>
                                                                     </div>
-                                                                </div>
-                                                            </div>
-                                                            
-                                                            <div class="mt-3 pt-3 border-t border-rose-200/80 space-y-2 text-sm">
-                                                                <div class="flex justify-between items-center bg-white p-2.5 rounded-lg border border-rose-100 shadow-2xs">
-                                                                    <span class="font-medium text-slate-700">รายการที่เลือกบันทึก:</span>
-                                                                    <span class="font-bold text-emerald-600 text-base">${ids.length} รายการ (${fmt(total)})</span>
-                                                                </div>
-                                                                <div class="flex justify-between items-center bg-rose-100/80 p-2.5 rounded-lg border border-rose-300 shadow-2xs">
-                                                                    <span class="font-bold text-rose-900">รายการคงค้างที่ไม่ถูกเลือก:</span>
-                                                                    <span class="font-black text-rose-600 text-lg">${unselectedCount} รายการ</span>
-                                                                </div>
-                                                            </div>
-                                                            
-                                                            <div class="mt-3 text-xs font-bold text-rose-700 bg-rose-200/60 p-2.5 rounded-lg text-center border border-rose-300/50">
-                                                                📌 รายการคงค้าง ${unselectedCount} รายการ จะถูกปิดยอดและยกยอดไปเดือนถัดไปอัตโนมัติ!
-                                                            </div>
-                                                        </div>`;
+                                                                    
+                                                                    <div class="mt-3 pt-3 border-t border-rose-200/80 space-y-2 text-sm">
+                                                                        <div class="flex justify-between items-center bg-white p-2.5 rounded-lg border border-rose-100 shadow-2xs">
+                                                                            <span class="font-medium text-slate-700">รายการที่เลือกบันทึก:</span>
+                                                                            <span class="font-bold text-emerald-600 text-base">${ids.length} รายการ (${fmt(total)})</span>
+                                                                        </div>
+                                                                        <div class="flex justify-between items-center bg-rose-100/80 p-2.5 rounded-lg border border-rose-300 shadow-2xs">
+                                                                            <span class="font-bold text-rose-900">รายการคงค้างที่ไม่ถูกเลือก:</span>
+                                                                            <span class="font-black text-rose-600 text-lg">${unselectedCount} รายการ</span>
+                                                                        </div>
+                                                                    </div>
+                                                                    
+                                                                    <div class="mt-3 text-xs font-bold text-rose-700 bg-rose-200/60 p-2.5 rounded-lg text-center border border-rose-300/50">
+                                                                        📌 รายการคงค้าง ${unselectedCount} รายการ จะถูกปิดยอดและยกยอดไปเดือนถัดไปอัตโนมัติ!
+                                                                    </div>
+                                                                </div>`;
                 } else {
                     warningBoxHtml = `
-                                                        <div class="bg-emerald-50 border-2 border-emerald-300 rounded-xl p-4 my-3 text-left shadow-xs">
-                                                            <div class="flex items-center gap-3">
-                                                                <div class="p-2 bg-emerald-100 text-emerald-600 rounded-lg shrink-0">
-                                                                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                                    </svg>
-                                                                </div>
-                                                                <div>
-                                                                    <div class="font-bold text-emerald-800 text-base">ทำรายการครบถ้วนทุกรายการแล้ว!</div>
-                                                                    <div class="text-sm text-emerald-700">ทุกรายการถูกเลือกจัดการเรียบร้อยครบทั้ง ${ids.length} รายการ</div>
-                                                                </div>
-                                                            </div>
-                                                        </div>`;
+                                                                <div class="bg-emerald-50 border-2 border-emerald-300 rounded-xl p-4 my-3 text-left shadow-xs">
+                                                                    <div class="flex items-center gap-3">
+                                                                        <div class="p-2 bg-emerald-100 text-emerald-600 rounded-lg shrink-0">
+                                                                            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                                                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                                            </svg>
+                                                                        </div>
+                                                                        <div>
+                                                                            <div class="font-bold text-emerald-800 text-base">ทำรายการครบถ้วนทุกรายการแล้ว!</div>
+                                                                            <div class="text-sm text-emerald-700">ทุกรายการถูกเลือกจัดการเรียบร้อยครบทั้ง ${ids.length} รายการ</div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>`;
                 }
 
                 confirmHtml = `
-                                                    ${warningBoxHtml}
-                                                    <div class="text-slate-700 text-sm font-semibold mt-2">
-                                                        คุณแน่ใจหรือไม่ว่าต้องการ <span class="text-rose-600 font-bold underline">"บันทึกและปิดยอดเดือน"</span> ?
-                                                    </div>`;
+                                                            ${warningBoxHtml}
+                                                            <div class="text-slate-700 text-sm font-semibold mt-2">
+                                                                คุณแน่ใจหรือไม่ว่าต้องการ <span class="text-rose-600 font-bold underline">"บันทึกและปิดยอดเดือน"</span> ?
+                                                            </div>`;
 
                 confirmBtnText = 'ยืนยันบันทึกและปิดยอดเดือน';
                 confirmBtnColor = '#e11d48';
