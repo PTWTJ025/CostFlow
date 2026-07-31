@@ -313,14 +313,36 @@
 
     <!-- Bulk actions toolbar (shown on saved tab) -->
     <div id="saved-actions-toolbar" class="flex flex-wrap items-center justify-between py-2.5 px-3 border-t border-slate-200/80 bg-slate-50/80 gap-3 rounded-b-md shadow-inner text-xs hidden">
-        <!-- Left side: Select all & count -->
-        <div class="flex items-center gap-4">
+        <!-- Left side: Select all, count & Action filter -->
+        <div class="flex items-center gap-3 flex-wrap">
             <label class="flex items-center gap-2 cursor-pointer font-medium text-slate-600 hover:text-slate-900 select-none transition-colors">
                 <input type="checkbox" id="select-all-saved" onchange="toggleSelectAllSaved(this)" class="rounded border-slate-300 text-rose-600 focus:ring-rose-500 w-4 h-4 transition-all cursor-pointer">
                 <span>เลือกทั้งหมด</span>
             </label>
-            <div class="h-4 w-px bg-slate-300"></div>
+            <div class="h-4 w-px bg-slate-300 hidden sm:block"></div>
             <span class="text-[11px] text-slate-500 font-semibold" id="saved-selected-count">เลือกแล้ว 0 รายการ</span>
+
+            <div class="h-4 w-px bg-slate-300 hidden sm:block"></div>
+
+            <!-- Filter by action -->
+            <div class="flex items-center gap-1.5 text-slate-500 bg-white border border-slate-200 rounded-md px-2 py-1 shadow-xs" style="height: 30px;">
+                <svg class="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 0 1-.659 1.591l-5.432 5.432a2.25 2.25 0 0 0-.659 1.591v2.927a2.25 2.25 0 0 1-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 0 0-.659-1.591L3.659 7.409A2.25 2.25 0 0 1 3 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0 1 12 3Z"/>
+                </svg>
+                <div class="relative flex items-center h-full">
+                    <select id="saved-action-select" onchange="applySavedFilters()"
+                            class="appearance-none bg-transparent text-slate-700 font-bold outline-none cursor-pointer text-xs focus:ring-0 p-0 m-0 pr-4 h-full"
+                            style="border: none !important; box-shadow: none !important; -webkit-appearance: none; -moz-appearance: none; background-image: none;">
+                        <option value="all">สถานะทั้งหมด</option>
+                        <option value="ReceivedFull">รับสินค้าแล้ว</option>
+                        <option value="Deferred">ผ่อน → เดือนหน้า</option>
+                        <option value="Skipped">ไม่ต้องการสินค้า / ค้าง</option>
+                    </select>
+                    <svg class="w-3 h-3 text-slate-400 absolute right-0 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
+                    </svg>
+                </div>
+            </div>
         </div>
 
         <!-- Right side: Bulk cancel button -->
@@ -434,7 +456,9 @@
 
             <div class="saved-card border border-slate-200 rounded-lg p-3 bg-white hover:border-slate-300 transition-all shadow-2xs"
                  data-action-id="@saved.ActionId"
-                 data-po-number="@saved.PoNumber">
+                 data-po-number="@saved.PoNumber"
+                 data-order-name="@saved.OrderName"
+                 data-action="@saved.Action">
                 <div class="flex items-start gap-3">
                     <input type="checkbox"
                            class="saved-card-checkbox mt-1 rounded border-slate-300 text-rose-600 focus:ring-rose-500 shrink-0 cursor-pointer"
@@ -594,7 +618,7 @@
             } else {
                 savedPanel.classList.remove('hidden');
                 pendingPanel.classList.add('hidden');
-                searchWrap.classList.add('hidden');
+                searchWrap.classList.remove('hidden');
                 if (pendingToolbar) pendingToolbar.classList.add('hidden');
                 if (savedToolbar) savedToolbar.classList.remove('hidden');
                 // saved = active (emerald)
@@ -983,7 +1007,40 @@
             onCardCheckboxChange();
         }
 
-        document.getElementById('search-pending').addEventListener('input', applyPendingFilters);
+        function applySavedFilters() {
+            const select = document.getElementById('saved-action-select');
+            const filterAction = select ? select.value : 'all';
+            const searchInput = document.getElementById('search-pending');
+            const q = searchInput ? searchInput.value.toLowerCase().trim() : '';
+
+            let visible = 0;
+            document.querySelectorAll('.saved-card').forEach(card => {
+                const po = card.dataset.poNumber ? card.dataset.poNumber.toLowerCase() : '';
+                const name = card.dataset.orderName ? card.dataset.orderName.toLowerCase() : '';
+                const matchSearch = po.includes(q) || name.includes(q);
+
+                const action = card.dataset.action || '';
+                let matchAction = true;
+                if (filterAction !== 'all') {
+                    matchAction = (action === filterAction);
+                }
+
+                if (matchSearch && matchAction) {
+                    card.style.display = '';
+                    visible++;
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+            const countEl = document.getElementById('tab-saved-count');
+            if (countEl) countEl.textContent = visible;
+            onSavedCardCheckboxChange();
+        }
+
+        document.getElementById('search-pending').addEventListener('input', function() {
+            applyPendingFilters();
+            applySavedFilters();
+        });
 
         function bulkAddToCart(action) {
             const checkedBoxes = Array.from(document.querySelectorAll('.pending-card-checkbox')).filter(cb => {
@@ -1093,17 +1150,27 @@
             } else {
                 confirmTitle = `<div class="flex items-center justify-center gap-2 text-rose-600 font-black text-xl">ยืนยันการปิดยอดเดือน ${MONTH_YEAR}</div>`;
 
+                const searchInput = document.getElementById('search-pending');
+                const searchVal = searchInput ? searchInput.value.trim() : '';
+                const filterSelect = document.getElementById('pending-sort-select');
+                const filterVal = filterSelect ? filterSelect.value : 'default';
+
+                const hiddenUnselectedCount = Array.from(document.querySelectorAll('.order-card')).filter(card => {
+                    return card.style.display === 'none' && !card.classList.contains('in-cart');
+                }).length;
+
+                let filterWarningHtml = '';
+                if (hiddenUnselectedCount > 0 || searchVal !== '' || filterVal !== 'default') {
+                    filterWarningHtml = `
+                        <div class="mt-2.5 text-xs font-bold text-amber-800 bg-amber-100/90 p-2.5 rounded-lg text-left border border-amber-300 shadow-2xs">
+                            ⚠️ คำเตือนเรื่องการค้นหา/ตัวกรอง:<br>
+                            มีอีก <u>${hiddenUnselectedCount} รายการ</u> ที่ถูกซ่อนอยู่จากการค้นหาหรือตัวกรอง ซึ่งรายการที่ซ่อนอยู่จะถูกปิดยอดและยกยอดไปเดือนถัดไปอัตโนมัติเช่นกัน!
+                        </div>`;
+                }
+
                 let warningBoxHtml = '';
                 if (unselectedCount > 0) {
                     warningBoxHtml = `
-                                                                <div class="bg-rose-50 border-2 border-rose-300 rounded-xl p-4 my-3 text-left shadow-xs">
-                                                                    <div class="flex items-start gap-3">
-                                                                        <div class="p-2 bg-rose-100 text-rose-600 rounded-lg shrink-0 mt-0.5">
-                                                                            
-                                                                        </div>
-                                                                        <div>
-                                                                            <div class="font-bold text-rose-800 text-base mb-1">คำเตือน! การปิดยอดจะสรุปและปิดงวดเดือนนี้ทันที</div>
-                                                                            <div class="text-sm text-slate-700 leading-relaxed">
                                                                                 กรุณาตรวจสอบจำนวนรายการด้านล่างก่อนยืนยัน:
                                                                             </div>
                                                                         </div>
