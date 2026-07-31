@@ -310,6 +310,30 @@
                 </button>
             </div>
         </div>
+
+        <!-- Bulk actions toolbar (shown on saved tab) -->
+        <div id="saved-actions-toolbar" class="flex flex-wrap items-center justify-between py-2.5 px-3 border-t border-slate-200/80 bg-slate-50/80 gap-3 rounded-b-md shadow-inner text-xs hidden">
+            <!-- Left side: Select all & count -->
+            <div class="flex items-center gap-4">
+                <label class="flex items-center gap-2 cursor-pointer font-medium text-slate-600 hover:text-slate-900 select-none transition-colors">
+                    <input type="checkbox" id="select-all-saved" onchange="toggleSelectAllSaved(this)" class="rounded border-slate-300 text-rose-600 focus:ring-rose-500 w-4 h-4 transition-all cursor-pointer">
+                    <span>เลือกทั้งหมด</span>
+                </label>
+                <div class="h-4 w-px bg-slate-300"></div>
+                <span class="text-[11px] text-slate-500 font-semibold" id="saved-selected-count">เลือกแล้ว 0 รายการ</span>
+            </div>
+
+            <!-- Right side: Bulk cancel button -->
+            <div class="flex items-center gap-2 shrink-0">
+                <button type="button" onclick="bulkCancelSavedActions()" id="bulk-cancel-saved-btn" disabled
+                        class="px-3 py-1.5 rounded-md font-bold bg-rose-600 hover:bg-rose-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white shadow-sm transition-all flex items-center gap-1.5 cursor-pointer disabled:hover:bg-slate-300">
+                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/>
+                    </svg>
+                    ยกเลิกบันทึกรายการที่เลือก
+                </button>
+            </div>
+        </div>
     </div>
 
     <!-- Pending list panel -->
@@ -408,8 +432,16 @@
                     : saved.Action == "Deferred" ? "ผ่อน → เดือนหน้า"
                     : "ไม่ต้องการสินค้า";
 
-                <div class="border border-slate-200 rounded-lg p-3 bg-white">
-                    <div class="flex items-start justify-between gap-2">
+                <div class="saved-card border border-slate-200 rounded-lg p-3 bg-white hover:border-slate-300 transition-all shadow-2xs"
+                     data-action-id="@saved.ActionId"
+                     data-po-number="@saved.PoNumber">
+                    <div class="flex items-start gap-3">
+                        <input type="checkbox"
+                               class="saved-card-checkbox mt-1 rounded border-slate-300 text-rose-600 focus:ring-rose-500 shrink-0 cursor-pointer"
+                               data-action-id="@saved.ActionId"
+                               data-po-number="@saved.PoNumber"
+                               onchange="onSavedCardCheckboxChange()"/>
+
                         <div class="flex-1 min-w-0">
                             <div class="font-bold text-[13px] text-slate-800 mb-0.5">@saved.PoNumber</div>
                             <p class="text-xs text-slate-500 leading-snug line-clamp-2">@saved.OrderName</p>
@@ -437,6 +469,19 @@
                                 @actionIcon@actionLabel
                             </span>
                         </div>
+                    </div>
+
+                    <!-- Footer / Edit & Cancel button -->
+                    <div class="flex items-center justify-between gap-2 mt-2 pt-2 border-t border-slate-100 text-xs">
+                        <span class="text-[10px] text-slate-400">บันทึกเมื่อ: @saved.CreatedAt.ToString("dd/MM/yyyy HH:mm")</span>
+                        <button type="button"
+                                onclick="cancelSavedAction('@saved.ActionId', '@saved.PoNumber')"
+                                class="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 border border-rose-200 transition-all cursor-pointer">
+                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/>
+                            </svg>
+                            แก้ไข / ยกเลิกบันทึก
+                        </button>
                     </div>
                 </div>
             }
@@ -535,11 +580,15 @@
             const btnSaved = document.getElementById('tab-saved');
             const badgePending = document.getElementById('tab-pending-count');
             const badgeSaved = document.getElementById('tab-saved-count');
+            const pendingToolbar = document.getElementById('bulk-actions-toolbar');
+            const savedToolbar = document.getElementById('saved-actions-toolbar');
 
             if (tab === 'pending') {
                 pendingPanel.classList.remove('hidden');
                 savedPanel.classList.add('hidden');
                 searchWrap.classList.remove('hidden');
+                if (pendingToolbar) pendingToolbar.classList.remove('hidden');
+                if (savedToolbar) savedToolbar.classList.add('hidden');
                 // pending = active (amber)
                 btnPending.style.cssText = 'background:#fffbeb;border-color:#fcd34d;color:#92400e;';
                 btnSaved.style.cssText = 'background:#f8fafc;border-color:#e2e8f0;color:#94a3b8;';
@@ -549,6 +598,8 @@
                 savedPanel.classList.remove('hidden');
                 pendingPanel.classList.add('hidden');
                 searchWrap.classList.add('hidden');
+                if (pendingToolbar) pendingToolbar.classList.add('hidden');
+                if (savedToolbar) savedToolbar.classList.remove('hidden');
                 // saved = active (emerald)
                 btnSaved.style.cssText = 'background:#ecfdf5;border-color:#6ee7b7;color:#065f46;';
                 btnPending.style.cssText = 'background:#f8fafc;border-color:#e2e8f0;color:#94a3b8;';
@@ -822,6 +873,88 @@
             }
         }
 
+        // ─── Bulk Select & Actions for Saved Tab ──────────────────────────────────
+        function toggleSelectAllSaved(chk) {
+            const isChecked = chk.checked;
+            document.querySelectorAll('.saved-card-checkbox').forEach(cb => {
+                cb.checked = isChecked;
+            });
+            onSavedCardCheckboxChange();
+        }
+
+        function onSavedCardCheckboxChange() {
+            const checkboxes = Array.from(document.querySelectorAll('.saved-card-checkbox'));
+            const checkedBoxes = checkboxes.filter(cb => cb.checked);
+            const count = checkedBoxes.length;
+
+            const selectAll = document.getElementById('select-all-saved');
+            if (selectAll) {
+                selectAll.checked = checkboxes.length > 0 && count === checkboxes.length;
+            }
+
+            const countEl = document.getElementById('saved-selected-count');
+            if (countEl) countEl.textContent = `เลือกแล้ว ${count} รายการ`;
+
+            const btn = document.getElementById('bulk-cancel-saved-btn');
+            if (btn) btn.disabled = count === 0;
+        }
+
+        async function bulkCancelSavedActions() {
+            const checkedBoxes = Array.from(document.querySelectorAll('.saved-card-checkbox')).filter(cb => cb.checked);
+            if (!checkedBoxes.length) return;
+
+            const actionIds = checkedBoxes.map(cb => cb.dataset.actionId);
+            const count = actionIds.length;
+
+            const result = await Swal.fire({
+                title: `ยกเลิกการบันทึก ${count} รายการที่เลือก?`,
+                html: `คุณกำลังจะยกเลิกการบันทึก <b>${count} รายการ</b><br><br><span class="text-xs text-slate-500">* รายการเหล่านี้จะถูกย้ายกลับไปอยู่ในหน้า <b>"รอดำเนินการ"</b> ในเดือนนี้ เพื่อให้คุณสามารถเลือกจัดการใหม่ได้</span>`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'ยืนยันยกเลิกรายการที่เลือก',
+                cancelButtonText: 'ปิด',
+                confirmButtonColor: '#e11d48',
+                cancelButtonColor: '#64748b',
+                customClass: {
+                    popup: 'rounded-xl'
+                }
+            });
+
+            if (!result.isConfirmed) return;
+
+            try {
+                const resp = await fetch('/MonthlyCost/BulkCancelActions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ actionIds: actionIds })
+                });
+
+                const data = await resp.json();
+                if (data.success) {
+                    await Swal.fire({
+                        icon: 'success',
+                        title: 'ยกเลิกสำเร็จ!',
+                        text: `ย้าย ${data.count || count} รายการกลับไปที่รอดำเนินการเรียบร้อยแล้ว`,
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                    location.reload();
+                } else {
+                    await Swal.fire({
+                        icon: 'error',
+                        title: 'เกิดข้อผิดพลาด',
+                        text: data.error || 'ไม่สามารถยกเลิกรายการได้'
+                    });
+                }
+            } catch (e) {
+                await Swal.fire({
+                    icon: 'error',
+                    title: 'เกิดข้อผิดพลาด',
+                    text: 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์'
+                });
+            }
+        }
+
         // ─── Search & Filter ───────────────────────────────────────────────────────────
         function applyPendingFilters() {
             const select = document.getElementById('pending-sort-select');
@@ -1069,6 +1202,56 @@
                         icon: 'error',
                         title: 'เกิดข้อผิดพลาด',
                         text: data.error || 'ไม่สามารถบันทึกได้'
+                    });
+                }
+            } catch (e) {
+                await Swal.fire({
+                    icon: 'error',
+                    title: 'เกิดข้อผิดพลาด',
+                    text: 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์'
+                });
+            }
+        }
+
+        async function cancelSavedAction(actionId, poNumber) {
+            const result = await Swal.fire({
+                title: `ยกเลิกการบันทึก ${poNumber}?`,
+                html: `ต้องการยกเลิกการบันทึกรายการนี้ใช่หรือไม่?<br><br><span class="text-xs text-slate-500">* รายการจะถูกย้ายกลับไปอยู่ในหน้า <b>"รอดำเนินการ"</b> ในเดือนนี้ เพื่อให้คุณสามารถเลือกจัดการใหม่ได้</span>`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'ยืนยันยกเลิกบันทึก',
+                cancelButtonText: 'ปิด',
+                confirmButtonColor: '#e11d48',
+                cancelButtonColor: '#64748b',
+                customClass: {
+                    popup: 'rounded-xl'
+                }
+            });
+
+            if (!result.isConfirmed) return;
+
+            try {
+                const resp = await fetch('/MonthlyCost/CancelAction', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ actionId: actionId })
+                });
+
+                const data = await resp.json();
+                if (data.success) {
+                    await Swal.fire({
+                        icon: 'success',
+                        title: 'ยกเลิกสำเร็จ!',
+                        text: 'ย้ายรายการกลับไปที่รอดำเนินการเรียบร้อยแล้ว',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                    location.reload();
+                } else {
+                    await Swal.fire({
+                        icon: 'error',
+                        title: 'เกิดข้อผิดพลาด',
+                        text: data.error || 'ไม่สามารถยกเลิกรายการได้'
                     });
                 }
             } catch (e) {

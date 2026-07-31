@@ -80,18 +80,9 @@ namespace CostFlow.Controllers
                 .Select(o => new { o.Id, o.Amount, o.ApprovedDate })
                 .ToListAsync();
 
-            // หาเดือนล่าสุดที่มีข้อมูลในปีนั้น
-            int latestMonthWithData = 0;
-            for (int m = 1; m <= 12; m++)
-            {
-                var mKey = $"{selectedYear:0000}-{m:00}";
-                var hasOrders = allOrders.Any(o => { var d = ParseThaiDate(o.ApprovedDate); return d.HasValue && d.Value.Year == selectedYear && d.Value.Month == m; });
-                var hasActions = allActions.Any(a => a.MonthYear == mKey);
-                if (hasOrders || hasActions)
-                {
-                    latestMonthWithData = m;
-                }
-            }
+            // กำหนดเดือนที่จะแสดงป้าย "มูลค่ารวมสะสม" ให้เป็นเดือนปัจจุบันเสมอสำหรับปีปัจจุบัน
+            int latestMonthWithData = selectedYear == now.Year ? now.Month 
+                                    : (selectedYear < now.Year ? 12 : 1);
 
             // Build cards for all 12 months
             var cards = new List<MonthlyCardViewModel>();
@@ -259,7 +250,7 @@ namespace CostFlow.Controllers
                     SkippedCarryOver = skippedCarryOver,
                     MonthAmount = monthBasePlannedAmount,
                     TotalAmount = monthOrdersInMonth.Count == 0 && monthActions.Count == 0 ? 0m : runningPlannedAmount,
-                    IsLatestWithData = (month == latestMonthWithData && hasNewOrCarryOverOrders > 0)
+                    IsLatestWithData = (month == latestMonthWithData)
                 });
             }
 
@@ -966,6 +957,18 @@ namespace CostFlow.Controllers
             {
                 return BadRequest(new { success = false, error = ex.Message });
             }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> CancelAction([FromBody] RevertActionRequest request)
+        {
+            return await RevertAction(request);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> BulkCancelActions([FromBody] BulkRevertActionRequest request)
+        {
+            return await BulkRevertAction(request);
         }
 
         // GET: /MonthlyCost/GetDetailStats?monthYear=มกราคม+2569 — API สำหรับ polling realtime ใน Detail
