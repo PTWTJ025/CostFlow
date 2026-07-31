@@ -316,15 +316,8 @@ namespace CostFlow.Controllers
             var ws = workbook.Worksheets.Add("รายการสั่งผลิต");
 
             // ── Font & style constants ───────────────────────────────────────
-            var fontName    = "TH SarabunPSK";     // ฟอนต์ไทย/อังกฤษมาตรฐาน
-            var colorHeader = XLColor.FromHtml("#1E3A5F");   // navy
-            var colorSubH   = XLColor.FromHtml("#2563EB");   // blue-600
-            var colorAlt    = XLColor.FromHtml("#F0F4FA");   // สีแถวคู่
+            var fontName    = "Noto Sans Thai";
             var colorBorder = XLColor.FromHtml("#CBD5E1");   // slate-300
-            var colorMatched = XLColor.FromHtml("#D1FAE5");  // emerald-100
-            var colorPending = XLColor.FromHtml("#FEE2E2");  // red-100
-            var colorTextDark = XLColor.FromHtml("#1E293B");
-            var colorTextGray = XLColor.FromHtml("#64748B");
             var colorGreen   = XLColor.FromHtml("#065F46");
             var colorRed     = XLColor.FromHtml("#991B1B");
 
@@ -337,9 +330,9 @@ namespace CostFlow.Controllers
             ws.Cell(1, 1).Value = $"รายงานใบสั่งผลิต — {sheetTitle}";
             var titleCell = ws.Cell(1, 1);
             titleCell.Style.Font.FontName = fontName;
-            titleCell.Style.Font.FontSize = 16;
+            titleCell.Style.Font.FontSize = 14;
             titleCell.Style.Font.Bold = true;
-            titleCell.Style.Font.FontColor = colorHeader;
+            titleCell.Style.Font.FontColor = XLColor.Black;
             ws.Range(1, 1, 1, 10).Merge();
 
             // ── Row 2: Sub-info ──────────────────────────────────────────────
@@ -349,14 +342,14 @@ namespace CostFlow.Controllers
                                    $"ยังไม่มีแผนผลิต: {pendingCount}    " +
                                    $"ยอดรวม: {totalAmount:N2} บาท";
             ws.Cell(2, 1).Style.Font.FontName = fontName;
-            ws.Cell(2, 1).Style.Font.FontSize = 11;
-            ws.Cell(2, 1).Style.Font.FontColor = colorTextGray;
+            ws.Cell(2, 1).Style.Font.FontSize = 10;
+            ws.Cell(2, 1).Style.Font.FontColor = XLColor.FromHtml("#475569");
             ws.Range(2, 1, 2, 10).Merge();
 
             // ── Row 3: blank spacer ──────────────────────────────────────────
-            ws.Row(3).Height = 6;
+            ws.Row(3).Height = 8;
 
-            // ── Row 4: Column Headers ────────────────────────────────────────
+            // ── Row 4: Column Headers (No fill color) ────────────────────────
             int headerRow = 4;
             var headers = new[]
             {
@@ -370,9 +363,9 @@ namespace CostFlow.Controllers
                 var cell = ws.Cell(headerRow, c + 1);
                 cell.Value = headers[c];
                 cell.Style.Font.FontName  = fontName;
-                cell.Style.Font.FontSize  = 12;
+                cell.Style.Font.FontSize  = 11;
                 cell.Style.Font.Bold      = true;
-                cell.Style.Font.FontColor = colorHeader;
+                cell.Style.Font.FontColor = XLColor.Black;
                 cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                 cell.Style.Alignment.Vertical   = XLAlignmentVerticalValues.Center;
                 cell.Style.Border.OutsideBorder  = XLBorderStyleValues.Thin;
@@ -429,7 +422,7 @@ namespace CostFlow.Controllers
                         _          => XLCellValue.FromObject(values[c]?.ToString() ?? "")
                     };
                     cell.Style.Font.FontName  = fontName;
-                    cell.Style.Font.FontSize  = 11;
+                    cell.Style.Font.FontSize  = 10;
                     cell.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
                     cell.Style.Border.OutsideBorderColor = colorBorder;
                     cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
@@ -455,7 +448,7 @@ namespace CostFlow.Controllers
                     }
                 }
 
-                ws.Row(row).Height = 18;
+                ws.Row(row).Height = 20;
             }
 
             // ── Summary row ──────────────────────────────────────────────────
@@ -463,13 +456,13 @@ namespace CostFlow.Controllers
             ws.Cell(sumRow, 6).Value = "รวมทั้งหมด";
             ws.Cell(sumRow, 6).Style.Font.FontName  = fontName;
             ws.Cell(sumRow, 6).Style.Font.Bold      = true;
-            ws.Cell(sumRow, 6).Style.Font.FontColor = colorHeader;
+            ws.Cell(sumRow, 6).Style.Font.FontColor = XLColor.Black;
             ws.Cell(sumRow, 6).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
 
             ws.Cell(sumRow, 7).Value = totalAmount;
             ws.Cell(sumRow, 7).Style.Font.FontName  = fontName;
             ws.Cell(sumRow, 7).Style.Font.Bold      = true;
-            ws.Cell(sumRow, 7).Style.Font.FontColor = colorHeader;
+            ws.Cell(sumRow, 7).Style.Font.FontColor = XLColor.Black;
             ws.Cell(sumRow, 7).Style.NumberFormat.Format  = "#,##0.00";
             ws.Cell(sumRow, 7).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
             ws.Range(sumRow, 6, sumRow, 7).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
@@ -501,9 +494,10 @@ namespace CostFlow.Controllers
             using var stream = new MemoryStream();
             workbook.SaveAs(stream);
 
+            string cleanTitle = sheetTitle.Trim().Replace(" ", "_");
             string downloadName = !string.IsNullOrWhiteSpace(customName)
                 ? $"{customName.Trim()}.xlsx"
-                : $"Report_{sheetTitle}_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
+                : $"รายงานใบสั่งผลิต_{cleanTitle}.xlsx";
 
             return File(stream.ToArray(),
                         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

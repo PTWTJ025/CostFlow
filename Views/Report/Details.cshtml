@@ -810,7 +810,7 @@
             const reportName = "@Html.Raw(reportName)";
             const currentMonth = "@currentMonth";
             const currentYear = "@currentYear";
-            const defaultExportName = `รายงาน_${reportName}_${new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' }).replace(/ /g, '_')}`;
+            const defaultExportName = `รายงานใบสั่งผลิต_${reportName}`.replace(/[\s\-_]+/g, '_');
 
             Swal.fire({
                 title: 'ตั้งชื่อไฟล์สำหรับส่งออก',

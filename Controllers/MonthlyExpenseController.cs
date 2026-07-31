@@ -138,10 +138,11 @@ namespace CostFlow.Controllers
             ws.Cell(1, 1).Value = $"ใบประมาณการสั่งซื้อและค่าใช้จ่ายประจำเดือน {request.EstimationMonth}";
             ws.Cell(1, 1).Style.Font.Bold = true;
             ws.Cell(1, 1).Style.Font.FontSize = 14;
-            ws.Cell(1, 1).Style.Font.FontName = "Sarabun";
-            ws.Range(1, 1, 1, 6).Merge();
+            ws.Cell(1, 1).Style.Font.FontName = "Noto Sans Thai";
+            ws.Cell(1, 1).Style.Font.FontColor = XLColor.Black;
+            ws.Range(1, 1, 1, 7).Merge();
 
-            // Headers
+            // Headers (No fill color)
             ws.Cell(3, 1).Value = "ลำดับ";
             ws.Cell(3, 2).Value = "รหัสสินค้า";
             ws.Cell(3, 3).Value = "ชื่อสินค้า / รายการอะไหล่";
@@ -153,7 +154,8 @@ namespace CostFlow.Controllers
             var headerRange = ws.Range(3, 1, 3, 7);
             headerRange.Style.Font.Bold = true;
             headerRange.Style.Font.FontSize = 11;
-            headerRange.Style.Font.FontName = "Sarabun";
+            headerRange.Style.Font.FontName = "Noto Sans Thai";
+            headerRange.Style.Font.FontColor = XLColor.Black;
             headerRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
             headerRange.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
             headerRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
@@ -182,7 +184,7 @@ namespace CostFlow.Controllers
                 ws.Cell(rowIdx, 7).Style.NumberFormat.Format = "#,##0.00";
 
                 var rowRange = ws.Range(rowIdx, 1, rowIdx, 7);
-                rowRange.Style.Font.FontName = "Sarabun";
+                rowRange.Style.Font.FontName = "Noto Sans Thai";
                 rowRange.Style.Font.FontSize = 10;
                 rowRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
                 rowRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
@@ -201,7 +203,7 @@ namespace CostFlow.Controllers
             ws.Cell(rowIdx, 7).Style.NumberFormat.Format = "#,##0.00";
 
             var summaryRange = ws.Range(rowIdx, 1, rowIdx, 7);
-            summaryRange.Style.Font.FontName = "Sarabun";
+            summaryRange.Style.Font.FontName = "Noto Sans Thai";
             summaryRange.Style.Font.FontSize = 11;
             summaryRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
             summaryRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
@@ -212,7 +214,8 @@ namespace CostFlow.Controllers
             workbook.SaveAs(stream);
             var content = stream.ToArray();
             
-            string fileName = $"Estimation_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+            string cleanMonth = (request.EstimationMonth ?? "").Trim().Replace(" ", "_");
+            string fileName = !string.IsNullOrWhiteSpace(cleanMonth) ? $"ใบประมาณการสั่งซื้อ_{cleanMonth}.xlsx" : "ใบประมาณการสั่งซื้อ.xlsx";
             return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
         }
     }

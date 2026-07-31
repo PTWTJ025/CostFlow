@@ -85,10 +85,10 @@ namespace CostFlow.Controllers
                 worksheet.Cell(1, 7).Value = "มูลค่ารวมเบิก";
                 worksheet.Cell(1, 8).Value = "แหล่งข้อมูลประวัติสั่งซื้อ";
 
-                // Format Header Row (Minimalist - strictly no color as requested: "อย่าใส่สี นะรูปหัวข้อ ตารางไรงี้")
+                // Format Header Row (Minimalist - clean borders, no background colors)
                 var headerRange = worksheet.Range(1, 1, 1, 8);
                 headerRange.Style.Font.Bold = true;
-                headerRange.Style.Font.FontName = "Sarabun";
+                headerRange.Style.Font.FontName = "Noto Sans Thai";
                 headerRange.Style.Font.FontSize = 11;
                 headerRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                 headerRange.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
@@ -126,7 +126,7 @@ namespace CostFlow.Controllers
 
                     // Apply fonts and thin borders
                     var dataRange = worksheet.Range(rowIdx, 1, rowIdx, 8);
-                    dataRange.Style.Font.FontName = "Sarabun";
+                    dataRange.Style.Font.FontName = "Noto Sans Thai";
                     dataRange.Style.Font.FontSize = 10;
                     dataRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
                     dataRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
@@ -140,7 +140,7 @@ namespace CostFlow.Controllers
                 {
                     workbook.SaveAs(stream);
                     var content = stream.ToArray();
-                    string fileName = $"Product_Prices_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+                    string fileName = "ราคากลางอ้างอิงสินค้า.xlsx";
                     return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
                 }
             }
