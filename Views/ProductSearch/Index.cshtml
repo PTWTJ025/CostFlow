@@ -180,8 +180,8 @@
 
             const toast = document.createElement("div");
             toast.className = `px-4 py-3 rounded shadow-lg text-xs font-semibold flex items-center gap-2 transform translate-y-2 opacity-0 transition-all duration-300 pointer-events-auto max-w-sm ${type === 'success'
-                    ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                    : 'bg-rose-50 text-rose-800 border border-rose-200'
+                ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                : 'bg-rose-50 text-rose-800 border border-rose-200'
                 }`;
 
             const icon = type === 'success'
@@ -239,45 +239,45 @@
 
         // If editing a saved batch, populate from server
         @if (ViewData["EditBatchName"] != null)
-    {
-        <text>
-            const editOrders = @Html.Raw(ViewData["EditOrdersJson"] ?? "[]");
-            const editBatchName = "@Html.Raw(ViewData["EditBatchName"])";
+        {
+            <text>
+                const editOrders = @Html.Raw(ViewData["EditOrdersJson"] ?? "[]");
+                const editBatchName = "@Html.Raw(ViewData["EditBatchName"])";
         
         if (editOrders && editOrders.length > 0) {
-                basket = editOrders.map(o => ({
-                    productCode: o.ProductCode || o.productCode,
-                    productName: o.ProductName || o.productName,
-                    unit: o.Unit || o.unit,
-                    unitPrice: o.UnitPrice || o.unitPrice,
-                    quantity: o.Quantity || o.quantity,
-                    totalAmount: o.TotalAmount || o.totalAmount,
-                    approvalNo: o.ApprovalNo || o.approvalNo || "",
-                    remarks: o.Remarks || o.remarks || "",
-                    receiveDate: o.ReceiveDate || o.receiveDate || ""
-                }));
+                    basket = editOrders.map(o => ({
+                        productCode: o.ProductCode || o.productCode,
+                        productName: o.ProductName || o.productName,
+                        unit: o.Unit || o.unit,
+                        unitPrice: o.UnitPrice || o.unitPrice,
+                        quantity: o.Quantity || o.quantity,
+                        totalAmount: o.TotalAmount || o.totalAmount,
+                        approvalNo: o.ApprovalNo || o.approvalNo || "",
+                        remarks: o.Remarks || o.remarks || "",
+                        receiveDate: o.ReceiveDate || o.receiveDate || ""
+                    }));
             setTimeout(() => {updateCartUI(); }, 50);
         }
-        </text>
-    }
-    else
-    {
-        <text>
-            try {
+            </text>
+        }
+        else
+        {
+            <text>
+                try {
             const savedDraft = localStorage.getItem("costflow_draft_orders");
-            if (savedDraft) {
+                if (savedDraft) {
                 const parsed = JSON.parse(savedDraft);
                 if (Array.isArray(parsed) && parsed.length > 0) {
-                basket = parsed;
+                    basket = parsed;
                     setTimeout(() => {
-                updateCartUI();
-            showToast("กู้คืนรายการสั่งซื้อแบบร่างที่ค้างอยู่จากหน่วยความจำเรียบร้อยแล้ว", "success");
+                    updateCartUI();
+                showToast("กู้คืนรายการสั่งซื้อแบบร่างที่ค้างอยู่จากหน่วยความจำเรียบร้อยแล้ว", "success");
                     }, 100);
                 }
             }
         } catch (e) { }
-        </text>
-    }
+            </text>
+        }
 
         // Format numbers helper
         function formatCurrency(val) {
@@ -700,8 +700,20 @@
                         },
                         body: JSON.stringify(payload)
                     })
-                        .then(res => res.json())
+                        .then(async res => {
+                            if (res.status === 401 || res.status === 403) {
+                                showToast("เซสชันการใช้งานหมดอายุ กรุณาเข้าสู่ระบบใหม่อีกครั้ง", "error");
+                                setCustomModalLoading(false);
+                                setTimeout(() => { window.location.href = "/Account/Login"; }, 1500);
+                                return null;
+                            }
+                            if (!res.ok) {
+                                throw new Error(`HTTP ${res.status}`);
+                            }
+                            return res.json();
+                        })
                         .then(data => {
+                            if (!data) return;
                             if (data.success) {
                                 basket = [];
                                 updateCartUI();

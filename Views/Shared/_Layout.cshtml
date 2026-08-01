@@ -280,8 +280,8 @@
 <script>
     (function() {
         const savedCollapsed = localStorage.getItem('costflow_sidebar_collapsed');
-        const isStaffUser = @(isStaff ? "true" : "false");
-        if (savedCollapsed === 'true' || (isStaffUser && savedCollapsed !== 'false')) {
+        // Default sidebar to COLLAPSED for all users (Admin & Staff) unless explicitly set to 'false'
+        if (savedCollapsed !== 'false') {
             document.body.classList.add('sidebar-collapsed');
         }
     })();

@@ -130,7 +130,7 @@ namespace CostFlow.Controllers
                 };
 
                 var client = _httpClientFactory.CreateClient();
-                client.Timeout = TimeSpan.FromSeconds(30);
+                client.Timeout = TimeSpan.FromSeconds(60);
 
                 var jsonString = JsonSerializer.Serialize(payload);
                 var content = new StringContent(jsonString, Encoding.UTF8, "application/json");
