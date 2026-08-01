@@ -102,7 +102,7 @@ namespace CostFlow.Controllers
 
             try
             {
-                var now = DateTime.Now;
+                var now = GetThaiNow();
                 var batchName = string.IsNullOrWhiteSpace(request.BatchName)
                     ? $"รายการคีย์ข้อมูลวันที่ {now.ToString("dd/MM/yyyy HH:mm")}"
                     : request.BatchName.Trim();
@@ -117,6 +117,7 @@ namespace CostFlow.Controllers
                 var payload = new
                 {
                     BatchName = batchName,
+                    CreatedAt = now.ToString("dd/MM/yyyy HH:mm:ss"),
                     Orders = request.Orders.Select(o => new
                     {
                         ProductCode = o.ProductCode ?? string.Empty,
@@ -194,7 +195,7 @@ namespace CostFlow.Controllers
         public async Task<IActionResult> SavedOrders(int? year, int? month)
         {
             var batches = new List<SavedBatchViewModel>();
-            var availableYears = new List<int> { DateTime.Now.Year };
+            var availableYears = new List<int> { GetThaiNow().Year };
 
             string? appScriptUrl = _configuration["GoogleSheets:OrderHistoryAppScriptUrl"];
             if (!string.IsNullOrWhiteSpace(appScriptUrl) && !appScriptUrl.Contains("_placeholder"))
@@ -249,6 +250,28 @@ namespace CostFlow.Controllers
             return View(batches);
         }
 
+
+        private static DateTime GetThaiNow()
+        {
+            var utcNow = DateTime.UtcNow;
+            try
+            {
+                var tz = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+                return TimeZoneInfo.ConvertTimeFromUtc(utcNow, tz);
+            }
+            catch
+            {
+                try
+                {
+                    var tz = TimeZoneInfo.FindSystemTimeZoneById("Asia/Bangkok");
+                    return TimeZoneInfo.ConvertTimeFromUtc(utcNow, tz);
+                }
+                catch
+                {
+                    return utcNow.AddHours(7);
+                }
+            }
+        }
 
         private DateTime? ParseDateNullable(string? val)
         {
