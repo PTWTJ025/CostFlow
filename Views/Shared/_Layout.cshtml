@@ -276,12 +276,13 @@
     <link rel="shortcut icon" href="~/favicon.ico"/>
 </head>
 
-<body class="text-on-surface flex h-[100dvh] overflow-hidden bg-[#F8FAFC] font-sans">
+<body class="sidebar-collapsed text-on-surface flex h-[100dvh] overflow-hidden bg-[#F8FAFC] font-sans">
 <script>
     (function() {
         const savedCollapsed = localStorage.getItem('costflow_sidebar_collapsed');
-        // Default sidebar to COLLAPSED for all users (Admin & Staff) unless explicitly set to 'false'
-        if (savedCollapsed !== 'false') {
+        if (savedCollapsed === 'false') {
+            document.body.classList.remove('sidebar-collapsed');
+        } else {
             document.body.classList.add('sidebar-collapsed');
         }
     })();

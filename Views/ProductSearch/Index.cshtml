@@ -419,9 +419,6 @@
                 } else {
                     suggestionsDropdown.classList.add("hidden");
                     searchInput.blur();
-                    if (formCode.value && formCode.value !== "-") {
-                        setTimeout(() => { formQty.focus(); formQty.select(); }, 40);
-                    }
                 }
             } else if (e.key === "Escape") {
                 suggestionsDropdown.classList.add("hidden");
@@ -448,17 +445,11 @@
             formName.style.height = 'auto';
             formName.style.height = Math.max(54, formName.scrollHeight) + 'px';
 
-            // Immediately close suggestions dropdown & blur search bar (hides iPad soft search keyboard)
+            // Immediately close suggestions dropdown & blur search bar (hides iPad soft search keyboard naturally)
             suggestionsDropdown.classList.add("hidden");
             suggestionsDropdown.innerHTML = "";
             searchInput.value = "";
             searchInput.blur();
-
-            // Auto-focus and highlight quantity field for instant typing
-            setTimeout(() => {
-                formQty.focus();
-                formQty.select();
-            }, 60);
         }
 
         // Live total calculation on unit inputs
