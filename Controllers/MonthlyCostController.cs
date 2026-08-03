@@ -866,16 +866,26 @@ namespace CostFlow.Controllers
                     var carryOverIds = latestPriorActionMap
                         .Where(kvp =>
                         {
-                            if (kvp.Value.Action == "Skipped" || kvp.Value.Action == "Deferred")
+                            if (kvp.Value.Action == "Deferred")
                             {
                                 var pp = kvp.Value.MonthYear.Split('-');
                                 var tp = monthYearKey.Split('-');
                                 if (pp.Length == 2 && tp.Length == 2
                                                    && int.TryParse(pp[0], out var pY) && int.TryParse(pp[1], out var pM)
-                                                   && int.TryParse(tp[0], out var tY) &&
-                                                   int.TryParse(tp[1], out var tM))
+                                                   && int.TryParse(tp[0], out var tY) && int.TryParse(tp[1], out var tM))
                                 {
                                     return ((tY - pY) * 12) + (tM - pM) == 1;
+                                }
+                            }
+                            else if (kvp.Value.Action == "Skipped")
+                            {
+                                var pp = kvp.Value.MonthYear.Split('-');
+                                var tp = monthYearKey.Split('-');
+                                if (pp.Length == 2 && tp.Length == 2
+                                                   && int.TryParse(pp[0], out var pY) && int.TryParse(pp[1], out var pM)
+                                                   && int.TryParse(tp[0], out var tY) && int.TryParse(tp[1], out var tM))
+                                {
+                                    return ((tY - pY) * 12) + (tM - pM) >= 1;
                                 }
                             }
 
@@ -1100,26 +1110,6 @@ namespace CostFlow.Controllers
                 .GroupBy(a => a.OrderTrackingMasterId)
                 .ToDictionary(g => g.Key, g => g.First());
 
-            var carryOverIds = latestPriorActionMap
-                .Where(kvp =>
-                {
-                    if (kvp.Value.Action == "Skipped" || kvp.Value.Action == "Deferred")
-                    {
-                        var pp = kvp.Value.MonthYear.Split('-');
-                        var tp = monthYearKey.Split('-');
-                        if (pp.Length == 2 && tp.Length == 2
-                                           && int.TryParse(pp[0], out var pY) && int.TryParse(pp[1], out var pM)
-                                           && int.TryParse(tp[0], out var tY) && int.TryParse(tp[1], out var tM))
-                        {
-                            return ((tY - pY) * 12) + (tM - pM) == 1;
-                        }
-                    }
-
-                    return false;
-                })
-                .Select(kvp => kvp.Key)
-                .ToHashSet();
-
             var existingActionIds = existingActions.Select(ea => ea.OrderTrackingMasterId).ToHashSet();
 
             var keyParts = monthYearKey.Split('-');
@@ -1132,6 +1122,10 @@ namespace CostFlow.Controllers
                 monthEnd = monthStart.AddMonths(1);
             }
 
+            var now = DateTime.Now;
+            var currentMonthKey = now.ToString("yyyy-MM");
+            var isPastMonth = string.Compare(monthYearKey, currentMonthKey) < 0;
+
             var pendingOrders = await _context.OrderTrackingMasters
                 .Where(otm => !existingActionIds.Contains(otm.Id))
                 .ToListAsync();
@@ -1141,12 +1135,17 @@ namespace CostFlow.Controllers
                 {
                     if (latestPriorActionMap.TryGetValue(otm.Id, out var prior) && prior.Action == "ReceivedFull")
                         return false;
-                    if (carryOverIds.Contains(otm.Id))
-                        return true;
                     var approvedDate = ParseThaiDate(otm.ApprovedDate);
-                    return approvedDate.HasValue && approvedDate.Value >= monthStart && approvedDate.Value < monthEnd;
+                    if (approvedDate == null) return false;
+                    return approvedDate.Value < monthEnd;
                 })
                 .ToList();
+
+            if (isPastMonth)
+            {
+                // เดือนอดีต pendingOrders จะย้ายไปเป็น auto-skipped ใน savedActions
+                pendingOrders.Clear();
+            }
 
             var pendingAmount = pendingOrders.Sum(o =>
             {
@@ -1218,26 +1217,6 @@ namespace CostFlow.Controllers
                     .GroupBy(a => a.OrderTrackingMasterId)
                     .ToDictionary(g => g.Key, g => g.First());
 
-                var carryOverIds = latestPriorActionMap
-                    .Where(kvp =>
-                    {
-                        if (kvp.Value.Action == "Skipped" || kvp.Value.Action == "Deferred")
-                        {
-                            var pp = kvp.Value.MonthYear.Split('-');
-                            var tp = monthYearKey.Split('-');
-                            if (pp.Length == 2 && tp.Length == 2
-                                               && int.TryParse(pp[0], out var pY) && int.TryParse(pp[1], out var pM)
-                                               && int.TryParse(tp[0], out var tY) && int.TryParse(tp[1], out var tM))
-                            {
-                                return ((tY - pY) * 12) + (tM - pM) == 1; // เฉพาะเดือนถัดไปเท่านั้น
-                            }
-                        }
-
-                        return false;
-                    })
-                    .Select(kvp => kvp.Key)
-                    .ToHashSet();
-
                 var kp = monthYearKey.Split('-');
                 DateTime gMonthStart = DateTime.MinValue, gMonthEnd = DateTime.MaxValue;
                 if (kp.Length == 2 &&
@@ -1248,18 +1227,34 @@ namespace CostFlow.Controllers
                     gMonthEnd = gMonthStart.AddMonths(1);
                 }
 
+                var now = DateTime.Now;
+                var currentMonthKey = now.ToString("yyyy-MM");
+                var isPastMonth = string.Compare(monthYearKey, currentMonthKey) < 0;
+
+                if (isPastMonth)
+                {
+                    // สำหรับเดือนอดีต รายการ pending ถูกย้ายไปบันทึกแล้ว (auto-skipped) หมดแล้ว
+                    return Ok(new List<object>());
+                }
+
                 var allPendingOrders = await _context.OrderTrackingMasters
                     .Include(otm => otm.Report)
                     .Include(otm => otm.MatchedInWeeklyPlans)
                     .ThenInclude(wpd => wpd.WeeklyPlan)
-                    .Where(otm =>
-                        !existingActionIds.Contains(otm.Id) &&
-                        (
-                            carryOverIds.Contains(otm.Id) ||
-                            (otm.Report.CreatedAt >= gMonthStart && otm.Report.CreatedAt < gMonthEnd)
-                        ))
+                    .Where(otm => !existingActionIds.Contains(otm.Id))
                     .OrderBy(otm => otm.PoNumber)
                     .ToListAsync();
+
+                allPendingOrders = allPendingOrders
+                    .Where(otm =>
+                    {
+                        if (latestPriorActionMap.TryGetValue(otm.Id, out var prior) && prior.Action == "ReceivedFull")
+                            return false;
+                        var approvedDate = ParseThaiDate(otm.ApprovedDate);
+                        if (approvedDate == null) return false;
+                        return approvedDate.Value < gMonthEnd;
+                    })
+                    .ToList();
 
                 var result = new List<object>();
                 foreach (var otm in allPendingOrders)
