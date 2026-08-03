@@ -43,6 +43,7 @@ namespace CostFlow.Controllers
             {
                 maxYear = now.Year + 1; // แสดงปีอนาคตเมื่อมีรายการผ่อน/ค้างข้ามปีจริงเท่านั้น
             }
+
             if (year.HasValue && year.Value > maxYear) maxYear = year.Value;
 
             var availableYears = new List<int>();
@@ -69,7 +70,8 @@ namespace CostFlow.Controllers
                 .ToListAsync();
 
             var allPriorReceivedList = await _context.MonthlyOrderActions
-                .Where(moa => moa.Action == "ReceivedFull" && string.Compare(moa.MonthYear, $"{selectedYear:0000}-12") <= 0)
+                .Where(moa =>
+                    moa.Action == "ReceivedFull" && string.Compare(moa.MonthYear, $"{selectedYear:0000}-12") <= 0)
                 .Select(moa => new { moa.MonthYear, moa.OrderTrackingMasterId })
                 .ToListAsync();
 
@@ -81,8 +83,9 @@ namespace CostFlow.Controllers
                 .ToListAsync();
 
             // กำหนดเดือนที่จะแสดงป้าย "มูลค่ารวมสะสม" ให้เป็นเดือนปัจจุบันเสมอสำหรับปีปัจจุบัน
-            int latestMonthWithData = selectedYear == now.Year ? now.Month 
-                                    : (selectedYear < now.Year ? 12 : 1);
+            int latestMonthWithData = selectedYear == now.Year
+                ? now.Month
+                : (selectedYear < now.Year ? 12 : 1);
 
             // Build cards for all 12 months
             var cards = new List<MonthlyCardViewModel>();
@@ -124,29 +127,44 @@ namespace CostFlow.Controllers
                         g => g.OrderByDescending(x => x.MonthYear).ThenByDescending(x => x.CreatedAt).First());
 
                 var existingActionOrderIds = monthActions.Select(ma => ma.OrderTrackingMasterId).ToHashSet();
-                
+
                 var pendingCarryOverItems = priorMonthActionMap
                     .Where(kvp => !existingActionOrderIds.Contains(kvp.Key))
                     .Where(kvp =>
                     {
-                        if (kvp.Value.Action == "Skipped" || kvp.Value.Action == "Deferred")
+                        if (kvp.Value.Action == "Deferred")
                         {
+                            // Deferred: carry-over เฉพาะเดือนถัดไปทันที (ตกลงจ่ายแล้ว ต้องรับเดือนหน้า)
                             var pp = kvp.Value.MonthYear.Split('-');
                             var tp = monthKey.Split('-');
                             if (pp.Length == 2 && tp.Length == 2
-                                && int.TryParse(pp[0], out var pY) && int.TryParse(pp[1], out var pM)
-                                && int.TryParse(tp[0], out var tY) && int.TryParse(tp[1], out var tM))
+                                               && int.TryParse(pp[0], out var pY) && int.TryParse(pp[1], out var pM)
+                                               && int.TryParse(tp[0], out var tY) && int.TryParse(tp[1], out var tM))
                             {
-                                return ((tY - pY) * 12) + (tM - pM) == 1; // เฉพาะเดือนถัดไปเท่านั้น
+                                return ((tY - pY) * 12) + (tM - pM) == 1;
                             }
                         }
+                        else if (kvp.Value.Action == "Skipped")
+                        {
+                            // Skipped: ของยังไม่มา ลอยข้ามเดือนได้เรื่อยๆ จนกว่าจะตัดสินใจ
+                            var pp = kvp.Value.MonthYear.Split('-');
+                            var tp = monthKey.Split('-');
+                            if (pp.Length == 2 && tp.Length == 2
+                                               && int.TryParse(pp[0], out var pY) && int.TryParse(pp[1], out var pM)
+                                               && int.TryParse(tp[0], out var tY) && int.TryParse(tp[1], out var tM))
+                            {
+                                return ((tY - pY) * 12) + (tM - pM) >= 1;
+                            }
+                        }
+
                         return false;
                     })
                     .ToList();
 
                 int deferredCount = pendingCarryOverItems.Count(kvp => kvp.Value.Action == "Deferred");
-                int skippedCount = skippedActions.Count + pendingCarryOverItems.Count(kvp => kvp.Value.Action == "Skipped");
-                
+                int skippedCount = skippedActions.Count +
+                                   pendingCarryOverItems.Count(kvp => kvp.Value.Action == "Skipped");
+
                 decimal deferredAmount = pendingCarryOverItems
                     .Where(kvp => kvp.Value.Action == "Deferred")
                     .Sum(kvp => kvp.Value.ActionPrice);
@@ -154,24 +172,28 @@ namespace CostFlow.Controllers
                 decimal carryOverPlannedAmount = pendingCarryOverItems
                     .Sum(kvp =>
                     {
-                        var otm = allActions.FirstOrDefault(a => a.OrderTrackingMasterId == kvp.Key)?.OrderTrackingMaster;
+                        var otm = allActions.FirstOrDefault(a => a.OrderTrackingMasterId == kvp.Key)
+                            ?.OrderTrackingMaster;
                         if (otm != null)
                         {
                             return kvp.Value.Action == "Deferred" && kvp.Value.ActionPrice > 0
                                 ? kvp.Value.ActionPrice
                                 : ParseDecimal(otm.Amount);
                         }
+
                         return 0m;
                     });
 
                 decimal skippedAmount = skippedActions.Sum(a => ParseDecimal(a.OrderTrackingMaster?.Amount))
-                    + pendingCarryOverItems
-                    .Where(kvp => kvp.Value.Action == "Skipped")
-                    .Sum(kvp =>
-                    {
-                        var otm = allActions.FirstOrDefault(a => a.OrderTrackingMasterId == kvp.Key)?.OrderTrackingMaster;
-                        return ParseDecimal(otm?.Amount);
-                    });
+                                        + pendingCarryOverItems
+                                            .Where(kvp => kvp.Value.Action == "Skipped")
+                                            .Sum(kvp =>
+                                            {
+                                                var otm = allActions
+                                                    .FirstOrDefault(a => a.OrderTrackingMasterId == kvp.Key)
+                                                    ?.OrderTrackingMaster;
+                                                return ParseDecimal(otm?.Amount);
+                                            });
 
                 int receivedCarryOver = receivedActions.Count(a =>
                     priorMonthActionMap.TryGetValue(a.OrderTrackingMasterId, out var prior) &&
@@ -183,7 +205,9 @@ namespace CostFlow.Controllers
                 // 3. เช็คว่าเดือนนี้มีข้อมูลสั่งผลิตใหม่ หรือมีรายการค้างยกมาจากเดือนก่อนหรือไม่
                 int hasNewOrCarryOverOrders = monthOrdersInMonth.Count + pendingCarryOverItems.Count;
                 int totalItemsInMonth = monthOrdersInMonth.Count + pendingCarryOverItems.Count;
-                int pendingItems = hasNewOrCarryOverOrders == 0 ? 0 : Math.Max(0, totalItemsInMonth - monthActions.Count);
+                int pendingItems = hasNewOrCarryOverOrders == 0
+                    ? 0
+                    : Math.Max(0, totalItemsInMonth - monthActions.Count);
                 int totalItems = hasNewOrCarryOverOrders == 0 ? 0 : totalItemsInMonth;
 
                 decimal plannedTotalForMonth = monthBasePlannedAmount + carryOverPlannedAmount;
@@ -249,7 +273,9 @@ namespace CostFlow.Controllers
                     DeferredCarryOver = deferredCarryOver,
                     SkippedCarryOver = skippedCarryOver,
                     MonthAmount = monthBasePlannedAmount,
-                    TotalAmount = monthOrdersInMonth.Count == 0 && monthActions.Count == 0 ? 0m : runningPlannedAmount,
+                    TotalAmount = (month == latestMonthWithData && runningPlannedAmount > 0)
+                        ? runningPlannedAmount
+                        : (monthOrdersInMonth.Count == 0 && monthActions.Count == 0 ? 0m : runningPlannedAmount),
                     IsLatestWithData = (month == latestMonthWithData)
                 });
             }
@@ -266,9 +292,12 @@ namespace CostFlow.Controllers
             var selectedYear = year ?? now.Year;
             var currentMonthKey = now.ToString("yyyy-MM");
 
-            var thaiMonths = new[] { "", "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน",
+            var thaiMonths = new[]
+            {
+                "", "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน",
                 "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม",
-                "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม" };
+                "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"
+            };
 
             var yearPrefix = $"{selectedYear:0000}-";
 
@@ -282,6 +311,10 @@ namespace CostFlow.Controllers
                 .Select(o => new { o.Id, o.Amount, o.ApprovedDate })
                 .ToListAsync();
 
+            int latestMonthWithData = selectedYear == now.Year
+                ? now.Month
+                : (selectedYear < now.Year ? 12 : 1);
+
             var result = new List<object>();
             decimal runningPlannedAmount = 0m;
 
@@ -291,7 +324,11 @@ namespace CostFlow.Controllers
                 var monthActions = allActions.Where(a => a.MonthYear == monthKey).ToList();
 
                 var monthOrdersInMonth = allOrders
-                    .Where(o => { var d = ParseThaiDate(o.ApprovedDate); return d.HasValue && d.Value.Year == selectedYear && d.Value.Month == month; })
+                    .Where(o =>
+                    {
+                        var d = ParseThaiDate(o.ApprovedDate);
+                        return d.HasValue && d.Value.Year == selectedYear && d.Value.Month == month;
+                    })
                     .ToList();
 
                 var monthBasePlannedAmount = monthOrdersInMonth
@@ -300,10 +337,10 @@ namespace CostFlow.Controllers
                 runningPlannedAmount += monthBasePlannedAmount;
 
                 var receivedActions = monthActions.Where(a => a.Action == "ReceivedFull").ToList();
-                var skippedActions  = monthActions.Where(a => a.Action == "Skipped").ToList();
+                var skippedActions = monthActions.Where(a => a.Action == "Skipped").ToList();
 
                 var receivedAmount = receivedActions.Sum(a => a.ActionPrice);
-                
+
                 var priorMonthActionMap = allActions
                     .Where(a => string.Compare(a.MonthYear, monthKey) < 0)
                     .GroupBy(a => a.OrderTrackingMasterId)
@@ -316,41 +353,57 @@ namespace CostFlow.Controllers
                     .Where(kvp => !existingIds.Contains(kvp.Key))
                     .Where(kvp =>
                     {
-                        if (kvp.Value.Action == "Skipped" || kvp.Value.Action == "Deferred")
+                        if (kvp.Value.Action == "Deferred")
                         {
+                            // Deferred: carry-over เฉพาะเดือนถัดไปทันที
                             var pp = kvp.Value.MonthYear.Split('-');
                             var tp = monthKey.Split('-');
                             if (pp.Length == 2 && tp.Length == 2
-                                && int.TryParse(pp[0], out var pY) && int.TryParse(pp[1], out var pM)
-                                && int.TryParse(tp[0], out var tY) && int.TryParse(tp[1], out var tM))
-                                return ((tY - pY) * 12) + (tM - pM) == 1; // เฉพาะเดือนถัดไปเท่านั้น
+                                               && int.TryParse(pp[0], out var pY) && int.TryParse(pp[1], out var pM)
+                                               && int.TryParse(tp[0], out var tY) && int.TryParse(tp[1], out var tM))
+                                return ((tY - pY) * 12) + (tM - pM) == 1;
                         }
+                        else if (kvp.Value.Action == "Skipped")
+                        {
+                            // Skipped: ของยังไม่มา ลอยข้ามเดือนได้เรื่อยๆ
+                            var pp = kvp.Value.MonthYear.Split('-');
+                            var tp = monthKey.Split('-');
+                            if (pp.Length == 2 && tp.Length == 2
+                                               && int.TryParse(pp[0], out var pY) && int.TryParse(pp[1], out var pM)
+                                               && int.TryParse(tp[0], out var tY) && int.TryParse(tp[1], out var tM))
+                                return ((tY - pY) * 12) + (tM - pM) >= 1;
+                        }
+
                         return false;
                     }).ToList();
 
                 var deferredCount = pendingCarryOver.Count(kvp => kvp.Value.Action == "Deferred");
-                var deferredAmount = pendingCarryOver.Where(kvp => kvp.Value.Action == "Deferred").Sum(kvp => kvp.Value.ActionPrice);
+                var deferredAmount = pendingCarryOver.Where(kvp => kvp.Value.Action == "Deferred")
+                    .Sum(kvp => kvp.Value.ActionPrice);
 
                 var skippedCount = skippedActions.Count + pendingCarryOver.Count(kvp => kvp.Value.Action == "Skipped");
                 var skippedAmount = skippedActions.Sum(a => ParseDecimal(a.OrderTrackingMaster?.Amount))
-                    + pendingCarryOver
-                    .Where(kvp => kvp.Value.Action == "Skipped")
-                    .Sum(kvp =>
-                    {
-                        var otm = allActions.FirstOrDefault(a => a.OrderTrackingMasterId == kvp.Key)?.OrderTrackingMaster;
-                        return ParseDecimal(otm?.Amount);
-                    });
+                                    + pendingCarryOver
+                                        .Where(kvp => kvp.Value.Action == "Skipped")
+                                        .Sum(kvp =>
+                                        {
+                                            var otm = allActions.FirstOrDefault(a => a.OrderTrackingMasterId == kvp.Key)
+                                                ?.OrderTrackingMaster;
+                                            return ParseDecimal(otm?.Amount);
+                                        });
 
                 var carryOverPlannedAmount = pendingCarryOver
                     .Sum(kvp =>
                     {
-                        var otm = allActions.FirstOrDefault(a => a.OrderTrackingMasterId == kvp.Key)?.OrderTrackingMaster;
+                        var otm = allActions.FirstOrDefault(a => a.OrderTrackingMasterId == kvp.Key)
+                            ?.OrderTrackingMaster;
                         if (otm != null)
                         {
                             return kvp.Value.Action == "Deferred" && kvp.Value.ActionPrice > 0
                                 ? kvp.Value.ActionPrice
                                 : ParseDecimal(otm.Amount);
                         }
+
                         return 0m;
                     });
 
@@ -359,15 +412,17 @@ namespace CostFlow.Controllers
                 result.Add(new
                 {
                     monthKey,
-                    receivedCount  = receivedActions.Count,
+                    receivedCount = receivedActions.Count,
                     receivedAmount = receivedAmount,
                     deferredCount,
                     deferredAmount,
                     skippedCount,
                     skippedAmount,
-                    monthAmount    = monthBasePlannedAmount,
-                    totalAmount    = monthOrdersInMonth.Count == 0 && monthActions.Count == 0 ? 0m : runningPlannedAmount,
-                    paidAmount     = receivedAmount,
+                    monthAmount = monthBasePlannedAmount,
+                    totalAmount = (month == latestMonthWithData && runningPlannedAmount > 0)
+                        ? runningPlannedAmount
+                        : (monthOrdersInMonth.Count == 0 && monthActions.Count == 0 ? 0m : runningPlannedAmount),
+                    paidAmount = receivedAmount,
                 });
             }
 
@@ -413,9 +468,9 @@ namespace CostFlow.Controllers
             var carryOverIds = latestPriorActionMap
                 .Where(kvp =>
                 {
-                    if (kvp.Value.Action == "Skipped" || kvp.Value.Action == "Deferred")
+                    if (kvp.Value.Action == "Deferred")
                     {
-                        // ทั้ง Skipped และ Deferred จะขึ้นเฉพาะในงวดเดือนถัดไปเท่านั้น
+                        // Deferred: carry-over เฉพาะเดือนถัดไปทันที (ตกลงจ่ายแล้ว ต้องรับเดือนหน้า)
                         var pp = kvp.Value.MonthYear.Split('-');
                         var tp = monthYearKey.Split('-');
                         if (pp.Length == 2 && tp.Length == 2
@@ -423,7 +478,20 @@ namespace CostFlow.Controllers
                                            && int.TryParse(tp[0], out var tY) && int.TryParse(tp[1], out var tM))
                         {
                             var monthDiff = ((tY - pY) * 12) + (tM - pM);
-                            return monthDiff == 1; // เฉพาะเดือนถัดไปเท่านั้น
+                            return monthDiff == 1;
+                        }
+                    }
+                    else if (kvp.Value.Action == "Skipped")
+                    {
+                        // Skipped: ของยังไม่มา ลอยข้ามเดือนได้เรื่อยๆ จนกว่าจะตัดสินใจ
+                        var pp = kvp.Value.MonthYear.Split('-');
+                        var tp = monthYearKey.Split('-');
+                        if (pp.Length == 2 && tp.Length == 2
+                                           && int.TryParse(pp[0], out var pY) && int.TryParse(pp[1], out var pM)
+                                           && int.TryParse(tp[0], out var tY) && int.TryParse(tp[1], out var tM))
+                        {
+                            var monthDiff = ((tY - pY) * 12) + (tM - pM);
+                            return monthDiff >= 1;
                         }
                     }
 
@@ -455,128 +523,24 @@ namespace CostFlow.Controllers
                 .OrderBy(otm => otm.PoNumber)
                 .ToListAsync();
 
-            // Filter by ApprovedDate or carry-over
+            // Filter: แสดงทุก WO ที่ ApprovedDate ≤ เดือนปัจจุบัน และยังไม่รับครบ
+            // (ไม่ว่าจะเคยถูก Skipped/Deferred หรือไม่ก็ตาม ลอยมาเรื่อยๆ จนกว่าจะรับครบ)
             allPendingOrders = allPendingOrders
                 .Where(otm =>
                 {
-                    if (carryOverIds.Contains(otm.Id))
-                        return true;
+                    // ถ้าเคยรับครบในเดือนก่อน → ไม่ต้องแสดงอีก
+                    if (latestPriorActionMap.TryGetValue(otm.Id, out var prevCheck) &&
+                        prevCheck.Action == "ReceivedFull")
+                        return false;
 
-                    // Parse ApprovedDate และเช็คว่าอยู่ในเดือนนี้หรือไม่
                     var approvedDate = ParseThaiDate(otm.ApprovedDate);
                     if (approvedDate == null)
                         return false;
 
-                    return approvedDate.Value >= monthStart && approvedDate.Value < monthEnd;
+                    // แสดงทุก WO ที่ ApprovedDate อยู่ในเดือนนี้หรือก่อนหน้า
+                    return approvedDate.Value < monthEnd;
                 })
                 .ToList();
-
-            // Transform to PendingOrderItem with cross-month forwarding logic
-            var pendingItems = new List<PendingOrderItem>();
-            foreach (var otm in allPendingOrders)
-            {
-                if (latestPriorActionMap.TryGetValue(otm.Id, out var priorAction))
-                {
-                    // หากเคยรับสินค้าชำระเต็มไปแล้วในเดือนก่อน ถือว่าเสร็จสิ้น ไม่ต้องขึ้นอีก
-                    if (priorAction.Action == "ReceivedFull")
-                    {
-                        continue;
-                    }
-                }
-
-                var quantity = 1;
-                if (!string.IsNullOrEmpty(otm.RemarksQuantity) && int.TryParse(otm.RemarksQuantity, out var qty))
-                {
-                    quantity = qty;
-                }
-
-                var amount = 0m;
-                if (!string.IsNullOrEmpty(otm.Amount) && decimal.TryParse(otm.Amount, out var amt))
-                {
-                    amount = amt;
-                }
-
-                var forwardedStatus = string.Empty;
-                var forwardedFromMonth = string.Empty;
-
-                if (priorAction != null)
-                {
-                    var approvedMonthStr = string.Empty;
-                    var parsedApprovedDate = ParseThaiDate(otm.ApprovedDate);
-                    if (parsedApprovedDate.HasValue) 
-                    {
-                        approvedMonthStr = ConvertKeyToThaiMonth($"{parsedApprovedDate.Value.Year:0000}-{parsedApprovedDate.Value.Month:00}");
-                    }
-                    
-                    if (priorAction.Action == "Deferred")
-                    {
-                        forwardedStatus = "Deferred";
-                        forwardedFromMonth = !string.IsNullOrEmpty(approvedMonthStr) ? approvedMonthStr : ConvertKeyToThaiMonth(priorAction.MonthYear);
-                        // Bug Fix: Inherit ActionPrice จาก Deferred record เดิม
-                        // ราคาที่ตกลงกันไว้ต้องคงที่ตลอดจนกว่าจะ ReceivedFull
-                        if (priorAction.ActionPrice > 0)
-                        {
-                            amount = priorAction.ActionPrice;
-                        }
-                    }
-                    else if (priorAction.Action == "Skipped")
-                    {
-                        forwardedStatus = "Skipped";
-                        forwardedFromMonth = !string.IsNullOrEmpty(approvedMonthStr) ? approvedMonthStr : ConvertKeyToThaiMonth(priorAction.MonthYear);
-                        // Bug Fix: ถ้า Skipped แต่เคยมี Deferred ก่อนหน้า ให้ดึง ActionPrice จาก Deferred เดิม
-                        // เหตุผล: auto-Skipped กลางทาง ไม่ควรทำให้ราคาที่ตกลงกันหาย
-                        var earlierDeferred = priorActions
-                            .Where(a => a.OrderTrackingMasterId == otm.Id && a.Action == "Deferred")
-                            .OrderByDescending(a => a.MonthYear)
-                            .ThenByDescending(a => a.CreatedAt)
-                            .FirstOrDefault();
-                        if (earlierDeferred != null && earlierDeferred.ActionPrice > 0)
-                        {
-                            amount = earlierDeferred.ActionPrice;
-                        }
-                    }
-                }
-
-                var productName = otm.Remarks ?? "ไม่ระบุ";
-
-                // ดึงเป้าหมายส่งมอบและหน่วยงานจากไฟล์แผนผลิตประจำสัปดาห์ล่าสุดที่จับคู่ได้
-                var latestMatchedPlan = otm.MatchedInWeeklyPlans
-                    .OrderByDescending(w => w.WeeklyPlan.UploadedAt)
-                    .FirstOrDefault();
-
-                var targetDelivery = !string.IsNullOrWhiteSpace(latestMatchedPlan?.DeliveryTarget)
-                    ? latestMatchedPlan.DeliveryTarget
-                    : "-";
-                var department = !string.IsNullOrEmpty(latestMatchedPlan?.Department)
-                    ? latestMatchedPlan.Department
-                    : (!string.IsNullOrEmpty(otm.Urgency) ? otm.Urgency : "-");
-
-                // หาเดือนต้นทางที่สินค้าถูกสร้างครั้งแรก (จากวันที่ในไฟล์ Report)
-                var originalMonth = string.Empty;
-                if (otm.Report?.CreatedAt != null)
-                {
-                    var reportDate = otm.Report.CreatedAt;
-                    originalMonth = ConvertKeyToThaiMonth($"{reportDate.Year:0000}-{reportDate.Month:00}");
-                }
-
-                pendingItems.Add(new PendingOrderItem
-                {
-                    OrderId = otm.Id,
-                    PoNumber = otm.PoNumber,
-                    OrderName = productName,
-                    Quantity = quantity,
-                    UnitPrice = quantity > 0 ? amount / quantity : amount,
-                    TotalPrice = amount,
-                    DeliveryTarget = targetDelivery,
-                    Department = department,
-                    FileName = otm.Report?.ReportName ?? "N/A",
-                    Status = otm.Status ?? "Pending",
-                    ForwardedStatus = forwardedStatus,
-                    ForwardedFromMonth = forwardedFromMonth,
-                    OriginalReportName = otm.Report?.ReportName ?? "N/A",
-                    OriginalMonth = originalMonth
-                });
-            }
 
             // Transform existingActions to SavedOrderItem
             var savedItems = existingActions
@@ -625,8 +589,150 @@ namespace CostFlow.Controllers
                 })
                 .ToList();
 
+            var now = DateTime.Now;
+            var currentMonthKey = now.ToString("yyyy-MM");
+            var isPastMonth = string.Compare(monthYearKey, currentMonthKey) < 0;
+
+            // Transform to PendingOrderItem with cross-month forwarding logic
+            var pendingItems = new List<PendingOrderItem>();
+            foreach (var otm in allPendingOrders)
+            {
+                if (latestPriorActionMap.TryGetValue(otm.Id, out var priorAction))
+                {
+                    // หากเคยรับสินค้าชำระเต็มไปแล้วในเดือนก่อน ถือว่าเสร็จสิ้น ไม่ต้องขึ้นอีก
+                    if (priorAction.Action == "ReceivedFull")
+                    {
+                        continue;
+                    }
+                }
+
+                var quantity = 1;
+                if (!string.IsNullOrEmpty(otm.RemarksQuantity) && int.TryParse(otm.RemarksQuantity, out var qty))
+                {
+                    quantity = qty;
+                }
+
+                var amount = 0m;
+                if (!string.IsNullOrEmpty(otm.Amount) && decimal.TryParse(otm.Amount, out var amt))
+                {
+                    amount = amt;
+                }
+
+                var forwardedStatus = string.Empty;
+                var forwardedFromMonth = string.Empty;
+
+                if (priorAction != null)
+                {
+                    var approvedMonthStr = string.Empty;
+                    var parsedApprovedDate = ParseThaiDate(otm.ApprovedDate);
+                    if (parsedApprovedDate.HasValue)
+                    {
+                        approvedMonthStr =
+                            ConvertKeyToThaiMonth(
+                                $"{parsedApprovedDate.Value.Year:0000}-{parsedApprovedDate.Value.Month:00}");
+                    }
+
+                    if (priorAction.Action == "Deferred")
+                    {
+                        forwardedStatus = "Deferred";
+                        forwardedFromMonth = !string.IsNullOrEmpty(approvedMonthStr)
+                            ? approvedMonthStr
+                            : ConvertKeyToThaiMonth(priorAction.MonthYear);
+                        if (priorAction.ActionPrice > 0)
+                        {
+                            amount = priorAction.ActionPrice;
+                        }
+                    }
+                    else if (priorAction.Action == "Skipped")
+                    {
+                        forwardedStatus = "Skipped";
+                        forwardedFromMonth = !string.IsNullOrEmpty(approvedMonthStr)
+                            ? approvedMonthStr
+                            : ConvertKeyToThaiMonth(priorAction.MonthYear);
+                        var earlierDeferred = priorActions
+                            .Where(a => a.OrderTrackingMasterId == otm.Id && a.Action == "Deferred")
+                            .OrderByDescending(a => a.MonthYear)
+                            .ThenByDescending(a => a.CreatedAt)
+                            .FirstOrDefault();
+                        if (earlierDeferred != null && earlierDeferred.ActionPrice > 0)
+                        {
+                            amount = earlierDeferred.ActionPrice;
+                        }
+                    }
+                }
+                else
+                {
+                    var parsedApprDate = ParseThaiDate(otm.ApprovedDate);
+                    if (parsedApprDate.HasValue && parsedApprDate.Value < monthStart)
+                    {
+                        forwardedStatus = "Skipped";
+                        forwardedFromMonth = ConvertKeyToThaiMonth(
+                            $"{parsedApprDate.Value.Year:0000}-{parsedApprDate.Value.Month:00}");
+                    }
+                }
+
+                var productName = otm.Remarks ?? "ไม่ระบุ";
+
+                var latestMatchedPlan = otm.MatchedInWeeklyPlans
+                    .OrderByDescending(w => w.WeeklyPlan.UploadedAt)
+                    .FirstOrDefault();
+
+                var targetDelivery = !string.IsNullOrWhiteSpace(latestMatchedPlan?.DeliveryTarget)
+                    ? latestMatchedPlan.DeliveryTarget
+                    : "-";
+                var department = !string.IsNullOrEmpty(latestMatchedPlan?.Department)
+                    ? latestMatchedPlan.Department
+                    : (!string.IsNullOrEmpty(otm.Urgency) ? otm.Urgency : "-");
+
+                var originalMonth = string.Empty;
+                if (otm.Report?.CreatedAt != null)
+                {
+                    var reportDate = otm.Report.CreatedAt;
+                    originalMonth = ConvertKeyToThaiMonth($"{reportDate.Year:0000}-{reportDate.Month:00}");
+                }
+
+                if (isPastMonth)
+                {
+                    // สำหรับเดือนที่ผ่านไปแล้ว (เช่น กรกฎาคม 2569): รายการค้างที่ยังไม่ถูกกด action
+                    // ถือเป็น "ผลัดอัตโนมัติไปเดือนถัดไป" (Auto-Skipped) → ย้ายไปอยู่ใน savedItems (แท็บบันทึกแล้ว)
+                    savedItems.Add(new SavedOrderItem
+                    {
+                        ActionId = Guid.Empty,
+                        OrderId = otm.Id,
+                        PoNumber = otm.PoNumber ?? "N/A",
+                        OrderName = productName,
+                        Quantity = quantity,
+                        TotalPrice = amount,
+                        ActionPrice = amount,
+                        Action = "Skipped",
+                        DeliveryTarget = targetDelivery,
+                        Department = department,
+                        CreatedAt = monthEnd.AddSeconds(-1)
+                    });
+                }
+                else
+                {
+                    pendingItems.Add(new PendingOrderItem
+                    {
+                        OrderId = otm.Id,
+                        PoNumber = otm.PoNumber,
+                        OrderName = productName,
+                        Quantity = quantity,
+                        UnitPrice = quantity > 0 ? amount / quantity : amount,
+                        TotalPrice = amount,
+                        DeliveryTarget = targetDelivery,
+                        Department = department,
+                        FileName = otm.Report?.ReportName ?? "N/A",
+                        Status = otm.Status ?? "Pending",
+                        ForwardedStatus = forwardedStatus,
+                        ForwardedFromMonth = forwardedFromMonth,
+                        OriginalReportName = otm.Report?.ReportName ?? "N/A",
+                        OriginalMonth = originalMonth
+                    });
+                }
+            }
+
             // Calculate stats
-            // ยอดรวมของเดือน = สินค้าทั้งหมดในเดือนนี้ (รวมสินค้าใหม่ + carry-over + pending ที่ยังไม่ได้บันทึก)
             var totalPlannedAmount = existingActions
                 .Sum(ea =>
                 {
@@ -634,7 +740,6 @@ namespace CostFlow.Controllers
                         return ea.ActionPrice;
                     if (ea.Action == "Deferred" && ea.ActionPrice > 0)
                         return ea.ActionPrice;
-                    // Skipped ใช้ราคาจริงจาก OrderTrackingMaster
                     if (ea.OrderTrackingMaster != null &&
                         !string.IsNullOrEmpty(ea.OrderTrackingMaster.Amount) &&
                         decimal.TryParse(ea.OrderTrackingMaster.Amount, out var realAmt))
@@ -642,25 +747,20 @@ namespace CostFlow.Controllers
                     return 0m;
                 });
 
-            // บวกยอด pending ที่ยังไม่ได้บันทึก ทั้งหมดในเดือนนี้
             totalPlannedAmount += pendingItems.Sum(p => p.TotalPrice);
+            totalPlannedAmount += savedItems.Where(s => s.ActionId == Guid.Empty).Sum(s => s.TotalPrice);
 
-            // จ่ายแล้วจริง = เฉพาะ ReceivedFull ของเดือนนี้ (รวมสินค้าใหม่และ carry-over ที่รับเต็มในเดือนนี้)
             var processedAmount = existingActions
                 .Where(ea => ea.Action == "ReceivedFull")
                 .Sum(ea => ea.ActionPrice);
 
             var stats = new MonthlyStats
             {
-                TotalOrders = pendingItems.Count + existingActions.Count,
+                TotalOrders = pendingItems.Count + savedItems.Count,
                 TotalPlannedAmount = totalPlannedAmount,
                 ProcessedOrders = existingActions.Count(ea => ea.Action == "ReceivedFull"),
                 ProcessedAmount = processedAmount
             };
-
-            var now = DateTime.Now;
-            var currentMonthKey = now.ToString("yyyy-MM");
-            var isCurrentMonth = (monthYearKey == currentMonthKey);
 
             var viewModel = new MonthlyCostDetailViewModel
             {
@@ -668,7 +768,7 @@ namespace CostFlow.Controllers
                 PendingOrders = pendingItems,
                 SavedOrders = savedItems,
                 Stats = stats,
-                IsCurrentMonth = isCurrentMonth
+                IsCurrentMonth = (monthYearKey == currentMonthKey)
             };
 
             ViewData["HeaderTitle"] = $"จัดการค่าใช้จ่าย - {id}";
@@ -719,7 +819,10 @@ namespace CostFlow.Controllers
         {
             if (string.IsNullOrWhiteSpace(val)) return 0m;
             val = val.Replace(",", "").Replace("฿", "").Trim();
-            return decimal.TryParse(val, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var res) ? res : 0m;
+            return decimal.TryParse(val, System.Globalization.NumberStyles.Any,
+                System.Globalization.CultureInfo.InvariantCulture, out var res)
+                ? res
+                : 0m;
         }
 
         [HttpPost]
@@ -750,7 +853,7 @@ namespace CostFlow.Controllers
 
                 // ใช้ list ที่ส่งมาจาก frontend (รายการ pending ทั้งหมดที่แสดงในหน้า)
                 HashSet<Guid> allPendingIds;
-                
+
                 if (request.AllPendingOrderIds != null && request.AllPendingOrderIds.Count > 0)
                 {
                     // ใช้ list จาก frontend ← วิธีนี้แม่นยำที่สุด
@@ -768,12 +871,14 @@ namespace CostFlow.Controllers
                                 var pp = kvp.Value.MonthYear.Split('-');
                                 var tp = monthYearKey.Split('-');
                                 if (pp.Length == 2 && tp.Length == 2
-                                    && int.TryParse(pp[0], out var pY) && int.TryParse(pp[1], out var pM)
-                                    && int.TryParse(tp[0], out var tY) && int.TryParse(tp[1], out var tM))
+                                                   && int.TryParse(pp[0], out var pY) && int.TryParse(pp[1], out var pM)
+                                                   && int.TryParse(tp[0], out var tY) &&
+                                                   int.TryParse(tp[1], out var tM))
                                 {
                                     return ((tY - pY) * 12) + (tM - pM) == 1;
                                 }
                             }
+
                             return false;
                         })
                         .Select(kvp => kvp.Key)
@@ -806,7 +911,8 @@ namespace CostFlow.Controllers
                         .ToHashSet();
 
                     allPendingIds = carryOverIds.Union(monthOrderIds).ToHashSet();
-                    Console.WriteLine($"Fallback - Carry-over: {carryOverIds.Count}, Month Orders: {monthOrderIds.Count}");
+                    Console.WriteLine(
+                        $"Fallback - Carry-over: {carryOverIds.Count}, Month Orders: {monthOrderIds.Count}");
                 }
 
                 // สินค้าที่ไม่ได้เลือก = pending ทั้งหมด - สินค้าที่เลือก
@@ -874,8 +980,8 @@ namespace CostFlow.Controllers
                         MonthYear = monthYearKey,
                         Action = action.Action,
                         ActionPrice = action.Action == "Deferred" ? originalPrice
-                                    : action.Action == "Skipped"  ? 0
-                                    : action.Price,
+                            : action.Action == "Skipped" ? 0
+                            : action.Price,
                         IsForcedPayment = false,
                         DeferredFromMonth = action.Action == "Deferred" ? monthYearKey : null,
                         CreatedAt = DateTime.UtcNow,
@@ -912,14 +1018,14 @@ namespace CostFlow.Controllers
                 /* ==========================================
                 // ส่วนที่เพิ่ม: ส่งข้อมูลไปสำรองใน Google Sheets (เอาคอมเมนต์ออกเมื่อพร้อมใช้งาน)
                 // ==========================================
-                try 
+                try
                 {
                     // อ่าน URL ของ Apps Script จากไฟล์ Config
                     string? appScriptUrl = _configuration["GoogleSheets:MonthlyCostAppScriptUrl"];
                     if (!string.IsNullOrWhiteSpace(appScriptUrl) && !appScriptUrl.Contains("_placeholder"))
                     {
                         // จัดรูปแบบข้อมูลที่จะส่งไปให้ Sheet
-                        var sheetPayload = new 
+                        var sheetPayload = new
                         {
                             MonthYear = monthYearKey,
                             Timestamp = DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"),
@@ -1002,12 +1108,13 @@ namespace CostFlow.Controllers
                         var pp = kvp.Value.MonthYear.Split('-');
                         var tp = monthYearKey.Split('-');
                         if (pp.Length == 2 && tp.Length == 2
-                            && int.TryParse(pp[0], out var pY) && int.TryParse(pp[1], out var pM)
-                            && int.TryParse(tp[0], out var tY) && int.TryParse(tp[1], out var tM))
+                                           && int.TryParse(pp[0], out var pY) && int.TryParse(pp[1], out var pM)
+                                           && int.TryParse(tp[0], out var tY) && int.TryParse(tp[1], out var tM))
                         {
                             return ((tY - pY) * 12) + (tM - pM) == 1;
                         }
                     }
+
                     return false;
                 })
                 .Select(kvp => kvp.Key)
@@ -1043,14 +1150,15 @@ namespace CostFlow.Controllers
 
             var pendingAmount = pendingOrders.Sum(o =>
             {
-                if (latestPriorActionMap.TryGetValue(o.Id, out var priorAction) && priorAction.Action == "Deferred" && priorAction.ActionPrice > 0)
+                if (latestPriorActionMap.TryGetValue(o.Id, out var priorAction) && priorAction.Action == "Deferred" &&
+                    priorAction.ActionPrice > 0)
                     return priorAction.ActionPrice;
                 return decimal.TryParse(o.Amount, out var a) ? a : 0m;
             });
 
             var receivedActions = existingActions.Where(a => a.Action == "ReceivedFull").ToList();
             var deferredActions = existingActions.Where(a => a.Action == "Deferred").ToList();
-            var skippedActions  = existingActions.Where(a => a.Action == "Skipped").ToList();
+            var skippedActions = existingActions.Where(a => a.Action == "Skipped").ToList();
 
             var skippedIds = skippedActions.Select(a => a.OrderTrackingMasterId).ToList();
             var skippedAmounts = await _context.OrderTrackingMasters
@@ -1073,9 +1181,9 @@ namespace CostFlow.Controllers
 
             return Json(new
             {
-                totalOrders     = existingActions.Count + pendingOrders.Count,
-                savedCount      = existingActions.Count,
-                receivedAmount  = processedAmount,
+                totalOrders = existingActions.Count + pendingOrders.Count,
+                savedCount = existingActions.Count,
+                receivedAmount = processedAmount,
                 processedAmount,
                 totalPlanned,
                 remainingAmount
@@ -1286,7 +1394,7 @@ namespace CostFlow.Controllers
                         string? appScriptUrl = _configuration["GoogleSheets:MonthlyCostAppScriptUrl"];
                         if (!string.IsNullOrWhiteSpace(appScriptUrl) && !appScriptUrl.Contains("_placeholder"))
                         {
-                            var sheetPayload = new 
+                            var sheetPayload = new
                             {
                                 ActionType = "Revert", // บอกสคริปต์ว่านี่คือการยกเลิก
                                 Timestamp = DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"),
@@ -1367,7 +1475,7 @@ namespace CostFlow.Controllers
                             string? appScriptUrl = _configuration["GoogleSheets:MonthlyCostAppScriptUrl"];
                             if (!string.IsNullOrWhiteSpace(appScriptUrl) && !appScriptUrl.Contains("_placeholder"))
                             {
-                                var sheetPayload = new 
+                                var sheetPayload = new
                                 {
                                     ActionType = "BulkRevert", // บอกสคริปต์ว่านี่คือการยกเลิกแบบกลุ่ม
                                     Timestamp = DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"),
@@ -1405,11 +1513,14 @@ namespace CostFlow.Controllers
         {
             ViewData["HeaderTitle"] = "สรุปค่าใช้จ่ายประจำเดือน";
 
-            var thaiMonths = new[] { "", "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน",
+            var thaiMonths = new[]
+            {
+                "", "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน",
                 "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม",
-                "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม" };
+                "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"
+            };
 
-            var now          = DateTime.Now;
+            var now = DateTime.Now;
             var selectedYear = year ?? now.Year;
 
             var hasFutureDataOrCarryOver = await _context.MonthlyOrderActions
@@ -1421,13 +1532,14 @@ namespace CostFlow.Controllers
             {
                 maxYear = now.Year + 1;
             }
+
             if (year.HasValue && year.Value > maxYear) maxYear = year.Value;
 
             var availableYears = new List<int>();
             for (int y = maxYear; y >= 2022; y--) availableYears.Add(y);
 
             ViewBag.AvailableYears = availableYears;
-            ViewBag.SelectedYear   = selectedYear;
+            ViewBag.SelectedYear = selectedYear;
 
             // Use MonthYear string prefix ("yyyy-MM") instead of CreatedAt to avoid timezone issues
             var yearPrefix = $"{selectedYear:0000}-";
@@ -1437,12 +1549,12 @@ namespace CostFlow.Controllers
                 .Where(a => a.MonthYear.StartsWith(yearPrefix) || a.MonthYear == prevDecKey)
                 .ToListAsync();
 
-            var rows       = new List<MonthlySummaryRow>();
+            var rows = new List<MonthlySummaryRow>();
             decimal cumulative = 0;
 
             for (int m = 1; m <= 12; m++)
             {
-                var key     = $"{selectedYear:0000}-{m:00}";
+                var key = $"{selectedYear:0000}-{m:00}";
                 var display = $"{thaiMonths[m]} {selectedYear + 543}";
                 var monthActions = allActions.Where(a => a.MonthYear == key).ToList();
 
@@ -1466,18 +1578,18 @@ namespace CostFlow.Controllers
 
                 rows.Add(new MonthlySummaryRow
                 {
-                    MonthKey       = key,
-                    MonthDisplay   = display,
-                    ReceivedCount  = monthActions.Count(a => a.Action == "ReceivedFull"),
+                    MonthKey = key,
+                    MonthDisplay = display,
+                    ReceivedCount = monthActions.Count(a => a.Action == "ReceivedFull"),
                     ReceivedAmount = received,
-                    DeferredCount  = monthActions.Count(a => a.Action == "Deferred"),
+                    DeferredCount = monthActions.Count(a => a.Action == "Deferred"),
                     DeferredAmount = deferred,
-                    SkippedCount   = monthActions.Count(a => a.Action == "Skipped"),
-                    TotalPaid      = received,
-                    Cumulative     = cumulative,
+                    SkippedCount = monthActions.Count(a => a.Action == "Skipped"),
+                    TotalPaid = received,
+                    Cumulative = cumulative,
                     CarryOverDeferredCount = carryOverCount,
                     CarryOverDeferredAmount = carryOverAmount,
-                    HasData        = monthActions.Any()
+                    HasData = monthActions.Any()
                 });
             }
 
@@ -1486,7 +1598,8 @@ namespace CostFlow.Controllers
                 .Select(g => g.OrderByDescending(a => a.MonthYear).ThenByDescending(a => a.CreatedAt).First())
                 .ToList();
 
-            var currentDebt = latestActionsByOrder.Where(a => a.Action == "Deferred" || a.Action == "Skipped").Sum(a => a.ActionPrice);
+            var currentDebt = latestActionsByOrder.Where(a => a.Action == "Deferred" || a.Action == "Skipped")
+                .Sum(a => a.ActionPrice);
 
             var uniqueDeferredThisYear = allActions
                 .Where(a => a.MonthYear.StartsWith(yearPrefix) && a.Action == "Deferred")
@@ -1496,12 +1609,12 @@ namespace CostFlow.Controllers
 
             var vm = new MonthlySummaryViewModel
             {
-                Year          = selectedYear,
-                Rows          = rows,
-                GrandTotal    = rows.Sum(r => r.TotalPaid),
+                Year = selectedYear,
+                Rows = rows,
+                GrandTotal = rows.Sum(r => r.TotalPaid),
                 TotalReceived = rows.Sum(r => r.ReceivedAmount),
                 TotalDeferred = uniqueDeferredThisYear,
-                CurrentDebt   = currentDebt
+                CurrentDebt = currentDebt
             };
 
             return View(vm);
@@ -1610,12 +1723,13 @@ namespace CostFlow.Controllers
                         var pp = kvp.Value.MonthYear.Split('-');
                         var tp = monthYearKey.Split('-');
                         if (pp.Length == 2 && tp.Length == 2
-                            && int.TryParse(pp[0], out var pY) && int.TryParse(pp[1], out var pM)
-                            && int.TryParse(tp[0], out var tY) && int.TryParse(tp[1], out var tM))
+                                           && int.TryParse(pp[0], out var pY) && int.TryParse(pp[1], out var pM)
+                                           && int.TryParse(tp[0], out var tY) && int.TryParse(tp[1], out var tM))
                         {
                             return ((tY - pY) * 12) + (tM - pM) == 1; // เฉพาะเดือนถัดไปเท่านั้น
                         }
                     }
+
                     return false;
                 })
                 .Select(kvp => kvp.Key)
@@ -1669,8 +1783,8 @@ namespace CostFlow.Controllers
 
             // Sub-info
             ws.Cell(2, 1).Value = $"วันที่ส่งออกรายงาน: {DateTime.Now:dd/MM/yyyy HH:mm}    " +
-                                   $"รายการบันทึกแล้ว: {existingActions.Count} รายการ    " +
-                                   $"รายการรอดำเนินการ: {pendingOrders.Count} รายการ";
+                                  $"รายการบันทึกแล้ว: {existingActions.Count} รายการ    " +
+                                  $"รายการรอดำเนินการ: {pendingOrders.Count} รายการ";
             ws.Cell(2, 1).Style.Font.FontName = fontName;
             ws.Cell(2, 1).Style.Font.FontSize = 10;
             ws.Cell(2, 1).Style.Font.FontColor = ClosedXML.Excel.XLColor.FromHtml("#475569");
@@ -1682,7 +1796,8 @@ namespace CostFlow.Controllers
             int headerRow = 4;
             var headers = new[]
             {
-                "ลำดับ", "เลขที่อนุมัติ (PO)", "ชื่อสินค้า / รายการอะไหล่", "แผนก / หน่วยงาน", "เป้าหมายส่งมอบ", "ที่มาของรายการ", "สถานะการบันทึก", "จำนวน", "ยอดเงินที่ต้องจ่าย (บาท)", "วันที่บันทึก"
+                "ลำดับ", "เลขที่อนุมัติ (PO)", "ชื่อสินค้า / รายการอะไหล่", "แผนก / หน่วยงาน", "เป้าหมายส่งมอบ",
+                "ที่มาของรายการ", "สถานะการบันทึก", "จำนวน", "ยอดเงินที่ต้องจ่าย (บาท)", "วันที่บันทึก"
             };
 
             for (int c = 0; c < headers.Length; c++)
@@ -1698,6 +1813,7 @@ namespace CostFlow.Controllers
                 cell.Style.Border.OutsideBorder = ClosedXML.Excel.XLBorderStyleValues.Thin;
                 cell.Style.Border.OutsideBorderColor = colorBorder;
             }
+
             ws.Row(headerRow).Height = 22;
 
             int currentRow = headerRow + 1;
@@ -1733,9 +1849,9 @@ namespace CostFlow.Controllers
                 }
 
                 string actionText = action.Action == "ReceivedFull" ? "รับสินค้าชำระเต็ม"
-                                  : action.Action == "Deferred" ? "ผ่อนชำระ"
-                                  : action.Action == "Skipped" ? "ยังไม่รับสินค้า"
-                                  : action.Action;
+                    : action.Action == "Deferred" ? "ผ่อนชำระ"
+                    : action.Action == "Skipped" ? "ยังไม่รับสินค้า"
+                    : action.Action;
 
                 string quantity = !string.IsNullOrEmpty(otm?.RemarksQuantity) ? otm.RemarksQuantity : "1";
                 decimal amt = action.ActionPrice;
@@ -1883,19 +1999,20 @@ namespace CostFlow.Controllers
             ws.Cell(currentRow, 9).Style.Font.FontColor = ClosedXML.Excel.XLColor.Black;
             ws.Cell(currentRow, 9).Style.NumberFormat.Format = "#,##0.00";
             ws.Cell(currentRow, 9).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Right;
-            ws.Range(currentRow, 7, currentRow, 9).Style.Border.OutsideBorder = ClosedXML.Excel.XLBorderStyleValues.Thin;
+            ws.Range(currentRow, 7, currentRow, 9).Style.Border.OutsideBorder =
+                ClosedXML.Excel.XLBorderStyleValues.Thin;
             ws.Range(currentRow, 7, currentRow, 9).Style.Border.OutsideBorderColor = colorBorder;
 
             // ── Column Widths ─────────────────────────────────────────
-            ws.Column(1).Width = 8;   // ลำดับ
-            ws.Column(2).Width = 22;  // เลขที่อนุมัติ (PO)
-            ws.Column(3).Width = 45;  // ชื่อสินค้า / รายการอะไหล่
-            ws.Column(4).Width = 18;  // แผนก
-            ws.Column(5).Width = 18;  // เป้าหมายส่งมอบ
-            ws.Column(6).Width = 26;  // ที่มาของรายการ
-            ws.Column(7).Width = 22;  // สถานะการบันทึก
-            ws.Column(8).Width = 12;  // จำนวน
-            ws.Column(9).Width = 22;  // ยอดเงินที่ต้องจ่าย
+            ws.Column(1).Width = 8; // ลำดับ
+            ws.Column(2).Width = 22; // เลขที่อนุมัติ (PO)
+            ws.Column(3).Width = 45; // ชื่อสินค้า / รายการอะไหล่
+            ws.Column(4).Width = 18; // แผนก
+            ws.Column(5).Width = 18; // เป้าหมายส่งมอบ
+            ws.Column(6).Width = 26; // ที่มาของรายการ
+            ws.Column(7).Width = 22; // สถานะการบันทึก
+            ws.Column(8).Width = 12; // จำนวน
+            ws.Column(9).Width = 22; // ยอดเงินที่ต้องจ่าย
             ws.Column(10).Width = 20; // วันที่บันทึก
 
             using var stream = new MemoryStream();
@@ -1904,8 +2021,8 @@ namespace CostFlow.Controllers
             string cleanMonth = monthYear.Trim().Replace(" ", "_");
             string downloadName = $"สรุปรายการที่ต้องจ่าย_{cleanMonth}.xlsx";
             return File(stream.ToArray(),
-                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        downloadName);
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                downloadName);
         }
     }
 

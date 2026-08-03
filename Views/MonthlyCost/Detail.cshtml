@@ -449,10 +449,10 @@
                 : "bg-purple-50 border-purple-200 text-purple-700";
             var actionIcon = saved.Action == "ReceivedFull" ? "✓ "
                 : saved.Action == "Deferred" ? "⏳ "
-                : "✕ ";
+                : "⏭ ";
             var actionLabel = saved.Action == "ReceivedFull" ? "รับสินค้าแล้ว"
                 : saved.Action == "Deferred" ? "ผ่อน → เดือนหน้า"
-                : "ไม่ต้องการสินค้า";
+                : "ยังไม่รับสินค้า";
 
             <div class="saved-card border border-slate-200 rounded-lg p-3 bg-white hover:border-slate-300 transition-all shadow-2xs"
                  data-action-id="@saved.ActionId"
@@ -487,7 +487,7 @@
                         }
                         else
                         {
-                            <span class="font-bold text-sm text-slate-400">฿0.00</span>
+                            <span class="font-bold text-sm text-slate-400">฿@saved.TotalPrice.ToString("N2")</span>
                         }
                         <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold border @actionBg">
                             @actionIcon@actionLabel
@@ -497,12 +497,23 @@
 
                 <!-- Footer / Edit & Cancel button -->
                 <div class="flex items-center justify-between gap-2 mt-2 pt-2 border-t border-slate-100 text-xs">
-                    <span class="text-[10px] text-slate-400">บันทึกเมื่อ: @saved.CreatedAt.ToString("dd/MM/yyyy HH:mm")</span>
-                    <button type="button"
-                            onclick="cancelSavedAction('@saved.ActionId', '@saved.PoNumber')"
-                            class="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 border border-rose-200 transition-all cursor-pointer">
-                        ยกเลิกบันทึก
-                    </button>
+                    <span class="text-[10px] text-slate-400">
+                        @(saved.ActionId != Guid.Empty ? $"บันทึกเมื่อ: {saved.CreatedAt:dd/MM/yyyy HH:mm}" : "ผลัดไปเดือนถัดไปอัตโนมัติ")
+                    </span>
+                    @if (saved.ActionId != Guid.Empty)
+                    {
+                        <button type="button"
+                                onclick="cancelSavedAction('@saved.ActionId', '@saved.PoNumber')"
+                                class="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 border border-rose-200 transition-all cursor-pointer">
+                            ยกเลิกบันทึก
+                        </button>
+                    }
+                    else
+                    {
+                        <span class="text-[10px] text-purple-600 font-medium bg-purple-50 px-2 py-0.5 rounded border border-purple-200">
+                            ผลัดไปเดือนถัดไป
+                        </span>
+                    }
                 </div>
             </div>
         }
