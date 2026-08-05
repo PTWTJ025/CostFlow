@@ -246,34 +246,25 @@ namespace CostFlow.Controllers
 
                             foreach (var bInfo in rawBatches)
                             {
-                                if (bInfo.InlineItems.ValueKind == JsonValueKind.Array && bInfo.InlineItems.GetArrayLength() > 0)
+                                // บังคับอ่านข้อมูลจากแต่ละเซลล์ในชีทโดยตรง (getBatchDetails) 1-to-1 ตามที่ผู้ใช้ต้องการ
+                                try
                                 {
-                                    foreach (var item in bInfo.InlineItems.EnumerateArray())
+                                    var detailRes = await client.GetAsync($"{appScriptUrl}?action=getBatchDetails&batchName={Uri.EscapeDataString(bInfo.Name)}");
+                                    if (detailRes.IsSuccessStatusCode)
                                     {
-                                        items.Add(ParseSavedItem(item, bInfo.Name, bInfo.Date, priceDict));
-                                    }
-                                }
-                                else
-                                {
-                                    try
-                                    {
-                                        var detailRes = await client.GetAsync($"{appScriptUrl}?action=getBatchDetails&batchName={Uri.EscapeDataString(bInfo.Name)}");
-                                        if (detailRes.IsSuccessStatusCode)
+                                        var dJson = await detailRes.Content.ReadAsStringAsync();
+                                        using var dDoc = JsonDocument.Parse(dJson);
+                                        var dRoot = dDoc.RootElement;
+                                        if (dRoot.TryGetProperty("items", out var dItemsEl) && dItemsEl.ValueKind == JsonValueKind.Array)
                                         {
-                                            var dJson = await detailRes.Content.ReadAsStringAsync();
-                                            using var dDoc = JsonDocument.Parse(dJson);
-                                            var dRoot = dDoc.RootElement;
-                                            if (dRoot.TryGetProperty("items", out var dItemsEl) && dItemsEl.ValueKind == JsonValueKind.Array)
+                                            foreach (var item in dItemsEl.EnumerateArray())
                                             {
-                                                foreach (var item in dItemsEl.EnumerateArray())
-                                                {
-                                                    items.Add(ParseSavedItem(item, bInfo.Name, bInfo.Date, priceDict));
-                                                }
+                                                items.Add(ParseSavedItem(item, bInfo.Name, bInfo.Date, priceDict));
                                             }
                                         }
                                     }
-                                    catch { /* fail gracefully */ }
                                 }
+                                catch { /* fail gracefully */ }
                             }
                         }
                     }
@@ -339,34 +330,25 @@ namespace CostFlow.Controllers
 
                             foreach (var bInfo in rawBatches)
                             {
-                                if (bInfo.InlineItems.ValueKind == JsonValueKind.Array && bInfo.InlineItems.GetArrayLength() > 0)
+                                // บังคับอ่านข้อมูลจากแต่ละเซลล์ในชีทโดยตรง (getBatchDetails) 1-to-1 ตามที่ผู้ใช้ต้องการ
+                                try
                                 {
-                                    foreach (var item in bInfo.InlineItems.EnumerateArray())
+                                    var detailRes = await client.GetAsync($"{appScriptUrl}?action=getBatchDetails&batchName={Uri.EscapeDataString(bInfo.Name)}");
+                                    if (detailRes.IsSuccessStatusCode)
                                     {
-                                        items.Add(ParseSavedItem(item, bInfo.Name, bInfo.Date, priceDict));
-                                    }
-                                }
-                                else
-                                {
-                                    try
-                                    {
-                                        var detailRes = await client.GetAsync($"{appScriptUrl}?action=getBatchDetails&batchName={Uri.EscapeDataString(bInfo.Name)}");
-                                        if (detailRes.IsSuccessStatusCode)
+                                        var dJson = await detailRes.Content.ReadAsStringAsync();
+                                        using var dDoc = JsonDocument.Parse(dJson);
+                                        var dRoot = dDoc.RootElement;
+                                        if (dRoot.TryGetProperty("items", out var dItemsEl) && dItemsEl.ValueKind == JsonValueKind.Array)
                                         {
-                                            var dJson = await detailRes.Content.ReadAsStringAsync();
-                                            using var dDoc = JsonDocument.Parse(dJson);
-                                            var dRoot = dDoc.RootElement;
-                                            if (dRoot.TryGetProperty("items", out var dItemsEl) && dItemsEl.ValueKind == JsonValueKind.Array)
+                                            foreach (var item in dItemsEl.EnumerateArray())
                                             {
-                                                foreach (var item in dItemsEl.EnumerateArray())
-                                                {
-                                                    items.Add(ParseSavedItem(item, bInfo.Name, bInfo.Date, priceDict));
-                                                }
+                                                items.Add(ParseSavedItem(item, bInfo.Name, bInfo.Date, priceDict));
                                             }
                                         }
                                     }
-                                    catch { /* fail gracefully */ }
                                 }
+                                catch { /* fail gracefully */ }
                             }
                         }
                     }
@@ -401,11 +383,11 @@ namespace CostFlow.Controllers
         private SavedOrderItemViewModel ParseSavedItem(JsonElement item, string bName, DateTime createdAt, Dictionary<string, decimal>? priceDict = null)
         {
             var pCode = GetStringProp(item, "ProductCode", "productCode", "Code", "code", "รหัสสินค้า");
-            var pName = GetStringProp(item, "ProductName", "productName", "Name", "name", "ชื่อสินค้า");
+            var pName = GetStringProp(item, "ProductName", "productName", "Name", "name", "ชื่อสินค้า", "ชื่อสินค้า / รายการอะไหล่");
             var unit = GetStringProp(item, "Unit", "unit", "หน่วย");
             var unitPriceStr = GetStringProp(item, "UnitPrice", "unitPrice", "Price", "price", "PricePerUnit", "Unit Price", "ราคา/หน่วย", "ราคาต่อหน่วย", "Cost", "cost");
             var quantityStr = GetStringProp(item, "Quantity", "quantity", "Qty", "qty", "จำนวน");
-            var totalAmountStr = GetStringProp(item, "TotalAmount", "totalAmount", "Total", "total", "TotalAmount", "ราคารวม", "TotalPrice", "totalPrice");
+            var totalAmountStr = GetStringProp(item, "TotalAmount", "totalAmount", "Total", "total", "TotalAmount", "ราคารวม", "TotalPrice", "totalPrice", "มูลค่ารวม");
             var remarks = GetStringProp(item, "Remarks", "remarks", "Remark", "remark", "หมายเหตุ", "Note", "note");
 
             var unitPrice = ParseDecimal(unitPriceStr);

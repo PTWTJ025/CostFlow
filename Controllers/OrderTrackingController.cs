@@ -108,10 +108,10 @@ namespace CostFlow.Controllers
                                                 double calcSum = 0;
                                                 foreach (var it in dItemsEl.EnumerateArray())
                                                 {
-                                                    var pCode = GetStringProp(it, "ProductCode", "productCode", "Code", "code");
-                                                    var qty = ParseDouble(GetStringProp(it, "Quantity", "quantity", "Qty", "qty"));
-                                                    var uPrice = ParseDouble(GetStringProp(it, "UnitPrice", "unitPrice", "Price", "price", "PricePerUnit", "Cost", "cost"));
-                                                    var tAmt = ParseDouble(GetStringProp(it, "TotalAmount", "totalAmount", "Total", "total"));
+                                                    var pCode = GetStringProp(it, "ProductCode", "productCode", "Code", "code", "รหัสสินค้า");
+                                                    var qty = ParseDouble(GetStringProp(it, "Quantity", "quantity", "Qty", "qty", "จำนวน"));
+                                                    var uPrice = ParseDouble(GetStringProp(it, "UnitPrice", "unitPrice", "Price", "price", "PricePerUnit", "Cost", "cost", "ราคาต่อหน่วย", "ราคา/หน่วย"));
+                                                    var tAmt = ParseDouble(GetStringProp(it, "TotalAmount", "totalAmount", "Total", "total", "ราคารวม", "มูลค่ารวม"));
 
                                                     if (uPrice == 0 && qty > 0 && tAmt > 0) uPrice = tAmt / qty;
                                                     if (uPrice == 0 && !string.IsNullOrWhiteSpace(pCode) && priceDict.TryGetValue(pCode, out var dbP)) uPrice = dbP;
@@ -170,10 +170,10 @@ namespace CostFlow.Controllers
                             {
                                 items.Add(new TrackingItemViewModel
                                 {
-                                    ProductCode = GetStringProp(it, "ProductCode", "productCode", "Code", "code"),
-                                    ProductName = GetStringProp(it, "ProductName", "productName", "Name", "name"),
-                                    Quantity = GetStringProp(it, "Quantity", "quantity", "Qty", "qty"),
-                                    Unit = GetStringProp(it, "Unit", "unit"),
+                                    ProductCode = GetStringProp(it, "ProductCode", "productCode", "Code", "code", "รหัสสินค้า"),
+                                    ProductName = GetStringProp(it, "ProductName", "productName", "Name", "name", "ชื่อสินค้า", "ชื่อสินค้า / รายการอะไหล่"),
+                                    Quantity = GetStringProp(it, "Quantity", "quantity", "Qty", "qty", "จำนวน"),
+                                    Unit = GetStringProp(it, "Unit", "unit", "หน่วย"),
                                     IsReceived = it.TryGetProperty("IsReceived", out var ir) && (ir.ValueKind == JsonValueKind.True || (ir.ValueKind == JsonValueKind.String && ir.GetString()?.ToLower() == "true")),
                                     ReceiveDate = GetStringProp(it, "ReceiveDate", "receiveDate")
                                 });
