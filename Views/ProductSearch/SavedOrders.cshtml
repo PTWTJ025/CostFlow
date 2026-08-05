@@ -11,18 +11,20 @@
     <!-- Breadcrumbs -->
     <div class="flex items-center gap-2 text-sm text-on-surface-variant shrink-0">
         <a href="/" class="hover:text-primary transition-colors flex items-center gap-1.5">
-            <!-- Heroicon: home -->
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"/>
+            <!-- Lucide: home -->
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
             </svg>
             <span>หน้าแรก</span>
         </a>
-        <svg class="w-3 h-3 text-outline opacity-60" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"/>
+        <!-- Lucide: chevron-right -->
+        <svg class="w-3 h-3 text-outline opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m9 18 6-6-6-6"/>
         </svg>
         <a href="/ProductSearch" class="hover:text-primary transition-colors">คีย์ใบสั่งซื้อ</a>
-        <svg class="w-3 h-3 text-outline opacity-60" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"/>
+        <!-- Lucide: chevron-right -->
+        <svg class="w-3 h-3 text-outline opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m9 18 6-6-6-6"/>
         </svg>
         <span class="font-semibold text-on-surface">ประวัติรายการสินค้า</span>
     </div>
@@ -41,9 +43,9 @@
         <!-- Card 1: สินค้าทั้งหมด -->
         <div class="bg-surface border border-outline-variant rounded-lg px-4 py-3 flex items-center gap-3">
             <div class="w-8 h-8 rounded flex items-center justify-center shrink-0" style="background:rgba(0,40,142,0.08);">
-                <!-- Heroicon: cube -->
-                <svg class="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="m21 7.5-9-5.25L3 7.5m18 0-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"/>
+                <!-- Lucide: package -->
+                <svg class="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>
                 </svg>
             </div>
             <div class="ml-auto text-right">
@@ -57,15 +59,19 @@
         <!-- Card 2: จำนวนชิ้นรวม -->
         <div class="bg-surface border border-outline-variant rounded-lg px-4 py-3 flex items-center gap-3">
             <div class="w-8 h-8 rounded flex items-center justify-center shrink-0" style="background:rgba(5,150,105,0.08);">
-                <!-- Heroicon: clipboard-document-check -->
-                <svg class="w-4 h-4" style="color:#059669" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M11.35 3.836c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25 2.25 0 0 1 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C7.302 4.004 6 5.273 6 6.75v10.5A2.25 2.25 0 0 0 8.25 19.5h7.5A2.25 2.25 0 0 0 18 17.25V6.75c0-1.477-1.302-2.746-2.726-2.834a49.61 49.61 0 0 0-1.124-.08M9 11.25l2.25 2.25L15 9.75"/>
+                <!-- Lucide: clipboard-check -->
+                <svg class="w-4 h-4" style="color:#059669" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                    <rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/>
                 </svg>
             </div>
             <div class="ml-auto text-right">
                 <p class="text-[11px] font-medium text-on-surface-variant leading-none mb-1">จำนวนรวมสะสม</p>
                 <p class="text-[20px] font-bold leading-none" style="color:#059669;">
-                    <span id="stat-total-qty">@(Model?.Sum(i => i.Quantity).ToString("N0") ?? "0")</span> <span class="text-[13px] font-medium text-on-surface-variant">หน่วย</span>
+                    @{
+                        var totalQtyVal = Model?.Sum(i => i.Quantity) ?? 0;
+                        string formattedTotalQty = totalQtyVal % 1 == 0 ? totalQtyVal.ToString("N0") : totalQtyVal.ToString("N2");
+                    }
+                    <span id="stat-total-qty">@formattedTotalQty</span> <span class="text-[13px] font-medium text-on-surface-variant">หน่วย</span>
                 </p>
             </div>
         </div>
@@ -73,9 +79,9 @@
         <!-- Card 3: มูลค่ารวมสะสม -->
         <div class="bg-surface border border-outline-variant rounded-lg px-4 py-3 flex items-center gap-3">
             <div class="w-8 h-8 rounded flex items-center justify-center shrink-0" style="background:rgba(37,99,235,0.08);">
-                <!-- Heroicon: banknotes -->
-                <svg class="w-4 h-4" style="color:#2563eb" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm3 0h.008v.008H18V10.5Zm-12 0h.008v.008H6V10.5Z"/>
+                <!-- Lucide: banknote -->
+                <svg class="w-4 h-4" style="color:#2563eb" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                    <rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/>
                 </svg>
             </div>
             <div class="ml-auto text-right">
@@ -157,7 +163,7 @@
                 </div>
             </form>
 
-            <!-- Search Box (Icon removed & clean padding) -->
+            <!-- Search Box -->
             <div class="relative w-64 sm:w-80">
                 <input type="text" id="search-input" placeholder="ค้นหาชื่อสินค้า..."
                        class="w-full px-3 py-2 text-[13px] bg-white border border-outline-variant rounded focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 text-on-surface placeholder-outline transition-all"/>
@@ -202,7 +208,7 @@
                                 @item.ProductName
                             </td>
                             <td class="py-3 px-4 text-right font-semibold text-on-surface">
-                                @item.Quantity.ToString("N2") <span class="text-xs font-normal text-on-surface-variant">@item.Unit</span>
+                                @(item.Quantity % 1 == 0 ? item.Quantity.ToString("N0") : item.Quantity.ToString("N2")) <span class="text-xs font-normal text-on-surface-variant">@item.Unit</span>
                             </td>
                             <td class="py-3 px-4 text-right font-mono text-on-surface-variant">
                                 ฿@item.UnitPrice.ToString("N2")
@@ -215,30 +221,30 @@
                             </td>
                             <td class="py-3 px-4 text-center">
                                 <div class="flex items-center justify-center gap-1.5">
-                                    <!-- Edit Quantity Button (Heroicon: pencil-square) -->
+                                    <!-- Edit Quantity Button (Lucide: square-pen) -->
                                     <button type="button"
                                             class="btn-edit-qty p-1.5 rounded-lg text-amber-700 hover:bg-amber-50 border border-amber-200/60 hover:border-amber-300 transition-all flex items-center gap-1 text-[12px] font-semibold"
                                             data-batch="@item.BatchName"
                                             data-code="@item.ProductCode"
                                             data-name="@item.ProductName"
-                                            data-qty="@item.Quantity"
+                                            data-qty="@(item.Quantity % 1 == 0 ? item.Quantity.ToString("0") : item.Quantity.ToString("0.##"))"
                                             data-unit="@item.Unit"
                                             title="แก้ไขเฉพาะจำนวนสินค้า">
-                                        <svg class="w-4 h-4 text-amber-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10"/>
+                                        <svg class="w-4 h-4 text-amber-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4Z"/>
                                         </svg>
                                         <span class="hidden sm:inline">แก้ไข</span>
                                     </button>
 
-                                    <!-- Delete Item Button (Heroicon: trash) -->
+                                    <!-- Delete Item Button (Lucide: trash-2) -->
                                     <button type="button"
                                             class="btn-delete-item p-1.5 rounded-lg text-rose-700 hover:bg-rose-50 border border-rose-200/60 hover:border-rose-300 transition-all flex items-center gap-1 text-[12px] font-semibold"
                                             data-batch="@item.BatchName"
                                             data-code="@item.ProductCode"
                                             data-name="@item.ProductName"
                                             title="ลบรายการสินค้า">
-                                        <svg class="w-4 h-4 text-rose-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/>
+                                        <svg class="w-4 h-4 text-rose-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/>
                                         </svg>
                                         <span class="hidden sm:inline">ลบ</span>
                                     </button>
@@ -252,9 +258,9 @@
                     <tr>
                         <td colspan="9" class="py-14 text-center">
                             <div class="flex flex-col items-center gap-3">
-                                <!-- Heroicon: inbox -->
-                                <svg class="w-10 h-10 text-outline opacity-40" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 13.5h3.86a2.25 2.25 0 0 1 2.012 1.244l.256.512a2.25 2.25 0 0 0 2.013 1.244h3.218a2.25 2.25 0 0 0 2.013-1.244l.256-.512a2.25 2.25 0 0 1 2.013-1.244h3.859m-19.5.338V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 0 0-2.15-1.588H6.911a2.25 2.25 0 0 0-2.15 1.588L2.35 13.177a2.25 2.25 0 0 0-.1.661Z"/>
+                                <!-- Lucide: inbox -->
+                                <svg class="w-10 h-10 text-outline opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>
                                 </svg>
                                 <div>
                                     <p class="font-semibold text-on-surface text-sm">ยังไม่มีรายการสินค้าในประวัติ</p>
@@ -267,9 +273,9 @@
                 <tr id="no-search-results" class="hidden">
                     <td colspan="9" class="py-10 text-center text-xs text-on-surface-variant">
                         <div class="flex flex-col items-center gap-2">
-                            <!-- Heroicon: magnifying-glass -->
-                            <svg class="w-8 h-8 text-outline opacity-40" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/>
+                            <!-- Lucide: search-x -->
+                            <svg class="w-8 h-8 text-outline opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><path d="m13.5 8.5-5 5"/><path d="m8.5 8.5 5 5"/>
                             </svg>
                             <span class="font-semibold text-on-surface text-sm">ไม่พบรายการสินค้าที่ตรงกับคำค้นหา</span>
                         </div>
@@ -322,14 +328,19 @@
                 const response = await fetch(`/ProductSearch/GetSavedOrdersJson?${params.toString()}`);
                 const data = await response.json();
 
+                function formatQuantity(val) {
+                    const num = Number(val || 0);
+                    return num % 1 === 0 ? num.toLocaleString('en-US') : num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                }
+
                 // Update Stats Cards
                 const statCount = document.getElementById('stat-total-count');
                 const statQty = document.getElementById('stat-total-qty');
                 const statAmount = document.getElementById('stat-total-amount');
 
-                if (statCount) statCount.textContent = (data.totalCount || 0).toLocaleString();
-                if (statQty) statQty.textContent = (data.totalQuantity || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
-                if (statAmount) statAmount.textContent = '฿' + (data.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                if (statCount) statCount.textContent = (data.totalCount || 0).toLocaleString('en-US');
+                if (statQty) statQty.textContent = formatQuantity(data.totalQuantity);
+                if (statAmount) statAmount.textContent = '฿' + (data.totalAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
                 const tbody = document.getElementById('item-tbody');
                 if (!data.items || data.items.length === 0) {
@@ -337,8 +348,9 @@
                     <tr>
                         <td colspan="9" class="py-14 text-center">
                             <div class="flex flex-col items-center gap-3">
-                                <svg class="w-10 h-10 text-outline opacity-40" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 13.5h3.86a2.25 2.25 0 0 1 2.012 1.244l.256.512a2.25 2.25 0 0 0 2.013 1.244h3.218a2.25 2.25 0 0 0 2.013-1.244l.256-.512a2.25 2.25 0 0 1 2.013-1.244h3.859m-19.5.338V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 0 0-2.15-1.588H6.911a2.25 2.25 0 0 0-2.15 1.588L2.35 13.177a2.25 2.25 0 0 0-.1-.661Z"/>
+                                <!-- Lucide: inbox -->
+                                <svg class="w-10 h-10 text-outline opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>
                                 </svg>
                                 <div>
                                     <p class="font-semibold text-on-surface text-sm">ยังไม่มีรายการสินค้าในประวัติ</p>
@@ -354,6 +366,8 @@
                 data.items.forEach(item => {
                     const searchText = `${item.productCode} ${item.productName} ${item.batchName} ${item.remarks}`.toLowerCase();
                     const pNameLower = (item.productName || '').toLowerCase();
+                    const qtyVal = Number(item.quantity || 0);
+                    const qtyCleanStr = qtyVal % 1 === 0 ? qtyVal.toString() : qtyVal.toFixed(2).replace(/\.?0+$/, '');
                     html += `
                     <tr class="border-b border-outline-variant hover:bg-surface-container-low transition-colors item-row"
                         data-search="${searchText}"
@@ -365,10 +379,10 @@
                         <td class="py-3 px-4 font-mono font-semibold text-on-surface whitespace-nowrap">${item.productCode}</td>
                         <td class="py-3 px-4 font-medium text-on-surface max-w-[220px] truncate" title="${item.productName}">${item.productName}</td>
                         <td class="py-3 px-4 text-right font-semibold text-on-surface">
-                            ${item.quantity.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} <span class="text-xs font-normal text-on-surface-variant">${item.unit}</span>
+                            ${formatQuantity(item.quantity)} <span class="text-xs font-normal text-on-surface-variant">${item.unit}</span>
                         </td>
-                        <td class="py-3 px-4 text-right font-mono text-on-surface-variant">฿${item.unitPrice.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                        <td class="py-3 px-4 text-right font-mono font-bold text-primary text-[14px]">฿${item.totalAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                        <td class="py-3 px-4 text-right font-mono text-on-surface-variant">฿${item.unitPrice.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                        <td class="py-3 px-4 text-right font-mono font-bold text-primary text-[14px]">฿${item.totalAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                         <td class="py-3 px-4 text-on-surface-variant text-xs max-w-[150px] truncate" title="${item.remarks}">${item.remarks}</td>
                         <td class="py-3 px-4 text-center">
                             <div class="flex items-center justify-center gap-1.5">
@@ -377,11 +391,12 @@
                                         data-batch="${item.batchName}"
                                         data-code="${item.productCode}"
                                         data-name="${item.productName}"
-                                        data-qty="${item.quantity}"
+                                        data-qty="${qtyCleanStr}"
                                         data-unit="${item.unit}"
                                         title="แก้ไขเฉพาะจำนวนสินค้า">
-                                    <svg class="w-4 h-4 text-amber-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10"/>
+                                    <!-- Lucide: square-pen -->
+                                    <svg class="w-4 h-4 text-amber-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4Z"/>
                                     </svg>
                                     <span class="hidden sm:inline">แก้ไข</span>
                                 </button>
@@ -392,8 +407,9 @@
                                         data-code="${item.productCode}"
                                         data-name="${item.productName}"
                                         title="ลบรายการสินค้า">
-                                    <svg class="w-4 h-4 text-rose-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/>
+                                    <!-- Lucide: trash-2 -->
+                                    <svg class="w-4 h-4 text-rose-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/>
                                     </svg>
                                     <span class="hidden sm:inline">ลบ</span>
                                 </button>
@@ -524,8 +540,9 @@
                     await Swal.fire({
                         html: `<div style="display:flex;flex-direction:column;align-items:center;gap:14px;padding:8px 0 4px;">
                                     <div style="width:52px;height:52px;border-radius:50%;background:#f0fdf4;border:1.5px solid #bbf7d0;display:flex;align-items:center;justify-content:center;">
-                                        <svg style="width:24px;height:24px;" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="#16a34a">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                                        <!-- Lucide: check -->
+                                        <svg style="width:24px;height:24px;" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="#16a34a" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="m5 12 5 5L20 7"/>
                                         </svg>
                                     </div>
                                     <div>
@@ -550,8 +567,9 @@
                 Swal.fire({
                     html: `<div style="display:flex;flex-direction:column;align-items:center;gap:14px;padding:8px 0 4px;">
                                 <div style="width:52px;height:52px;border-radius:50%;background:#fff1f2;border:1.5px solid #fecdd3;display:flex;align-items:center;justify-content:center;">
-                                    <svg style="width:24px;height:24px;" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="#e11d48">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m0 3.75h.008v.008H12v-.008Zm9.75-3.75a9.75 9.75 0 1 1-19.5 0 9.75 9.75 0 0 1 19.5 0Z" />
+                                    <!-- Lucide: alert-triangle -->
+                                    <svg style="width:24px;height:24px;" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="#e11d48" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/>
                                     </svg>
                                 </div>
                                 <div>
@@ -579,8 +597,9 @@
                 html: `
                     <div style="display:flex;flex-direction:column;align-items:center;gap:16px;padding:8px 0 4px;">
                         <div style="width:52px;height:52px;border-radius:50%;background:#fff1f2;border:1.5px solid #fecdd3;display:flex;align-items:center;justify-content:center;">
-                            <svg style="width:24px;height:24px;color:#e11d48" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="#e11d48">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+                            <!-- Lucide: alert-triangle -->
+                            <svg style="width:24px;height:24px;" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="#e11d48" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/>
                             </svg>
                         </div>
                         <div>
@@ -628,8 +647,9 @@
                     await Swal.fire({
                         html: `<div style="display:flex;flex-direction:column;align-items:center;gap:14px;padding:8px 0 4px;">
                                     <div style="width:52px;height:52px;border-radius:50%;background:#f0fdf4;border:1.5px solid #bbf7d0;display:flex;align-items:center;justify-content:center;">
-                                        <svg style="width:24px;height:24px;" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="#16a34a">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                                        <!-- Lucide: check -->
+                                        <svg style="width:24px;height:24px;" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="#16a34a" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="m5 12 5 5L20 7"/>
                                         </svg>
                                     </div>
                                     <div>
@@ -654,8 +674,9 @@
                 Swal.fire({
                     html: `<div style="display:flex;flex-direction:column;align-items:center;gap:14px;padding:8px 0 4px;">
                                 <div style="width:52px;height:52px;border-radius:50%;background:#fff1f2;border:1.5px solid #fecdd3;display:flex;align-items:center;justify-content:center;">
-                                    <svg style="width:24px;height:24px;" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="#e11d48">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m0 3.75h.008v.008H12v-.008Zm9.75-3.75a9.75 9.75 0 1 1-19.5 0 9.75 9.75 0 0 1 19.5 0Z" />
+                                    <!-- Lucide: alert-triangle -->
+                                    <svg style="width:24px;height:24px;" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="#e11d48" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/>
                                     </svg>
                                 </div>
                                 <div>

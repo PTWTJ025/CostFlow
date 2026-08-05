@@ -2,17 +2,21 @@ using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
 using System.Text;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.EntityFrameworkCore;
+using CostFlow.Data;
 
 namespace CostFlow.Controllers
 {
     [Authorize]
     public class OrderTrackingController : Controller
     {
+        private readonly AppDbContext _context;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly IConfiguration _configuration;
 
-        public OrderTrackingController(IHttpClientFactory httpClientFactory, IConfiguration configuration)
+        public OrderTrackingController(AppDbContext context, IHttpClientFactory httpClientFactory, IConfiguration configuration)
         {
+            _context = context;
             _httpClientFactory = httpClientFactory;
             _configuration = configuration;
         }
@@ -22,6 +26,10 @@ namespace CostFlow.Controllers
         {
             var batches = new List<TrackingBatchViewModel>();
             var availableYears = new List<int> { DateTime.Now.Year };
+
+            var priceDict = await _context.ProductPrices
+                .AsNoTracking()
+                .ToDictionaryAsync(p => p.ProductCode, p => p.PricePerUnit, StringComparer.OrdinalIgnoreCase);
 
             string? appScriptUrl = _configuration["GoogleSheets:OrderHistoryAppScriptUrl"];
             if (!string.IsNullOrWhiteSpace(appScriptUrl) && !appScriptUrl.Contains("_placeholder"))
@@ -41,16 +49,23 @@ namespace CostFlow.Controllers
                         
                         if (root.TryGetProperty("batches", out var batchesEl))
                         {
+                            var rawList = new List<TrackingBatchViewModel>();
                             foreach (var b in batchesEl.EnumerateArray())
                             {
-                                var name = GetStringProp(b, "BatchName");
-                                var createdAtStr = GetStringProp(b, "CreatedAt");
-                                var totalItems = b.TryGetProperty("TotalItems", out var tip) && tip.ValueKind == JsonValueKind.Number ? tip.GetInt32() : 0;
-                                var receivedItems = b.TryGetProperty("ReceivedItems", out var rip) && rip.ValueKind == JsonValueKind.Number ? rip.GetInt32() : 0;
-                                var totalAmount = b.TryGetProperty("TotalAmount", out var tap) && tap.ValueKind == JsonValueKind.Number ? tap.GetDouble() : 0;
+                                var name = GetStringProp(b, "BatchName", "batchName", "Name", "name");
+                                var createdAtStr = GetStringProp(b, "CreatedAt", "createdAt", "Date", "date");
                                 
+                                var totalItemsStr = GetStringProp(b, "TotalItems", "totalItems", "ItemsCount", "itemsCount", "Count");
+                                var totalItems = ParseInt(totalItemsStr);
+
+                                var receivedItemsStr = GetStringProp(b, "ReceivedItems", "receivedItems", "ReceivedCount");
+                                var receivedItems = ParseInt(receivedItemsStr);
+
+                                var totalAmountStr = GetStringProp(b, "TotalAmount", "totalAmount", "Total", "total", "TotalValue", "totalValue", "ราคารวม");
+                                var totalAmount = ParseDouble(totalAmountStr);
+
                                 var isReceived = b.TryGetProperty("IsReceived", out var ir) && (ir.ValueKind == JsonValueKind.True || (ir.ValueKind == JsonValueKind.String && ir.GetString()?.ToLower() == "true"));
-                                var receiveDateStr = GetStringProp(b, "ReceiveDate");
+                                var receiveDateStr = GetStringProp(b, "ReceiveDate", "receiveDate");
                                 if (!isReceived && totalItems > 0 && receivedItems >= totalItems)
                                 {
                                     isReceived = true;
@@ -61,7 +76,7 @@ namespace CostFlow.Controllers
                                 if (year.HasValue && year.Value > 0 && createdAt.Year != year.Value) continue;
                                 if (month.HasValue && month.Value > 0 && createdAt.Month != month.Value) continue;
 
-                                batches.Add(new TrackingBatchViewModel
+                                rawList.Add(new TrackingBatchViewModel
                                 {
                                     BatchName = name,
                                     CreatedAt = createdAt,
@@ -74,6 +89,42 @@ namespace CostFlow.Controllers
 
                                 if (!availableYears.Contains(createdAt.Year))
                                     availableYears.Add(createdAt.Year);
+                            }
+
+                            foreach (var b in rawList)
+                            {
+                                if (b.TotalAmount == 0 && !string.IsNullOrWhiteSpace(b.BatchName))
+                                {
+                                    try
+                                    {
+                                        var detailRes = await client.GetAsync($"{appScriptUrl}?action=getBatchDetails&batchName={Uri.EscapeDataString(b.BatchName)}");
+                                        if (detailRes.IsSuccessStatusCode)
+                                        {
+                                            var dJson = await detailRes.Content.ReadAsStringAsync();
+                                            using var dDoc = JsonDocument.Parse(dJson);
+                                            var dRoot = dDoc.RootElement;
+                                            if (dRoot.TryGetProperty("items", out var dItemsEl) && dItemsEl.ValueKind == JsonValueKind.Array)
+                                            {
+                                                double calcSum = 0;
+                                                foreach (var it in dItemsEl.EnumerateArray())
+                                                {
+                                                    var pCode = GetStringProp(it, "ProductCode", "productCode", "Code", "code");
+                                                    var qty = ParseDouble(GetStringProp(it, "Quantity", "quantity", "Qty", "qty"));
+                                                    var uPrice = ParseDouble(GetStringProp(it, "UnitPrice", "unitPrice", "Price", "price", "PricePerUnit", "Cost", "cost"));
+                                                    var tAmt = ParseDouble(GetStringProp(it, "TotalAmount", "totalAmount", "Total", "total"));
+
+                                                    if (uPrice == 0 && qty > 0 && tAmt > 0) uPrice = tAmt / qty;
+                                                    if (uPrice == 0 && !string.IsNullOrWhiteSpace(pCode) && priceDict.TryGetValue(pCode, out var dbP)) uPrice = dbP;
+
+                                                    calcSum += (tAmt > 0 ? tAmt : (qty * uPrice));
+                                                }
+                                                b.TotalAmount = calcSum;
+                                            }
+                                        }
+                                    }
+                                    catch { }
+                                }
+                                batches.Add(b);
                             }
                         }
                     }
@@ -119,12 +170,12 @@ namespace CostFlow.Controllers
                             {
                                 items.Add(new TrackingItemViewModel
                                 {
-                                    ProductCode = GetStringProp(it, "ProductCode"),
-                                    ProductName = GetStringProp(it, "ProductName"),
-                                    Quantity = GetStringProp(it, "Quantity"),
-                                    Unit = GetStringProp(it, "Unit"),
+                                    ProductCode = GetStringProp(it, "ProductCode", "productCode", "Code", "code"),
+                                    ProductName = GetStringProp(it, "ProductName", "productName", "Name", "name"),
+                                    Quantity = GetStringProp(it, "Quantity", "quantity", "Qty", "qty"),
+                                    Unit = GetStringProp(it, "Unit", "unit"),
                                     IsReceived = it.TryGetProperty("IsReceived", out var ir) && (ir.ValueKind == JsonValueKind.True || (ir.ValueKind == JsonValueKind.String && ir.GetString()?.ToLower() == "true")),
-                                    ReceiveDate = GetStringProp(it, "ReceiveDate")
+                                    ReceiveDate = GetStringProp(it, "ReceiveDate", "receiveDate")
                                 });
                             }
                         }
@@ -137,9 +188,37 @@ namespace CostFlow.Controllers
             return View(items);
         }
 
-        private static string GetStringProp(JsonElement element, string propName)
+        private static string GetStringProp(JsonElement element, params string[] propNames)
         {
-            if (!element.TryGetProperty(propName, out var prop)) return "";
+            if (element.ValueKind != JsonValueKind.Object) return "";
+
+            foreach (var name in propNames)
+            {
+                if (element.TryGetProperty(name, out var prop))
+                {
+                    var val = GetJsonValString(prop);
+                    if (!string.IsNullOrWhiteSpace(val)) return val;
+                }
+            }
+
+            foreach (var p in element.EnumerateObject())
+            {
+                foreach (var name in propNames)
+                {
+                    if (p.Name.Equals(name, StringComparison.OrdinalIgnoreCase) ||
+                        p.Name.Replace(" ", "").Replace("_", "").Equals(name.Replace(" ", "").Replace("_", ""), StringComparison.OrdinalIgnoreCase))
+                    {
+                        var val = GetJsonValString(p.Value);
+                        if (!string.IsNullOrWhiteSpace(val)) return val;
+                    }
+                }
+            }
+
+            return "";
+        }
+
+        private static string GetJsonValString(JsonElement prop)
+        {
             return prop.ValueKind switch
             {
                 JsonValueKind.String => prop.GetString() ?? "",
@@ -148,6 +227,23 @@ namespace CostFlow.Controllers
                 JsonValueKind.Undefined => "",
                 _ => prop.ToString() ?? ""
             };
+        }
+
+        private static int ParseInt(string? val)
+        {
+            if (string.IsNullOrWhiteSpace(val)) return 0;
+            if (int.TryParse(val.Trim(), out var i)) return i;
+            if (double.TryParse(val.Trim(), out var d)) return (int)d;
+            return 0;
+        }
+
+        private static double ParseDouble(string? val)
+        {
+            if (string.IsNullOrWhiteSpace(val)) return 0;
+            string clean = val.Replace("฿", "").Replace(",", "").Trim();
+            if (double.TryParse(clean, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var d)) return d;
+            if (double.TryParse(clean, out var d2)) return d2;
+            return 0;
         }
 
         [HttpPost]

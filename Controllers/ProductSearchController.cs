@@ -198,6 +198,10 @@ namespace CostFlow.Controllers
             var availableYears = new List<int> { GetThaiNow().Year };
             var availableBatches = new List<string>();
 
+            var priceDict = await _context.ProductPrices
+                .AsNoTracking()
+                .ToDictionaryAsync(p => p.ProductCode, p => (decimal)p.PricePerUnit, StringComparer.OrdinalIgnoreCase);
+
             string? appScriptUrl = _configuration["GoogleSheets:OrderHistoryAppScriptUrl"];
             if (!string.IsNullOrWhiteSpace(appScriptUrl) && !appScriptUrl.Contains("_placeholder"))
             {
@@ -240,15 +244,13 @@ namespace CostFlow.Controllers
                                 rawBatches.Add((bName, createdAt, hasInline ? itemsEl : default));
                             }
 
-                            // Fetch details concurrently for batches if items are not inline
-                            var fetchTasks = rawBatches.Select(async bInfo =>
+                            foreach (var bInfo in rawBatches)
                             {
-                                var bItems = new List<SavedOrderItemViewModel>();
                                 if (bInfo.InlineItems.ValueKind == JsonValueKind.Array && bInfo.InlineItems.GetArrayLength() > 0)
                                 {
                                     foreach (var item in bInfo.InlineItems.EnumerateArray())
                                     {
-                                        bItems.Add(ParseSavedItem(item, bInfo.Name, bInfo.Date));
+                                        items.Add(ParseSavedItem(item, bInfo.Name, bInfo.Date, priceDict));
                                     }
                                 }
                                 else
@@ -265,20 +267,13 @@ namespace CostFlow.Controllers
                                             {
                                                 foreach (var item in dItemsEl.EnumerateArray())
                                                 {
-                                                    bItems.Add(ParseSavedItem(item, bInfo.Name, bInfo.Date));
+                                                    items.Add(ParseSavedItem(item, bInfo.Name, bInfo.Date, priceDict));
                                                 }
                                             }
                                         }
                                     }
                                     catch { /* fail gracefully */ }
                                 }
-                                return bItems;
-                            });
-
-                            var batchResults = await Task.WhenAll(fetchTasks);
-                            foreach (var list in batchResults)
-                            {
-                                items.AddRange(list);
                             }
                         }
                     }
@@ -306,6 +301,10 @@ namespace CostFlow.Controllers
         public async Task<IActionResult> GetSavedOrdersJson(int? year, int? month, string? batchName)
         {
             var items = new List<SavedOrderItemViewModel>();
+
+            var priceDict = await _context.ProductPrices
+                .AsNoTracking()
+                .ToDictionaryAsync(p => p.ProductCode, p => (decimal)p.PricePerUnit, StringComparer.OrdinalIgnoreCase);
 
             string? appScriptUrl = _configuration["GoogleSheets:OrderHistoryAppScriptUrl"];
             if (!string.IsNullOrWhiteSpace(appScriptUrl) && !appScriptUrl.Contains("_placeholder"))
@@ -338,14 +337,13 @@ namespace CostFlow.Controllers
                                 rawBatches.Add((bName, createdAt, hasInline ? itemsEl : default));
                             }
 
-                            var fetchTasks = rawBatches.Select(async bInfo =>
+                            foreach (var bInfo in rawBatches)
                             {
-                                var bItems = new List<SavedOrderItemViewModel>();
                                 if (bInfo.InlineItems.ValueKind == JsonValueKind.Array && bInfo.InlineItems.GetArrayLength() > 0)
                                 {
                                     foreach (var item in bInfo.InlineItems.EnumerateArray())
                                     {
-                                        bItems.Add(ParseSavedItem(item, bInfo.Name, bInfo.Date));
+                                        items.Add(ParseSavedItem(item, bInfo.Name, bInfo.Date, priceDict));
                                     }
                                 }
                                 else
@@ -362,20 +360,13 @@ namespace CostFlow.Controllers
                                             {
                                                 foreach (var item in dItemsEl.EnumerateArray())
                                                 {
-                                                    bItems.Add(ParseSavedItem(item, bInfo.Name, bInfo.Date));
+                                                    items.Add(ParseSavedItem(item, bInfo.Name, bInfo.Date, priceDict));
                                                 }
                                             }
                                         }
                                     }
                                     catch { /* fail gracefully */ }
                                 }
-                                return bItems;
-                            });
-
-                            var batchResults = await Task.WhenAll(fetchTasks);
-                            foreach (var list in batchResults)
-                            {
-                                items.AddRange(list);
                             }
                         }
                     }
@@ -407,14 +398,29 @@ namespace CostFlow.Controllers
             return Json(result);
         }
 
-        private SavedOrderItemViewModel ParseSavedItem(JsonElement item, string bName, DateTime createdAt)
+        private SavedOrderItemViewModel ParseSavedItem(JsonElement item, string bName, DateTime createdAt, Dictionary<string, decimal>? priceDict = null)
         {
-            var pCode = GetStringProp(item, "ProductCode");
-            var pName = GetStringProp(item, "ProductName");
-            var unit = GetStringProp(item, "Unit");
-            var unitPrice = ParseDecimal(GetStringProp(item, "UnitPrice"));
-            var quantity = ParseDecimal(GetStringProp(item, "Quantity"));
-            var remarks = GetStringProp(item, "Remarks");
+            var pCode = GetStringProp(item, "ProductCode", "productCode", "Code", "code", "รหัสสินค้า");
+            var pName = GetStringProp(item, "ProductName", "productName", "Name", "name", "ชื่อสินค้า");
+            var unit = GetStringProp(item, "Unit", "unit", "หน่วย");
+            var unitPriceStr = GetStringProp(item, "UnitPrice", "unitPrice", "Price", "price", "PricePerUnit", "Unit Price", "ราคา/หน่วย", "ราคาต่อหน่วย", "Cost", "cost");
+            var quantityStr = GetStringProp(item, "Quantity", "quantity", "Qty", "qty", "จำนวน");
+            var totalAmountStr = GetStringProp(item, "TotalAmount", "totalAmount", "Total", "total", "TotalAmount", "ราคารวม", "TotalPrice", "totalPrice");
+            var remarks = GetStringProp(item, "Remarks", "remarks", "Remark", "remark", "หมายเหตุ", "Note", "note");
+
+            var unitPrice = ParseDecimal(unitPriceStr);
+            var quantity = ParseDecimal(quantityStr);
+            var totalAmount = ParseDecimal(totalAmountStr);
+
+            if (unitPrice == 0 && quantity > 0 && totalAmount > 0)
+            {
+                unitPrice = totalAmount / quantity;
+            }
+
+            if (unitPrice == 0 && !string.IsNullOrWhiteSpace(pCode) && priceDict != null && priceDict.TryGetValue(pCode, out var dbPrice))
+            {
+                unitPrice = dbPrice;
+            }
 
             return new SavedOrderItemViewModel
             {
@@ -682,9 +688,37 @@ namespace CostFlow.Controllers
             }
         }
 
-        private static string GetStringProp(JsonElement element, string propName)
+        private static string GetStringProp(JsonElement element, params string[] propNames)
         {
-            if (!element.TryGetProperty(propName, out var prop)) return "";
+            if (element.ValueKind != JsonValueKind.Object) return "";
+
+            foreach (var name in propNames)
+            {
+                if (element.TryGetProperty(name, out var prop))
+                {
+                    var val = GetJsonValString(prop);
+                    if (!string.IsNullOrWhiteSpace(val)) return val;
+                }
+            }
+
+            foreach (var p in element.EnumerateObject())
+            {
+                foreach (var name in propNames)
+                {
+                    if (p.Name.Equals(name, StringComparison.OrdinalIgnoreCase) ||
+                        p.Name.Replace(" ", "").Replace("_", "").Equals(name.Replace(" ", "").Replace("_", ""), StringComparison.OrdinalIgnoreCase))
+                    {
+                        var val = GetJsonValString(p.Value);
+                        if (!string.IsNullOrWhiteSpace(val)) return val;
+                    }
+                }
+            }
+
+            return "";
+        }
+
+        private static string GetJsonValString(JsonElement prop)
+        {
             return prop.ValueKind switch
             {
                 JsonValueKind.String => prop.GetString() ?? "",
@@ -734,7 +768,8 @@ namespace CostFlow.Controllers
         {
             if (string.IsNullOrWhiteSpace(val)) return 0;
             string clean = val.Replace("฿", "").Replace(",", "").Trim();
-            if (decimal.TryParse(clean, out var dec)) return dec;
+            if (decimal.TryParse(clean, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var dec)) return dec;
+            if (decimal.TryParse(clean, out var dec2)) return dec2;
             return 0;
         }
     }
