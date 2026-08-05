@@ -245,7 +245,7 @@ body.sidebar-collapsed .purchase-menu-trigger {
 body.sidebar-collapsed .purchase-dropdown {
   position: absolute;
   left: calc(100% + 14px);
-  top: 0;
+  bottom: 0;
   background: white;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
@@ -263,10 +263,12 @@ body.sidebar-collapsed .purchase-dropdown-item {
   margin-left: 0 !important;
   margin-right: 0 !important;
   padding-left: 12px !important;
+  justify-content: flex-start !important;
   white-space: nowrap;
 }
 
-body.sidebar-collapsed .purchase-dropdown-item span {
+body.sidebar-collapsed .purchase-dropdown-item span,
+body.sidebar-collapsed #sidebar .purchase-dropdown-item span {
   display: inline !important;
 }
 

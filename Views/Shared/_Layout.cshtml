@@ -435,8 +435,9 @@
     <div class="px-md flex flex-col gap-xs mt-auto mb-2">
         @if (isAdmin)
         {
-            <!-- Purchase System Collapsible Menu (Admin Only) -->
-            <button id="purchase-menu-toggle"
+            <div class="purchase-system-menu-container relative w-full">
+                <!-- Purchase System Collapsible Menu (Admin Only) -->
+                <button id="purchase-menu-toggle"
                     class="purchase-menu-trigger group relative cursor-pointer flex items-center gap-2 px-3 py-2 rounded-sm text-slate-500 hover:text-slate-700 hover:bg-slate-50 transition-all font-body-md w-full"
                     data-guide="ระบบจัดซื้อ (เครื่องมือเสริม)">
                 <svg class="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"
@@ -484,6 +485,7 @@
                     </svg>
                     <span class="text-[12px] font-medium">ติดตามสินค้า</span>
                 </a>
+            </div>
             </div>
             
         }
