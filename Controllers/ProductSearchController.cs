@@ -253,62 +253,26 @@ namespace CostFlow.Controllers
                 .AsNoTracking()
                 .ToDictionaryAsync(p => p.ProductCode, p => (decimal)p.PricePerUnit, StringComparer.OrdinalIgnoreCase);
 
-            string? appScriptUrl = _configuration["GoogleSheets:OrderHistoryAppScriptUrl"];
-            if (!string.IsNullOrWhiteSpace(appScriptUrl) && !appScriptUrl.Contains("_placeholder"))
+            var batches = await _tiDbContext.SavedOrderBatches
+                .AsNoTracking()
+                .Select(b => new { b.BatchName, b.CreatedAt })
+                .ToListAsync();
+
+            foreach (var b in batches)
             {
-                try
+                if (!string.IsNullOrWhiteSpace(b.BatchName) && !availableBatches.Contains(b.BatchName))
                 {
-                    var client = _httpClientFactory.CreateClient();
-                    client.Timeout = TimeSpan.FromSeconds(30);
-                    var response = await client.GetAsync(appScriptUrl);
-                    if (response.IsSuccessStatusCode)
-                    {
-                        var json = await response.Content.ReadAsStringAsync();
-                        using var doc = JsonDocument.Parse(json);
-                        var root = doc.RootElement;
-                        if (root.TryGetProperty("batches", out var batchesEl))
-                        {
-                            var rawBatches = new List<(string Name, DateTime Date, JsonElement InlineItems)>();
-                            foreach (var b in batchesEl.EnumerateArray())
-                            {
-                                var bName = GetStringProp(b, "BatchName");
-                                var createdAtStr = GetStringProp(b, "CreatedAt");
-                                var createdAt = ParseDateNullable(createdAtStr) ?? DateTime.MinValue;
-
-                                if (!string.IsNullOrWhiteSpace(bName) && !availableBatches.Contains(bName))
-                                {
-                                    availableBatches.Add(bName);
-                                }
-
-                                if (createdAt.Year > 2000 && !availableYears.Contains(createdAt.Year))
-                                {
-                                    availableYears.Add(createdAt.Year);
-                                }
-
-                                // Filter by year/month/batchName if requested
-                                if (year.HasValue && year.Value > 0 && createdAt.Year != year.Value) continue;
-                                if (month.HasValue && month.Value > 0 && createdAt.Month != month.Value) continue;
-                                if (!string.IsNullOrWhiteSpace(batchName) && !bName.Equals(batchName, StringComparison.OrdinalIgnoreCase)) continue;
-
-                                JsonElement itemsEl = default;
-                                bool hasInline = b.TryGetProperty("Orders", out itemsEl) || b.TryGetProperty("items", out itemsEl);
-                                rawBatches.Add((bName, createdAt, hasInline ? itemsEl : default));
-                            }
-
-                            // ข้ามการดึง getBatchDetails ในจังหวะโหลดหน้าเว็บครั้งแรก เพื่อให้โหลดเร็ว
-                            // การดึงข้อมูลจริงจะถูกทำผ่าน AJAX (GetSavedOrdersJson) ที่หน้าเว็บแทน
-                            // foreach (var bInfo in rawBatches) { ... }
-                        }
-                    }
+                    availableBatches.Add(b.BatchName);
                 }
-                catch { /* fail gracefully */ }
+                
+                if (b.CreatedAt.Year > 2000 && !availableYears.Contains(b.CreatedAt.Year))
+                {
+                    availableYears.Add(b.CreatedAt.Year);
+                }
             }
 
-            // Default sorting: Order by CreatedAt descending (newest keyed items first)
-            items = items.OrderByDescending(i => i.CreatedAt).ToList();
-
-            availableYears = availableYears.OrderByDescending(y => y).ToList();
-            availableBatches = availableBatches.OrderBy(b => b).ToList();
+            availableYears = availableYears.Distinct().OrderByDescending(y => y).ToList();
+            availableBatches = availableBatches.Distinct().OrderBy(b => b).ToList();
 
             ViewData["SelectedYear"] = year;
             ViewData["SelectedMonth"] = month;

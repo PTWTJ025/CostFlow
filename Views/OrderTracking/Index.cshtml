@@ -21,28 +21,12 @@
         <span class="font-semibold text-on-surface">ติดตามสินค้า</span>
     </div>
 
-    <!-- Page Title & Actions -->
-    <div class="flex items-start justify-between shrink-0 gap-4 flex-wrap">
-        <div>
-            <h1 class="text-xl font-bold text-on-surface mb-1 tracking-tight">ติดตามสถานะการรับสินค้า</h1>
-            <p class="text-sm text-on-surface-variant">
-                ตรวจสอบและอัปเดตสถานะการรับสินค้าของแต่ละแผ่นงาน
-            </p>
-        </div>
-
-        @if (User.IsInRole("Admin"))
-        {
-            <div class="flex items-center gap-2">
-                <form method="post" action="/ProductSearch/MigrateToTiDb" class="mb-0">
-                    <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-on-primary text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors shadow-sm" onclick="return confirm('ระบบจะดึงข้อมูลแผ่นงานทั้งหมดจาก Google Sheets มาอัปเดตใน TiDB คุณต้องการดำเนินการต่อหรือไม่? (อาจใช้เวลาสักครู่)');">
-                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                        </svg>
-                        นำเข้าข้อมูลจาก Sheet ลง TiDB
-                    </button>
-                </form>
-            </div>
-        }
+    <!-- Page Title -->
+    <div class="shrink-0">
+        <h1 class="text-xl font-bold text-on-surface mb-1 tracking-tight">ติดตามสถานะการรับสินค้า</h1>
+        <p class="text-sm text-on-surface-variant">
+            ตรวจสอบและอัปเดตสถานะการรับสินค้าของแต่ละแผ่นงาน
+        </p>
     </div>
 
     <!-- Stats Row -->
