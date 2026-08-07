@@ -30,10 +30,21 @@
     </div>
 
     <!-- Page Title -->
-    <div class="shrink-0 flex items-center justify-between">
+    <div class="shrink-0 flex items-center justify-between flex-wrap gap-4">
         <div>
             <h1 class="text-xl font-bold text-on-surface leading-tight">ประวัติรายการสินค้าที่บันทึก</h1>
-            <p class="text-sm text-on-surface-variant mt-0.5">รายการสินค้าทั้งหมดจากใบสั่งซื้อที่บันทึกลง Google Sheets (เรียงตามวันที่คีย์ข้อมูล)</p>
+            <p class="text-sm text-on-surface-variant mt-0.5">รายการสินค้าทั้งหมดจากใบสั่งซื้อที่บันทึกลงฐานข้อมูล (เรียงตามวันที่คีย์ข้อมูล)</p>
+        </div>
+        <div>
+            @if(isAdmin)
+            {
+                <button type="button" onclick="migrateToTiDb()" class="h-9 px-4 inline-flex items-center gap-2 text-sm font-medium bg-primary text-on-primary rounded-full hover:bg-primary/90 transition-colors">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/>
+                    </svg>
+                    นำเข้าข้อมูลจาก Sheet ลง TiDB
+                </button>
+            }
         </div>
     </div>
 
@@ -95,73 +106,70 @@
     <div class="flex-1 flex flex-col bg-surface border border-outline-variant rounded-lg overflow-hidden min-h-0">
         <!-- Toolbar & Filters -->
         <div class="bg-surface px-5 py-3 border-b border-outline-variant shrink-0 flex flex-wrap items-center justify-between gap-3">
-            <form method="get" action="/ProductSearch/SavedOrders" class="flex flex-wrap items-center gap-2" id="filter-form" onsubmit="event.preventDefault(); handleFilterChange(this);">
-                <!-- Year select -->
-                <div class="relative">
-                    <select name="year" onchange="handleFilterChange(this)"
-                            class="appearance-none pl-3 pr-8 py-2 border border-outline-variant rounded text-[13px] font-medium text-on-surface-variant outline-none cursor-pointer bg-white hover:border-outline focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all">
-                        <option value="">ปีทั้งหมด</option>
-                        @if (ViewData["AvailableYears"] is List<int> years)
+            <!-- Hidden Filter Form -->
+            <form method="get" action="/ProductSearch/SavedOrders" class="hidden" id="filter-form">
+                <select name="year" id="hidden-year">
+                    <option value="">ปีทั้งหมด</option>
+                    @if (ViewData["AvailableYears"] is List<int> years)
+                    {
+                        foreach (var y in years)
                         {
-                            foreach (var y in years)
+                            if ((int?)ViewData["SelectedYear"] == y)
                             {
-                                if ((int?)ViewData["SelectedYear"] == y)
-                                {
-                                    <option value="@y" selected>ปี @(y + 543)</option>
-                                }
-                                else
-                                {
-                                    <option value="@y">ปี @(y + 543)</option>
-                                }
+                                <option value="@y" selected>ปี @(y + 543)</option>
+                            }
+                            else
+                            {
+                                <option value="@y">ปี @(y + 543)</option>
                             }
                         }
-                    </select>
-                </div>
-
-                <!-- Month select -->
-                <div class="relative">
-                    <select name="month" onchange="handleFilterChange(this)"
-                            class="appearance-none pl-3 pr-8 py-2 border border-outline-variant rounded text-[13px] font-medium text-on-surface-variant outline-none cursor-pointer bg-white hover:border-outline focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all">
-                        <option value="">เดือนทั้งหมด</option>
-                        @{
-                            string[] monthsTh = { "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม" };
-                            for (int i = 1; i <= 12; i++)
-                            {
-                                if ((int?)ViewData["SelectedMonth"] == i)
-                                {
-                                    <option value="@i" selected>@monthsTh[i - 1]</option>
-                                }
-                                else
-                                {
-                                    <option value="@i">@monthsTh[i - 1]</option>
-                                }
-                            }
-                        }
-                    </select>
-                </div>
-
-                <!-- Batch select -->
-                <div class="relative">
-                    <select name="batchName" onchange="handleFilterChange(this)"
-                            class="appearance-none pl-3 pr-8 py-2 border border-outline-variant rounded text-[13px] font-medium text-on-surface-variant outline-none cursor-pointer bg-white hover:border-outline focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all max-w-[200px] truncate">
-                        <option value="">แผ่นงานทั้งหมด</option>
-                        @if (ViewData["AvailableBatches"] is List<string> batches)
+                    }
+                </select>
+                <select name="month" id="hidden-month">
+                    <option value="">เดือนทั้งหมด</option>
+                    @{
+                        string[] monthsTh = { "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม" };
+                        for (int i = 1; i <= 12; i++)
                         {
-                            foreach (var b in batches)
+                            if ((int?)ViewData["SelectedMonth"] == i)
                             {
-                                if ((string?)ViewData["SelectedBatch"] == b)
-                                {
-                                    <option value="@b" selected title="@b">@b</option>
-                                }
-                                else
-                                {
-                                    <option value="@b" title="@b">@b</option>
-                                }
+                                <option value="@i" selected>@monthsTh[i - 1]</option>
+                            }
+                            else
+                            {
+                                <option value="@i">@monthsTh[i - 1]</option>
                             }
                         }
-                    </select>
-                </div>
+                    }
+                </select>
+                <select name="batchName" id="hidden-batchName">
+                    <option value="">แผ่นงานทั้งหมด</option>
+                    @if (ViewData["AvailableBatches"] is List<string> batches)
+                    {
+                        foreach (var b in batches)
+                        {
+                            if ((string?)ViewData["SelectedBatch"] == b)
+                            {
+                                <option value="@b" selected title="@b">@b</option>
+                            }
+                            else
+                            {
+                                <option value="@b" title="@b">@b</option>
+                            }
+                        }
+                    }
+                </select>
             </form>
+
+            <div class="flex flex-wrap items-center gap-2">
+                <button type="button" onclick="openFilterModal()" class="flex items-center gap-2 px-4 py-2 bg-white border border-outline-variant rounded-md text-[13px] font-semibold text-on-surface-variant hover:text-primary hover:border-primary/50 transition-all shadow-sm">
+                    <!-- Lucide: filter -->
+                    <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+                    </svg>
+                    ตัวกรองข้อมูล
+                </button>
+            </div>
 
             <!-- Search Box -->
             <div class="relative w-64 sm:w-80">
@@ -290,6 +298,63 @@
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
+        function migrateToTiDb() {
+            Swal.fire({
+                title: 'ยืนยันการนำเข้าข้อมูล?',
+                text: "การนำเข้าข้อมูลจะใช้เวลาสักครู่ ระบบจะดึงประวัติการสั่งซื้อทั้งหมดจาก Google Sheets มาบันทึกใน TiDB เฉพาะรายการที่ยังไม่มี",
+                icon: 'info',
+                showCancelButton: true,
+                confirmButtonColor: '#00288E',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'ใช่, นำเข้าข้อมูล',
+                cancelButtonText: 'ยกเลิก'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({
+                        title: 'กำลังนำเข้าข้อมูล...',
+                        text: 'กรุณารอสักครู่',
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+
+                    fetch('/ProductSearch/MigrateToTiDb', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            Swal.fire(
+                                'นำเข้าสำเร็จ!',
+                                data.message,
+                                'success'
+                            ).then(() => {
+                                window.location.reload();
+                            });
+                        } else {
+                            Swal.fire(
+                                'ผิดพลาด!',
+                                data.error,
+                                'error'
+                            );
+                        }
+                    })
+                    .catch(error => {
+                        Swal.fire(
+                            'ผิดพลาด!',
+                            'ไม่สามารถติดต่อเซิร์ฟเวอร์ได้: ' + error,
+                            'error'
+                        );
+                    });
+                }
+            });
+        }
+
         // Render Skeleton Loading Rows in Table
         function renderSkeletonRows() {
             const tbody = document.getElementById('item-tbody');
@@ -408,7 +473,7 @@
                                         data-name="${item.productName}"
                                         title="ลบรายการสินค้า">
                                     <!-- Lucide: trash-2 -->
-                                    <svg class="w-4 h-4 text-rose-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                                    <svg class="w-4 h-4 text-rose-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
                                         <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/>
                                     </svg>
                                     <span class="hidden sm:inline">ลบ</span>
@@ -695,9 +760,82 @@
             }
         }
 
+        async function openFilterModal() {
+            const yearOptions = document.getElementById('hidden-year').innerHTML;
+            const monthOptions = document.getElementById('hidden-month').innerHTML;
+            const batchOptions = document.getElementById('hidden-batchName').innerHTML;
+            
+            const currentYear = document.getElementById('hidden-year').value;
+            const currentMonth = document.getElementById('hidden-month').value;
+            const currentBatch = document.getElementById('hidden-batchName').value;
+
+            const { value: formValues, isConfirmed } = await Swal.fire({
+                title: 'ตัวกรองข้อมูล',
+                html: `
+                    <div style="text-align:left; font-size:13px; color:#444653; margin-top:16px; display:flex; flex-direction:column; gap:16px;">
+                        <div>
+                            <label style="display:block; font-weight:600; margin-bottom:6px; color:#1a1b22;">เลือกปี</label>
+                            <select id="swal-filter-year" style="width:100%; padding:10px 12px; border:1px solid #c4c5d5; border-radius:6px; font-size:14px; outline:none; background:#fff; font-family:inherit;">
+                                ${yearOptions}
+                            </select>
+                        </div>
+                        <div>
+                            <label style="display:block; font-weight:600; margin-bottom:6px; color:#1a1b22;">เลือกเดือน</label>
+                            <select id="swal-filter-month" style="width:100%; padding:10px 12px; border:1px solid #c4c5d5; border-radius:6px; font-size:14px; outline:none; background:#fff; font-family:inherit;">
+                                ${monthOptions}
+                            </select>
+                        </div>
+                        <div>
+                            <label style="display:block; font-weight:600; margin-bottom:6px; color:#1a1b22;">เลือกแผ่นงาน</label>
+                            <select id="swal-filter-batch" style="width:100%; padding:10px 12px; border:1px solid #c4c5d5; border-radius:6px; font-size:14px; outline:none; background:#fff; font-family:inherit;">
+                                ${batchOptions}
+                            </select>
+                        </div>
+                    </div>
+                `,
+                showCancelButton: true,
+                confirmButtonText: 'นำไปใช้',
+                cancelButtonText: 'ยกเลิก',
+                customClass: {
+                    popup: 'swal-popup-custom',
+                    confirmButton: 'swal-btn-primary',
+                    cancelButton: 'swal-btn-cancel',
+                    actions: 'swal-actions-custom'
+                },
+                buttonsStyling: false,
+                focusConfirm: false,
+                didOpen: () => {
+                    document.getElementById('swal-filter-year').value = currentYear;
+                    document.getElementById('swal-filter-month').value = currentMonth;
+                    document.getElementById('swal-filter-batch').value = currentBatch;
+                },
+                preConfirm: () => {
+                    return {
+                        year: document.getElementById('swal-filter-year').value,
+                        month: document.getElementById('swal-filter-month').value,
+                        batchName: document.getElementById('swal-filter-batch').value
+                    };
+                }
+            });
+
+            if (isConfirmed && formValues) {
+                document.getElementById('hidden-year').value = formValues.year;
+                document.getElementById('hidden-month').value = formValues.month;
+                document.getElementById('hidden-batchName').value = formValues.batchName;
+                
+                handleFilterChange(document.getElementById('hidden-year'));
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             initSearchFilter();
             bindActionEvents();
+            
+            // โหลดข้อมูลอัตโนมัติเมื่อเปิดหน้า เพื่อแสดง Skeleton Loader ระหว่างรอข้อมูล
+            const selectElem = document.querySelector('#filter-form select');
+            if (selectElem) {
+                handleFilterChange(selectElem);
+            }
         });
     </script>
 

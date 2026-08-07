@@ -22,12 +22,14 @@ namespace CostFlow.Controllers
     public class ProductSearchController : Controller
     {
         private readonly AppDbContext _context;
+        private readonly TiDbContext _tiDbContext;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly IConfiguration _configuration;
 
-        public ProductSearchController(AppDbContext context, IHttpClientFactory httpClientFactory, IConfiguration configuration)
+        public ProductSearchController(AppDbContext context, TiDbContext tiDbContext, IHttpClientFactory httpClientFactory, IConfiguration configuration)
         {
             _context = context;
+            _tiDbContext = tiDbContext;
             _httpClientFactory = httpClientFactory;
             _configuration = configuration;
         }
@@ -152,6 +154,41 @@ namespace CostFlow.Controllers
                     return Json(new { success = false, error = errorMsg });
                 }
 
+                // --- Dual Write: Save to TiDB ---
+                try
+                {
+                    var newBatch = new CostFlow.Models.TiDb.SavedOrderBatch
+                    {
+                        BatchName = batchName,
+                        CreatedAt = now,
+                        TotalItems = payload.Orders.Count,
+                        TotalAmount = payload.Orders.Sum(o => o.UnitPrice * o.Quantity)
+                    };
+
+                    _tiDbContext.SavedOrderBatches.Add(newBatch);
+                    await _tiDbContext.SaveChangesAsync();
+
+                    var dbItems = payload.Orders.Select(o => new CostFlow.Models.TiDb.SavedOrderItem
+                    {
+                        BatchId = newBatch.Id,
+                        ProductCode = o.ProductCode,
+                        ProductName = o.ProductName,
+                        Unit = o.Unit,
+                        UnitPrice = o.UnitPrice,
+                        Quantity = o.Quantity,
+                        Remarks = o.Remarks
+                    }).ToList();
+
+                    _tiDbContext.SavedOrderItems.AddRange(dbItems);
+                    await _tiDbContext.SaveChangesAsync();
+                }
+                catch (Exception dbEx)
+                {
+                    // If TiDB fails but Google Sheet succeeds, we might want to log it or return a warning.
+                    // For now, we will return an error so the user knows TiDB failed.
+                    return Json(new { success = false, error = $"บันทึกลง Sheet สำเร็จ แต่ TiDB ล้มเหลว: {dbEx.Message}" });
+                }
+
                 return Json(new { success = true });
             }
             catch (Exception ex)
@@ -181,6 +218,20 @@ namespace CostFlow.Controllers
                 var response = await client.PostAsync(appScriptUrl, content);
                 if (!response.IsSuccessStatusCode)
                     return Json(new { success = false, error = $"Google Sheets ตอบกลับ HTTP {(int)response.StatusCode}" });
+
+                try
+                {
+                    var dbBatch = await _tiDbContext.SavedOrderBatches.FirstOrDefaultAsync(b => b.BatchName == batchName);
+                    if (dbBatch != null)
+                    {
+                        _tiDbContext.SavedOrderBatches.Remove(dbBatch);
+                        await _tiDbContext.SaveChangesAsync();
+                    }
+                }
+                catch (Exception dbEx)
+                {
+                    return Json(new { success = false, error = $"ลบจาก Sheet สำเร็จ แต่ลบจาก TiDB ล้มเหลว: {dbEx.Message}" });
+                }
 
                 return Json(new { success = true });
             }
@@ -244,28 +295,9 @@ namespace CostFlow.Controllers
                                 rawBatches.Add((bName, createdAt, hasInline ? itemsEl : default));
                             }
 
-                            foreach (var bInfo in rawBatches)
-                            {
-                                // บังคับอ่านข้อมูลจากแต่ละเซลล์ในชีทโดยตรง (getBatchDetails) 1-to-1 ตามที่ผู้ใช้ต้องการ
-                                try
-                                {
-                                    var detailRes = await client.GetAsync($"{appScriptUrl}?action=getBatchDetails&batchName={Uri.EscapeDataString(bInfo.Name)}");
-                                    if (detailRes.IsSuccessStatusCode)
-                                    {
-                                        var dJson = await detailRes.Content.ReadAsStringAsync();
-                                        using var dDoc = JsonDocument.Parse(dJson);
-                                        var dRoot = dDoc.RootElement;
-                                        if (dRoot.TryGetProperty("items", out var dItemsEl) && dItemsEl.ValueKind == JsonValueKind.Array)
-                                        {
-                                            foreach (var item in dItemsEl.EnumerateArray())
-                                            {
-                                                items.Add(ParseSavedItem(item, bInfo.Name, bInfo.Date, priceDict));
-                                            }
-                                        }
-                                    }
-                                }
-                                catch { /* fail gracefully */ }
-                            }
+                            // ข้ามการดึง getBatchDetails ในจังหวะโหลดหน้าเว็บครั้งแรก เพื่อให้โหลดเร็ว
+                            // การดึงข้อมูลจริงจะถูกทำผ่าน AJAX (GetSavedOrdersJson) ที่หน้าเว็บแทน
+                            // foreach (var bInfo in rawBatches) { ... }
                         }
                     }
                 }
@@ -293,70 +325,42 @@ namespace CostFlow.Controllers
         {
             var items = new List<SavedOrderItemViewModel>();
 
-            var priceDict = await _context.ProductPrices
-                .AsNoTracking()
-                .ToDictionaryAsync(p => p.ProductCode, p => (decimal)p.PricePerUnit, StringComparer.OrdinalIgnoreCase);
+            var query = _tiDbContext.SavedOrderBatches
+                .Include(b => b.Items)
+                .AsQueryable();
 
-            string? appScriptUrl = _configuration["GoogleSheets:OrderHistoryAppScriptUrl"];
-            if (!string.IsNullOrWhiteSpace(appScriptUrl) && !appScriptUrl.Contains("_placeholder"))
+            if (year.HasValue && year.Value > 0)
             {
-                try
-                {
-                    var client = _httpClientFactory.CreateClient();
-                    client.Timeout = TimeSpan.FromSeconds(30);
-                    var response = await client.GetAsync(appScriptUrl);
-                    if (response.IsSuccessStatusCode)
-                    {
-                        var json = await response.Content.ReadAsStringAsync();
-                        using var doc = JsonDocument.Parse(json);
-                        var root = doc.RootElement;
-                        if (root.TryGetProperty("batches", out var batchesEl))
-                        {
-                            var rawBatches = new List<(string Name, DateTime Date, JsonElement InlineItems)>();
-                            foreach (var b in batchesEl.EnumerateArray())
-                            {
-                                var bName = GetStringProp(b, "BatchName");
-                                var createdAtStr = GetStringProp(b, "CreatedAt");
-                                var createdAt = ParseDateNullable(createdAtStr) ?? DateTime.MinValue;
-
-                                if (year.HasValue && year.Value > 0 && createdAt.Year != year.Value) continue;
-                                if (month.HasValue && month.Value > 0 && createdAt.Month != month.Value) continue;
-                                if (!string.IsNullOrWhiteSpace(batchName) && !bName.Equals(batchName, StringComparison.OrdinalIgnoreCase)) continue;
-
-                                JsonElement itemsEl = default;
-                                bool hasInline = b.TryGetProperty("Orders", out itemsEl) || b.TryGetProperty("items", out itemsEl);
-                                rawBatches.Add((bName, createdAt, hasInline ? itemsEl : default));
-                            }
-
-                            foreach (var bInfo in rawBatches)
-                            {
-                                // บังคับอ่านข้อมูลจากแต่ละเซลล์ในชีทโดยตรง (getBatchDetails) 1-to-1 ตามที่ผู้ใช้ต้องการ
-                                try
-                                {
-                                    var detailRes = await client.GetAsync($"{appScriptUrl}?action=getBatchDetails&batchName={Uri.EscapeDataString(bInfo.Name)}");
-                                    if (detailRes.IsSuccessStatusCode)
-                                    {
-                                        var dJson = await detailRes.Content.ReadAsStringAsync();
-                                        using var dDoc = JsonDocument.Parse(dJson);
-                                        var dRoot = dDoc.RootElement;
-                                        if (dRoot.TryGetProperty("items", out var dItemsEl) && dItemsEl.ValueKind == JsonValueKind.Array)
-                                        {
-                                            foreach (var item in dItemsEl.EnumerateArray())
-                                            {
-                                                items.Add(ParseSavedItem(item, bInfo.Name, bInfo.Date, priceDict));
-                                            }
-                                        }
-                                    }
-                                }
-                                catch { /* fail gracefully */ }
-                            }
-                        }
-                    }
-                }
-                catch { /* fail gracefully */ }
+                query = query.Where(b => b.CreatedAt.Year == year.Value);
+            }
+            if (month.HasValue && month.Value > 0)
+            {
+                query = query.Where(b => b.CreatedAt.Month == month.Value);
+            }
+            if (!string.IsNullOrWhiteSpace(batchName))
+            {
+                query = query.Where(b => b.BatchName == batchName);
             }
 
-            items = items.OrderByDescending(i => i.CreatedAt).ToList();
+            var batches = await query.OrderByDescending(b => b.CreatedAt).ToListAsync();
+
+            foreach (var b in batches)
+            {
+                foreach (var item in b.Items)
+                {
+                    items.Add(new SavedOrderItemViewModel
+                    {
+                        BatchName = b.BatchName,
+                        CreatedAt = b.CreatedAt,
+                        ProductCode = item.ProductCode,
+                        ProductName = item.ProductName,
+                        Unit = item.Unit,
+                        UnitPrice = item.UnitPrice,
+                        Quantity = item.Quantity,
+                        Remarks = item.Remarks
+                    });
+                }
+            }
 
             var result = new
             {
@@ -380,6 +384,132 @@ namespace CostFlow.Controllers
             return Json(result);
         }
 
+        // POST: /ProductSearch/MigrateToTiDb
+        [HttpPost]
+        public async Task<IActionResult> MigrateToTiDb()
+        {
+            var priceDict = await _context.ProductPrices
+                .AsNoTracking()
+                .ToDictionaryAsync(p => p.ProductCode, p => (decimal)p.PricePerUnit, StringComparer.OrdinalIgnoreCase);
+
+            string? appScriptUrl = _configuration["GoogleSheets:OrderHistoryAppScriptUrl"];
+            if (string.IsNullOrWhiteSpace(appScriptUrl) || appScriptUrl.Contains("_placeholder"))
+            {
+                return Json(new { success = false, error = "ยังไม่ได้ตั้งค่า Google Sheets API URL" });
+            }
+
+            int batchesImported = 0;
+            int itemsImported = 0;
+
+            try
+            {
+                var client = _httpClientFactory.CreateClient();
+                client.Timeout = TimeSpan.FromSeconds(60);
+                var response = await client.GetAsync(appScriptUrl);
+                if (response.IsSuccessStatusCode)
+                {
+                    var json = await response.Content.ReadAsStringAsync();
+                    using var doc = JsonDocument.Parse(json);
+                    var root = doc.RootElement;
+                    if (root.TryGetProperty("batches", out var batchesEl))
+                    {
+                        var rawBatches = new List<(string Name, DateTime Date, JsonElement InlineItems)>();
+                        foreach (var b in batchesEl.EnumerateArray())
+                        {
+                            var bName = GetStringProp(b, "BatchName");
+                            var createdAtStr = GetStringProp(b, "CreatedAt");
+                            var createdAt = ParseDateNullable(createdAtStr) ?? DateTime.MinValue;
+
+                            // Skip if already in TiDB
+                            bool exists = await _tiDbContext.SavedOrderBatches.AnyAsync(tb => tb.BatchName == bName);
+                            if (exists) continue;
+
+                            JsonElement itemsEl = default;
+                            bool hasInline = b.TryGetProperty("Orders", out itemsEl) || b.TryGetProperty("items", out itemsEl);
+                            rawBatches.Add((bName, createdAt, hasInline ? itemsEl : default));
+                        }
+
+                        foreach (var bInfo in rawBatches)
+                        {
+                            var itemsList = new List<CostFlow.Models.TiDb.SavedOrderItem>();
+                            if (bInfo.InlineItems.ValueKind == JsonValueKind.Array)
+                            {
+                                foreach (var item in bInfo.InlineItems.EnumerateArray())
+                                {
+                                    var parsed = ParseSavedItem(item, bInfo.Name, bInfo.Date, priceDict);
+                                    itemsList.Add(new CostFlow.Models.TiDb.SavedOrderItem
+                                    {
+                                        ProductCode = parsed.ProductCode,
+                                        ProductName = parsed.ProductName,
+                                        Unit = parsed.Unit,
+                                        UnitPrice = parsed.UnitPrice,
+                                        Quantity = parsed.Quantity,
+                                        Remarks = parsed.Remarks,
+                                        IsReceived = parsed.IsReceived,
+                                        ReceiveDate = ParseDateNullable(parsed.ReceiveDate)
+                                    });
+                                }
+                            }
+                            else
+                            {
+                                try
+                                {
+                                    var detailRes = await client.GetAsync($"{appScriptUrl}?action=getBatchDetails&batchName={Uri.EscapeDataString(bInfo.Name)}");
+                                    if (detailRes.IsSuccessStatusCode)
+                                    {
+                                        var dJson = await detailRes.Content.ReadAsStringAsync();
+                                        using var dDoc = JsonDocument.Parse(dJson);
+                                        var dRoot = dDoc.RootElement;
+                                        if (dRoot.TryGetProperty("items", out var dItemsEl) && dItemsEl.ValueKind == JsonValueKind.Array)
+                                        {
+                                            foreach (var item in dItemsEl.EnumerateArray())
+                                            {
+                                                var parsed = ParseSavedItem(item, bInfo.Name, bInfo.Date, priceDict);
+                                                itemsList.Add(new CostFlow.Models.TiDb.SavedOrderItem
+                                                {
+                                                    ProductCode = parsed.ProductCode,
+                                                    ProductName = parsed.ProductName,
+                                                    Unit = parsed.Unit,
+                                                    UnitPrice = parsed.UnitPrice,
+                                                    Quantity = parsed.Quantity,
+                                                    Remarks = parsed.Remarks,
+                                                    IsReceived = parsed.IsReceived,
+                                                    ReceiveDate = ParseDateNullable(parsed.ReceiveDate)
+                                                });
+                                            }
+                                        }
+                                    }
+                                }
+                                catch { /* skip this batch if it fails */ }
+                            }
+
+                            if (itemsList.Any())
+                            {
+                                var newBatch = new CostFlow.Models.TiDb.SavedOrderBatch
+                                {
+                                    BatchName = bInfo.Name,
+                                    CreatedAt = bInfo.Date,
+                                    TotalItems = itemsList.Count,
+                                    TotalAmount = itemsList.Sum(i => i.Quantity * i.UnitPrice),
+                                    Items = itemsList
+                                };
+                                _tiDbContext.SavedOrderBatches.Add(newBatch);
+                                await _tiDbContext.SaveChangesAsync();
+                                batchesImported++;
+                                itemsImported += itemsList.Count;
+                            }
+                        }
+                    }
+                }
+
+                return Json(new { success = true, message = $"นำเข้าข้อมูลสำเร็จ จำนวน {batchesImported} แบตช์ (รวม {itemsImported} รายการ)" });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, error = ex.Message });
+            }
+        }
+
         private SavedOrderItemViewModel ParseSavedItem(JsonElement item, string bName, DateTime createdAt, Dictionary<string, decimal>? priceDict = null)
         {
             var pCode = GetStringProp(item, "ProductCode", "productCode", "Code", "code", "รหัสสินค้า");
@@ -389,6 +519,8 @@ namespace CostFlow.Controllers
             var quantityStr = GetStringProp(item, "Quantity", "quantity", "Qty", "qty", "จำนวน");
             var totalAmountStr = GetStringProp(item, "TotalAmount", "totalAmount", "Total", "total", "TotalAmount", "ราคารวม", "TotalPrice", "totalPrice", "มูลค่ารวม");
             var remarks = GetStringProp(item, "Remarks", "remarks", "Remark", "remark", "หมายเหตุ", "Note", "note");
+            var isReceived = item.TryGetProperty("IsReceived", out var ir) && (ir.ValueKind == JsonValueKind.True || (ir.ValueKind == JsonValueKind.String && ir.GetString()?.ToLower() == "true"));
+            var receiveDateStr = GetStringProp(item, "ReceiveDate", "receiveDate", "วันที่รับ");
 
             var unitPrice = ParseDecimal(unitPriceStr);
             var quantity = ParseDecimal(quantityStr);
@@ -413,7 +545,9 @@ namespace CostFlow.Controllers
                 Unit = unit,
                 UnitPrice = unitPrice,
                 Quantity = quantity,
-                Remarks = remarks
+                Remarks = remarks,
+                IsReceived = isReceived,
+                ReceiveDate = receiveDateStr
             };
         }
 
@@ -529,6 +663,25 @@ namespace CostFlow.Controllers
                 if (!saveResponse.IsSuccessStatusCode)
                 {
                     return Json(new { success = false, error = $"เกิดข้อผิดพลาดจาก Google Sheets (HTTP {(int)saveResponse.StatusCode})" });
+                }
+
+                try
+                {
+                    var dbBatch = await _tiDbContext.SavedOrderBatches.Include(b => b.Items).FirstOrDefaultAsync(b => b.BatchName == request.BatchName);
+                    if (dbBatch != null)
+                    {
+                        var item = dbBatch.Items.FirstOrDefault(i => i.ProductCode == request.ProductCode);
+                        if (item != null)
+                        {
+                            item.Quantity = request.NewQuantity;
+                            dbBatch.TotalAmount = dbBatch.Items.Sum(i => i.Quantity * i.UnitPrice);
+                            await _tiDbContext.SaveChangesAsync();
+                        }
+                    }
+                }
+                catch (Exception dbEx)
+                {
+                    return Json(new { success = false, error = $"อัปเดต Sheet สำเร็จ แต่ TiDB ล้มเหลว: {dbEx.Message}" });
                 }
 
                 return Json(new { success = true });
@@ -662,6 +815,36 @@ namespace CostFlow.Controllers
                     }
                 }
 
+                try
+                {
+                    var dbBatch = await _tiDbContext.SavedOrderBatches.Include(b => b.Items).FirstOrDefaultAsync(b => b.BatchName == request.BatchName);
+                    if (dbBatch != null)
+                    {
+                        var item = dbBatch.Items.FirstOrDefault(i => i.ProductCode == request.ProductCode);
+                        if (item != null)
+                        {
+                            _tiDbContext.SavedOrderItems.Remove(item);
+                            
+                            // If it was the last item, remove the whole batch. Otherwise update totals.
+                            if (dbBatch.Items.Count <= 1)
+                            {
+                                _tiDbContext.SavedOrderBatches.Remove(dbBatch);
+                            }
+                            else
+                            {
+                                dbBatch.TotalItems--;
+                                dbBatch.TotalAmount = dbBatch.Items.Where(i => i.Id != item.Id).Sum(i => i.Quantity * i.UnitPrice);
+                            }
+                            
+                            await _tiDbContext.SaveChangesAsync();
+                        }
+                    }
+                }
+                catch (Exception dbEx)
+                {
+                    return Json(new { success = false, error = $"ลบจาก Sheet สำเร็จ แต่ลบจาก TiDB ล้มเหลว: {dbEx.Message}" });
+                }
+
                 return Json(new { success = true });
             }
             catch (Exception ex)
@@ -791,6 +974,8 @@ namespace CostFlow.Controllers
         public decimal Quantity { get; set; }
         public decimal TotalAmount => UnitPrice * Quantity;
         public string Remarks { get; set; } = string.Empty;
+        public bool IsReceived { get; set; }
+        public string? ReceiveDate { get; set; }
     }
 
     public class UpdateQuantityRequest

@@ -11,12 +11,14 @@ namespace CostFlow.Controllers
     public class OrderTrackingController : Controller
     {
         private readonly AppDbContext _context;
+        private readonly TiDbContext _tiDbContext;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly IConfiguration _configuration;
 
-        public OrderTrackingController(AppDbContext context, IHttpClientFactory httpClientFactory, IConfiguration configuration)
+        public OrderTrackingController(AppDbContext context, TiDbContext tiDbContext, IHttpClientFactory httpClientFactory, IConfiguration configuration)
         {
             _context = context;
+            _tiDbContext = tiDbContext;
             _httpClientFactory = httpClientFactory;
             _configuration = configuration;
         }
@@ -27,109 +29,53 @@ namespace CostFlow.Controllers
             var batches = new List<TrackingBatchViewModel>();
             var availableYears = new List<int> { DateTime.Now.Year };
 
-            var priceDict = await _context.ProductPrices
-                .AsNoTracking()
-                .ToDictionaryAsync(p => p.ProductCode, p => p.PricePerUnit, StringComparer.OrdinalIgnoreCase);
+            var query = _tiDbContext.SavedOrderBatches
+                .Include(b => b.Items)
+                .AsQueryable();
 
-            string? appScriptUrl = _configuration["GoogleSheets:OrderHistoryAppScriptUrl"];
-            if (!string.IsNullOrWhiteSpace(appScriptUrl) && !appScriptUrl.Contains("_placeholder"))
+            if (year.HasValue && year.Value > 0)
             {
-                try
+                query = query.Where(b => b.CreatedAt.Year == year.Value);
+            }
+            if (month.HasValue && month.Value > 0)
+            {
+                query = query.Where(b => b.CreatedAt.Month == month.Value);
+            }
+            if (!string.IsNullOrWhiteSpace(batchName))
+            {
+                query = query.Where(b => b.BatchName == batchName);
+            }
+
+            var dbBatches = await query.OrderByDescending(b => b.CreatedAt).ToListAsync();
+
+            // Populate available years for dropdown
+            var distinctYears = await _tiDbContext.SavedOrderBatches.Select(b => b.CreatedAt.Year).Distinct().ToListAsync();
+            foreach (var y in distinctYears)
+            {
+                if (!availableYears.Contains(y)) availableYears.Add(y);
+            }
+
+            foreach (var b in dbBatches)
+            {
+                int totalItems = b.Items.Count;
+                int receivedItems = b.Items.Count(i => i.IsReceived);
+                bool isReceived = (totalItems > 0 && receivedItems >= totalItems);
+
+                var lastReceiveDate = b.Items.Where(i => i.IsReceived && i.ReceiveDate.HasValue)
+                                             .OrderByDescending(i => i.ReceiveDate)
+                                             .Select(i => i.ReceiveDate)
+                                             .FirstOrDefault();
+
+                batches.Add(new TrackingBatchViewModel
                 {
-                    var client = _httpClientFactory.CreateClient();
-                    client.Timeout = TimeSpan.FromSeconds(30);
-                    
-                    var response = await client.GetAsync($"{appScriptUrl}?action=getTracking");
-                    
-                    if (response.IsSuccessStatusCode)
-                    {
-                        var json = await response.Content.ReadAsStringAsync();
-                        using var doc = JsonDocument.Parse(json);
-                        var root = doc.RootElement;
-                        
-                        if (root.TryGetProperty("batches", out var batchesEl))
-                        {
-                            var rawList = new List<TrackingBatchViewModel>();
-                            foreach (var b in batchesEl.EnumerateArray())
-                            {
-                                var name = GetStringProp(b, "BatchName", "batchName", "Name", "name");
-                                var createdAtStr = GetStringProp(b, "CreatedAt", "createdAt", "Date", "date");
-                                
-                                var totalItemsStr = GetStringProp(b, "TotalItems", "totalItems", "ItemsCount", "itemsCount", "Count");
-                                var totalItems = ParseInt(totalItemsStr);
-
-                                var receivedItemsStr = GetStringProp(b, "ReceivedItems", "receivedItems", "ReceivedCount");
-                                var receivedItems = ParseInt(receivedItemsStr);
-
-                                var totalAmountStr = GetStringProp(b, "TotalAmount", "totalAmount", "Total", "total", "TotalValue", "totalValue", "ราคารวม");
-                                var totalAmount = ParseDouble(totalAmountStr);
-
-                                var isReceived = b.TryGetProperty("IsReceived", out var ir) && (ir.ValueKind == JsonValueKind.True || (ir.ValueKind == JsonValueKind.String && ir.GetString()?.ToLower() == "true"));
-                                var receiveDateStr = GetStringProp(b, "ReceiveDate", "receiveDate");
-                                if (!isReceived && totalItems > 0 && receivedItems >= totalItems)
-                                {
-                                    isReceived = true;
-                                }
-
-                                DateTime.TryParse(createdAtStr, out var createdAt);
-
-                                if (year.HasValue && year.Value > 0 && createdAt.Year != year.Value) continue;
-                                if (month.HasValue && month.Value > 0 && createdAt.Month != month.Value) continue;
-
-                                rawList.Add(new TrackingBatchViewModel
-                                {
-                                    BatchName = name,
-                                    CreatedAt = createdAt,
-                                    TotalItems = totalItems,
-                                    ReceivedItems = receivedItems,
-                                    TotalAmount = totalAmount,
-                                    IsReceived = isReceived,
-                                    ReceiveDate = receiveDateStr
-                                });
-
-                                if (!availableYears.Contains(createdAt.Year))
-                                    availableYears.Add(createdAt.Year);
-                            }
-
-                            foreach (var b in rawList)
-                            {
-                                if (b.TotalAmount == 0 && !string.IsNullOrWhiteSpace(b.BatchName))
-                                {
-                                    try
-                                    {
-                                        var detailRes = await client.GetAsync($"{appScriptUrl}?action=getBatchDetails&batchName={Uri.EscapeDataString(b.BatchName)}");
-                                        if (detailRes.IsSuccessStatusCode)
-                                        {
-                                            var dJson = await detailRes.Content.ReadAsStringAsync();
-                                            using var dDoc = JsonDocument.Parse(dJson);
-                                            var dRoot = dDoc.RootElement;
-                                            if (dRoot.TryGetProperty("items", out var dItemsEl) && dItemsEl.ValueKind == JsonValueKind.Array)
-                                            {
-                                                double calcSum = 0;
-                                                foreach (var it in dItemsEl.EnumerateArray())
-                                                {
-                                                    var pCode = GetStringProp(it, "ProductCode", "productCode", "Code", "code", "รหัสสินค้า");
-                                                    var qty = ParseDouble(GetStringProp(it, "Quantity", "quantity", "Qty", "qty", "จำนวน"));
-                                                    var uPrice = ParseDouble(GetStringProp(it, "UnitPrice", "unitPrice", "Price", "price", "PricePerUnit", "Cost", "cost", "ราคาต่อหน่วย", "ราคา/หน่วย"));
-                                                    var tAmt = ParseDouble(GetStringProp(it, "TotalAmount", "totalAmount", "Total", "total", "ราคารวม", "มูลค่ารวม"));
-
-                                                    if (uPrice == 0 && qty > 0 && tAmt > 0) uPrice = tAmt / qty;
-                                                    if (uPrice == 0 && !string.IsNullOrWhiteSpace(pCode) && priceDict.TryGetValue(pCode, out var dbP)) uPrice = dbP;
-
-                                                    calcSum += (tAmt > 0 ? tAmt : (qty * uPrice));
-                                                }
-                                                b.TotalAmount = calcSum;
-                                            }
-                                        }
-                                    }
-                                    catch { }
-                                }
-                                batches.Add(b);
-                            }
-                        }
-                    }
-                }
-                catch { /* fail gracefully */ }
+                    BatchName = b.BatchName,
+                    CreatedAt = b.CreatedAt,
+                    TotalItems = totalItems,
+                    ReceivedItems = receivedItems,
+                    TotalAmount = (double)b.Items.Sum(i => i.Quantity * i.UnitPrice),
+                    IsReceived = isReceived,
+                    ReceiveDate = lastReceiveDate?.ToString("dd/MM/yyyy HH:mm")
+                });
             }
 
             availableYears = availableYears.OrderByDescending(y => y).ToList();
@@ -148,40 +94,24 @@ namespace CostFlow.Controllers
             
             var items = new List<TrackingItemViewModel>();
             
-            string? appScriptUrl = _configuration["GoogleSheets:OrderHistoryAppScriptUrl"];
-            if (!string.IsNullOrWhiteSpace(appScriptUrl) && !appScriptUrl.Contains("_placeholder"))
+            var batch = await _tiDbContext.SavedOrderBatches
+                .Include(b => b.Items)
+                .FirstOrDefaultAsync(b => b.BatchName == batchName);
+
+            if (batch != null)
             {
-                try
+                foreach (var it in batch.Items)
                 {
-                    var client = _httpClientFactory.CreateClient();
-                    client.Timeout = TimeSpan.FromSeconds(30);
-                    
-                    var response = await client.GetAsync($"{appScriptUrl}?action=getBatchDetails&batchName={Uri.EscapeDataString(batchName)}");
-                    
-                    if (response.IsSuccessStatusCode)
+                    items.Add(new TrackingItemViewModel
                     {
-                        var json = await response.Content.ReadAsStringAsync();
-                        using var doc = JsonDocument.Parse(json);
-                        var root = doc.RootElement;
-                        
-                        if (root.TryGetProperty("items", out var itemsEl))
-                        {
-                            foreach (var it in itemsEl.EnumerateArray())
-                            {
-                                items.Add(new TrackingItemViewModel
-                                {
-                                    ProductCode = GetStringProp(it, "ProductCode", "productCode", "Code", "code", "รหัสสินค้า"),
-                                    ProductName = GetStringProp(it, "ProductName", "productName", "Name", "name", "ชื่อสินค้า", "ชื่อสินค้า / รายการอะไหล่"),
-                                    Quantity = GetStringProp(it, "Quantity", "quantity", "Qty", "qty", "จำนวน"),
-                                    Unit = GetStringProp(it, "Unit", "unit", "หน่วย"),
-                                    IsReceived = it.TryGetProperty("IsReceived", out var ir) && (ir.ValueKind == JsonValueKind.True || (ir.ValueKind == JsonValueKind.String && ir.GetString()?.ToLower() == "true")),
-                                    ReceiveDate = GetStringProp(it, "ReceiveDate", "receiveDate")
-                                });
-                            }
-                        }
-                    }
+                        ProductCode = it.ProductCode,
+                        ProductName = it.ProductName,
+                        Quantity = it.Quantity.ToString("0.##"),
+                        Unit = it.Unit,
+                        IsReceived = it.IsReceived,
+                        ReceiveDate = it.ReceiveDate?.ToString("dd/MM/yyyy HH:mm")
+                    });
                 }
-                catch { /* fail gracefully */ }
             }
             
             ViewData["BatchName"] = batchName;
@@ -292,6 +222,38 @@ namespace CostFlow.Controllers
                 {
                     string errorMsg = root.TryGetProperty("error", out var errProp) ? errProp.GetString() ?? "" : "การบันทึกลง Google Sheets ล้มเหลว";
                     return Json(new { success = false, error = errorMsg });
+                }
+
+                // Update TiDB
+                var batch = await _tiDbContext.SavedOrderBatches
+                    .Include(b => b.Items)
+                    .FirstOrDefaultAsync(b => b.BatchName == request.BatchName);
+
+                if (batch != null)
+                {
+                    DateTime? parsedReceiveDate = null;
+                    if (!string.IsNullOrWhiteSpace(request.ReceiveDate))
+                    {
+                        var parts = request.ReceiveDate.Split(' ')[0].Split('/'); // expects dd/MM/yyyy
+                        if (parts.Length == 3 && int.TryParse(parts[0], out int d) && int.TryParse(parts[1], out int m) && int.TryParse(parts[2], out int y))
+                        {
+                            try
+                            {
+                                parsedReceiveDate = new DateTime(y, m, d);
+                            }
+                            catch { }
+                        }
+                    }
+
+                    foreach (var it in batch.Items)
+                    {
+                        if (request.ProductCodes.Contains(it.ProductCode))
+                        {
+                            it.IsReceived = true;
+                            it.ReceiveDate = parsedReceiveDate ?? DateTime.Now;
+                        }
+                    }
+                    await _tiDbContext.SaveChangesAsync();
                 }
 
                 return Json(new { success = true });

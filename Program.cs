@@ -42,6 +42,10 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
 
+var tidbConnectionString = builder.Configuration.GetConnectionString("TiDbConnection");
+builder.Services.AddDbContext<TiDbContext>(options =>
+    options.UseMySql(tidbConnectionString, ServerVersion.AutoDetect(tidbConnectionString)));
+
 builder.Services.AddScoped<IProductPriceRepository, ProductPriceRepository>();
 
 // ASP.NET Core Identity
@@ -111,9 +115,24 @@ app.MapControllerRoute(
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var tiDb = scope.ServiceProvider.GetRequiredService<TiDbContext>();
 
     // 1. Recreate all tables if DB doesn't exist (Identity + custom tables)
     db.Database.EnsureCreated();
+    tiDb.Database.EnsureCreated();
+    
+    // Add columns to SavedOrderItem separately to handle duplicate column errors gracefully
+    try
+    {
+        tiDb.Database.ExecuteSqlRaw("ALTER TABLE SavedOrderItems ADD COLUMN IsReceived BOOLEAN NOT NULL DEFAULT 0;");
+    }
+    catch { /* Ignore if column already exists */ }
+
+    try
+    {
+        tiDb.Database.ExecuteSqlRaw("ALTER TABLE SavedOrderItems ADD COLUMN ReceiveDate DATETIME NULL;");
+    }
+    catch { /* Ignore if column already exists */ }
 
     // 2. Seed Product Prices only if the table is empty
     if (!db.ProductPrices.Any())

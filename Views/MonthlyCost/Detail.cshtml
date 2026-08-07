@@ -306,7 +306,7 @@
             <button type="button" onclick="bulkAddToCart('Skipped')"
                     class="px-2.5 py-1.5 rounded-md font-bold bg-white text-purple-700 border border-purple-200 hover:bg-purple-50 hover:border-purple-300 shadow-sm transition-all flex items-center gap-1.5 cursor-pointer">
                 <span class="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
-                ยังไม่รับ
+                ค้างยกยอด
             </button>
         </div>
     </div>
@@ -366,10 +366,22 @@
         foreach (var order in Model.PendingOrders)
         {
             var fwdBadge = "";
+            
+            // สร้าง tooltip ที่แสดงทั้งเดือนต้นทางและเดือนที่กด action ล่าสุด
             if (order.ForwardedStatus == "Deferred")
-                fwdBadge = $"<span class=\"ml-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-700\">ผ่อนจาก {order.ForwardedFromMonth}</span>";
+            {
+                var tooltipText = !string.IsNullOrEmpty(order.OriginalMonth) 
+                    ? $"WO สร้างจาก {order.OriginalMonth} • กดผ่อนล่าสุดที่ {order.ForwardedFromMonth}" 
+                    : $"กดผ่อนล่าสุดที่ {order.ForwardedFromMonth}";
+                fwdBadge = $"<span class=\"ml-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-700\" title=\"{tooltipText}\">ผ่อนยกยอดมา</span>";
+            }
             else if (order.ForwardedStatus == "Skipped")
-                fwdBadge = $"<span class=\"ml-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-purple-100 text-purple-700\">ค้างจาก {order.ForwardedFromMonth}</span>";
+            {
+                var tooltipText = !string.IsNullOrEmpty(order.OriginalMonth) 
+                    ? $"WO สร้างจาก {order.OriginalMonth} • ค้างมาจาก {order.ForwardedFromMonth}" 
+                    : $"ค้างมาจาก {order.ForwardedFromMonth}";
+                fwdBadge = $"<span class=\"ml-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-purple-100 text-purple-700\" title=\"{tooltipText}\">ค้างยกยอดมา</span>";
+            }
 
             <div class="order-card border border-slate-200 rounded p-3 bg-white"
                  data-order-id="@order.OrderId"
@@ -380,7 +392,8 @@
                  data-department="@order.Department"
                  data-delivery="@order.DeliveryTarget"
                  data-forwarded-status="@order.ForwardedStatus"
-                 data-forwarded-from="@order.ForwardedFromMonth">
+                 data-forwarded-from="@order.ForwardedFromMonth"
+                 data-original-month="@order.OriginalMonth">
 
                 <div class="flex items-start gap-3">
                     <input type="checkbox" class="pending-card-checkbox mt-1 rounded border-slate-300 text-primary focus:ring-primary shrink-0 cursor-pointer" onchange="onCardCheckboxChange()"/>
@@ -395,8 +408,21 @@
 
                         @if (order.ForwardedStatus == "Deferred")
                         {
+                            var infoText = "";
+                            if (!string.IsNullOrEmpty(order.OriginalMonth) && !string.IsNullOrEmpty(order.ForwardedFromMonth))
+                            {
+                                infoText = $"WO สั่งซื้อจาก {order.OriginalMonth} ถูกผ่อนจาก {order.ForwardedFromMonth} — กรุณาตรวจสอบการรับสินค้า";
+                            }
+                            else if (!string.IsNullOrEmpty(order.OriginalMonth))
+                            {
+                                infoText = $"WO สั่งซื้อจาก {order.OriginalMonth} ถูกผ่อนสะสมมา — กรุณาตรวจสอบการรับสินค้า";
+                            }
+                            else
+                            {
+                                infoText = "รายการผ่อนสะสม — กรุณาตรวจสอบการรับสินค้า";
+                            }
                             <div class="mt-1.5 mb-1.5 text-[11px] font-bold text-amber-600 bg-amber-50/70 border border-amber-100 rounded-md px-2.5 py-1 inline-flex items-center gap-1.5">
-                                <span>รายการผ่อนสะสม: ตรวจสอบการรับสินค้า</span>
+                                <span>@infoText</span>
                             </div>
                         }
 
@@ -447,9 +473,6 @@
             var actionBg = saved.Action == "ReceivedFull" ? "bg-emerald-50 border-emerald-200 text-emerald-700"
                 : saved.Action == "Deferred" ? "bg-amber-50 border-amber-200 text-amber-700"
                 : "bg-purple-50 border-purple-200 text-purple-700";
-            var actionIcon = saved.Action == "ReceivedFull" ? "✓ "
-                : saved.Action == "Deferred" ? "⏳ "
-                : "⏭ ";
             var actionLabel = saved.Action == "ReceivedFull" ? "รับสินค้าแล้ว"
                 : saved.Action == "Deferred" ? "ผ่อน → เดือนหน้า"
                 : "ยังไม่รับสินค้า";
@@ -490,7 +513,7 @@
                             <span class="font-bold text-sm text-slate-400">฿@saved.TotalPrice.ToString("N2")</span>
                         }
                         <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold border @actionBg">
-                            @actionIcon@actionLabel
+                            @actionLabel
                         </span>
                     </div>
                 </div>
@@ -734,6 +757,7 @@
                 delivery: card.dataset.delivery,
                 forwardedStatus: card.dataset.forwardedStatus || '',
                 forwardedFrom: card.dataset.forwardedFrom || '',
+                originalMonth: card.dataset.originalMonth || '',
                 action: 'ReceivedFull',
                 actionPrice: parseFloat(card.dataset.price) || 0
             };
@@ -769,9 +793,15 @@
 
             let fwdBadgeHtml = '';
             if (isDeferredCarryOver) {
-                fwdBadgeHtml = `<span class="ml-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-700 cursor-help" title="รายการผ่อนชำระยกยอดมาจาก ${item.forwardedFrom}">ผ่อนจาก ${item.forwardedFrom}</span>`;
+                const tooltipText = item.originalMonth 
+                    ? `WO สร้างจาก ${item.originalMonth} • กดผ่อนล่าสุดที่ ${item.forwardedFrom}` 
+                    : `กดผ่อนล่าสุดที่ ${item.forwardedFrom}`;
+                fwdBadgeHtml = `<span class="ml-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-700 cursor-help" title="${tooltipText}">ผ่อนยกยอดมา</span>`;
             } else if (isSkippedCarryOver) {
-                fwdBadgeHtml = `<span class="ml-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-purple-100 text-purple-700 cursor-help" title="รายการค้างชำระยกยอดมาจาก ${item.forwardedFrom}">ค้างจาก ${item.forwardedFrom}</span>`;
+                const tooltipText = item.originalMonth 
+                    ? `WO สร้างจาก ${item.originalMonth} • ค้างมาจาก ${item.forwardedFrom}` 
+                    : `ค้างมาจาก ${item.forwardedFrom}`;
+                fwdBadgeHtml = `<span class="ml-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-purple-100 text-purple-700 cursor-help" title="${tooltipText}">ค้างยกยอดมา</span>`;
             }
 
             el.innerHTML = `
