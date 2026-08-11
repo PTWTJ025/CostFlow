@@ -18,7 +18,7 @@ using CostFlow.Services;
 
 namespace CostFlow.Controllers
 {
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin,Dev")]
     public class PriceReferenceController : Controller
     {
         private readonly IProductPriceRepository _priceRepository;
@@ -148,7 +148,7 @@ namespace CostFlow.Controllers
 
         // POST: /PriceReference/Create
         [HttpPost]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Dev")]
         public async Task<IActionResult> Create([FromBody] ProductPrice model)
         {
             if (model == null || string.IsNullOrWhiteSpace(model.ProductCode))
@@ -181,7 +181,7 @@ namespace CostFlow.Controllers
 
         // POST: /PriceReference/Edit
         [HttpPost]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Dev")]
         public async Task<IActionResult> Edit([FromBody] ProductPrice model)
         {
             if (model == null || string.IsNullOrWhiteSpace(model.ProductCode))
@@ -212,7 +212,7 @@ namespace CostFlow.Controllers
 
         // POST: /PriceReference/Delete
         [HttpPost]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Dev")]
         public async Task<IActionResult> Delete(string productCode)
         {
             if (string.IsNullOrWhiteSpace(productCode))
@@ -234,7 +234,7 @@ namespace CostFlow.Controllers
 
         // POST: /PriceReference/SyncFromGoogleSheets
         [HttpPost]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Dev")]
         public async Task<IActionResult> SyncFromGoogleSheets()
         {
             try

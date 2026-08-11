@@ -126,7 +126,7 @@ namespace CostFlow.Controllers
 
         public async Task<IActionResult> Index()
         {
-            bool isAdmin = User.IsInRole("Admin");
+            bool isAdmin = User.IsInRole("Admin") || User.IsInRole("Dev");
             if (!isAdmin)
             {
                 return RedirectToAction("Index", "ProductSearch");
@@ -207,6 +207,56 @@ namespace CostFlow.Controllers
             return Json(new { success = false, error = "เกิดข้อผิดพลาดในการบันทึกข้อมูล" });
         }
 
+        // POST: /Home/BackupDatabase
+        // ดาวน์โหลด SQLite database file สำหรับ Admin
+        [HttpPost]
+        [Authorize(Roles = "Admin,Dev")]
+        public IActionResult BackupDatabase()
+        {
+            try
+            {
+                // อ่าน connection string แล้ว parse path ของ .db file
+                string? connStr = _configuration.GetConnectionString("DefaultConnection");
+                string? dbRelativePath = null;
+
+                if (!string.IsNullOrWhiteSpace(connStr))
+                {
+                    // รูปแบบ: "Data Source=Data/CostFlow.db" หรือ "Data Source=C:\full\path\file.db"
+                    foreach (var part in connStr.Split(';'))
+                    {
+                        var trimmed = part.Trim();
+                        if (trimmed.StartsWith("Data Source=", StringComparison.OrdinalIgnoreCase))
+                        {
+                            dbRelativePath = trimmed.Substring("Data Source=".Length).Trim();
+                            break;
+                        }
+                    }
+                }
+
+                if (string.IsNullOrWhiteSpace(dbRelativePath))
+                    return Json(new { success = false, error = "ไม่พบ path ของ SQLite database ในไฟล์ตั้งค่า" });
+
+                // Resolve path: ถ้าไม่ใช่ absolute path ให้ใช้ ContentRootPath เป็น base
+                string dbFullPath = System.IO.Path.IsPathRooted(dbRelativePath)
+                    ? dbRelativePath
+                    : System.IO.Path.Combine(Directory.GetCurrentDirectory(), dbRelativePath);
+
+                if (!System.IO.File.Exists(dbFullPath))
+                    return Json(new { success = false, error = $"ไม่พบไฟล์ฐานข้อมูล: {dbRelativePath}" });
+
+                string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                string downloadName = $"CostFlow_backup_{timestamp}.db";
+
+                // ส่งไฟล์ให้ download โดยตรง (stream ไฟล์ทีละ chunk)
+                var fileBytes = System.IO.File.ReadAllBytes(dbFullPath);
+                return File(fileBytes, "application/octet-stream", downloadName);
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, error = $"เกิดข้อผิดพลาด: {ex.Message}" });
+            }
+        }
+
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error()
         {
@@ -221,7 +271,7 @@ namespace CostFlow.Controllers
         // — ถ้าใส่ cutoffOverride จะใช้วันนั้นเป็นวันตัดข้อมูลแทนค่า config
         // — ตัวอย่าง: ถ้าอยากจำลองว่า "วันนี้คือ 5 นาทีหลังครบ 2 ปี" ให้ใส่วันที่ล่วงหน้าไป
         [HttpPost]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Dev")]
         [AcceptVerbs("GET", "POST")]
         public async Task<IActionResult> ArchiveAndPurge(string? cutoffOverride = null)
         {

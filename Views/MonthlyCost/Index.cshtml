@@ -71,6 +71,7 @@
                 var fileIconColor = card.StatusCode == "completed" ? "text-blue-600" : "text-emerald-600";
 
                 <a asp-controller="MonthlyCost" asp-action="Detail" asp-route-id="@card.MonthYearDisplay"
+                   onclick="return handleCardClick(event, '@card.MonthYearKey', '@card.MonthYearDisplay')"
                    data-month="@card.MonthYearDisplay.ToLower()"
                    data-month-key="@card.MonthYearKey"
                    data-file="@card.FileName.ToLower()"
@@ -111,8 +112,17 @@
                         </div>
 
                         <!-- ความคืบหน้า (ไม่มี bar และ %) -->
-                        <div class="mb-3">
+                        <div class="mb-3 flex items-center justify-between">
                             <div class="text-xs font-bold text-slate-600">ความคืบหน้า</div>
+                            @if (card.IsPastYearDecember)
+                            {
+                                <div class="text-xs font-bold text-emerald-600 flex items-center gap-1">
+                                    <svg class="w-3.5 h-3.5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    <span>ยอดของปีนี้</span>
+                                </div>
+                            }
                         </div>
                     </div>
 
@@ -148,20 +158,47 @@
                         </div>
                         @if (card.IsLatestWithData)
                         {
-                            <!-- Total Amount Pill -->
-                            <div class="flex-1 min-w-0 bg-blue-50/80 hover:bg-blue-100 border border-blue-200/60 rounded-lg py-2 px-2 flex flex-col items-center justify-center text-center transition-all duration-200 group/pill relative shadow-sm"
-                                 title="มูลค่ารวมสะสม: @card.TotalAmount.ToString("N2") บาท">
-                                <div class="flex items-center gap-1 text-[10px] font-black text-blue-600 uppercase tracking-tight mb-0.5">
-                                    <span class="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0 animate-pulse"></span>
-                                    <span>มูลค่ารวมสะสม</span>
+                            if (card.IsPastYearDecember)
+                            {
+                                <!-- Past Year December Pill (Emerald Green Style) -->
+                                <div class="flex-1 min-w-0 bg-transparent hover:bg-emerald-50 border border-emerald-500 rounded-lg py-2 px-2 flex flex-col items-center justify-center text-center transition-all duration-200 group/pill relative shadow-sm text-emerald-600"
+                                     title="มูลค่ารวมสะสม: @card.TotalAmount.ToString("N2") บาท">
+
+                                    <div class="flex items-center gap-1 text-[10px] font-black text-emerald-600 uppercase tracking-tight mb-0.5">
+                                        <!-- เปลี่ยน bg-white เป็น bg-emerald-500 เพื่อให้จุดไข่ปลามองเห็นได้ -->
+                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0 animate-pulse"></span>
+                                        <span>มูลค่ารวมสะสม</span>
+                                    </div>
+
+                                    <!-- เปลี่ยน text-white เป็น text-emerald-700 และเปลี่ยนสีตอน hover -->
+                                    <div class="text-[13px] font-black font-mono text-emerald-700 leading-none my-0.5 group-hover/pill:text-emerald-800 transition-colors" data-field="totalAmount">
+                                        @card.TotalAmount.ToString("N2")
+                                    </div>
+
+                                    <!-- เปลี่ยน text-emerald-100 เป็น text-emerald-600 -->
+                                    <div class="text-[9px] font-black text-emerald-600 mt-0.5">
+                                        บาท
+                                    </div>
+
                                 </div>
-                                <div class="text-[13px] font-black font-mono text-blue-700 leading-none my-0.5 group-hover/pill:text-blue-800 transition-colors" data-field="totalAmount">
-                                    @card.TotalAmount.ToString("N2")
+                            }
+                            else
+                            {
+                                <!-- Current Active Month Pill (Blue Style) -->
+                                <div class="flex-1 min-w-0 bg-blue-50/80 hover:bg-blue-100 border border-blue-200/60 rounded-lg py-2 px-2 flex flex-col items-center justify-center text-center transition-all duration-200 group/pill relative shadow-sm"
+                                     title="มูลค่ารวมสะสม: @card.TotalAmount.ToString("N2") บาท">
+                                    <div class="flex items-center gap-1 text-[10px] font-black text-blue-600 uppercase tracking-tight mb-0.5">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0 animate-pulse"></span>
+                                        <span>มูลค่ารวมสะสม</span>
+                                    </div>
+                                    <div class="text-[13px] font-black font-mono text-blue-700 leading-none my-0.5 group-hover/pill:text-blue-800 transition-colors" data-field="totalAmount">
+                                        @card.TotalAmount.ToString("N2")
+                                    </div>
+                                    <div class="text-[9px] font-black text-blue-500 mt-0.5">
+                                        บาท
+                                    </div>
                                 </div>
-                                <div class="text-[9px] font-black text-blue-500 mt-0.5">
-                                    บาท
-                                </div>
-                            </div>
+                            }
                         }
                     </div>
                 </a>
@@ -191,7 +228,12 @@
 </div>
 
 @section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
     <script>
+        function handleCardClick(e, monthKey, monthName) {
+            return true;
+        }
+
         document.addEventListener('DOMContentLoaded', function () {
             const searchInput = document.getElementById('search-input');
             const filterStatus = document.getElementById('filter-status');
@@ -231,16 +273,47 @@
             searchInput.addEventListener('input', applyFilters);
             filterStatus.addEventListener('change', applyFilters);
 
-            // ── Realtime polling ──────────────────────────────────────────────
+            // ── Realtime polling & SignalR ──────────────────────────────────
             const selectedYear = @(ViewBag.SelectedYear ?? DateTime.Now.Year);
-            const POLL_INTERVAL = 3000; // 3 วินาที (Realtime)
+            const POLL_INTERVAL = 3000; // Fallback polling 3 วินาที
 
             function fmtN2(n) {
                 return Number(n).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             }
 
-            function updateCards(data) {
-                data.forEach(item => {
+            function updateCards(response) {
+                const cardItems = Array.isArray(response) ? response : (response.cards || []);
+                const availableYears = response.availableYears || [];
+
+                if (availableYears.length > 0) {
+                    const yearSelect = document.getElementById('year-filter');
+                    if (yearSelect) {
+                        const currentSelVal = parseInt(yearSelect.value);
+                        Array.from(yearSelect.options).forEach(opt => {
+                            const val = parseInt(opt.value);
+                            if (!availableYears.includes(val) && val !== currentSelVal) {
+                                opt.remove();
+                            }
+                        });
+                        availableYears.forEach(y => {
+                            if (!yearSelect.querySelector(`option[value="${y}"]`)) {
+                                const opt = document.createElement('option');
+                                opt.value = y;
+                                const buddhistYear = y + 543;
+                                opt.textContent = `พ.ศ. ${buddhistYear} (${y})`;
+                                const options = Array.from(yearSelect.options);
+                                const insertBeforeOpt = options.find(o => parseInt(o.value) < y);
+                                if (insertBeforeOpt) {
+                                    yearSelect.insertBefore(opt, insertBeforeOpt);
+                                } else {
+                                    yearSelect.appendChild(opt);
+                                }
+                            }
+                        });
+                    }
+                }
+
+                cardItems.forEach(item => {
                     const card = grid.querySelector(`a.card-item[data-month-key="${item.monthKey}"]`);
                     if (!card) return;
 
@@ -273,7 +346,23 @@
                 }
             }
 
-            // Poll ทันทีหลัง load และทุก 3 วินาที + เมื่อสลับแท็บกลับมา
+            // SignalR Instant Push
+            try {
+                const connection = new signalR.HubConnectionBuilder()
+                    .withUrl("/dashboardHub")
+                    .withAutomaticReconnect()
+                    .build();
+
+                connection.on("ReceiveMonthlyCostUpdate", function () {
+                    pollCards();
+                });
+
+                connection.start().catch(err => console.error("SignalR connection error: ", err));
+            } catch (e) {
+                console.error("SignalR init error: ", e);
+            }
+
+            // Fallback Polling + Events
             pollCards();
             setInterval(pollCards, POLL_INTERVAL);
             window.addEventListener('focus', pollCards);

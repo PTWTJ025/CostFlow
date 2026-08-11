@@ -27,7 +27,7 @@ namespace CostFlow.Controllers
             // ถ้า login อยู่แล้ว แยกไปตามบทบาท
             if (User.Identity?.IsAuthenticated == true)
             {
-                if (User.IsInRole("Admin"))
+                if (User.IsInRole("Admin") || User.IsInRole("Dev"))
                 {
                     return RedirectToAction("Index", "Home");
                 }
@@ -76,7 +76,7 @@ namespace CostFlow.Controllers
 
             if (result.Succeeded)
             {
-                bool isAdmin = await _userManager.IsInRoleAsync(user, "Admin");
+                bool isAdmin = await _userManager.IsInRoleAsync(user, "Admin") || await _userManager.IsInRoleAsync(user, "Dev");
                 string redirect = isAdmin ? Url.Action("Index", "Home")! : Url.Action("Index", "ProductSearch")!;
                 return Json(new { success = true, redirectUrl = redirect });
             }

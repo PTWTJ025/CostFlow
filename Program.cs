@@ -29,6 +29,7 @@ catch (Exception ex)
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+builder.Services.AddSignalR();
 builder.Services.AddHttpClient();
 // Named client for Google Apps Script (must follow redirects for doGet)
 builder.Services.AddHttpClient("GoogleAppsScript", client => { client.Timeout = TimeSpan.FromSeconds(30); })
@@ -40,13 +41,15 @@ builder.Services.AddHttpClient("GoogleAppsScript", client => { client.Timeout = 
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
+    options.UseSqlite(connectionString));
 
 var tidbConnectionString = builder.Configuration.GetConnectionString("TiDbConnection");
 builder.Services.AddDbContext<TiDbContext>(options =>
     options.UseMySql(tidbConnectionString, ServerVersion.AutoDetect(tidbConnectionString)));
 
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IProductPriceRepository, ProductPriceRepository>();
+builder.Services.AddScoped<IDateTimeProvider, DateTimeProvider>();
 
 // ASP.NET Core Identity
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
@@ -111,6 +114,8 @@ app.MapControllerRoute(
         pattern: "{controller=Home}/{action=Index}/{id?}")
     .WithStaticAssets();
 
+app.MapHub<CostFlow.Hubs.DashboardHub>("/dashboardHub");
+
 // Auto-migrate/create Database on startup
 using (var scope = app.Services.CreateScope())
 {
@@ -120,19 +125,24 @@ using (var scope = app.Services.CreateScope())
     // 1. Recreate all tables if DB doesn't exist (Identity + custom tables)
     db.Database.EnsureCreated();
     tiDb.Database.EnsureCreated();
-    
-    // Add columns to SavedOrderItem separately to handle duplicate column errors gracefully
+
     try
     {
         tiDb.Database.ExecuteSqlRaw("ALTER TABLE SavedOrderItems ADD COLUMN IsReceived BOOLEAN NOT NULL DEFAULT 0;");
     }
-    catch { /* Ignore if column already exists */ }
+    catch
+    {
+        /* Ignore if column already exists */
+    }
 
     try
     {
         tiDb.Database.ExecuteSqlRaw("ALTER TABLE SavedOrderItems ADD COLUMN ReceiveDate DATETIME NULL;");
     }
-    catch { /* Ignore if column already exists */ }
+    catch
+    {
+        /* Ignore if column already exists */
+    }
 
     // 2. Seed Product Prices only if the table is empty
     if (!db.ProductPrices.Any())
@@ -172,12 +182,92 @@ using (var scope = app.Services.CreateScope())
         }
     }
 
+    // 2.5 Seed Sample Staff Orders into TiDbContext if empty
+    if (!tiDb.SavedOrderBatches.Any())
+    {
+        try
+        {
+            var now = DateTime.Now;
+            var sampleBatches = new List<CostFlow.Models.TiDb.SavedOrderBatch>
+            {
+                new CostFlow.Models.TiDb.SavedOrderBatch
+                {
+                    BatchName = "BATCH-20250811-001",
+                    CreatedAt = now.AddDays(-10),
+                    TotalItems = 2,
+                    TotalAmount = 3450.00m,
+                    Items = new List<CostFlow.Models.TiDb.SavedOrderItem>
+                    {
+                        new CostFlow.Models.TiDb.SavedOrderItem { ProductCode = "BEARING-6204-ZZ", ProductName = "ลูกปืนตลับ SKF 6204-ZZ", Unit = "ตัว", UnitPrice = 185.00m, Quantity = 10, Remarks = "สำหรับบำรุงรักษาเครื่องกลึง T-101", IsReceived = true, ReceiveDate = now.AddDays(-8) },
+                        new CostFlow.Models.TiDb.SavedOrderItem { ProductCode = "BELT-B-65", ProductName = "สายพานพัดลม B-65 Mitsuboshi", Unit = "เส้น", UnitPrice = 320.00m, Quantity = 5, Remarks = "เปลี่ยนตามรอบซ่อมบำรุง", IsReceived = true, ReceiveDate = now.AddDays(-7) }
+                    }
+                },
+                new CostFlow.Models.TiDb.SavedOrderBatch
+                {
+                    BatchName = "BATCH-20250811-002",
+                    CreatedAt = now.AddDays(-7),
+                    TotalItems = 2,
+                    TotalAmount = 6100.00m,
+                    Items = new List<CostFlow.Models.TiDb.SavedOrderItem>
+                    {
+                        new CostFlow.Models.TiDb.SavedOrderItem { ProductCode = "VALVE-SOL-24V", ProductName = "โซลินอยด์วาล์ว 24VDC SMC", Unit = "ตัว", UnitPrice = 2450.00m, Quantity = 2, Remarks = "งานซ่อมด่วนไลน์ผลิต A", IsReceived = false },
+                        new CostFlow.Models.TiDb.SavedOrderItem { ProductCode = "PU-TUBE-8MM", ProductName = "ท่อนิวเมติก PU 8mm (ม้วน 100m)", Unit = "ม้วน", UnitPrice = 1200.00m, Quantity = 1, Remarks = "เดินท่อลมใหม่ไลน์ A", IsReceived = true, ReceiveDate = now.AddDays(-5) }
+                    }
+                },
+                new CostFlow.Models.TiDb.SavedOrderBatch
+                {
+                    BatchName = "BATCH-20250811-003",
+                    CreatedAt = now.AddDays(-5),
+                    TotalItems = 2,
+                    TotalAmount = 17900.00m,
+                    Items = new List<CostFlow.Models.TiDb.SavedOrderItem>
+                    {
+                        new CostFlow.Models.TiDb.SavedOrderItem { ProductCode = "GREASE-HIGH-TEMP", ProductName = "จารบีทนความร้อน SKF LGMT 3/1", Unit = "กระป๋อง", UnitPrice = 850.00m, Quantity = 4, Remarks = "สั่งซื้อสำรองคลังช่างประจำเดือน", IsReceived = false },
+                        new CostFlow.Models.TiDb.SavedOrderItem { ProductCode = "OIL-HYD-68", ProductName = "น้ำมันไฮดรอลิก PTT ISO VG 68 (ถัง 200L)", Unit = "ถัง", UnitPrice = 14500.00m, Quantity = 1, Remarks = "เปลี่ยนถ่ายประจำปีเครื่องปั๊ม", IsReceived = false }
+                    }
+                },
+                new CostFlow.Models.TiDb.SavedOrderBatch
+                {
+                    BatchName = "BATCH-20250811-004",
+                    CreatedAt = now.AddDays(-3),
+                    TotalItems = 2,
+                    TotalAmount = 15400.00m,
+                    Items = new List<CostFlow.Models.TiDb.SavedOrderItem>
+                    {
+                        new CostFlow.Models.TiDb.SavedOrderItem { ProductCode = "MOTOR-3HP-3P", ProductName = "มอเตอร์ไฟฟ้า Mitsubishi 3HP 380V", Unit = "เครื่อง", UnitPrice = 8900.00m, Quantity = 1, Remarks = "สำหรับประกอบสายพานลำเลียงใหม่", IsReceived = true, ReceiveDate = now.AddDays(-1) },
+                        new CostFlow.Models.TiDb.SavedOrderItem { ProductCode = "GEAR-REDUCER-1-30", ProductName = "เกียร์ทดรอบ อัตราส่วน 1:30", Unit = "ตัว", UnitPrice = 6500.00m, Quantity = 1, Remarks = "ใช้คู่กับมอเตอร์ 3HP", IsReceived = true, ReceiveDate = now.AddDays(-1) }
+                    }
+                },
+                new CostFlow.Models.TiDb.SavedOrderBatch
+                {
+                    BatchName = "BATCH-20250811-005",
+                    CreatedAt = now.AddDays(-1),
+                    TotalItems = 2,
+                    TotalAmount = 3150.00m,
+                    Items = new List<CostFlow.Models.TiDb.SavedOrderItem>
+                    {
+                        new CostFlow.Models.TiDb.SavedOrderItem { ProductCode = "BOLT-M12-50-SS", ProductName = "น็อตสแตนเลส M12x50mm (กล่อง 100 ตัว)", Unit = "กล่อง", UnitPrice = 750.00m, Quantity = 3, Remarks = "ประกอบยึดแท่นเครื่องจักร T-99", IsReceived = false },
+                        new CostFlow.Models.TiDb.SavedOrderItem { ProductCode = "WASHER-M12-SS", ProductName = "แหวนสปริงสแตนเลส M12 (กล่อง 500 ตัว)", Unit = "กล่อง", UnitPrice = 450.00m, Quantity = 2, Remarks = "งานประกอบเครื่องจักร T-99", IsReceived = false }
+                    }
+                }
+            };
+
+            tiDb.SavedOrderBatches.AddRange(sampleBatches);
+            tiDb.SaveChanges();
+            Console.WriteLine("Successfully seeded 5 sample staff order batches into TiDbContext.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error seeding staff orders: {ex.Message}");
+        }
+    }
+
     // 3. Seed Roles & Default Users via Identity
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
 
     // Create roles
-    string[] roles = { "Admin", "Staff" };
+    string[] roles = { "Admin", "Staff", "Dev" };
     foreach (var role in roles)
     {
         if (!await roleManager.RoleExistsAsync(role))
@@ -273,6 +363,48 @@ using (var scope = app.Services.CreateScope())
         staffUser.ProfilePictureUrl =
             "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRkt942qIdGSgY_RotRR9_HhY3bveTRjSgZZYygIyA-3JzTkNbA9PR1CbXB&s=10";
         await userManager.UpdateAsync(staffUser);
+    }
+
+    // Seed DEV01 (ทีมงาน Dev Test - Dev role สำหรับทดสอบระบบ)
+    string? devPassword = app.Configuration["Seed:DevPassword"]
+                          ?? Environment.GetEnvironmentVariable("DEV_PASSWORD")
+                          ?? (app.Environment.IsDevelopment() ? "dev1234" : "123456");
+
+    var devUser = await userManager.FindByNameAsync("DEV01");
+    if (devUser == null)
+    {
+        var dev = new ApplicationUser
+        {
+            UserName = "DEV01",
+            EmployeeCode = "DEV01",
+            FullName = "ทีมงาน Dev Test",
+            ProfilePictureUrl = "https://img-9gag-fun.9cache.com/photo/ap93yAE_460s.jpg",
+            IsActive = true,
+            CreatedAt = DateTime.Now
+        };
+        var result = await userManager.CreateAsync(dev, devPassword);
+        if (result.Succeeded)
+        {
+            await userManager.AddToRoleAsync(dev, "Dev");
+            Console.WriteLine("Seeded user DEV01 with role Dev.");
+        }
+        else
+        {
+            Console.WriteLine($"Failed to seed DEV01: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+        }
+    }
+    else
+    {
+        devUser.FullName = "ทีมงาน Dev Test";
+        await userManager.UpdateAsync(devUser);
+        // ย้าย role จาก Admin → Dev ถ้ายังเป็น Admin อยู่
+        var devRoles = await userManager.GetRolesAsync(devUser);
+        if (devRoles.Contains("Admin") && !devRoles.Contains("Dev"))
+        {
+            await userManager.RemoveFromRoleAsync(devUser, "Admin");
+            await userManager.AddToRoleAsync(devUser, "Dev");
+            Console.WriteLine("Migrated DEV01 role: Admin → Dev.");
+        }
     }
 }
 

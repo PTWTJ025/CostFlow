@@ -3,26 +3,32 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using CostFlow.Data;
 using CostFlow.Models;
 using CostFlow.Services;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
+using System.Globalization;
 
 namespace CostFlow.Controllers
 {
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin,Dev")]
     public class FileMergeController : Controller
     {
         private readonly ImportStorageService _storageService;
         private readonly AppDbContext _context;
+        private readonly IHttpClientFactory _httpClientFactory;
+        private readonly IConfiguration _configuration;
 
-        public FileMergeController(AppDbContext context)
+        public FileMergeController(AppDbContext context, IHttpClientFactory httpClientFactory,
+            IConfiguration configuration)
         {
             _storageService = new ImportStorageService();
             _context = context;
+            _httpClientFactory = httpClientFactory;
+            _configuration = configuration;
         }
 
         public IActionResult Index()
@@ -40,8 +46,10 @@ namespace CostFlow.Controllers
                 return Json(new { success = false, error = "เซสชันไฟล์หมดอายุ (เกิน 30 นาที) กรุณาอัปโหลดใหม่" });
             }
 
-            var poSheet = file.Sheets.FirstOrDefault(s => s.SheetName.Equals("mcsAppvProduct", StringComparison.OrdinalIgnoreCase))
-                          ?? file.Sheets.FirstOrDefault();
+            var poSheet =
+                file.Sheets.FirstOrDefault(s =>
+                    s.SheetName.Equals("mcsAppvProduct", StringComparison.OrdinalIgnoreCase))
+                ?? file.Sheets.FirstOrDefault();
 
             if (poSheet == null)
             {
@@ -69,7 +77,8 @@ namespace CostFlow.Controllers
             {
                 string poNum = kvp.Key;
                 var row = kvp.Value;
-                previewList.Add(new {
+                previewList.Add(new
+                {
                     poNumber = poNum,
                     requestDate = GetColVal(row, 1),
                     approvedDate = GetColVal(row, 2),
@@ -85,7 +94,7 @@ namespace CostFlow.Controllers
 
         // --- STEP 2: Save Master File ---
         [HttpPost]
-        public IActionResult ConfirmSaveMaster(Guid sessionId)
+        public async Task<IActionResult> ConfirmSaveMaster(Guid sessionId)
         {
             try
             {
@@ -97,7 +106,7 @@ namespace CostFlow.Controllers
 
                 // สร้างชื่อรายงานจากวันที่ปัจจุบัน (ใช้ format ตัวเลขเพื่อความปลอดภัย)
                 string baseReportName = $"รายงานสั่งผลิต_{DateTime.Now:dd_MM_yyyy_HH_mm}";
-                
+
                 // Check for duplicate report name and auto-increment
                 string finalReportName = baseReportName;
                 int counter = 1;
@@ -107,7 +116,8 @@ namespace CostFlow.Controllers
                     counter++;
                 }
 
-                var poSheet = file.Sheets.FirstOrDefault(s => s.SheetName.Equals("mcsAppvProduct", StringComparison.OrdinalIgnoreCase))
+                var poSheet = file.Sheets.FirstOrDefault(s =>
+                                  s.SheetName.Equals("mcsAppvProduct", StringComparison.OrdinalIgnoreCase))
                               ?? file.Sheets.FirstOrDefault();
 
                 if (poSheet == null)
@@ -124,7 +134,7 @@ namespace CostFlow.Controllers
 
                     string poNum = GetColVal(row, 0).Trim();
                     if (string.IsNullOrEmpty(poNum) || IsHeaderRow(poNum)) continue;
-                    
+
                     if (!distinctRows.ContainsKey(poNum))
                     {
                         distinctRows[poNum] = row;
@@ -189,22 +199,26 @@ namespace CostFlow.Controllers
                 newReport.TotalPOs = insertCount;
 
                 _context.SaveChanges();
+
+                await SyncWeeklyPlansToGoogleSheetsAsync(newReport.Id);
+
                 _storageService.DeleteImport(sessionId);
 
-                var message = insertCount > 0 
-                    ? $"นำเข้าสำเร็จ {insertCount} รายการ" 
+                var message = insertCount > 0
+                    ? $"นำเข้าสำเร็จ {insertCount} รายการ"
                     : "ไม่มีรายการใหม่ถูกนำเข้า";
-                
+
                 if (skippedCount > 0)
                 {
                     message += $" (ข้าม {skippedCount} รายการที่มีอยู่แล้ว)";
                 }
 
-                return Json(new { 
-                    success = true, 
-                    insertCount = insertCount, 
+                return Json(new
+                {
+                    success = true,
+                    insertCount = insertCount,
                     skippedCount = skippedCount,
-                    totalCount = distinctRows.Count, 
+                    totalCount = distinctRows.Count,
                     fileName = finalReportName,
                     message = message,
                     skippedPOs = skippedPOs.Take(10).ToList() // Show first 10 skipped POs for debugging
@@ -212,7 +226,12 @@ namespace CostFlow.Controllers
             }
             catch (Exception ex)
             {
-                return Json(new { success = false, error = "เกิดข้อผิดพลาดในการบันทึกข้อมูล: " + ex.Message + (ex.InnerException != null ? " -> " + ex.InnerException.Message : "") });
+                return Json(new
+                {
+                    success = false,
+                    error = "เกิดข้อผิดพลาดในการบันทึกข้อมูล: " + ex.Message +
+                            (ex.InnerException != null ? " -> " + ex.InnerException.Message : "")
+                });
             }
         }
 
@@ -293,9 +312,9 @@ namespace CostFlow.Controllers
 
                     // Check if this filename+sheet combination already exists (across all reports)
                     var existingPlan = _context.WeeklyPlans
-                        .FirstOrDefault(wp => wp.FileName == importedFile.FileName && 
+                        .FirstOrDefault(wp => wp.FileName == importedFile.FileName &&
                                               wp.SheetName == fileInfo.SelectedSheet);
-                    
+
                     if (existingPlan != null)
                     {
                         duplicates.Add($"{importedFile.FileName} (ชีท: {fileInfo.SelectedSheet})");
@@ -312,7 +331,7 @@ namespace CostFlow.Controllers
 
         // --- STEP 4: Process Weekly Plan (รับ sheet ที่เลือกมาแล้ว) ---
         [HttpPost]
-        public IActionResult ProcessWeeklyPlan([FromBody] WeeklyPlanProcessRequest request)
+        public async Task<IActionResult> ProcessWeeklyPlan([FromBody] WeeklyPlanProcessRequest request)
         {
             if (request == null || request.Files == null || request.Files.Count == 0)
                 return Json(new { success = false, error = "ไม่มีข้อมูลไฟล์" });
@@ -323,7 +342,8 @@ namespace CostFlow.Controllers
                 // This is needed because WeeklyPlan table has ReportId as required FK
                 var report = _context.Reports.OrderByDescending(r => r.CreatedAt).FirstOrDefault();
                 if (report == null)
-                    return Json(new { success = false, error = "ไม่พบรายงานสั่งผลิตในระบบ กรุณานำเข้าไฟล์สั่งผลิตก่อน" });
+                    return Json(
+                        new { success = false, error = "ไม่พบรายงานสั่งผลิตในระบบ กรุณานำเข้าไฟล์สั่งผลิตก่อน" });
 
                 // Get ALL orders from the system (not limited to specific report)
                 var allOrders = _context.OrderTrackingMasters.ToList();
@@ -335,7 +355,7 @@ namespace CostFlow.Controllers
                 foreach (var fileInfo in request.Files)
                 {
                     var importedFile = _storageService.GetImport(fileInfo.SessionId);
-                    if (importedFile == null) 
+                    if (importedFile == null)
                     {
                         debugInfo.Add($"❌ ไม่พบไฟล์ในระบบสำหรับ sessionId: {fileInfo.SessionId}");
                         continue;
@@ -348,23 +368,24 @@ namespace CostFlow.Controllers
                     debugInfo.Add($"   - ชีทที่เลือก: '{fileInfo.SelectedSheet}'");
 
                     var selectedSheet = importedFile.Sheets.FirstOrDefault(s => s.SheetName == fileInfo.SelectedSheet);
-                    if (selectedSheet == null) 
+                    if (selectedSheet == null)
                     {
                         debugInfo.Add($"   ❌ ไม่พบชีท '{fileInfo.SelectedSheet}' ในไฟล์");
                         continue;
                     }
-                    
+
                     debugInfo.Add($"   ✅ พบชีท '{selectedSheet.SheetName}' - มี {selectedSheet.RawRows.Count} แถว");
 
                     // Check for duplicate uploads (overwrite logic)
                     var existingPlan = _context.WeeklyPlans
-                        .FirstOrDefault(wp => wp.ReportId == report.Id && 
-                                              wp.FileName == importedFile.FileName && 
+                        .FirstOrDefault(wp => wp.ReportId == report.Id &&
+                                              wp.FileName == importedFile.FileName &&
                                               wp.SheetName == selectedSheet.SheetName);
-                    
+
                     if (existingPlan != null)
                     {
-                        debugInfo.Add($"   ⚠️ พบไฟล์ '{importedFile.FileName}' ชีท '{selectedSheet.SheetName}' ซ้ำในระบบ - ทำการลบข้อมูลเก่าเพื่อบันทึกใหม่ (Overwrite)");
+                        debugInfo.Add(
+                            $"   ⚠️ พบไฟล์ '{importedFile.FileName}' ชีท '{selectedSheet.SheetName}' ซ้ำในระบบ - ทำการลบข้อมูลเก่าเพื่อบันทึกใหม่ (Overwrite)");
                         // Remove old details
                         var oldDetails = _context.WeeklyPlanDetails.Where(d => d.WeeklyPlanId == existingPlan.Id);
                         _context.WeeklyPlanDetails.RemoveRange(oldDetails);
@@ -388,7 +409,8 @@ namespace CostFlow.Controllers
 
                     int fileMatchedCount = 0;
                     var foundPOs = new List<string>(); // เก็บ PO ที่เจอทุกแถว
-                    var matchedUniquePOsInFile = new HashSet<string>(StringComparer.OrdinalIgnoreCase); // เก็บ PO ที่จับคู่ได้แบบไม่ซ้ำ
+                    var matchedUniquePOsInFile =
+                        new HashSet<string>(StringComparer.OrdinalIgnoreCase); // เก็บ PO ที่จับคู่ได้แบบไม่ซ้ำ
 
                     // หา column index ของ "ใบขออนุมัติ" หรือ "เลขที่อนุมัติ" จาก header
                     int poColumnIndex = -1;
@@ -406,6 +428,7 @@ namespace CostFlow.Controllers
                                 break;
                             }
                         }
+
                         if (poColumnIndex != -1) break;
                     }
 
@@ -425,7 +448,7 @@ namespace CostFlow.Controllers
                         // ดึง PO จากคอลัมน์ที่หาเจอ โดยเลือกเฉพาะที่ขึ้นต้นด้วย WO
                         string poNumberInFile = ExtractPoNumberFromColumn(row, poColumnIndex);
                         if (string.IsNullOrEmpty(poNumberInFile)) continue;
-                        
+
                         foundPOs.Add(poNumberInFile); // เก็บไว้ debug
 
                         // Clean PO number (digits only)
@@ -441,9 +464,9 @@ namespace CostFlow.Controllers
                         // 0=ลำดับ, 1=เลขที่อนุมัติ(WO), 2=วันที่รับPO, 3=วันที่เปิดใบสั่ง,
                         // 4=เลขที่ใบสั่ง, 5=หน่วยงาน, 6=สาขา, 7=ชื่อใบสั่ง, 8=ประเภทงาน,
                         // 9=จำนวนชิ้น, 10=ราคา, 11=สถานะใบสั่ง, 12=ส่งมอบ, 13+=อื่นๆ
-                        string department = GetColVal(row, 5);      // หน่วยงาน (LCD00, LCA00)
-                        string orderName = GetColVal(row, 7);       // ชื่อใบสั่ง
-                        string orderStatus = GetColVal(row, 11);    // สถานะใบสั่ง (C:ปิดใบสั่ง, O:กำลังดำเนินการ)
+                        string department = GetColVal(row, 5); // หน่วยงาน (LCD00, LCA00)
+                        string orderName = GetColVal(row, 7); // ชื่อใบสั่ง
+                        string orderStatus = GetColVal(row, 11); // สถานะใบสั่ง (C:ปิดใบสั่ง, O:กำลังดำเนินการ)
                         string deliveryTarget = GetColVal(row, 12); // ส่งมอบ (วันที่)
 
                         // Create WeeklyPlanDetail (บันทึกประวัติทุกแถวตามจริง ไม่ตัดทิ้ง เพื่อเวลาคลิกตรวจสอบจะได้เห็นครบทุกงวด/สถานะ)
@@ -471,6 +494,7 @@ namespace CostFlow.Controllers
                                 matchedOrder.Status = "Matched";
                                 matchedOrder.UpdatedAt = DateTime.Now;
                             }
+
                             fileMatchedCount++;
                             totalMatched++;
                             matchedUniquePOsInFile.Add(cleanPoInFile);
@@ -485,10 +509,10 @@ namespace CostFlow.Controllers
                     {
                         fileName = importedFile.FileName,
                         sheetName = selectedSheet.SheetName,
-                        totalCount = uniqueTotalInFile,        // จำนวน PO ที่ไม่ซ้ำ
-                        matchedCount = uniqueMatchedInFile,    // จำนวน PO ที่จับคู่ได้ไม่ซ้ำ
-                        totalRowsCount = foundPOs.Count,       // จำนวนแถวทั้งหมดใน Excel
-                        matchedRowsCount = fileMatchedCount    // จำนวนแถวที่จับคู่ได้
+                        totalCount = uniqueTotalInFile, // จำนวน PO ที่ไม่ซ้ำ
+                        matchedCount = uniqueMatchedInFile, // จำนวน PO ที่จับคู่ได้ไม่ซ้ำ
+                        totalRowsCount = foundPOs.Count, // จำนวนแถวทั้งหมดใน Excel
+                        matchedRowsCount = fileMatchedCount // จำนวนแถวที่จับคู่ได้
                     });
 
                     // Debug: แสดง PO ที่เจอ
@@ -497,6 +521,7 @@ namespace CostFlow.Controllers
                     {
                         debugInfo.Add($"   - PO 5 ตัวแรก: {string.Join(", ", foundPOs.Take(5))}");
                     }
+
                     debugInfo.Add($"   - จับคู่ได้: {fileMatchedCount} รายการ");
 
                     // Delete temp file
@@ -525,6 +550,8 @@ namespace CostFlow.Controllers
                 }
 
                 _context.SaveChanges();
+
+                await SyncWeeklyPlansToGoogleSheetsAsync();
 
                 return Json(new
                 {
@@ -580,6 +607,7 @@ namespace CostFlow.Controllers
                     return val;
                 }
             }
+
             return string.Empty;
         }
 
@@ -590,6 +618,7 @@ namespace CostFlow.Controllers
                 if (!string.IsNullOrWhiteSpace(row[i]))
                     return i;
             }
+
             return row.Count > 0 ? row.Count - 1 : 0;
         }
 
@@ -609,6 +638,7 @@ namespace CostFlow.Controllers
                     sb.Append(c);
                 }
             }
+
             return sb.ToString();
         }
 
@@ -616,7 +646,8 @@ namespace CostFlow.Controllers
         {
             if (string.IsNullOrEmpty(remarks)) return "-";
             remarks = remarks.Replace("\u200b", "").Trim();
-            string[] patterns = {
+            string[] patterns =
+            {
                 @"(?:จำนวน|จํานวน|จำนวนชิ้น|จํานวนชิ้น|จำนวน\s*ชิ้น|จำนวณ|จนวน|จํนวน|จำนวน)\s*[:=\-\s]*\s*([0-9]+)",
                 @"([0-9]+)\s*(?:ชิ้น|อัน|ตัว|เครื่อง)"
             };
@@ -629,6 +660,7 @@ namespace CostFlow.Controllers
                     return match.Groups[1].Value;
                 }
             }
+
             return "-";
         }
 
@@ -637,10 +669,12 @@ namespace CostFlow.Controllers
             if (string.IsNullOrWhiteSpace(val)) return "";
             if (DateTime.TryParse(val, out var d)) return d.ToString("dd/MM/yyyy");
             string[] formats = { "d/M/yyyy", "d/M/yy", "dd/MM/yyyy", "yyyy-MM-dd", "d/M/yyyy H:mm:ss" };
-            if (DateTime.TryParseExact(val, formats, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var d2))
+            if (DateTime.TryParseExact(val, formats, System.Globalization.CultureInfo.InvariantCulture,
+                    System.Globalization.DateTimeStyles.None, out var d2))
             {
                 return d2.ToString("dd/MM/yyyy");
             }
+
             return val.Trim();
         }
 
@@ -669,6 +703,7 @@ namespace CostFlow.Controllers
             {
                 return true;
             }
+
             return false;
         }
 
@@ -678,6 +713,162 @@ namespace CostFlow.Controllers
             val = val.Replace(",", "").Replace("฿", "").Trim();
             if (decimal.TryParse(val, out var d)) return d.ToString("0.00");
             return val;
+        }
+
+        private async Task SyncWeeklyPlansToGoogleSheetsAsync(Guid? targetReportId = null)
+        {
+            try
+            {
+                string? appScriptUrl = _configuration["GoogleSheets:MonthlyCostAppScriptUrl"];
+                if (string.IsNullOrWhiteSpace(appScriptUrl) || appScriptUrl.Contains("_placeholder"))
+                {
+                    appScriptUrl = _configuration["GoogleSheets:ArchiveAppScriptUrl"];
+                }
+
+                if (!string.IsNullOrWhiteSpace(appScriptUrl) && !appScriptUrl.Contains("_placeholder"))
+                {
+                    Guid activeReportId = targetReportId ?? await _context.Reports
+                        .OrderByDescending(r => r.CreatedAt)
+                        .Select(r => r.Id)
+                        .FirstOrDefaultAsync();
+
+                    if (activeReportId == Guid.Empty) return;
+
+                    var allOrders = await _context.OrderTrackingMasters
+                        .Where(o => o.ReportId == activeReportId)
+                        .Include(o => o.Report)
+                        .Include(o => o.MatchedInWeeklyPlans)
+                        .ThenInclude(m => m.WeeklyPlan)
+                        .ToListAsync();
+
+                    var formattedPlanItems = new List<(string MonthYear, object?[] Row)>();
+
+                    foreach (var otm in allOrders)
+                    {
+                        var latestPlan = otm.MatchedInWeeklyPlans
+                            .OrderByDescending(w => w.WeeklyPlan?.UploadedAt)
+                            .FirstOrDefault();
+
+                        string poNo = otm.PoNumber ?? "-";
+                        string orderName = !string.IsNullOrWhiteSpace(latestPlan?.OrderName)
+                            ? latestPlan.OrderName
+                            : (!string.IsNullOrWhiteSpace(otm.Remarks) ? otm.Remarks.Trim() : "ไม่ระบุ");
+                        string dept = !string.IsNullOrWhiteSpace(latestPlan?.Department)
+                            ? latestPlan.Department
+                            : (!string.IsNullOrWhiteSpace(otm.Urgency) ? otm.Urgency : "-");
+                        string deliveryTarget = !string.IsNullOrWhiteSpace(latestPlan?.DeliveryTarget)
+                            ? latestPlan.DeliveryTarget
+                            : "-";
+                        string approvedDateDisplay = otm.ApprovedDate ?? "-";
+
+                        string monthKey = GetMonthYearFromDateStr(approvedDateDisplay, poNo)
+                                          ?? latestPlan?.WeeklyPlan?.UploadedAt.ToLocalTime().ToString("yyyy-MM")
+                                          ?? otm.CreatedAt.ToLocalTime().ToString("yyyy-MM");
+
+                        string uploadDate = latestPlan?.WeeklyPlan?.UploadedAt.ToLocalTime().ToString("dd/MM/yyyy")
+                                            ?? otm.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy");
+                        string fileName = latestPlan?.WeeklyPlan?.FileName ?? otm.Report?.ReportName ?? "-";
+
+                        string rawPlanStatus = latestPlan?.OrderStatus ?? otm.Status ?? "Pending";
+                        string planStatusThai = rawPlanStatus switch
+                        {
+                            "Pending" => "รอดำเนินการ",
+                            "Matched" => "จับคู่สำเร็จ",
+                            "Completed" => "เสร็จสมบูรณ์",
+                            "Approved" => "อนุมัติแล้ว",
+                            "In Progress" => "กำลังดำเนินการ",
+                            "-" => "รอดำเนินการ",
+                            _ => rawPlanStatus
+                        };
+
+                        string matchResult = latestPlan != null || otm.Status == "Matched"
+                            ? "จับคู่สำเร็จ"
+                            : "ยังไม่ได้จับคู่";
+
+                        formattedPlanItems.Add((monthKey, new object?[]
+                        {
+                            uploadDate, // A วันที่อัปโหลดจริง
+                            approvedDateDisplay, // B วันที่อนุมัติ
+                            fileName, // C ชื่อไฟล์
+                            poNo, // D เลข PO
+                            orderName, // E ชื่อสินค้า
+                            dept, // F แผนก
+                            deliveryTarget, // G กำหนดส่งมอบ
+                            planStatusThai, // H สถานะในไฟล์แผน (ภาษาไทย)
+                            matchResult // I ผลการจับคู่ (ภาษาไทย)
+                        }));
+                    }
+
+                    var planGroups = formattedPlanItems
+                        .GroupBy(item => item.MonthYear)
+                        .OrderBy(g => g.Key)
+                        .Select(g => new
+                        {
+                            MonthYear = g.Key,
+                            Rows = g.Select(x => x.Row).ToList()
+                        }).ToList();
+
+                    var sheetPayload = new
+                    {
+                        SheetName_Plans = "แผนผลิตประจำสัปดาห์",
+                        PlanGroups = planGroups
+                    };
+
+                    var client = _httpClientFactory.CreateClient("GoogleAppsScript");
+                    client.Timeout = TimeSpan.FromSeconds(30);
+
+                    var jsonString = System.Text.Json.JsonSerializer.Serialize(sheetPayload);
+                    var content =
+                        new System.Net.Http.StringContent(jsonString, System.Text.Encoding.UTF8, "application/json");
+
+                    var response = await client.PostAsync(appScriptUrl, content);
+                    if (response.IsSuccessStatusCode)
+                    {
+                        Console.WriteLine("Successfully synced WeeklyPlan_Matching to Google Sheets after FileMerge.");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error syncing WeeklyPlan_Matching to Google Sheets: {ex.Message}");
+            }
+        }
+
+        private static string? GetMonthYearFromDateStr(string? dateStr, string? poNumber = null)
+        {
+            if (!string.IsNullOrWhiteSpace(dateStr) && dateStr != "-")
+            {
+                var clean = dateStr.Trim();
+
+                if (DateTime.TryParse(clean, new CultureInfo("th-TH"), DateTimeStyles.None, out var dtThai))
+                {
+                    int year = dtThai.Year > 2500 ? dtThai.Year - 543 : dtThai.Year;
+                    return $"{year:0000}-{dtThai.Month:02}";
+                }
+
+                if (DateTime.TryParse(clean, CultureInfo.InvariantCulture, DateTimeStyles.None, out var dtInv))
+                {
+                    int year = dtInv.Year > 2500 ? dtInv.Year - 543 : dtInv.Year;
+                    return $"{year:0000}-{dtInv.Month:02}";
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(poNumber))
+            {
+                var cleanPo = poNumber.Trim().ToUpper();
+                if (cleanPo.StartsWith("WO") && cleanPo.Length >= 6)
+                {
+                    var yearStr = cleanPo.Substring(2, 2);
+                    var monthStr = cleanPo.Substring(4, 2);
+                    if (int.TryParse(yearStr, out int y2) && int.TryParse(monthStr, out int m) && m >= 1 && m <= 12)
+                    {
+                        int fullYear = y2 > 50 ? (y2 + 2500 - 543) : (y2 + 2000);
+                        return $"{fullYear:0000}-{m:02}";
+                    }
+                }
+            }
+
+            return null;
         }
     }
 }

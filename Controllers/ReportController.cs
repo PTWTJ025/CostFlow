@@ -11,7 +11,7 @@ using ClosedXML.Excel;
 using System.IO;
 namespace CostFlow.Controllers
 {
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin,Dev")]
     public class ReportController : Controller
     {
         private readonly AppDbContext _context;
@@ -44,13 +44,8 @@ namespace CostFlow.Controllers
 
             // กำหนดปีที่เลือก:
             // 1. ถ้ามี Query Parameter 'year' ให้ใช้ปีนั้น
-            // 2. ถ้าไม่มี ให้ดึงปีล่าสุดที่มีข้อมูลในระบบ (Max Year จาก DB)
-            // 3. ถ้าไม่มีข้อมูลในระบบเลย ให้ใช้ปีปัจจุบันของเครื่อง
-            var selectedYear = year;
-            if (!selectedYear.HasValue)
-            {
-                selectedYear = parsedYears.Any() ? parsedYears.Max() : now.Year;
-            }
+            // 2. ถ้าไม่มี ให้ใช้ปีปัจจุบันของเครื่องเป็นค่าเริ่มต้น (Default)
+            var selectedYear = year ?? now.Year;
 
             // Parse ApprovedDate and group by month (for selected year)
             var ordersByMonth = allOrders
@@ -116,16 +111,14 @@ namespace CostFlow.Controllers
             ViewData["CurrentYear"] = now.Year;
 
             // กำหนดช่วงปีสำหรับให้เลือกใน Dropdown:
-            // - เริ่มตั้งแต่ พ.ศ. 2565 (2022) ตามที่คุณระบุว่าต้องการย้อนหลังตั้งแต่เปลี่ยนจาก Papersheet
-            // - สิ้นสุดที่ปีสูงสุดระหว่าง (ปีปัจจุบันของเครื่อง, ปีสูงสุดที่มีข้อมูลใน DB, หรืออย่างน้อยที่สุดคือปี 2026/2569)
-            var maxAvailableYear = Math.Max(now.Year, parsedYears.Any() ? parsedYears.Max() : 2026);
-            var minAvailableYear = 2022; // พ.ศ. 2565
+            // - แสดงเฉพาะปีที่มีการ์ด/ข้อมูลในระบบจริง
+            // - รวมปีปัจจุบัน (CurrentYear) และปีที่เลือก (SelectedYear) เสมอ
+            var availableYears = parsedYears
+                .Concat(new[] { now.Year, selectedYear })
+                .Distinct()
+                .OrderByDescending(yr => yr)
+                .ToList();
 
-            var availableYears = new List<int>();
-            for (int yr = maxAvailableYear; yr >= minAvailableYear; yr--)
-            {
-                availableYears.Add(yr);
-            }
             ViewData["AvailableYears"] = availableYears;
             
             return View(cards);

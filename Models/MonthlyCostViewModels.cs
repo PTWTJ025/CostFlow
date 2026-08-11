@@ -34,6 +34,7 @@ namespace CostFlow.Models
         public decimal TotalAmount { get; set; }
         public decimal MonthAmount { get; set; }
         public bool IsLatestWithData { get; set; }
+        public bool IsPastYearDecember { get; set; }
 
         public double ProgressPercent => TotalItems > 0
             ? Math.Round((double)DoneItems / TotalItems * 100, 1)
@@ -53,6 +54,7 @@ namespace CostFlow.Models
         public List<SavedOrderItem> SavedOrders { get; set; } = new();
 
         public bool IsCurrentMonth { get; set; }
+        public bool IsFutureMonth { get; set; }
         public bool IsCompleted => Stats.TotalOrders > 0 && PendingOrders.Count == 0;
         public bool IsLocked => !IsCurrentMonth && IsCompleted;
     }
@@ -88,6 +90,9 @@ namespace CostFlow.Models
         public string DeliveryTarget { get; set; } = string.Empty;
         public string Department { get; set; } = string.Empty;
         public DateTime CreatedAt { get; set; }
+        public string ForwardedStatus { get; set; } = string.Empty; 
+        public string ForwardedFromMonth { get; set; } = string.Empty;
+        public string OriginalMonth { get; set; } = string.Empty;
     }
 
     public class MonthlyStats
