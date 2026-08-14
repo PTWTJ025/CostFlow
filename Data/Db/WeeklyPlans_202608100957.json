@@ -1,0 +1,21 @@
+{
+"WeeklyPlans": [
+	{
+		"Id" : "5cc8457e-3e7f-48cd-b462-ec4be86129fe",
+		"ReportId" : "5604c8d8-2615-41be-88b7-4099ed095e80",
+		"FileName" : "แผนผลิตประจำสัปดาห์ KC 21-7-69.xlsx",
+		"SheetName" : "รวมงานผลิต - ราคาLCA00-LCD00",
+		"TotalRecords" : 148,
+		"MatchedCount" : 69,
+		"UploadedAt" : "2026-07-31 02:01:03.636471"
+	},
+	{
+		"Id" : "78f4a0f4-e429-4d84-8f5e-40d1e2dd2817",
+		"ReportId" : "5604c8d8-2615-41be-88b7-4099ed095e80",
+		"FileName" : "แผนผลิตประจำสัปดาห์ KC 30-6-69.xlsx",
+		"SheetName" : "รวมงานผลิต - ราคาLCA00-LCD00",
+		"TotalRecords" : 145,
+		"MatchedCount" : 57,
+		"UploadedAt" : "2026-07-31 02:01:55.948302"
+	}
+]}

@@ -1,0 +1,47 @@
+{
+"AspNetUsers": [
+	{
+		"Id" : "549e6fd7-2f44-40b1-b43f-09caffa16d87",
+		"EmployeeCode" : "ADMIN01",
+		"FullName" : "แมวกวนๆ",
+		"ProfilePictureUrl" : "https:\/\/cdn.readawrite.com\/articles\/11729\/11728659\/thumbnail\/large.gif?1",
+		"IsActive" : 1,
+		"CreatedAt" : "2026-07-09 11:04:25.475971",
+		"UserName" : "ADMIN01",
+		"NormalizedUserName" : "ADMIN01",
+		"Email" : null,
+		"NormalizedEmail" : null,
+		"EmailConfirmed" : 0,
+		"PasswordHash" : "AQAAAAIAAYagAAAAEHW8LhOZ7Ji2DcSDKoQmToAceiHZ22BMk8ZMNqp4OOh+Gt7FCYPmhDF9wfG647tgtA==",
+		"SecurityStamp" : "TJ5Z43S6HDMXYSL2P2UO5XJHACYNWWO5",
+		"ConcurrencyStamp" : "12e36cf2-a9b2-4af6-b9ff-280b726847cd",
+		"PhoneNumber" : null,
+		"PhoneNumberConfirmed" : 0,
+		"TwoFactorEnabled" : 0,
+		"LockoutEnd" : null,
+		"LockoutEnabled" : 1,
+		"AccessFailedCount" : 0
+	},
+	{
+		"Id" : "6926e7de-d7d3-4962-bc32-75d7ebc1a17b",
+		"EmployeeCode" : "STAFF01",
+		"FullName" : "เจ้าหน้าที่ฝ่ายช่าง",
+		"ProfilePictureUrl" : "https:\/\/encrypted-tbn0.gstatic.com\/images?q=tbn:ANd9GcRkt942qIdGSgY_RotRR9_HhY3bveTRjSgZZYygIyA-3JzTkNbA9PR1CbXB&s=10",
+		"IsActive" : 1,
+		"CreatedAt" : "2026-07-09 11:04:27.142375",
+		"UserName" : "STAFF01",
+		"NormalizedUserName" : "STAFF01",
+		"Email" : null,
+		"NormalizedEmail" : null,
+		"EmailConfirmed" : 0,
+		"PasswordHash" : "AQAAAAIAAYagAAAAELvereimYmXb4AruIvrWEGyZtrILqKBsJO3WHzjcIvoWxvY3yMfkXPlfkvyMoTaIgQ==",
+		"SecurityStamp" : "ORN2T3Y35M5F7WTKB5IZS33HT35JMLLS",
+		"ConcurrencyStamp" : "7dbc2fc5-ea5d-45ec-b7e8-9c154fdcb15e",
+		"PhoneNumber" : null,
+		"PhoneNumberConfirmed" : 0,
+		"TwoFactorEnabled" : 0,
+		"LockoutEnd" : null,
+		"LockoutEnabled" : 1,
+		"AccessFailedCount" : 0
+	}
+]}

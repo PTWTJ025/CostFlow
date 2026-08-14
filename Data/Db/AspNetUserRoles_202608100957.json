@@ -1,0 +1,11 @@
+{
+"AspNetUserRoles": [
+	{
+		"UserId" : "549e6fd7-2f44-40b1-b43f-09caffa16d87",
+		"RoleId" : "8a628c48-a363-4915-8b85-2ca07510b4f2"
+	},
+	{
+		"UserId" : "6926e7de-d7d3-4962-bc32-75d7ebc1a17b",
+		"RoleId" : "eff0e2ea-feb9-4968-af65-a5ae06aa5f43"
+	}
+]}
