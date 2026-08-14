@@ -111,13 +111,21 @@ namespace CostFlow.Controllers
 
             int currentYear = DateTime.Now.Year;
             string yearPrefix = $"{currentYear:0000}-";
-            decimal totalYearlyCost = await _context.MonthlyOrderActions
-                .Where(a => a.MonthYear.StartsWith(yearPrefix))
-                .SumAsync(a => (decimal?)a.ActionPrice) ?? 0m;
-
-            if (totalYearlyCost == 0)
+            decimal totalYearlyCost = 0m;
+            try
             {
-                totalYearlyCost = await _context.MonthlyOrderActions.SumAsync(a => (decimal?)a.ActionPrice) ?? 0m;
+                totalYearlyCost = await _context.MonthlyOrderActions
+                    .Where(a => a.MonthYear.StartsWith(yearPrefix))
+                    .SumAsync(a => (decimal?)a.ActionPrice) ?? 0m;
+
+                if (totalYearlyCost == 0)
+                {
+                    totalYearlyCost = await _context.MonthlyOrderActions.SumAsync(a => (decimal?)a.ActionPrice) ?? 0m;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Dashboard] Warning: Could not query MonthlyOrderActions: {ex.Message}");
             }
 
             return new HomeDashboardViewModel

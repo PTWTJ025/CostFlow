@@ -60,6 +60,13 @@ namespace CostFlow.Data
                 .WithMany(o => o.MatchedInWeeklyPlans)
                 .HasForeignKey(d => d.MatchedOrderId)
                 .OnDelete(DeleteBehavior.SetNull);
+
+            // MonthlyOrderAction -> OrderTrackingMaster (many-to-1)
+            builder.Entity<MonthlyOrderAction>()
+                .HasOne(m => m.OrderTrackingMaster)
+                .WithMany()
+                .HasForeignKey(m => m.OrderTrackingMasterId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

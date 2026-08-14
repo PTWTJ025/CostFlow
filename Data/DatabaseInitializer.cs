@@ -155,9 +155,9 @@ namespace CostFlow.Data
                     `ProductCode` varchar(255) NOT NULL,
                     `ProductName` longtext NOT NULL,
                     `Unit` longtext NOT NULL,
-                    `TotalQty` double NOT NULL,
-                    `TotalValue` double NOT NULL,
-                    `PricePerUnit` double NOT NULL,
+                    `TotalQty` double NOT NULL DEFAULT 0,
+                    `TotalValue` double NOT NULL DEFAULT 0,
+                    `PricePerUnit` double NOT NULL DEFAULT 0,
                     `Sources` longtext NOT NULL,
                     PRIMARY KEY (`ProductCode`)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
@@ -166,9 +166,9 @@ namespace CostFlow.Data
                     `Id` char(36) NOT NULL,
                     `ReportName` varchar(255) NOT NULL,
                     `OriginalFileName` longtext NOT NULL,
-                    `TotalPOs` int NOT NULL,
-                    `MatchedPOs` int NOT NULL,
-                    `CreatedAt` datetime(6) NOT NULL,
+                    `TotalPOs` int NOT NULL DEFAULT 0,
+                    `MatchedPOs` int NOT NULL DEFAULT 0,
+                    `CreatedAt` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
                     `CreatedBy` longtext DEFAULT NULL,
                     `CreatedByUserId` longtext DEFAULT NULL,
                     PRIMARY KEY (`Id`),
@@ -186,11 +186,10 @@ namespace CostFlow.Data
                     `Remarks` longtext DEFAULT NULL,
                     `RemarksQuantity` longtext DEFAULT NULL,
                     `Status` longtext NOT NULL,
-                    `CreatedAt` datetime(6) NOT NULL,
-                    `UpdatedAt` datetime(6) NOT NULL,
+                    `CreatedAt` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+                    `UpdatedAt` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
                     PRIMARY KEY (`Id`),
-                    KEY `IX_OrderTrackingMasters_ReportId` (`ReportId`),
-                    CONSTRAINT `FK_OrderTrackingMasters_Reports_ReportId` FOREIGN KEY (`ReportId`) REFERENCES `Reports` (`Id`) ON DELETE CASCADE
+                    KEY `IX_OrderTrackingMasters_ReportId` (`ReportId`)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
 
                 @"CREATE TABLE IF NOT EXISTS `WeeklyPlans` (
@@ -198,13 +197,12 @@ namespace CostFlow.Data
                     `ReportId` char(36) NOT NULL,
                     `FileName` longtext NOT NULL,
                     `SheetName` longtext NOT NULL,
-                    `TotalRecords` int NOT NULL,
-                    `MatchedCount` int NOT NULL,
-                    `UploadedAt` datetime(6) NOT NULL,
+                    `TotalRecords` int NOT NULL DEFAULT 0,
+                    `MatchedCount` int NOT NULL DEFAULT 0,
+                    `UploadedAt` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
                     `UploadedBy` longtext DEFAULT NULL,
                     PRIMARY KEY (`Id`),
-                    KEY `IX_WeeklyPlans_ReportId` (`ReportId`),
-                    CONSTRAINT `FK_WeeklyPlans_Reports_ReportId` FOREIGN KEY (`ReportId`) REFERENCES `Reports` (`Id`) ON DELETE CASCADE
+                    KEY `IX_WeeklyPlans_ReportId` (`ReportId`)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
 
                 @"CREATE TABLE IF NOT EXISTS `WeeklyPlanDetails` (
@@ -216,29 +214,26 @@ namespace CostFlow.Data
                     `OrderStatus` longtext DEFAULT NULL,
                     `DeliveryTarget` longtext DEFAULT NULL,
                     `Price` longtext DEFAULT NULL,
-                    `RowIndex` int NOT NULL,
-                    `IsMatched` tinyint(1) NOT NULL,
+                    `RowIndex` int NOT NULL DEFAULT 0,
+                    `IsMatched` tinyint(1) NOT NULL DEFAULT 0,
                     `MatchedOrderId` char(36) DEFAULT NULL,
                     PRIMARY KEY (`Id`),
                     KEY `IX_WeeklyPlanDetails_MatchedOrderId` (`MatchedOrderId`),
-                    KEY `IX_WeeklyPlanDetails_WeeklyPlanId` (`WeeklyPlanId`),
-                    CONSTRAINT `FK_WeeklyPlanDetails_OrderTrackingMasters_MatchedOrderId` FOREIGN KEY (`MatchedOrderId`) REFERENCES `OrderTrackingMasters` (`Id`) ON DELETE SET NULL,
-                    CONSTRAINT `FK_WeeklyPlanDetails_WeeklyPlans_WeeklyPlanId` FOREIGN KEY (`WeeklyPlanId`) REFERENCES `WeeklyPlans` (`Id`) ON DELETE CASCADE
+                    KEY `IX_WeeklyPlanDetails_WeeklyPlanId` (`WeeklyPlanId`)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
 
                 @"CREATE TABLE IF NOT EXISTS `MonthlyOrderActions` (
                     `Id` char(36) NOT NULL,
                     `OrderTrackingMasterId` char(36) NOT NULL,
-                    `MonthYear` longtext NOT NULL,
-                    `Action` longtext NOT NULL,
-                    `ActionPrice` decimal(65,30) NOT NULL,
-                    `DeferredFromMonth` longtext DEFAULT NULL,
-                    `IsForcedPayment` tinyint(1) NOT NULL,
-                    `CreatedAt` datetime(6) NOT NULL,
-                    `UpdatedAt` datetime(6) NOT NULL,
+                    `MonthYear` varchar(50) NOT NULL,
+                    `Action` varchar(50) NOT NULL DEFAULT 'Pending',
+                    `ActionPrice` decimal(18,2) NOT NULL DEFAULT 0.00,
+                    `DeferredFromMonth` varchar(50) DEFAULT NULL,
+                    `IsForcedPayment` tinyint(1) NOT NULL DEFAULT 0,
+                    `CreatedAt` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+                    `UpdatedAt` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
                     PRIMARY KEY (`Id`),
-                    KEY `IX_MonthlyOrderActions_OrderTrackingMasterId` (`OrderTrackingMasterId`),
-                    CONSTRAINT `FK_MonthlyOrderActions_OrderTrackingMasters_OrderTrackingMasterId` FOREIGN KEY (`OrderTrackingMasterId`) REFERENCES `OrderTrackingMasters` (`Id`) ON DELETE CASCADE
+                    KEY `IX_MonthlyOrderActions_OrderTrackingMasterId` (`OrderTrackingMasterId`)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;"
             };
 
