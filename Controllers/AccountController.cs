@@ -27,7 +27,13 @@ namespace CostFlow.Controllers
             // ถ้า login อยู่แล้ว แยกไปตามบทบาท
             if (User.Identity?.IsAuthenticated == true)
             {
-                if (User.IsInRole("Admin") || User.IsInRole("Dev"))
+                var user = await _userManager.GetUserAsync(User);
+                string userName = User.Identity?.Name ?? user?.UserName ?? "";
+                bool isAdmin = User.IsInRole("Admin") || User.IsInRole("Dev") ||
+                               userName.Equals("ADMIN01", StringComparison.OrdinalIgnoreCase) ||
+                               userName.Equals("DEV01", StringComparison.OrdinalIgnoreCase);
+
+                if (isAdmin)
                 {
                     return RedirectToAction("Index", "Home");
                 }

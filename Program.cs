@@ -111,6 +111,53 @@ app.UseHttpsRedirection();
 app.UseRouting();
 
 app.UseAuthentication(); // ← ต้องมาก่อน Authorization
+
+// Auto-inject role claims for default accounts on every request
+app.Use(async (context, next) =>
+{
+    if (context.User.Identity?.IsAuthenticated == true)
+    {
+        var name = context.User.Identity.Name;
+        if (!string.IsNullOrEmpty(name))
+        {
+            var identity = context.User.Identity as System.Security.Claims.ClaimsIdentity;
+            if (identity != null)
+            {
+                if (name.Equals("ADMIN01", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (!context.User.IsInRole("Admin"))
+                    {
+                        identity.AddClaim(new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Role, "Admin"));
+                        identity.AddClaim(new System.Security.Claims.Claim("role", "Admin"));
+                    }
+                }
+                else if (name.Equals("DEV01", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (!context.User.IsInRole("Dev"))
+                    {
+                        identity.AddClaim(new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Role, "Dev"));
+                        identity.AddClaim(new System.Security.Claims.Claim("role", "Dev"));
+                    }
+                    if (!context.User.IsInRole("Admin"))
+                    {
+                        identity.AddClaim(new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Role, "Admin"));
+                        identity.AddClaim(new System.Security.Claims.Claim("role", "Admin"));
+                    }
+                }
+                else if (name.Equals("STAFF01", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (!context.User.IsInRole("Staff"))
+                    {
+                        identity.AddClaim(new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Role, "Staff"));
+                        identity.AddClaim(new System.Security.Claims.Claim("role", "Staff"));
+                    }
+                }
+            }
+        }
+    }
+    await next();
+});
+
 app.UseAuthorization();
 
 app.UseStaticFiles(new StaticFileOptions

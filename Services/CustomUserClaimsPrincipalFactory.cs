@@ -29,6 +29,25 @@ public class CustomUserClaimsPrincipalFactory : UserClaimsPrincipalFactory<Appli
             identity.AddClaim(new Claim("ProfilePictureUrl", user.ProfilePictureUrl));
         }
 
+        // เพิ่ม Role Claim ให้บัญชีหลักอัตโนมัติ เพื่อความเสถียร 100%
+        if (string.Equals(user.UserName, "ADMIN01", StringComparison.OrdinalIgnoreCase))
+        {
+            identity.AddClaim(new Claim(ClaimTypes.Role, "Admin"));
+            identity.AddClaim(new Claim("role", "Admin"));
+        }
+        else if (string.Equals(user.UserName, "DEV01", StringComparison.OrdinalIgnoreCase))
+        {
+            identity.AddClaim(new Claim(ClaimTypes.Role, "Dev"));
+            identity.AddClaim(new Claim(ClaimTypes.Role, "Admin"));
+            identity.AddClaim(new Claim("role", "Dev"));
+            identity.AddClaim(new Claim("role", "Admin"));
+        }
+        else if (string.Equals(user.UserName, "STAFF01", StringComparison.OrdinalIgnoreCase))
+        {
+            identity.AddClaim(new Claim(ClaimTypes.Role, "Staff"));
+            identity.AddClaim(new Claim("role", "Staff"));
+        }
+
         return identity;
     }
 }
