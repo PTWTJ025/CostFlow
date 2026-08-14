@@ -40,8 +40,16 @@ builder.Services.AddHttpClient("GoogleAppsScript", client => { client.Timeout = 
     });
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite(connectionString));
+if (!string.IsNullOrEmpty(connectionString) && (connectionString.StartsWith("Server=", StringComparison.OrdinalIgnoreCase) || connectionString.Contains("Port=")))
+{
+    builder.Services.AddDbContext<AppDbContext>(options =>
+        options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
+}
+else
+{
+    builder.Services.AddDbContext<AppDbContext>(options =>
+        options.UseSqlite(connectionString));
+}
 
 var tidbConnectionString = builder.Configuration.GetConnectionString("TiDbConnection");
 builder.Services.AddDbContext<TiDbContext>(options =>

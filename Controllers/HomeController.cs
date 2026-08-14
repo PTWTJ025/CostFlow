@@ -223,9 +223,10 @@ namespace CostFlow.Controllers
         {
             try
             {
-                // 1. อ่าน path ของ SQLite database
+                // 1. ตรวจสอบประเภท DefaultConnection (SQLite หรือ TiDB MySQL)
                 string? connStr = _configuration.GetConnectionString("DefaultConnection");
                 string? dbRelativePath = null;
+                bool isSqlite = false;
 
                 if (!string.IsNullOrWhiteSpace(connStr))
                 {
@@ -235,24 +236,53 @@ namespace CostFlow.Controllers
                         if (trimmed.StartsWith("Data Source=", StringComparison.OrdinalIgnoreCase))
                         {
                             dbRelativePath = trimmed.Substring("Data Source=".Length).Trim();
+                            isSqlite = true;
                             break;
                         }
                     }
                 }
 
-                if (string.IsNullOrWhiteSpace(dbRelativePath))
-                    return Json(new { success = false, error = "ไม่พบ path ของ SQLite database ในไฟล์ตั้งค่า" });
-
-                string dbFullPath = System.IO.Path.IsPathRooted(dbRelativePath)
-                    ? dbRelativePath
-                    : System.IO.Path.Combine(Directory.GetCurrentDirectory(), dbRelativePath);
-
-                if (!System.IO.File.Exists(dbFullPath))
-                    return Json(new { success = false, error = $"ไม่พบไฟล์ฐานข้อมูล: {dbRelativePath}" });
-
                 string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                byte[]? appDbJsonBytes = null;
+                string? dbFullPath = null;
 
-                // 2. ดึงข้อมูลจาก TiDB Cloud
+                if (isSqlite && !string.IsNullOrWhiteSpace(dbRelativePath))
+                {
+                    dbFullPath = System.IO.Path.IsPathRooted(dbRelativePath)
+                        ? dbRelativePath
+                        : System.IO.Path.Combine(Directory.GetCurrentDirectory(), dbRelativePath);
+                }
+                else
+                {
+                    // ถ้าต่อ TiDB Cloud ให้ดึงข้อมูลตารางหลักออกมาเป็น JSON สำหรับ Backup
+                    try
+                    {
+                        var reports = await _context.Reports.AsNoTracking().ToListAsync();
+                        var orders = await _context.OrderTrackingMasters.AsNoTracking().ToListAsync();
+                        var plans = await _context.WeeklyPlans.AsNoTracking().ToListAsync();
+                        var actions = await _context.MonthlyOrderActions.AsNoTracking().ToListAsync();
+
+                        var coreData = new
+                        {
+                            BackupTime = DateTime.UtcNow,
+                            DatabaseSource = "TiDB Cloud (costflow_db)",
+                            Reports = reports,
+                            Orders = orders,
+                            WeeklyPlans = plans,
+                            MonthlyOrderActions = actions
+                        };
+
+                        var opt = new JsonSerializerOptions { WriteIndented = true };
+                        string coreJson = JsonSerializer.Serialize(coreData, opt);
+                        appDbJsonBytes = System.Text.Encoding.UTF8.GetBytes(coreJson);
+                    }
+                    catch (Exception appDbEx)
+                    {
+                        Console.WriteLine($"[BackupDatabase] Warning: Could not export core TiDB data: {appDbEx.Message}");
+                    }
+                }
+
+                // 2. ดึงข้อมูลจาก TiDB Cloud (Saved Orders)
                 byte[]? tidbJsonBytes = null;
                 try
                 {
@@ -283,7 +313,6 @@ namespace CostFlow.Controllers
                         })
                     });
 
-
                     var options = new JsonSerializerOptions { WriteIndented = true };
                     string jsonString = JsonSerializer.Serialize(tidbData, options);
                     tidbJsonBytes = System.Text.Encoding.UTF8.GetBytes(jsonString);
@@ -293,24 +322,34 @@ namespace CostFlow.Controllers
                     Console.WriteLine($"[BackupDatabase] Warning: Could not fetch TiDB data: {tiEx.Message}");
                 }
 
-                // 3. รวมทั้ง 2 ฐานข้อมูลเข้าเป็นไฟล์ .ZIP
+                // 3. รวมฐานข้อมูลเข้าเป็นไฟล์ .ZIP
                 using (var ms = new MemoryStream())
                 {
                     using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, true))
                     {
-                        // ไฟล์ 1: SQLite .db
-                        var dbEntry = archive.CreateEntry($"CostFlow_sqlite_{timestamp}.db", CompressionLevel.Optimal);
-                        using (var entryStream = dbEntry.Open())
-                        using (var fileStream = System.IO.File.OpenRead(dbFullPath))
+                        // ไฟล์ 1: SQLite .db หรือ TiDB_Core_*.json
+                        if (isSqlite && dbFullPath != null && System.IO.File.Exists(dbFullPath))
                         {
-                            await fileStream.CopyToAsync(entryStream);
+                            var dbEntry = archive.CreateEntry($"CostFlow_sqlite_{timestamp}.db", CompressionLevel.Optimal);
+                            using (var entryStream = dbEntry.Open())
+                            using (var fileStream = System.IO.File.OpenRead(dbFullPath))
+                            {
+                                await fileStream.CopyToAsync(entryStream);
+                            }
+                        }
+                        else if (appDbJsonBytes != null)
+                        {
+                            var coreEntry = archive.CreateEntry($"TiDB_CostFlowCore_{timestamp}.json", CompressionLevel.Optimal);
+                            using (var entryStream = coreEntry.Open())
+                            {
+                                await entryStream.WriteAsync(appDbJsonBytes, 0, appDbJsonBytes.Length);
+                            }
                         }
 
-                        // ไฟล์ 2: TiDB .json (ถ้ามี)
+                        // ไฟล์ 2: TiDB_SavedOrders_*.json
                         if (tidbJsonBytes != null && tidbJsonBytes.Length > 0)
                         {
-                            var tidbEntry = archive.CreateEntry($"TiDB_SavedOrders_{timestamp}.json",
-                                CompressionLevel.Optimal);
+                            var tidbEntry = archive.CreateEntry($"TiDB_SavedOrders_{timestamp}.json", CompressionLevel.Optimal);
                             using (var entryStream = tidbEntry.Open())
                             {
                                 await entryStream.WriteAsync(tidbJsonBytes, 0, tidbJsonBytes.Length);
