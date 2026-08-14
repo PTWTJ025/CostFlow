@@ -50,7 +50,7 @@
     </div>
 
     <!-- Quick Stats Metric Row -->
-    <section aria-label="สถิติข้อมูล" class="bg-surface-container-lowest rounded-lg border border-outline-variant/60 shadow-sm overflow-hidden mt-6">
+    <section aria-label="สถิติข้อมูล" class="bg-surface-container-lowest rounded-lg border border-outline-variant/60 shadow-sm overflow-hidden">
         <div class="grid grid-cols-2 lg:grid-cols-4">
             <!-- Stat 1: Merged Reports -->
             <a href="/Report"
@@ -103,18 +103,18 @@
     </section>
 
     <!-- Quick Navigation and Recent Reports -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-lg lg:gap-xl mt-6">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-lg lg:gap-xl">
 
         <!-- Left 2 cols: Main Functions Navigation -->
         <section aria-label="เครื่องมือเข้าใช้งานด่วน" class="lg:col-span-2 flex flex-col gap-md">
             <header>
                 <h2 class="font-headline-sm text-headline-sm text-on-surface mb-xs">เข้าใช้งานด่วน</h2>
-                <p class="font-body-md text-body-md text-on-surface-variant">เลือกทำรายการที่คุณต้องการได้อย่างรวดเร็ว</p>
+                <!--    <p class="font-body-md text-body-md text-on-surface-variant">เลือกทำรายการที่คุณต้องการได้อย่างรวดเร็ว</p> -->
             </header>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-md mt-2">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-md">
                 <!-- Nav Card 1 -->
-                <a href="/FileMerge" class="group flex gap-md items-start p-md lg:p-lg rounded-lg bg-surface-container-lowest border border-outline-variant/60 hover:bg-primary/5 hover:border-primary/40 transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+                <a href="/FileMerge" class="group flex gap-md items-start p-md lg:p-lg rounded bg-surface-container-lowest border border-outline-variant/60 hover:bg-primary/5 hover:border-primary/40 transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
                     <div class="w-12 h-12 rounded-md bg-primary/10 text-primary flex items-center justify-center flex-shrink-0 group-hover:bg-primary group-hover:text-white transition-colors">
                         <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5"/>
@@ -127,7 +127,7 @@
                 </a>
 
                 <!-- Nav Card 2 -->
-                <a href="/ProductSearch" class="group flex gap-md items-start p-md lg:p-lg rounded-lg bg-surface-container-lowest border border-outline-variant/60 hover:bg-primary/5 hover:border-primary/40 transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+                <a href="/ProductSearch" class="group flex gap-md items-start p-md lg:p-lg rounded bg-surface-container-lowest border border-outline-variant/60 hover:bg-primary/5 hover:border-primary/40 transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
                     <div class="w-12 h-12 rounded-md bg-primary/10 text-primary flex items-center justify-center flex-shrink-0 group-hover:bg-primary group-hover:text-white transition-colors">
                         <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m3.75 9v6m3-3v3m-7.5-6v6m1.5-12H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
@@ -195,7 +195,7 @@
                         double acc = r.TotalRows > 0 ? Math.Round((double)r.MatchedRows / r.TotalRows * 100, 1) : 0;
                         string formattedDate = r.CreatedAt.ToString("dd MMM yyyy HH:mm น.", new System.Globalization.CultureInfo("th-TH"));
 
-                        <a href="@Url.Action("Details", "Report", new { fileName = r.ReportName })" class="group p-md border border-outline-variant/60 rounded-lg bg-surface-container-lowest hover:bg-primary/5 hover:border-primary/40 transition-colors flex flex-col gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 shadow-sm">
+                        <a href="@Url.Action("Details", "Report", new { fileName = r.ReportName })" class="group p-md border border-outline-variant/60 rounded bg-surface-container-lowest hover:bg-primary/5 hover:border-primary/40 transition-colors flex flex-col gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 shadow-sm">
                             <div class="flex justify-between items-start">
                                 <time datetime="@r.CreatedAt.ToString("O")" class="font-data-tabular text-data-tabular text-secondary">@formattedDate • โดย @(r.CreatedBy ?? "ไม่ระบุ")</time>
                                 <span class="font-label-bold text-[10px] text-primary opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
@@ -264,7 +264,7 @@
                             let html = "";
                             data.recentReports.forEach(r => {
                                 html += `
-                                    <a href="${r.detailsUrl}" class="group p-md border border-outline-variant/60 rounded-lg bg-surface-container-lowest hover:bg-primary/5 hover:border-primary/40 transition-colors flex flex-col gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 shadow-sm">
+                                    <a href="${r.detailsUrl}" class="group p-md border border-outline-variant/60 rounded bg-surface-container-lowest hover:bg-primary/5 hover:border-primary/40 transition-colors flex flex-col gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 shadow-sm">
                                         <div class="flex justify-between items-start">
                                             <time class="font-data-tabular text-data-tabular text-secondary">${r.formattedDate} • โดย ${r.createdBy || 'ไม่ระบุ'}</time>
                                             <span class="font-label-bold text-[10px] text-primary opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
