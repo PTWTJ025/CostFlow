@@ -57,7 +57,7 @@ namespace CostFlow.Data
             await SanitizeMonthlyOrderActionsAsync(db);
         }
 
-        private static async Task EnsureMySqlTablesExistAsync(AppDbContext db, TiDbContext tiDb)
+        public static async Task EnsureMySqlTablesExistAsync(AppDbContext db, TiDbContext tiDb)
         {
             var isMySql = db.Database.IsMySql();
             if (!isMySql) return;
@@ -510,6 +510,12 @@ namespace CostFlow.Data
                 // Ensure admin password is valid
                 var token = await userManager.GeneratePasswordResetTokenAsync(adminUser);
                 await userManager.ResetPasswordAsync(adminUser, token, adminPassword);
+
+                if (!await userManager.IsInRoleAsync(adminUser, "Admin"))
+                {
+                    await userManager.AddToRoleAsync(adminUser, "Admin");
+                    Console.WriteLine("[DB Init] Re-assigned role Admin to ADMIN01.");
+                }
             }
 
             // Seed STAFF01
@@ -545,6 +551,12 @@ namespace CostFlow.Data
                 // Ensure staff password is valid
                 var token = await userManager.GeneratePasswordResetTokenAsync(staffUser);
                 await userManager.ResetPasswordAsync(staffUser, token, staffPassword);
+
+                if (!await userManager.IsInRoleAsync(staffUser, "Staff"))
+                {
+                    await userManager.AddToRoleAsync(staffUser, "Staff");
+                    Console.WriteLine("[DB Init] Re-assigned role Staff to STAFF01.");
+                }
             }
 
             // Seed DEV01
@@ -580,6 +592,12 @@ namespace CostFlow.Data
                 var token = await userManager.GeneratePasswordResetTokenAsync(devUser);
                 await userManager.ResetPasswordAsync(devUser, token, devPassword);
 
+                if (!await userManager.IsInRoleAsync(devUser, "Dev"))
+                {
+                    await userManager.AddToRoleAsync(devUser, "Dev");
+                    Console.WriteLine("[DB Init] Re-assigned role Dev to DEV01.");
+                }
+
                 try
                 {
                     var devRoles = await userManager.GetRolesAsync(devUser);
@@ -589,15 +607,10 @@ namespace CostFlow.Data
                         await userManager.AddToRoleAsync(devUser, "Dev");
                         Console.WriteLine("[DB Init] Migrated DEV01 role: Admin -> Dev.");
                     }
-                    else if (!devRoles.Contains("Dev"))
-                    {
-                        await userManager.AddToRoleAsync(devUser, "Dev");
-                        Console.WriteLine("[DB Init] Assigned Dev role to DEV01.");
-                    }
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"[DB Init] Warning checking/migrating DEV01 roles: {ex.Message}");
+                    Console.WriteLine($"[DB Init] Warning checking DEV01 roles: {ex.Message}");
                 }
             }
         }

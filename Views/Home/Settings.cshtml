@@ -103,14 +103,14 @@
             <div class="bg-slate-50 p-md rounded border border-slate-200/80 flex flex-col justify-between">
                 <div>
                     <span class="text-[10px] text-slate-500 font-semibold uppercase block mb-1">ไฟล์สำรองปลายทาง</span>
-                    <a href="https://docs.google.com/spreadsheets/d/1RFXMLRLjidiH6z9C6-DFHZcf8pP_K4TskJJcMVzPS5w/edit?usp=sharing" target="_blank" class="text-xs font-bold text-primary hover:underline flex items-center gap-1">
+                    <a href="https://docs.google.com/spreadsheets/d/1RFXMLRLjidiH6z9C6-DFHZcf8pP_K4TskJJcMVzPS5w/edit?gid=572126532#gid=572126532" target="_blank" class="text-xs font-bold text-primary hover:underline flex items-center gap-1">
                         เปิดดู Google Sheet สำรอง
                         <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
                         </svg>
                     </a>
                 </div>
-                <span class="text-[10px] text-slate-400 mt-2 block">บันทึก 2 ชีท: WeeklyPlan & MonthlyCost</span>
+                <span class="text-[10px] text-slate-400 mt-2 block">ฐานข้อมูลสำรองย้อนหลัง 2 ปี (WeeklyPlan & MonthlyCost)</span>
             </div>
 
             <div class="bg-amber-50/60 p-md rounded border border-amber-200/80 flex flex-col justify-between">
@@ -231,17 +231,51 @@ function executeArchiveAndPurge() {
         closeArchiveModal();
 
         if (data.success) {
-            // 💾 ดาวน์โหลดไฟล์สำรองอัตโนมัติ (Purged Archive Backup)
+            // กรณีไม่มีข้อมูลที่เก่าเกิน 2 ปี (ไม่มีอะไรต้องลบ)
+            if (data.purged === 0 && data.archived === 0) {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'ไม่พบข้อมูลที่เก่าเกิน 2 ปี',
+                        html: `
+                            <div class="text-left text-xs text-slate-600 space-y-2 mt-2 leading-relaxed">
+                                <p>ข้อมูลทั้งหมดในฐานข้อมูลของคุณอยู่ในช่วง <b>24 เดือนล่าสุด</b> ยังไม่มีรายการเก่าที่ต้องย้ายลง Google Sheet หรือลบออกจากระบบครับ</p>
+                                <p class="text-slate-400 text-[11px] mt-2">* หากต้องการดาวน์โหลดสำรองข้อมูลปัจจุบันทั้งหมด สามารถกดปุ่ม <b>"ดาวน์โหลด Backup ทั้งหมด (.ZIP)"</b> ด้านบนได้ทันทีครับ</p>
+                            </div>
+                        `,
+                        confirmButtonColor: '#2563eb'
+                    });
+                } else if (typeof showToast === 'function') {
+                    showToast("ไม่พบข้อมูลเก่าเกิน 2 ปีในระบบ", "info");
+                }
+                return;
+            }
+
+            let directDownloadLink = '';
+
+            // 💾 ดาวน์โหลดไฟล์สำรองอัตโนมัติลงเครื่องทันที (Purged Archive Backup)
             if (data.backupJson) {
                 const blob = new Blob([data.backupJson], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
+                const dlName = data.backupFileName || 'CostFlow_PurgedArchive.json';
+
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = data.backupFileName || 'CostFlow_PurgedArchive.json';
+                a.download = dlName;
                 document.body.appendChild(a);
                 a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
+                setTimeout(() => {
+                    a.remove();
+                }, 1000);
+
+                directDownloadLink = `
+                    <div class="mt-3 pt-2.5 border-t border-slate-200 flex items-center justify-between">
+                        <span class="text-[11px] text-slate-500">หากเบราว์เซอร์ไม่ดาวน์โหลดอัตโนมัติ:</span>
+                        <a href="${url}" download="${dlName}" class="text-xs font-bold text-blue-600 hover:text-blue-800 underline flex items-center gap-1">
+                            📥 คลิกดาวน์โหลดไฟล์สำรอง
+                        </a>
+                    </div>
+                `;
             }
 
             if (typeof Swal !== 'undefined') {
@@ -250,9 +284,10 @@ function executeArchiveAndPurge() {
                     title: 'สำรองและล้างข้อมูลสำเร็จ!',
                     html: `
                         <div class="text-left text-xs text-slate-600 space-y-2 mt-2">
-                            <p><b>📊 บันทึกลง Google Sheets สำรอง:</b> ${data.archived} แถว</p>
+                            <p><b>📊 ย้ายลง Google Sheets สำรอง:</b> ${data.archived} แถว</p>
                             <p><b>🗑️ ลบข้อมูลเก่าออกจากฐานข้อมูล:</b> ${data.purged} รายการ</p>
-                            <p><b>💾 ดาวน์โหลดไฟล์สำรอง:</b> <span class="text-blue-600 font-mono bg-blue-50 px-1 py-0.5 rounded border border-blue-200">${data.backupFileName || 'PurgedArchive.json'}</span> (เก็บไว้ในเครื่องเรียบร้อย)</p>
+                            <p><b>💾 ไฟล์สำรอง JSON:</b> <span class="text-blue-600 font-mono bg-blue-50 px-1 py-0.5 rounded border border-blue-200">${data.backupFileName || 'PurgedArchive.json'}</span> (เริ่มดาวน์โหลดลงเครื่องเรียบร้อยแล้ว)</p>
+                            ${directDownloadLink}
                         </div>
                     `,
                     confirmButtonColor: '#2563eb'

@@ -76,7 +76,27 @@ namespace CostFlow.Controllers
 
             if (result.Succeeded)
             {
-                bool isAdmin = await _userManager.IsInRoleAsync(user, "Admin") || await _userManager.IsInRoleAsync(user, "Dev");
+                // ตรวจสอบและผูก Role อัตโนมัติหากยังไม่มี (Self-healing role assignment)
+                if (user.UserName == "ADMIN01" && !await _userManager.IsInRoleAsync(user, "Admin"))
+                {
+                    await _userManager.AddToRoleAsync(user, "Admin");
+                    await _signInManager.RefreshSignInAsync(user);
+                }
+                else if (user.UserName == "DEV01" && !await _userManager.IsInRoleAsync(user, "Dev"))
+                {
+                    await _userManager.AddToRoleAsync(user, "Dev");
+                    await _signInManager.RefreshSignInAsync(user);
+                }
+                else if (user.UserName == "STAFF01" && !await _userManager.IsInRoleAsync(user, "Staff"))
+                {
+                    await _userManager.AddToRoleAsync(user, "Staff");
+                    await _signInManager.RefreshSignInAsync(user);
+                }
+
+                bool isAdmin = user.UserName == "ADMIN01" || user.UserName == "DEV01" ||
+                               await _userManager.IsInRoleAsync(user, "Admin") || 
+                               await _userManager.IsInRoleAsync(user, "Dev");
+
                 string redirect = isAdmin ? Url.Action("Index", "Home")! : Url.Action("Index", "ProductSearch")!;
                 return Json(new { success = true, redirectUrl = redirect });
             }

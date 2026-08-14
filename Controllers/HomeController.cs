@@ -35,9 +35,29 @@ namespace CostFlow.Controllers
             _configuration = configuration;
         }
 
+        private static bool _mySqlTablesChecked = false;
+
         private async Task<HomeDashboardViewModel> BuildDashboardViewModelAsync()
         {
-            int totalReferencePrices = await _context.ProductPrices.CountAsync();
+            if (!_mySqlTablesChecked && _context.Database.IsMySql())
+            {
+                try
+                {
+                    await DatabaseInitializer.EnsureMySqlTablesExistAsync(_context, _tiContext);
+                    _mySqlTablesChecked = true;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[Dashboard] Warning ensuring MySQL tables: {ex.Message}");
+                }
+            }
+
+            int totalReferencePrices = 0;
+            try
+            {
+                totalReferencePrices = await _context.ProductPrices.CountAsync();
+            }
+            catch { }
 
             int totalSparePartOrders = 0;
             try
@@ -69,18 +89,26 @@ namespace CostFlow.Controllers
                 /* ถ้า Sheets ไม่ตอบ แสดง 0 แทน */
             }
 
-            var groupedReports = await _context.Reports
-                .OrderByDescending(r => r.CreatedAt)
-                .Select(r => new ReportSummaryViewModel
-                {
-                    ReportName = r.ReportName,
-                    TotalRows = r.TotalPOs,
-                    MatchedRows = r.MatchedPOs,
-                    CreatedAt = r.CreatedAt,
-                    CompareFileName = r.OriginalFileName,
-                    CreatedBy = r.CreatedBy
-                })
-                .ToListAsync();
+            var groupedReports = new List<ReportSummaryViewModel>();
+            try
+            {
+                groupedReports = await _context.Reports
+                    .OrderByDescending(r => r.CreatedAt)
+                    .Select(r => new ReportSummaryViewModel
+                    {
+                        ReportName = r.ReportName,
+                        TotalRows = r.TotalPOs,
+                        MatchedRows = r.MatchedPOs,
+                        CreatedAt = r.CreatedAt,
+                        CompareFileName = r.OriginalFileName,
+                        CreatedBy = r.CreatedBy
+                    })
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Dashboard] Warning fetching reports: {ex.Message}");
+            }
 
             int totalMergedReports = groupedReports.Count;
             double avgSuccessRate = 0;
@@ -265,22 +293,28 @@ namespace CostFlow.Controllers
                     // ถ้าต่อ TiDB Cloud ให้ดึงข้อมูลตารางหลักออกมาเป็น JSON สำหรับ Backup
                     try
                     {
+                        var productPrices = await _context.ProductPrices.AsNoTracking().ToListAsync();
                         var reports = await _context.Reports.AsNoTracking().ToListAsync();
                         var orders = await _context.OrderTrackingMasters.AsNoTracking().ToListAsync();
-                        var plans = await _context.WeeklyPlans.AsNoTracking().ToListAsync();
+                        var plans = await _context.WeeklyPlans.Include(p => p.Details).AsNoTracking().ToListAsync();
                         var actions = await _context.MonthlyOrderActions.AsNoTracking().ToListAsync();
 
                         var coreData = new
                         {
                             BackupTime = DateTime.UtcNow,
                             DatabaseSource = "TiDB Cloud (costflow_db)",
+                            ProductPrices = productPrices,
                             Reports = reports,
                             Orders = orders,
                             WeeklyPlans = plans,
                             MonthlyOrderActions = actions
                         };
 
-                        var opt = new JsonSerializerOptions { WriteIndented = true };
+                        var opt = new JsonSerializerOptions
+                        {
+                            WriteIndented = true,
+                            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+                        };
                         string coreJson = JsonSerializer.Serialize(coreData, opt);
                         appDbJsonBytes = System.Text.Encoding.UTF8.GetBytes(coreJson);
                     }
@@ -321,7 +355,11 @@ namespace CostFlow.Controllers
                         })
                     });
 
-                    var options = new JsonSerializerOptions { WriteIndented = true };
+                    var options = new JsonSerializerOptions
+                    {
+                        WriteIndented = true,
+                        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+                    };
                     string jsonString = JsonSerializer.Serialize(tidbData, options);
                     tidbJsonBytes = System.Text.Encoding.UTF8.GetBytes(jsonString);
                 }
@@ -786,7 +824,11 @@ namespace CostFlow.Controllers
                     PurgedOrders = oldOrdersToArchive.Select(o => new { o.Id, o.PoNumber, o.Remarks, o.Amount, o.ApprovedDate, o.CreatedAt })
                 };
 
-                string backupJsonString = System.Text.Json.JsonSerializer.Serialize(backupPayload, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+                string backupJsonString = System.Text.Json.JsonSerializer.Serialize(backupPayload, new System.Text.Json.JsonSerializerOptions
+                {
+                    WriteIndented = true,
+                    Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+                });
                 string backupFileName = $"CostFlow_PurgedArchive_{DateTime.Now:yyyyMMdd_HHmmss}.json";
 
                 return Json(new

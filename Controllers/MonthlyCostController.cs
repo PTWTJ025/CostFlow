@@ -573,8 +573,15 @@ namespace CostFlow.Controllers
                 id = "กรกฎาคม 2569";
             }
 
-            // Parse month/year from Thai format (e.g., "กรกฎาคม 2569")
+            // Parse month/year from Thai format (e.g., "กรกฎาคม 2569" หรือ "2026-02")
             var monthYearKey = ConvertThaiMonthToKey(id);
+            var canonicalThaiMonth = ConvertKeyToThaiMonth(monthYearKey);
+
+            // ถ้า URL ที่เข้ามาไม่ใช่ชื่อเดือนภาษาไทยมาตรฐาน (เช่น เข้ามาเป็น 2026-02 หรือ 2026-22) ให้ Redirect ไป URL ชื่อเดือนภาษาไทยทันที
+            if (!string.Equals(id, canonicalThaiMonth, StringComparison.OrdinalIgnoreCase))
+            {
+                return RedirectToAction("Detail", new { id = canonicalThaiMonth });
+            }
 
             // ประกาศ currentMonthKey สำหรับเช็คว่าเป็นเดือนอนาคตหรือไม่
             var now = _dateTimeProvider.Now;
@@ -973,9 +980,11 @@ namespace CostFlow.Controllers
                 ProcessedAmount = processedAmount
             };
 
+            string displayMonthThai = ConvertKeyToThaiMonth(monthYearKey);
+
             var viewModel = new MonthlyCostDetailViewModel
             {
-                MonthYear = id,
+                MonthYear = displayMonthThai,
                 PendingOrders = pendingItems,
                 SavedOrders = savedItems,
                 Stats = stats,
@@ -983,27 +992,45 @@ namespace CostFlow.Controllers
                 IsFutureMonth = string.Compare(monthYearKey, currentMonthKey) > 0
             };
 
-            ViewData["HeaderTitle"] = $"จัดการค่าใช้จ่าย - {id}";
+            ViewData["HeaderTitle"] = $"จัดการค่าใช้จ่าย - {displayMonthThai}";
             return View(viewModel);
         }
 
-        private string ConvertThaiMonthToKey(string thaiMonthYear)
+        private string ConvertThaiMonthToKey(string input)
         {
-            if (string.IsNullOrWhiteSpace(thaiMonthYear)) return _dateTimeProvider.Now.ToString("yyyy-MM");
-            var parts = thaiMonthYear.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length != 2) return _dateTimeProvider.Now.ToString("yyyy-MM");
+            if (string.IsNullOrWhiteSpace(input)) return _dateTimeProvider.Now.ToString("yyyy-MM");
+            input = input.Trim();
 
-            var thaiMonths = new Dictionary<string, int>
+            // 1. ตรวจสอบกรณีเป็นรูปแบบ yyyy-MM ตรงๆ (เช่น "2026-01", "2026-02")
+            if (input.Contains("-"))
             {
-                { "มกราคม", 1 }, { "กุมภาพันธ์", 2 }, { "มีนาคม", 3 }, { "เมษายน", 4 },
-                { "พฤษภาคม", 5 }, { "มิถุนายน", 6 }, { "กรกฎาคม", 7 }, { "สิงหาคม", 8 },
-                { "กันยายน", 9 }, { "ตุลาคม", 10 }, { "พฤศจิกายน", 11 }, { "ธันวาคม", 12 }
-            };
+                var p = input.Split('-');
+                if (p.Length == 2 && int.TryParse(p[0], out var y) && int.TryParse(p[1], out var m))
+                {
+                    if (m >= 1 && m <= 12)
+                    {
+                        var gregYear = y > 2400 ? y - 543 : y;
+                        return $"{gregYear:0000}-{m:02}";
+                    }
+                }
+            }
 
-            if (int.TryParse(parts[1], out var buddhistYear) && thaiMonths.TryGetValue(parts[0], out var month))
+            // 2. ตรวจสอบกรณีเป็นชื่อเดือนภาษาไทย (เช่น "กุมภาพันธ์ 2569")
+            var parts = input.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length == 2)
             {
-                var year = buddhistYear - 543; // Convert Buddhist year to Gregorian
-                return $"{year:0000}-{month:00}";
+                var thaiMonths = new Dictionary<string, int>
+                {
+                    { "มกราคม", 1 }, { "กุมภาพันธ์", 2 }, { "มีนาคม", 3 }, { "เมษายน", 4 },
+                    { "พฤษภาคม", 5 }, { "มิถุนายน", 6 }, { "กรกฎาคม", 7 }, { "สิงหาคม", 8 },
+                    { "กันยายน", 9 }, { "ตุลาคม", 10 }, { "พฤศจิกายน", 11 }, { "ธันวาคม", 12 }
+                };
+
+                if (int.TryParse(parts[1], out var buddhistYear) && thaiMonths.TryGetValue(parts[0], out var month))
+                {
+                    var year = buddhistYear > 2400 ? buddhistYear - 543 : buddhistYear; // Convert Buddhist year to Gregorian
+                    return $"{year:0000}-{month:00}";
+                }
             }
 
             return _dateTimeProvider.Now.ToString("yyyy-MM");
