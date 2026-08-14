@@ -3,231 +3,155 @@
     ViewData["Title"] = "ตั้งค่า & สำรองข้อมูล";
 }
 
-<div class="flex-1 p-4 md:p-6 lg:p-8 flex flex-col gap-6 max-w-6xl mx-auto w-full text-slate-800">
-    
-    <!-- Top Breadcrumb & Navigation -->
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200">
-        <div class="flex flex-col gap-0.5">
-            <div class="flex items-center gap-1.5 text-xs text-slate-500">
-                <a href="/" class="hover:text-slate-900 transition-colors">หน้าหลัก</a>
-                <span>/</span>
-                <span class="text-slate-800 font-semibold">ตั้งค่า & สำรองข้อมูล</span>
-            </div>
-            <h1 class="text-xl font-bold text-slate-900 tracking-tight">
-                การตั้งค่าและการบำรุงรักษาฐานข้อมูล
-            </h1>
+<div class="flex-1 p-md md:p-lg lg:p-xl flex flex-col gap-lg max-w-[88vw] mx-auto w-full">
+    <!-- Breadcrumbs / Top Actions -->
+    <div class="flex justify-between items-center">
+        <div class="flex items-center gap-xs text-xs text-secondary">
+            <a href="/" class="hover:text-primary transition-colors">หน้าหลัก</a>
+            <span>/</span>
+            <span class="text-slate-700 font-semibold">ตั้งค่า & สำรองข้อมูล</span>
         </div>
-
-        <div class="flex items-center gap-2 self-start sm:self-auto">
-            <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-100 border border-slate-200 text-slate-700 text-xs font-medium">
-                <span class="w-2 h-2 rounded-full bg-emerald-600"></span>
-                <span>TiDB Cloud Connected</span>
-            </div>
-            <button type="button" onclick="window.history.back();" class="text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 px-3 py-1.5 rounded border border-slate-300 shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer">
-                <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
-                </svg>
-                ย้อนกลับ
-            </button>
-        </div>
+        <button onclick="window.history.back();" class="text-xs text-slate-600 hover:text-slate-800 hover:bg-slate-100 px-md py-1.5 rounded transition-all flex items-center gap-xs border border-slate-200 cursor-pointer">
+            <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+            </svg>
+            ย้อนกลับ
+        </button>
     </div>
 
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- SECTION 1: Full Database Snapshot (Horizontal 3-Column Grid)          -->
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <div class="bg-white rounded border border-slate-200 shadow-xs p-5 md:p-6">
-        <div class="border-b border-slate-100 pb-3 mb-4 flex flex-wrap justify-between items-center gap-2">
+    <!-- SQLite & TiDB Database Backup Section -->
+    <div class="bg-white rounded border border-outline-variant shadow-sm p-md md:p-lg lg:p-xl">
+        <div class="border-b border-slate-100 pb-md mb-md flex flex-wrap justify-between items-center gap-sm">
             <div>
-                <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
-                    <svg class="w-5 h-5 text-blue-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125m16.5 5.625c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125m16.5 5.625c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" />
+                <h3 class="font-headline-sm text-headline-sm text-on-surface mb-xs flex items-center gap-2">
+                    <svg class="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
                     </svg>
-                    <span>สำรองฐานข้อมูลระบบ (Full Backup & Download)</span>
-                </h2>
-                <p class="text-xs text-slate-500 mt-0.5">ดาวน์โหลดไฟล์สำรองข้อมูลทั้งระบบเก็บไว้ในเครื่อง แนะนำให้ทำเป็นประจำเพื่อความปลอดภัย</p>
+                    สำรองฐานข้อมูล (Backup & Download)
+                </h3>
+                <p class="text-xs text-secondary">ดาวน์โหลดไฟล์ฐานข้อมูลเพื่อสำรองข้อมูลไว้ในเครื่อง แนะนำให้ทำทุกเดือนหลังปิดยอด</p>
             </div>
-            <span class="text-[11px] font-semibold text-blue-800 bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded">
-                Admin Only
+            <span class="text-[11px] font-bold text-blue-700 bg-blue-50 border border-blue-200/80 px-3 py-1 rounded-full">
+                สำหรับผู้ดูแลระบบ (Admin Only)
             </span>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <!-- Box 1: DB Architecture -->
-            <div class="bg-slate-50 p-4 rounded border border-slate-200 flex flex-col justify-between">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-md">
+            <div class="bg-slate-50 p-md rounded border border-slate-200/80 flex flex-col justify-between">
                 <div>
-                    <span class="text-[11px] text-slate-500 font-semibold block mb-1">ประเภทฐานข้อมูลในระบบ</span>
-                    <span class="text-sm font-bold text-slate-900 block">TiDB Cloud & TiDB Cloud</span>
+                    <span class="text-[10px] text-slate-500 font-semibold uppercase block mb-1">ประเภทฐานข้อมูลในระบบ</span>
+                    <span class="text-base font-bold text-slate-800">TiDB Cloud & SQLite</span>
                 </div>
-                <div class="text-[11px] text-slate-600 mt-3 pt-2 border-t border-slate-200/60 leading-relaxed">
-                    ระบบหลัก (<code class="font-mono text-slate-800">costflow_db</code>) + จัดซื้อ (<code class="font-mono text-slate-800">test</code>)
-                </div>
+                <span class="text-[10px] text-slate-400 mt-2 block">ระบบหลัก (costflow_db) + จัดซื้อสั่งอะไหล่ (test)</span>
             </div>
 
-            <!-- Box 2: Backup Target Package -->
-            <div class="bg-slate-50 p-4 rounded border border-slate-200 flex flex-col justify-between">
+            <div class="bg-slate-50 p-md rounded border border-slate-200/80 flex flex-col justify-between">
                 <div>
-                    <span class="text-[11px] text-slate-500 font-semibold block mb-1">ไฟล์รวมสำรองข้อมูล</span>
-                    <span class="text-xs font-mono font-bold text-slate-800 break-all block">CostFlow_FullBackup_*.zip</span>
+                    <span class="text-[10px] text-slate-500 font-semibold uppercase block mb-1">ไฟล์รวมสำรองข้อมูล</span>
+                    <span class="text-xs font-mono font-bold text-slate-700 break-all">CostFlow_FullBackup_*.zip</span>
                 </div>
-                <div class="text-[11px] text-slate-600 mt-3 pt-2 border-t border-slate-200/60 leading-relaxed">
-                    บีบอัดข้อมูลทั้ง 2 ก้อนรวมกันในไฟล์ ZIP เดียวแบบออฟไลน์
-                </div>
+                <span class="text-[10px] text-slate-400 mt-2 block">บีบอัดฐานข้อมูลระบบใน ZIP เดียว</span>
             </div>
 
-            <!-- Box 3: Action Download Button -->
-            <div class="bg-slate-50 p-4 rounded border border-slate-200 flex flex-col justify-between">
+            <div class="bg-blue-50/60 p-md rounded border border-blue-200/80 flex flex-col justify-between">
                 <div>
-                    <span class="text-[11px] text-slate-500 font-semibold block mb-1">คำสั่งสำรองข้อมูลทั้งหมด</span>
-                    <span class="text-xs text-slate-700 font-medium block">ดึงข้อมูลสดทั้งระบบและดาวน์โหลดลงเครื่อง</span>
+                    <span class="text-[10px] text-blue-800 font-semibold uppercase block mb-1">คำสั่งสำรองข้อมูลทั้งหมด</span>
+                    <span class="text-xs text-blue-900 font-medium block">ดาวน์โหลดทั้ง 2 DB มาเก็บในเครื่อง (ZIP)</span>
                 </div>
-                <form id="backup-form" method="post" action="/Home/BackupDatabase" class="mt-3">
+                <form id="backup-form" method="post" action="/Home/BackupDatabase">
                     @Html.AntiForgeryToken()
                     <button type="button" onclick="executeBackup()" id="backup-btn"
-                            style="background-color: #1e3a8a !important; color: #ffffff !important;"
-                            class="w-full font-bold text-xs py-2 px-3 rounded shadow-xs flex items-center justify-center gap-1.5 hover:opacity-90 active:scale-[0.99] transition-all cursor-pointer border-none">
+                        class="mt-3 font-bold text-xs px-4 py-2.5 rounded shadow-sm flex items-center justify-center gap-1.5 w-full cursor-pointer hover:opacity-90 border-none transition-all"
+                        style="background-color: #2563eb; color: #ffffff;">
                         <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
                         </svg>
-                        <span style="color: #ffffff !important; font-weight: 700;">ดาวน์โหลด Backup ทั้งหมด (.ZIP)</span>
+                        <span style="color: #ffffff; font-weight: 700;">ดาวน์โหลด Backup ทั้งหมด (.ZIP)</span>
                     </button>
                 </form>
             </div>
         </div>
     </div>
 
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- SECTION 2: Long-Term Archive & Data Purge (Horizontal 3-Column Grid)  -->
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <div class="bg-white rounded border border-slate-200 shadow-xs p-5 md:p-6">
-        <div class="border-b border-slate-100 pb-3 mb-4 flex flex-wrap justify-between items-center gap-2">
+    <!-- Admin Database Archival & Maintenance Section -->
+    <div class="bg-white rounded border border-outline-variant shadow-sm p-md md:p-lg lg:p-xl">
+        <div class="border-b border-slate-100 pb-md mb-md flex flex-wrap justify-between items-center gap-sm">
             <div>
-                <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
-                    <svg class="w-5 h-5 text-amber-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5m6 4.125l2.25 2.25m0 0l2.25-2.25M12 13.875V8.25M3.75 7.5h16.5M6.75 7.5V4.875c0-.621.504-1.125 1.125-1.125h8.25c.621 0 1.125.504 1.125 1.125V7.5" />
+                <h3 class="font-headline-sm text-headline-sm text-on-surface mb-xs flex items-center gap-2">
+                    <svg class="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125m16.5 5.625c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125m16.5 5.625c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" />
                     </svg>
-                    <span>การจัดการฐานข้อมูลและการสำรองข้อมูล (Archive & Maintenance)</span>
-                </h2>
-                <p class="text-xs text-slate-500 mt-0.5">ย้ายข้อมูลเก่าเกิน 2 ปีลง Google Sheets สำรอง และลบออกจากฐานข้อมูลเพื่อเพิ่มความเร็วของระบบ</p>
+                    การจัดการฐานข้อมูลและการสำรองข้อมูล (Archive & Database Maintenance)
+                    <span class="text-[11px] font-bold text-emerald-700 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-full inline-flex items-center gap-1">พร้อมใช้งาน</span>
+                </h3>
+                <p class="text-xs text-secondary">ย้ายข้อมูลเก่าเกิน 2 ปีลง Google Sheet สำรอง และลบออกจากฐานข้อมูลเพื่อเพิ่มความเร็วของระบบ</p>
             </div>
-            <div class="flex items-center gap-1.5">
-                <span class="text-[11px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">
-                    พร้อมใช้งาน
-                </span>
-                <span class="text-[11px] font-semibold text-amber-900 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded">
-                    Admin Only
-                </span>
-            </div>
+            <span class="text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200/80 px-3 py-1 rounded-full">
+                สำหรับผู้ดูแลระบบ (Admin Only)
+            </span>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <!-- Box 1: Retention Period -->
-            <div class="bg-slate-50 p-4 rounded border border-slate-200 flex flex-col justify-between">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-md">
+            <div class="bg-slate-50 p-md rounded border border-slate-200/80 flex flex-col justify-between">
                 <div>
-                    <span class="text-[11px] text-slate-500 font-semibold block mb-1">ระยะเวลาเก็บข้อมูลในระบบ</span>
-                    <div class="flex items-baseline gap-1.5">
-                        <span class="text-base font-bold text-slate-900 font-mono">24 เดือน</span>
-                        <span class="text-xs text-slate-500">(2 ปี)</span>
-                    </div>
+                    <span class="text-[10px] text-slate-500 font-semibold uppercase block mb-1">ระยะเวลาเก็บข้อมูลในระบบ</span>
+                    <span class="text-base font-bold text-slate-800">24 เดือน (2 ปี)</span>
                 </div>
-                <div class="text-[11px] text-slate-600 mt-3 pt-2 border-t border-slate-200/60 leading-relaxed">
-                    ข้อมูลที่เก่ากว่า 2 ปี จะถูกคัดแยกเพื่อย้ายลง Google Sheets
-                </div>
+                <span class="text-[10px] text-slate-400 mt-2 block">ข้อมูลที่เก่ากว่า 2 ปี จะถูกย้ายลง Google Sheet</span>
             </div>
 
-            <!-- Box 2: Destination Sheet Link -->
-            <div class="bg-slate-50 p-4 rounded border border-slate-200 flex flex-col justify-between">
+            <div class="bg-slate-50 p-md rounded border border-slate-200/80 flex flex-col justify-between">
                 <div>
-                    <span class="text-[11px] text-slate-500 font-semibold block mb-1">ไฟล์สำรองปลายทาง</span>
-                    <a href="https://docs.google.com/spreadsheets/d/1RFXMLRLjidiH6z9C6-DFHZcf8pP_K4TskJJcMVzPS5w/edit?usp=sharing" target="_blank"
-                       class="text-xs font-bold text-blue-700 hover:text-blue-900 hover:underline inline-flex items-center gap-1">
-                        <span>เปิดดู Google Sheet สำรอง</span>
+                    <span class="text-[10px] text-slate-500 font-semibold uppercase block mb-1">ไฟล์สำรองปลายทาง</span>
+                    <a href="https://docs.google.com/spreadsheets/d/1RFXMLRLjidiH6z9C6-DFHZcf8pP_K4TskJJcMVzPS5w/edit?usp=sharing" target="_blank" class="text-xs font-bold text-primary hover:underline flex items-center gap-1">
+                        เปิดดู Google Sheet สำรอง
                         <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
                         </svg>
                     </a>
                 </div>
-                <div class="text-[11px] text-slate-600 mt-3 pt-2 border-t border-slate-200/60 leading-relaxed">
-                    บันทึก 2 ชีท: <span class="font-semibold text-slate-800">WeeklyPlan</span> & <span class="font-semibold text-slate-800">MonthlyCost</span>
-                </div>
+                <span class="text-[10px] text-slate-400 mt-2 block">บันทึก 2 ชีท: WeeklyPlan & MonthlyCost</span>
             </div>
 
-            <!-- Box 3: Purge Action Button -->
-            <div class="bg-slate-50 p-4 rounded border border-slate-200 flex flex-col justify-between">
+            <div class="bg-amber-50/60 p-md rounded border border-amber-200/80 flex flex-col justify-between">
                 <div>
-                    <span class="text-[11px] text-slate-500 font-semibold block mb-1">คำสั่งล้างข้อมูล</span>
-                    <span class="text-xs text-slate-700 font-medium block">สำรองลงชีท + โหลด JSON + ลบจาก DB</span>
+                    <span class="text-[10px] text-amber-800 font-semibold uppercase block mb-1">คำสั่งล้างข้อมูล</span>
+                    <span class="text-xs text-amber-900 font-medium block">ย้ายข้อมูลย้อนหลังเกิน 2 ปีลง Sheet และลบออก</span>
                 </div>
-                <button type="button" onclick="openArchiveModal()"
-                        style="background-color: #b45309 !important; color: #ffffff !important;"
-                        class="w-full font-bold text-xs py-2 px-3 rounded shadow-xs flex items-center justify-center gap-1.5 hover:opacity-90 active:scale-[0.99] transition-all cursor-pointer border-none mt-3">
+                <button type="button" onclick="openArchiveModal()" style="background-color: #d97706; color: #ffffff !important;" class="mt-3 font-bold text-xs px-4 py-2.5 rounded shadow-sm flex items-center justify-center gap-1.5 w-full cursor-pointer hover:opacity-90 border-none transition-all">
                     <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5m6 4.125l2.25 2.25m0 0l2.25-2.25M12 13.875V8.25M3.75 7.5h16.5M6.75 7.5V4.875c0-.621.504-1.125 1.125-1.125h8.25c.621 0 1.125.504 1.125 1.125V7.5" />
                     </svg>
                     <span style="color: #ffffff !important; font-weight: 700;">สำรองและลบข้อมูลเก่า (เกิน 2 ปี) ทันที</span>
                 </button>
             </div>
         </div>
-
-        <!-- Fail-Safe Notice Banner -->
-        <div class="mt-4 p-2.5 rounded bg-slate-100/80 border border-slate-200 text-xs text-slate-600 flex items-center gap-2">
-            <svg class="w-4 h-4 text-emerald-700 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
-            </svg>
-            <span><strong>ความปลอดภัยแบบ Fail-Safe:</strong> หาก Google Sheets บันทึกไม่สำเร็จ ระบบจะยกเลิกการลบใน Database ทันที ข้อมูลจะไม่สูญหาย</span>
-        </div>
     </div>
-
 </div>
 
-<!-- ═══════════════════════════════════════════════════════════════════════════ -->
-<!-- Confirmation Modal for Archive & Purge                                      -->
-<!-- ═══════════════════════════════════════════════════════════════════════════ -->
-<div id="archive-modal" class="fixed inset-0 z-50 hidden bg-slate-900/60 flex items-center justify-center p-4">
-    <div class="bg-white rounded shadow-lg max-w-md w-full border border-slate-300 overflow-hidden">
-        <div class="px-5 py-3.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-            <div class="flex items-center gap-2 text-slate-900 font-bold text-sm">
-                <svg class="w-4 h-4 text-amber-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+<!-- Modal ยืนยันการสำรองและลบข้อมูล -->
+<div id="archive-modal" class="fixed inset-0 z-50 hidden bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6 border border-slate-200 animate-in fade-in zoom-in duration-200">
+        <div class="flex items-center gap-3 text-amber-600 mb-3">
+            <div class="p-2 bg-amber-100 rounded-full">
+                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
-                <span>ยืนยันการสำรองและล้างข้อมูลเก่า</span>
             </div>
-            <button type="button" onclick="closeArchiveModal()" class="text-slate-400 hover:text-slate-700 p-1 cursor-pointer">
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-            </button>
+            <h4 class="text-base font-bold text-slate-800">ยืนยันการสำรองและลบข้อมูลเก่า</h4>
         </div>
-
-        <div class="p-5 flex flex-col gap-3.5 text-xs text-slate-700 leading-relaxed">
-            <p>
-                ระบบจะทำการย้ายข้อมูลที่มีอายุเก่ากว่า <strong class="text-slate-900">2 ปี (24 เดือน)</strong> ไปบันทึกเก็บไว้ใน Google Sheet สำรองอย่างปลอดภัย พร้อมดาวน์โหลดไฟล์สำรองเก็บไว้ในเครื่อง และลบออกจากฐานข้อมูลเพื่อเพิ่มความเร็วของระบบ
-            </p>
-
-            <div class="p-3 bg-slate-50 border border-slate-200 rounded text-slate-700 space-y-1.5 text-[11px]">
-                <span class="font-bold text-slate-900 block">ขั้นตอนการทำงานอัตโนมัติ:</span>
-                <div class="flex items-start gap-1.5">
-                    <span class="font-bold text-slate-600">1.</span>
-                    <span>ส่งข้อมูลเก่าไปบันทึกถาวรลงใน Google Sheets สำรอง</span>
-                </div>
-                <div class="flex items-start gap-1.5">
-                    <span class="font-bold text-slate-600">2.</span>
-                    <span>ดาวน์โหลดไฟล์ <code class="font-mono bg-white px-1 py-0.5 rounded border border-slate-300">CostFlow_PurgedArchive_*.json</code></span>
-                </div>
-                <div class="flex items-start gap-1.5">
-                    <span class="font-bold text-slate-600">3.</span>
-                    <span>ลบแถวข้อมูลเก่าออกจากฐานข้อมูลหลักเพื่อคืนพื้นที่</span>
-                </div>
-            </div>
+        <p class="text-xs text-slate-600 leading-relaxed mb-4">
+            ระบบจะทำการย้ายข้อมูลที่มีอายุเก่ากว่า <strong class="text-slate-900">2 ปี (24 เดือน)</strong> ไปบันทึกเก็บไว้ใน Google Sheet สำรองอย่างปลอดภัย พร้อมดาวน์โหลดไฟล์สำรองเก็บไว้ในเครื่อง และลบออกจากฐานข้อมูลเพื่อเพิ่มความเร็วของระบบ
+        </p>
+        <div class="bg-amber-50 border border-amber-200 rounded p-3 mb-5 text-[11px] text-amber-800">
+            <strong>⚠️ ปลอดภัยสูง (Fail-Safe):</strong> หาก Google Sheet บันทึกไม่สำเร็จ ระบบจะยกเลิกการลบใน Database ทันที ข้อมูลจะไม่สูญหาย
         </div>
-
-        <div class="px-5 py-3 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
-            <button type="button" onclick="closeArchiveModal()" class="px-3.5 py-1.5 text-xs font-medium text-slate-700 bg-white hover:bg-slate-100 rounded border border-slate-300 transition-colors cursor-pointer">
+        <div class="flex justify-end gap-2">
+            <button type="button" onclick="closeArchiveModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded border border-slate-200 transition-colors cursor-pointer">
                 ยกเลิก
             </button>
-            <button type="button" id="confirm-archive-btn" onclick="executeArchiveAndPurge()"
-                    style="background-color: #b45309 !important; color: #ffffff !important;"
-                    class="px-3.5 py-1.5 text-xs font-bold rounded shadow-xs transition-colors flex items-center gap-1 cursor-pointer hover:opacity-90 border-none">
-                <span style="color: #ffffff !important; font-weight: 700;">ยืนยันการสำรองและล้างข้อมูล</span>
+            <button type="button" id="confirm-archive-btn" onclick="executeArchiveAndPurge()" style="background-color: #d97706; color: #ffffff !important;" class="px-4 py-2 text-xs font-bold rounded shadow-sm transition-all flex items-center gap-1.5 cursor-pointer hover:opacity-90 border-none">
+                <span style="color: #ffffff !important; font-weight: 700;">ยืนยันการสำรองและลบข้อมูล</span>
             </button>
         </div>
     </div>
@@ -277,7 +201,7 @@ function executeBackup() {
     })
     .catch(err => {
         btn.disabled = false;
-        btn.innerHTML = `<svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg><span style="color:#ffffff;font-weight:700;">ดาวน์โหลด Backup ทั้งหมด (.ZIP)</span>`;
+        btn.innerHTML = `<svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg><span style="color:#ffffff;font-weight:700;">ดาวน์โหลด Backup ฐานข้อมูล</span>`;
         if (typeof showToast === 'function') showToast(err.message || 'เกิดข้อผิดพลาดในการ Backup', 'error');
         else alert(err.message || 'เกิดข้อผิดพลาดในการ Backup');
     });
@@ -303,7 +227,7 @@ function executeArchiveAndPurge() {
     .then(res => res.json())
     .then(data => {
         btn.disabled = false;
-        btn.innerHTML = `<span style="color: #ffffff !important; font-weight: 700;">ยืนยันการสำรองและล้างข้อมูล</span>`;
+        btn.innerHTML = `<span style="color: #ffffff !important; font-weight: 700;">ยืนยันการสำรองและลบข้อมูล</span>`;
         closeArchiveModal();
 
         if (data.success) {
@@ -325,13 +249,13 @@ function executeArchiveAndPurge() {
                     icon: 'success',
                     title: 'สำรองและล้างข้อมูลสำเร็จ!',
                     html: `
-                        <div class="text-left text-xs text-slate-700 space-y-2 mt-2">
+                        <div class="text-left text-xs text-slate-600 space-y-2 mt-2">
                             <p><b>📊 บันทึกลง Google Sheets สำรอง:</b> ${data.archived} แถว</p>
                             <p><b>🗑️ ลบข้อมูลเก่าออกจากฐานข้อมูล:</b> ${data.purged} รายการ</p>
-                            <p><b>💾 ดาวน์โหลดไฟล์สำรอง:</b> <span class="text-blue-700 font-mono bg-blue-50 px-1 py-0.5 rounded border border-blue-200">${data.backupFileName || 'PurgedArchive.json'}</span> (เก็บไว้ในเครื่องเรียบร้อย)</p>
+                            <p><b>💾 ดาวน์โหลดไฟล์สำรอง:</b> <span class="text-blue-600 font-mono bg-blue-50 px-1 py-0.5 rounded border border-blue-200">${data.backupFileName || 'PurgedArchive.json'}</span> (เก็บไว้ในเครื่องเรียบร้อย)</p>
                         </div>
                     `,
-                    confirmButtonColor: '#1e3a8a'
+                    confirmButtonColor: '#2563eb'
                 });
             } else if (typeof showToast === 'function') {
                 showToast(data.message || "สำรองข้อมูลและลบรายการเก่าเรียบร้อย พร้อมดาวน์โหลดไฟล์สำรองแล้ว!", "success");
@@ -341,8 +265,7 @@ function executeArchiveAndPurge() {
                 Swal.fire({
                     icon: 'error',
                     title: 'เกิดข้อผิดพลาด',
-                    text: data.error || 'เกิดข้อผิดพลาดในการสำรองข้อมูล',
-                    confirmButtonColor: '#1e3a8a'
+                    text: data.error || 'เกิดข้อผิดพลาดในการสำรองข้อมูล'
                 });
             } else if (typeof showToast === 'function') {
                 showToast(data.error || "เกิดข้อผิดพลาดในการสำรองข้อมูล", "error");
@@ -351,14 +274,13 @@ function executeArchiveAndPurge() {
     })
     .catch(err => {
         btn.disabled = false;
-        btn.innerHTML = `<span style="color: #ffffff !important; font-weight: 700;">ยืนยันการสำรองและล้างข้อมูล</span>`;
+        btn.innerHTML = `<span style="color: #ffffff !important; font-weight: 700;">ยืนยันการสำรองและลบข้อมูล</span>`;
         closeArchiveModal();
         if (typeof Swal !== 'undefined') {
             Swal.fire({
                 icon: 'error',
                 title: 'เกิดข้อผิดพลาดในการเชื่อมต่อ',
-                text: 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้',
-                confirmButtonColor: '#1e3a8a'
+                text: 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้'
             });
         } else if (typeof showToast === 'function') {
             showToast("เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์", "error");
@@ -370,15 +292,15 @@ document.addEventListener("DOMContentLoaded", function() {
     function showToast(message, type = 'error') {
         const container = document.getElementById("toast-container");
         const toast = document.createElement("div");
-        toast.className = `px-3.5 py-2.5 rounded shadow-md text-xs font-medium flex items-center gap-2 transform translate-y-2 opacity-0 transition-all duration-300 pointer-events-auto max-w-sm ${
+        toast.className = `px-4 py-3 rounded shadow-lg text-xs font-semibold flex items-center gap-2 transform translate-y-2 opacity-0 transition-all duration-300 pointer-events-auto max-w-sm ${
             type === 'success' 
-                ? 'bg-slate-900 text-white border border-slate-800' 
-                : 'bg-rose-950 text-rose-100 border border-rose-800'
+                ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' 
+                : 'bg-rose-50 text-rose-800 border border-rose-200'
         }`;
         
         const icon = type === 'success'
-            ? `<svg class="w-4 h-4 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`
-            : `<svg class="w-4 h-4 text-rose-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>`;
+            ? `<svg class="w-4 h-4 text-emerald-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`
+            : `<svg class="w-4 h-4 text-rose-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>`;
 
         toast.innerHTML = `${icon}<span>${message}</span>`;
         container.appendChild(toast);

@@ -470,47 +470,40 @@ namespace CostFlow.Data
                 }
             }
 
-            string? adminPassword = configuration["Seed:AdminPassword"]
+            string adminPassword = configuration["Seed:AdminPassword"]
                                     ?? Environment.GetEnvironmentVariable("ADMIN_PASSWORD")
-                                    ?? (env.IsDevelopment() ? "admin1234" : null);
+                                    ?? "admin1234";
 
-            string? staffPassword = configuration["Seed:StaffPassword"]
+            string staffPassword = configuration["Seed:StaffPassword"]
                                     ?? Environment.GetEnvironmentVariable("STAFF_PASSWORD")
-                                    ?? (env.IsDevelopment() ? "123456" : null);
+                                    ?? "123456";
 
-            string? devPassword = configuration["Seed:DevPassword"]
+            string devPassword = configuration["Seed:DevPassword"]
                                   ?? Environment.GetEnvironmentVariable("DEV_PASSWORD")
-                                  ?? (env.IsDevelopment() ? "dev1234" : "123456");
+                                  ?? "dev1234";
 
             // Seed ADMIN01
             var adminUser = await userManager.FindByNameAsync("ADMIN01");
             if (adminUser == null)
             {
-                if (string.IsNullOrEmpty(adminPassword))
+                var admin = new ApplicationUser
                 {
-                    Console.WriteLine("[DB Init] WARNING: Skipping ADMIN01 creation in Production because ADMIN_PASSWORD is not set.");
+                    UserName = "ADMIN01",
+                    EmployeeCode = "ADMIN01",
+                    FullName = "แมวกวนๆ",
+                    ProfilePictureUrl = "https://cdn.readawrite.com/articles/11729/11728659/thumbnail/large.gif?1",
+                    IsActive = true,
+                    CreatedAt = DateTime.Now
+                };
+                var result = await userManager.CreateAsync(admin, adminPassword);
+                if (result.Succeeded)
+                {
+                    await userManager.AddToRoleAsync(admin, "Admin");
+                    Console.WriteLine("[DB Init] Seeded user ADMIN01 with role Admin.");
                 }
                 else
                 {
-                    var admin = new ApplicationUser
-                    {
-                        UserName = "ADMIN01",
-                        EmployeeCode = "ADMIN01",
-                        FullName = "แมวกวนๆ",
-                        ProfilePictureUrl = "https://cdn.readawrite.com/articles/11729/11728659/thumbnail/large.gif?1",
-                        IsActive = true,
-                        CreatedAt = DateTime.Now
-                    };
-                    var result = await userManager.CreateAsync(admin, adminPassword);
-                    if (result.Succeeded)
-                    {
-                        await userManager.AddToRoleAsync(admin, "Admin");
-                        Console.WriteLine("[DB Init] Seeded user ADMIN01 with role Admin.");
-                    }
-                    else
-                    {
-                        Console.WriteLine($"[DB Init] Failed to seed ADMIN01: {string.Join(", ", result.Errors.Select(e => e.Description))}");
-                    }
+                    Console.WriteLine($"[DB Init] Failed to seed ADMIN01: {string.Join(", ", result.Errors.Select(e => e.Description))}");
                 }
             }
             else
@@ -518,37 +511,34 @@ namespace CostFlow.Data
                 adminUser.FullName = "แมวกวนๆ";
                 adminUser.ProfilePictureUrl = "https://cdn.readawrite.com/articles/11729/11728659/thumbnail/large.gif?1";
                 await userManager.UpdateAsync(adminUser);
+
+                // Ensure admin password is valid
+                var token = await userManager.GeneratePasswordResetTokenAsync(adminUser);
+                await userManager.ResetPasswordAsync(adminUser, token, adminPassword);
             }
 
             // Seed STAFF01
             var staffUser = await userManager.FindByNameAsync("STAFF01");
             if (staffUser == null)
             {
-                if (string.IsNullOrEmpty(staffPassword))
+                var staff = new ApplicationUser
                 {
-                    Console.WriteLine("[DB Init] WARNING: Skipping STAFF01 creation in Production because STAFF_PASSWORD is not set.");
+                    UserName = "STAFF01",
+                    EmployeeCode = "STAFF01",
+                    FullName = "เจ้าหน้าที่ฝ่ายช่าง",
+                    ProfilePictureUrl = "https://png.pngtree.com/png-clipart/20240304/original/pngtree-repairman-worker-cat-sticker-png-image_14504417.png",
+                    IsActive = true,
+                    CreatedAt = DateTime.Now
+                };
+                var result = await userManager.CreateAsync(staff, staffPassword);
+                if (result.Succeeded)
+                {
+                    await userManager.AddToRoleAsync(staff, "Staff");
+                    Console.WriteLine("[DB Init] Seeded user STAFF01 with role Staff.");
                 }
                 else
                 {
-                    var staff = new ApplicationUser
-                    {
-                        UserName = "STAFF01",
-                        EmployeeCode = "STAFF01",
-                        FullName = "เจ้าหน้าที่ฝ่ายช่าง",
-                        ProfilePictureUrl = "https://png.pngtree.com/png-clipart/20240304/original/pngtree-repairman-worker-cat-sticker-png-image_14504417.png",
-                        IsActive = true,
-                        CreatedAt = DateTime.Now
-                    };
-                    var result = await userManager.CreateAsync(staff, staffPassword);
-                    if (result.Succeeded)
-                    {
-                        await userManager.AddToRoleAsync(staff, "Staff");
-                        Console.WriteLine("[DB Init] Seeded user STAFF01 with role Staff.");
-                    }
-                    else
-                    {
-                        Console.WriteLine($"[DB Init] Failed to seed STAFF01: {string.Join(", ", result.Errors.Select(e => e.Description))}");
-                    }
+                    Console.WriteLine($"[DB Init] Failed to seed STAFF01: {string.Join(", ", result.Errors.Select(e => e.Description))}");
                 }
             }
             else
@@ -556,6 +546,10 @@ namespace CostFlow.Data
                 staffUser.FullName = "เจ้าหน้าที่ฝ่ายช่าง";
                 staffUser.ProfilePictureUrl = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRkt942qIdGSgY_RotRR9_HhY3bveTRjSgZZYygIyA-3JzTkNbA9PR1CbXB&s=10";
                 await userManager.UpdateAsync(staffUser);
+
+                // Ensure staff password is valid
+                var token = await userManager.GeneratePasswordResetTokenAsync(staffUser);
+                await userManager.ResetPasswordAsync(staffUser, token, staffPassword);
             }
 
             // Seed DEV01
@@ -586,6 +580,10 @@ namespace CostFlow.Data
             {
                 devUser.FullName = "ทีมงาน Dev Test";
                 await userManager.UpdateAsync(devUser);
+
+                // Ensure dev password is valid
+                var token = await userManager.GeneratePasswordResetTokenAsync(devUser);
+                await userManager.ResetPasswordAsync(devUser, token, devPassword);
 
                 try
                 {
