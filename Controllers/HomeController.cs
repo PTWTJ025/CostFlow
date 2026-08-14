@@ -723,15 +723,36 @@ namespace CostFlow.Controllers
                 int totalPurged = remainingOldPlanIds.Count + remainingActions.Count + remainingOldOrders.Count +
                                   oldReports.Count;
 
+                // สร้างก้อน Backup JSON ของข้อมูลที่กำลังจะถูกลบ เพื่อให้ดาวน์โหลดเก็บไว้ในเครื่อง
+                var backupPayload = new
+                {
+                    PurgedAt = DateTime.UtcNow,
+                    CutoffDate = cutoffDate,
+                    RetentionMonths = retentionMonths,
+                    TotalPlanRows = totalPlanRows,
+                    TotalActionRows = totalActionRows,
+                    TotalReportsPurged = oldReports.Count,
+                    TotalOrdersPurged = oldOrdersToArchive.Count,
+                    WeeklyPlanGroups = planGroups,
+                    MonthlyCostActionGroups = actionGroups,
+                    PurgedReports = oldReports.Select(r => new { r.Id, r.ReportName, r.CreatedAt, r.CreatedBy }),
+                    PurgedOrders = oldOrdersToArchive.Select(o => new { o.Id, o.PoNumber, o.Remarks, o.Amount, o.ApprovedDate, o.CreatedAt })
+                };
+
+                string backupJsonString = System.Text.Json.JsonSerializer.Serialize(backupPayload, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+                string backupFileName = $"CostFlow_PurgedArchive_{DateTime.Now:yyyyMMdd_HHmmss}.json";
+
                 return Json(new
                 {
                     success = true,
                     testMode = isTestMode,
                     message = isTestMode
                         ? $"[TEST MODE] สำรองและลบข้อมูลก่อนวันที่ {cutoffDate:dd/MM/yyyy} เรียบร้อยแล้ว"
-                        : "สำรองข้อมูลลง Google Sheets และลบออกจากระบบเรียบร้อยแล้ว",
+                        : "สำรองข้อมูลลง Google Sheets, ลบข้อมูลเก่า และดาวน์โหลดไฟล์สำรองเรียบร้อยแล้ว",
                     archived = totalArchived,
                     purged = totalPurged,
+                    backupFileName = backupFileName,
+                    backupJson = backupJsonString,
                     details = new
                     {
                         weeklyPlanRows = totalPlanRows,
