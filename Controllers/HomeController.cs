@@ -11,6 +11,8 @@ using Microsoft.Extensions.Configuration;
 using CostFlow.Data;
 using CostFlow.Models;
 using Microsoft.AspNetCore.Identity;
+using System.IO;
+using System.IO.Compression;
 
 namespace CostFlow.Controllers
 {
@@ -18,14 +20,16 @@ namespace CostFlow.Controllers
     public class HomeController : Controller
     {
         private readonly AppDbContext _context;
+        private readonly TiDbContext _tiContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly IConfiguration _configuration;
 
-        public HomeController(AppDbContext context, UserManager<ApplicationUser> userManager,
+        public HomeController(AppDbContext context, TiDbContext tiContext, UserManager<ApplicationUser> userManager,
             IHttpClientFactory httpClientFactory, IConfiguration configuration)
         {
             _context = context;
+            _tiContext = tiContext;
             _userManager = userManager;
             _httpClientFactory = httpClientFactory;
             _configuration = configuration;
@@ -73,7 +77,8 @@ namespace CostFlow.Controllers
                     TotalRows = r.TotalPOs,
                     MatchedRows = r.MatchedPOs,
                     CreatedAt = r.CreatedAt,
-                    CompareFileName = r.OriginalFileName
+                    CompareFileName = r.OriginalFileName,
+                    CreatedBy = r.CreatedBy
                 })
                 .ToListAsync();
 
@@ -85,7 +90,9 @@ namespace CostFlow.Controllers
                 TotalRows = r.TotalRows,
                 MatchedRows = r.MatchedRows,
                 CreatedAt = r.CreatedAt,
-                FormattedDate = r.CreatedAt.ToString("dd MMM yyyy HH:mm น.", new System.Globalization.CultureInfo("th-TH")),
+                CreatedBy = r.CreatedBy ?? "ไม่ระบุ",
+                FormattedDate =
+                    r.CreatedAt.ToString("dd MMM yyyy HH:mm น.", new System.Globalization.CultureInfo("th-TH")),
                 Accuracy = r.TotalRows > 0 ? Math.Round((double)r.MatchedRows / r.TotalRows * 100, 1) : 0,
                 DetailsUrl = Url.Action("Details", "Report", new { fileName = r.ReportName })
             }).ToList();
@@ -147,7 +154,8 @@ namespace CostFlow.Controllers
                 totalRows = r.TotalRows,
                 matchedRows = r.MatchedRows,
                 createdAt = r.CreatedAt,
-                formattedDate = r.CreatedAt.ToString("dd MMM yyyy HH:mm น.", new System.Globalization.CultureInfo("th-TH")),
+                formattedDate =
+                    r.CreatedAt.ToString("dd MMM yyyy HH:mm น.", new System.Globalization.CultureInfo("th-TH")),
                 accuracy = r.TotalRows > 0 ? Math.Round((double)r.MatchedRows / r.TotalRows * 100, 1) : 0,
                 detailsUrl = Url.Action("Details", "Report", new { fileName = r.ReportName })
             }).ToList();
@@ -208,20 +216,19 @@ namespace CostFlow.Controllers
         }
 
         // POST: /Home/BackupDatabase
-        // ดาวน์โหลด SQLite database file สำหรับ Admin
+        // ดาวน์โหลดข้อมูลสำรองทั้ง SQLite (.db) และ TiDB Cloud (.json) รวมกันเป็นไฟล์ .ZIP สำหรับ Admin
         [HttpPost]
         [Authorize(Roles = "Admin,Dev")]
-        public IActionResult BackupDatabase()
+        public async Task<IActionResult> BackupDatabase()
         {
             try
             {
-                // อ่าน connection string แล้ว parse path ของ .db file
+                // 1. อ่าน path ของ SQLite database
                 string? connStr = _configuration.GetConnectionString("DefaultConnection");
                 string? dbRelativePath = null;
 
                 if (!string.IsNullOrWhiteSpace(connStr))
                 {
-                    // รูปแบบ: "Data Source=Data/CostFlow.db" หรือ "Data Source=C:\full\path\file.db"
                     foreach (var part in connStr.Split(';'))
                     {
                         var trimmed = part.Trim();
@@ -236,7 +243,6 @@ namespace CostFlow.Controllers
                 if (string.IsNullOrWhiteSpace(dbRelativePath))
                     return Json(new { success = false, error = "ไม่พบ path ของ SQLite database ในไฟล์ตั้งค่า" });
 
-                // Resolve path: ถ้าไม่ใช่ absolute path ให้ใช้ ContentRootPath เป็น base
                 string dbFullPath = System.IO.Path.IsPathRooted(dbRelativePath)
                     ? dbRelativePath
                     : System.IO.Path.Combine(Directory.GetCurrentDirectory(), dbRelativePath);
@@ -245,15 +251,81 @@ namespace CostFlow.Controllers
                     return Json(new { success = false, error = $"ไม่พบไฟล์ฐานข้อมูล: {dbRelativePath}" });
 
                 string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-                string downloadName = $"CostFlow_backup_{timestamp}.db";
 
-                // ส่งไฟล์ให้ download โดยตรง (stream ไฟล์ทีละ chunk)
-                var fileBytes = System.IO.File.ReadAllBytes(dbFullPath);
-                return File(fileBytes, "application/octet-stream", downloadName);
+                // 2. ดึงข้อมูลจาก TiDB Cloud
+                byte[]? tidbJsonBytes = null;
+                try
+                {
+                    var batches = await _tiContext.SavedOrderBatches
+                        .Include(b => b.Items)
+                        .AsNoTracking()
+                        .ToListAsync();
+
+                    var tidbData = batches.Select(b => new
+                    {
+                        b.Id,
+                        b.BatchName,
+                        b.CreatedAt,
+                        b.TotalItems,
+                        b.TotalAmount,
+                        Items = b.Items.Select(i => new
+                        {
+                            i.Id,
+                            i.BatchId,
+                            i.ProductCode,
+                            i.ProductName,
+                            i.Quantity,
+                            i.UnitPrice,
+                            i.Unit,
+                            i.Remarks,
+                            i.IsReceived,
+                            i.ReceiveDate
+                        })
+                    });
+
+
+                    var options = new JsonSerializerOptions { WriteIndented = true };
+                    string jsonString = JsonSerializer.Serialize(tidbData, options);
+                    tidbJsonBytes = System.Text.Encoding.UTF8.GetBytes(jsonString);
+                }
+                catch (Exception tiEx)
+                {
+                    Console.WriteLine($"[BackupDatabase] Warning: Could not fetch TiDB data: {tiEx.Message}");
+                }
+
+                // 3. รวมทั้ง 2 ฐานข้อมูลเข้าเป็นไฟล์ .ZIP
+                using (var ms = new MemoryStream())
+                {
+                    using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, true))
+                    {
+                        // ไฟล์ 1: SQLite .db
+                        var dbEntry = archive.CreateEntry($"CostFlow_sqlite_{timestamp}.db", CompressionLevel.Optimal);
+                        using (var entryStream = dbEntry.Open())
+                        using (var fileStream = System.IO.File.OpenRead(dbFullPath))
+                        {
+                            await fileStream.CopyToAsync(entryStream);
+                        }
+
+                        // ไฟล์ 2: TiDB .json (ถ้ามี)
+                        if (tidbJsonBytes != null && tidbJsonBytes.Length > 0)
+                        {
+                            var tidbEntry = archive.CreateEntry($"TiDB_SavedOrders_{timestamp}.json",
+                                CompressionLevel.Optimal);
+                            using (var entryStream = tidbEntry.Open())
+                            {
+                                await entryStream.WriteAsync(tidbJsonBytes, 0, tidbJsonBytes.Length);
+                            }
+                        }
+                    }
+
+                    ms.Seek(0, SeekOrigin.Begin);
+                    string zipDownloadName = $"CostFlow_FullBackup_{timestamp}.zip";
+                    return File(ms.ToArray(), "application/zip", zipDownloadName);
+                }
             }
             catch (Exception ex)
             {
-                return Json(new { success = false, error = $"เกิดข้อผิดพลาด: {ex.Message}" });
+                return Json(new { success = false, error = $"เกิดข้อผิดพลาดในการสำรองข้อมูล: {ex.Message}" });
             }
         }
 
@@ -320,7 +392,7 @@ namespace CostFlow.Controllers
                     .SelectMany(plan => plan.Details.Select(d =>
                     {
                         string poNo = d.MatchedOrder?.PoNumber ?? d.PoNumberInFile ?? "";
-                        
+
                         // ลำดับความสำคัญในการระบุเดือน: ApprovedDate -> PO Number (เช่น WO2507.. -> 2025-07) -> DeliveryTarget -> UploadedAt
                         string monthKey = GetMonthYearFromDateStr(d.MatchedOrder?.ApprovedDate)
                                           ?? GetMonthYearFromDateStr(null, poNo)
@@ -335,12 +407,14 @@ namespace CostFlow.Controllers
                             if (!string.IsNullOrEmpty(extractedMKey) && extractedMKey.Contains("-"))
                             {
                                 var parts = extractedMKey.Split('-');
-                                if (parts.Length == 2 && int.TryParse(parts[0], out int y) && int.TryParse(parts[1], out int m))
+                                if (parts.Length == 2 && int.TryParse(parts[0], out int y) &&
+                                    int.TryParse(parts[1], out int m))
                                 {
                                     approvedDateDisplay = $"01/{m:00}/{y + 543}";
                                 }
                             }
                         }
+
                         if (string.IsNullOrWhiteSpace(approvedDateDisplay)) approvedDateDisplay = "-";
 
                         return new
@@ -350,13 +424,13 @@ namespace CostFlow.Controllers
                             Row = new object?[]
                             {
                                 plan.UploadedAt.ToLocalTime().ToString("dd/MM/yyyy"), // A วันที่อัปโหลด
-                                approvedDateDisplay,                                  // B วันที่อนุมัติ
-                                plan.FileName,                                       // C ชื่อไฟล์อ้างอิง
-                                poNo,                                                // D เลข PO
-                                CleanText(d.OrderName ?? d.MatchedOrder?.Remarks),   // E ชื่อสินค้า
-                                d.Department ?? "-",                                 // F แผนก
-                                d.DeliveryTarget ?? "-",                             // G กำหนดส่งมอบ
-                                d.OrderStatus ?? "-",                                // H สถานะในไฟล์แผน
+                                approvedDateDisplay, // B วันที่อนุมัติ
+                                plan.FileName, // C ชื่อไฟล์อ้างอิง
+                                poNo, // D เลข PO
+                                CleanText(d.OrderName ?? d.MatchedOrder?.Remarks), // E ชื่อสินค้า
+                                d.Department ?? "-", // F แผนก
+                                d.DeliveryTarget ?? "-", // G กำหนดส่งมอบ
+                                d.OrderStatus ?? "-", // H สถานะในไฟล์แผน
                                 d.IsMatched ? "จับคู่สำเร็จ" : "ไม่พบ PO นี้ในระบบ" // I ผลการจับคู่
                             }
                         };
@@ -423,12 +497,14 @@ namespace CostFlow.Controllers
                         if (!string.IsNullOrEmpty(extractedMKey) && extractedMKey.Contains("-"))
                         {
                             var parts = extractedMKey.Split('-');
-                            if (parts.Length == 2 && int.TryParse(parts[0], out int y) && int.TryParse(parts[1], out int m))
+                            if (parts.Length == 2 && int.TryParse(parts[0], out int y) &&
+                                int.TryParse(parts[1], out int m))
                             {
                                 approvedDateDisplay = $"01/{m:00}/{y + 543}";
                             }
                         }
                     }
+
                     if (string.IsNullOrWhiteSpace(approvedDateDisplay)) approvedDateDisplay = "-";
 
                     if (actionsByOrderId.TryGetValue(order.Id, out var orderActions) && orderActions.Count > 0)
@@ -438,21 +514,21 @@ namespace CostFlow.Controllers
                             var row = new object?[]
                             {
                                 act.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm"), // A วัน/เวลาที่บันทึก
-                                approvedDateDisplay,                                     // B วันที่อนุมัติ
-                                order.PoNumber ?? "-",                                   // C เลข PO
-                                CleanText(order.Remarks),                                // D ชื่อสินค้า
-                                latestPlan?.Department ?? order.Urgency ?? "-",          // E แผนก
-                                latestPlan?.DeliveryTarget ?? "-",                       // F กำหนดส่งมอบ
-                                FormatMoneyStr(order.Amount),                            // G ยอดสั่งซื้อเต็ม
-                                act.Action switch                                        // H สถานะการรับของ
+                                approvedDateDisplay, // B วันที่อนุมัติ
+                                order.PoNumber ?? "-", // C เลข PO
+                                CleanText(order.Remarks), // D ชื่อสินค้า
+                                latestPlan?.Department ?? order.Urgency ?? "-", // E แผนก
+                                latestPlan?.DeliveryTarget ?? "-", // F กำหนดส่งมอบ
+                                FormatMoneyStr(order.Amount), // G ยอดสั่งซื้อเต็ม
+                                act.Action switch // H สถานะการรับของ
                                 {
                                     "ReceivedFull" => "รับของครบแล้ว",
                                     "Deferred" => "ผ่อนชำระ",
                                     "Skipped" => "ข้าม / ยังไม่รับ",
                                     _ => act.Action
                                 },
-                                act.ActionPrice.ToString("N2"),                          // I ยอดที่จ่ายจริง
-                                act.DeferredFromMonth ?? "-"                             // J ยกยอดมาจาก
+                                act.ActionPrice.ToString("N2"), // I ยอดที่จ่ายจริง
+                                act.DeferredFromMonth ?? "-" // J ยกยอดมาจาก
                             };
                             formattedActionItems.Add((act.MonthYear ?? orderMonthKey, order.PoNumber ?? "", row));
                         }
@@ -463,15 +539,15 @@ namespace CostFlow.Controllers
                         var defaultRow = new object?[]
                         {
                             order.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm"), // A วัน/เวลาที่บันทึก
-                            approvedDateDisplay,                                     // B วันที่อนุมัติ
-                            order.PoNumber ?? "-",                                   // C เลข PO
-                            CleanText(order.Remarks),                                // D ชื่อสินค้า
-                            latestPlan?.Department ?? order.Urgency ?? "-",          // E แผนก
-                            latestPlan?.DeliveryTarget ?? "-",                       // F กำหนดส่งมอบ
-                            FormatMoneyStr(order.Amount),                            // G ยอดสั่งซื้อเต็ม
-                            "ยังไม่ดำเนินการ",                                      // H สถานะการรับของ
-                            "0.00",                                                  // I ยอดที่จ่ายจริง
-                            "-"                                                      // J ยกยอดมาจาก
+                            approvedDateDisplay, // B วันที่อนุมัติ
+                            order.PoNumber ?? "-", // C เลข PO
+                            CleanText(order.Remarks), // D ชื่อสินค้า
+                            latestPlan?.Department ?? order.Urgency ?? "-", // E แผนก
+                            latestPlan?.DeliveryTarget ?? "-", // F กำหนดส่งมอบ
+                            FormatMoneyStr(order.Amount), // G ยอดสั่งซื้อเต็ม
+                            "ยังไม่ดำเนินการ", // H สถานะการรับของ
+                            "0.00", // I ยอดที่จ่ายจริง
+                            "-" // J ยกยอดมาจาก
                         };
                         formattedActionItems.Add((orderMonthKey, order.PoNumber ?? "", defaultRow));
                     }
@@ -498,7 +574,7 @@ namespace CostFlow.Controllers
 
                 // ตรวจสอบว่ามีข้อมูลอะไรที่ต้องประมวลผลไหม (ทั้งสำหรับ Sheet และสำหรับ Purge)
                 bool hasAnythingToProcess = totalPlanRows > 0 || totalActionRows > 0
-                    || oldReports.Count > 0 || oldOrdersToArchive.Count > 0;
+                                                              || oldReports.Count > 0 || oldOrdersToArchive.Count > 0;
 
                 if (!hasAnythingToProcess)
                 {
@@ -552,8 +628,16 @@ namespace CostFlow.Controllers
                     var root = doc.RootElement;
                     bool isSheetSuccess = root.TryGetProperty("success", out var succProp) && succProp.GetBoolean();
 
-                    int archivedPlans = root.TryGetProperty("archivedPlans", out var pProp) && pProp.ValueKind == System.Text.Json.JsonValueKind.Number ? pProp.GetInt32() : 0;
-                    int archivedActions = root.TryGetProperty("archivedActions", out var aProp) && aProp.ValueKind == System.Text.Json.JsonValueKind.Number ? aProp.GetInt32() : 0;
+                    int archivedPlans =
+                        root.TryGetProperty("archivedPlans", out var pProp) &&
+                        pProp.ValueKind == System.Text.Json.JsonValueKind.Number
+                            ? pProp.GetInt32()
+                            : 0;
+                    int archivedActions =
+                        root.TryGetProperty("archivedActions", out var aProp) &&
+                        aProp.ValueKind == System.Text.Json.JsonValueKind.Number
+                            ? aProp.GetInt32()
+                            : 0;
                     int totalArchivedBySheet = archivedPlans + archivedActions;
 
                     if (!isSheetSuccess)
@@ -572,7 +656,8 @@ namespace CostFlow.Controllers
                         return Json(new
                         {
                             success = false,
-                            error = $"ยกเลิกการลบ — Google Sheets บันทึกได้ 0 แถว (จากทั้งหมด {expectedRows} แถว) กรุณาตรวจสอบการตั้งค่า Apps Script Deployment"
+                            error =
+                                $"ยกเลิกการลบ — Google Sheets บันทึกได้ 0 แถว (จากทั้งหมด {expectedRows} แถว) กรุณาตรวจสอบการตั้งค่า Apps Script Deployment"
                         });
                     }
                 }
@@ -680,7 +765,7 @@ namespace CostFlow.Controllers
                 var cleanPo = poNumber.Trim().ToUpper();
                 if (cleanPo.StartsWith("WO") && cleanPo.Length >= 6)
                 {
-                    var yearStr = cleanPo.Substring(2, 2);  // "26" -> 2569 -> 2026
+                    var yearStr = cleanPo.Substring(2, 2); // "26" -> 2569 -> 2026
                     var monthStr = cleanPo.Substring(4, 2); // "04" -> April
                     if (int.TryParse(yearStr, out int y2) && int.TryParse(monthStr, out int m) && m >= 1 && m <= 12)
                     {
@@ -753,24 +838,26 @@ namespace CostFlow.Controllers
             {
                 return val.ToString("N2");
             }
+
             return amountStr;
         }
 
         private static string CleanText(string? input)
         {
             if (string.IsNullOrWhiteSpace(input) || input == "-") return "-";
-            var cleaned = System.Text.RegularExpressions.Regex.Replace(input, @"\r?\n|\r", " ").Trim();
+            var cleaned = System.Text.RegularExpressions.Regex.Replace(input, @"\r?\n|\r", " ");
+            cleaned = cleaned.Replace("สั่งทำ ", "").Replace("สั่งทำ", "").Trim();
             return string.IsNullOrWhiteSpace(cleaned) ? "-" : cleaned;
         }
     }
 
-        public class HomeDashboardViewModel
-        {
-            public int TotalReferencePrices { get; set; }
-            public int TotalSparePartOrders { get; set; }
-            public int TotalMergedReports { get; set; }
-            public double AvgMatchSuccessRate { get; set; }
-            public decimal TotalYearlyCost { get; set; }
-            public System.Collections.Generic.List<ReportSummaryViewModel> RecentReports { get; set; } = new();
-        }
+    public class HomeDashboardViewModel
+    {
+        public int TotalReferencePrices { get; set; }
+        public int TotalSparePartOrders { get; set; }
+        public int TotalMergedReports { get; set; }
+        public double AvgMatchSuccessRate { get; set; }
+        public decimal TotalYearlyCost { get; set; }
+        public System.Collections.Generic.List<ReportSummaryViewModel> RecentReports { get; set; } = new();
     }
+}

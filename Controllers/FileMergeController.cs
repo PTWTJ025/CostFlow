@@ -149,7 +149,9 @@ namespace CostFlow.Controllers
                     OriginalFileName = file.FileName,
                     TotalPOs = distinctRows.Count,
                     MatchedPOs = 0,
-                    CreatedAt = DateTime.Now
+                    CreatedAt = DateTime.Now,
+                    CreatedBy = User.Identity?.Name ?? "System",
+                    CreatedByUserId = User.FindFirstValue(ClaimTypes.NameIdentifier)
                 };
                 _context.Reports.Add(newReport);
 
@@ -347,6 +349,10 @@ namespace CostFlow.Controllers
 
                 // Get ALL orders from the system (not limited to specific report)
                 var allOrders = _context.OrderTrackingMasters.ToList();
+                var ordersByPo = allOrders
+                    .Where(o => !string.IsNullOrWhiteSpace(CleanKey(o.PoNumber)))
+                    .GroupBy(o => CleanKey(o.PoNumber), StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
 
                 int totalMatched = 0;
                 var fileResults = new List<object>();
@@ -376,6 +382,26 @@ namespace CostFlow.Controllers
 
                     debugInfo.Add($"   ✅ พบชีท '{selectedSheet.SheetName}' - มี {selectedSheet.RawRows.Count} แถว");
 
+                    // Read the header once per sheet.  All fields below use this map, so inserting
+                    // or moving Excel columns cannot silently shift data into the wrong field.
+                    var columns = FindWeeklyPlanColumns(selectedSheet.RawRows);
+                    var missingColumns = GetMissingRequiredWeeklyPlanColumns(columns);
+                    if (missingColumns.Count > 0)
+                    {
+                        debugInfo.Add($"   ❌ ไม่พบคอลัมน์ที่จำเป็น: {string.Join(", ", missingColumns)}");
+                        fileResults.Add(new
+                        {
+                            fileName = importedFile.FileName,
+                            sheetName = selectedSheet.SheetName,
+                            error = $"ไม่พบคอลัมน์ที่จำเป็น: {string.Join(", ", missingColumns)}"
+                        });
+                        continue;
+                    }
+
+                    debugInfo.Add($"   ✅ อ่านหัวตารางแถว {columns.HeaderRowIndex + 1}: " +
+                                  $"PO={columns.PoNumber}, หน่วยงาน={columns.Department}, ชื่อใบสั่ง={columns.OrderName}, " +
+                                  $"ราคา={columns.Price}, สถานะ={columns.OrderStatus}, ส่งมอบ={columns.DeliveryTarget}");
+
                     // Check for duplicate uploads (overwrite logic)
                     var existingPlan = _context.WeeklyPlans
                         .FirstOrDefault(wp => wp.ReportId == report.Id &&
@@ -403,7 +429,8 @@ namespace CostFlow.Controllers
                         SheetName = selectedSheet.SheetName,
                         TotalRecords = selectedSheet.RawRows.Count,
                         MatchedCount = 0,
-                        UploadedAt = DateTime.Now
+                        UploadedAt = DateTime.Now,
+                        UploadedBy = User.Identity?.Name ?? "System"
                     };
                     _context.WeeklyPlans.Add(weeklyPlan);
 
@@ -412,41 +439,14 @@ namespace CostFlow.Controllers
                     var matchedUniquePOsInFile =
                         new HashSet<string>(StringComparer.OrdinalIgnoreCase); // เก็บ PO ที่จับคู่ได้แบบไม่ซ้ำ
 
-                    // หา column index ของ "ใบขออนุมัติ" หรือ "เลขที่อนุมัติ" จาก header
-                    int poColumnIndex = -1;
-                    for (int r = 0; r < Math.Min(5, selectedSheet.RawRows.Count); r++)
-                    {
-                        var headerRow = selectedSheet.RawRows[r];
-                        for (int c = 0; c < headerRow.Count; c++)
-                        {
-                            var cellValue = GetColVal(headerRow, c);
-                            // ค้นหาคำว่า "อนุมัติ" ในชื่อคอลัมน์
-                            if (cellValue.Contains("อนุมัติ", StringComparison.OrdinalIgnoreCase))
-                            {
-                                poColumnIndex = c;
-                                debugInfo.Add($"   ✅ เจอคอลัมน์ PO: '{cellValue}' ที่ตำแหน่ง {c}");
-                                break;
-                            }
-                        }
-
-                        if (poColumnIndex != -1) break;
-                    }
-
-                    // ถ้าไม่เจอ header ให้ fallback เป็นคอลัมน์ 1 (หรือ 2 ถ้าเริ่มนับจาก 0)
-                    if (poColumnIndex == -1)
-                    {
-                        poColumnIndex = 1; // เปลี่ยนจาก 3 เป็น 1
-                        debugInfo.Add($"   ⚠️ ไม่เจอ header 'อนุมัติ' ใช้คอลัมน์ {poColumnIndex} แทน");
-                    }
-
                     // Process each row
-                    for (int r = 0; r < selectedSheet.RawRows.Count; r++)
+                    for (int r = columns.HeaderRowIndex + 1; r < selectedSheet.RawRows.Count; r++)
                     {
                         var row = selectedSheet.RawRows[r];
                         if (row.Count == 0) continue;
 
                         // ดึง PO จากคอลัมน์ที่หาเจอ โดยเลือกเฉพาะที่ขึ้นต้นด้วย WO
-                        string poNumberInFile = ExtractPoNumberFromColumn(row, poColumnIndex);
+                        string poNumberInFile = ExtractPoNumberFromColumn(row, columns.PoNumber);
                         if (string.IsNullOrEmpty(poNumberInFile)) continue;
 
                         foundPOs.Add(poNumberInFile); // เก็บไว้ debug
@@ -455,19 +455,12 @@ namespace CostFlow.Controllers
                         string cleanPoInFile = CleanKey(poNumberInFile);
 
                         // Try to match with existing orders
-                        var matchedOrder = allOrders.FirstOrDefault(o =>
-                            CleanKey(o.PoNumber) == cleanPoInFile
-                        );
+                        ordersByPo.TryGetValue(cleanPoInFile, out var matchedOrder);
 
-                        // Extract data from correct columns based on your file structure
-                        // จากข้อมูลจริง:
-                        // 0=ลำดับ, 1=เลขที่อนุมัติ(WO), 2=วันที่รับPO, 3=วันที่เปิดใบสั่ง,
-                        // 4=เลขที่ใบสั่ง, 5=หน่วยงาน, 6=สาขา, 7=ชื่อใบสั่ง, 8=ประเภทงาน,
-                        // 9=จำนวนชิ้น, 10=ราคา, 11=สถานะใบสั่ง, 12=ส่งมอบ, 13+=อื่นๆ
-                        string department = GetColVal(row, 5); // หน่วยงาน (LCD00, LCA00)
-                        string orderName = GetColVal(row, 7); // ชื่อใบสั่ง
-                        string orderStatus = GetColVal(row, 11); // สถานะใบสั่ง (C:ปิดใบสั่ง, O:กำลังดำเนินการ)
-                        string deliveryTarget = GetColVal(row, 12); // ส่งมอบ (วันที่)
+                        string department = GetColVal(row, columns.Department);
+                        string orderName = GetColVal(row, columns.OrderName);
+                        string orderStatus = GetColVal(row, columns.OrderStatus);
+                        string deliveryTarget = GetColVal(row, columns.DeliveryTarget);
 
                         // Create WeeklyPlanDetail (บันทึกประวัติทุกแถวตามจริง ไม่ตัดทิ้ง เพื่อเวลาคลิกตรวจสอบจะได้เห็นครบทุกงวด/สถานะ)
                         var detail = new WeeklyPlanDetail
@@ -479,7 +472,7 @@ namespace CostFlow.Controllers
                             OrderName = orderName,
                             OrderStatus = orderStatus,
                             DeliveryTarget = FormatDeliveryTargetDate(deliveryTarget) ?? string.Empty,
-                            Price = GetColVal(row, 10),
+                            Price = GetColVal(row, columns.Price),
                             RowIndex = r,
                             IsMatched = matchedOrder != null,
                             MatchedOrderId = matchedOrder?.Id
@@ -570,6 +563,86 @@ namespace CostFlow.Controllers
         }
 
         // --- Helper methods ---
+        private static WeeklyPlanColumnMap FindWeeklyPlanColumns(List<List<string>> rows)
+        {
+            var aliases = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
+            {
+                [nameof(WeeklyPlanColumnMap.PoNumber)] = new[] { "เลขที่อนุมัติ", "ใบขออนุมัติ", "PO Number", "PO" },
+                [nameof(WeeklyPlanColumnMap.Department)] = new[] { "หน่วยงาน", "แผนก" },
+                [nameof(WeeklyPlanColumnMap.OrderName)] = new[] { "ชื่อใบสั่ง", "รายละเอียดใบสั่ง" },
+                [nameof(WeeklyPlanColumnMap.Price)] = new[] { "ราคาประมาณการมี +-5%", "ราคาประมาณการมี +/-5%", "ราคาประมาณการ", "ราคา" },
+                [nameof(WeeklyPlanColumnMap.OrderStatus)] = new[] { "สถานะใบสั่ง", "สถานะ" },
+                [nameof(WeeklyPlanColumnMap.DeliveryTarget)] = new[] { "ส่งมอบ", "กำหนดส่งมอบ" }
+            };
+
+            var map = new WeeklyPlanColumnMap();
+            for (int rowIndex = 0; rowIndex < Math.Min(5, rows.Count); rowIndex++)
+            {
+                var row = rows[rowIndex];
+                var found = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+                for (int columnIndex = 0; columnIndex < row.Count; columnIndex++)
+                {
+                    var normalizedHeader = NormalizeWeeklyPlanHeader(row[columnIndex]);
+                    if (string.IsNullOrEmpty(normalizedHeader)) continue;
+
+                    foreach (var field in aliases)
+                    {
+                        if (!found.ContainsKey(field.Key) &&
+                            field.Value.Any(alias => normalizedHeader == NormalizeWeeklyPlanHeader(alias)))
+                        {
+                            found[field.Key] = columnIndex;
+                        }
+                    }
+                }
+
+                // A valid header row must at least identify the PO column; the remaining required
+                // fields are validated by the caller to produce a useful import error.
+                if (!found.TryGetValue(nameof(WeeklyPlanColumnMap.PoNumber), out var poNumber)) continue;
+
+                map.HeaderRowIndex = rowIndex;
+                map.PoNumber = poNumber;
+                map.Department = found.GetValueOrDefault(nameof(WeeklyPlanColumnMap.Department), -1);
+                map.OrderName = found.GetValueOrDefault(nameof(WeeklyPlanColumnMap.OrderName), -1);
+                map.Price = found.GetValueOrDefault(nameof(WeeklyPlanColumnMap.Price), -1);
+                map.OrderStatus = found.GetValueOrDefault(nameof(WeeklyPlanColumnMap.OrderStatus), -1);
+                map.DeliveryTarget = found.GetValueOrDefault(nameof(WeeklyPlanColumnMap.DeliveryTarget), -1);
+                return map;
+            }
+
+            return map;
+        }
+
+        private static List<string> GetMissingRequiredWeeklyPlanColumns(WeeklyPlanColumnMap columns)
+        {
+            var missing = new List<string>();
+            if (columns.PoNumber < 0) missing.Add("เลขที่อนุมัติ");
+            if (columns.Department < 0) missing.Add("หน่วยงาน");
+            if (columns.OrderName < 0) missing.Add("ชื่อใบสั่ง");
+            if (columns.Price < 0) missing.Add("ราคาประมาณการมี +-5%");
+            if (columns.OrderStatus < 0) missing.Add("สถานะใบสั่ง");
+            if (columns.DeliveryTarget < 0) missing.Add("ส่งมอบ");
+            return missing;
+        }
+
+        private static string NormalizeWeeklyPlanHeader(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return string.Empty;
+
+            var normalized = value.Replace("\u200b", "").Replace("\u00a0", "").Replace("\uFEFF", "");
+            return Regex.Replace(normalized, @"[\s\-_()/\\.]", string.Empty).ToUpperInvariant();
+        }
+
+        private sealed class WeeklyPlanColumnMap
+        {
+            public int HeaderRowIndex { get; set; } = -1;
+            public int PoNumber { get; set; } = -1;
+            public int Department { get; set; } = -1;
+            public int OrderName { get; set; } = -1;
+            public int Price { get; set; } = -1;
+            public int OrderStatus { get; set; } = -1;
+            public int DeliveryTarget { get; set; } = -1;
+        }
+
         private string ExtractPoNumberFromColumn(List<string> row, int columnIndex)
         {
             if (columnIndex < 0 || columnIndex >= row.Count)

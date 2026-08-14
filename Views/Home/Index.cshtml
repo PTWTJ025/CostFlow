@@ -55,7 +55,7 @@
             <!-- Stat 1: Merged Reports -->
             <a href="/Report"
                class="group flex items-start gap-md px-md md:px-lg py-md md:py-lg border-b lg:border-b-0 border-r border-outline-variant/60 hover:bg-primary/5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset">
-                <i class="fi fi-rs-document-signed text-xl text-primary flex-shrink-0" aria-hidden="true"></i>
+                <i data-lucide="file-check-2" class="w-6 h-6 text-primary flex-shrink-0" aria-hidden="true"></i>
                 <div class="min-w-0">
                     <div id="stat-merged-reports" class="font-headline-sm text-headline-sm text-on-surface tabular-nums tracking-tight leading-none group-hover:text-primary transition-colors">
                         @Model.TotalMergedReports.ToString("N0")
@@ -67,7 +67,7 @@
             <!-- Stat 2: Yearly Cost / Expense -->
             <a href="/MonthlyCost"
                class="group flex items-start gap-md px-md md:px-lg py-md md:py-lg border-b lg:border-b-0 lg:border-r border-outline-variant/60 hover:bg-primary/5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset">
-                <i class="fi fi-rs-coins text-xl text-primary flex-shrink-0" aria-hidden="true"></i>
+                <i data-lucide="coins" class="w-6 h-6 text-primary flex-shrink-0" aria-hidden="true"></i>
                 <div class="min-w-0">
                     <div id="stat-yearly-cost" class="font-headline-sm text-headline-sm text-on-surface tabular-nums tracking-tight leading-none truncate group-hover:text-primary transition-colors">
                         ฿@Model.TotalYearlyCost.ToString("N0")
@@ -79,7 +79,7 @@
             <!-- Stat 3: Saved Spare Part Orders -->
             <a href="/FileMerge"
                class="group flex items-start gap-md px-md md:px-lg py-md md:py-lg border-r border-outline-variant/60 hover:bg-primary/5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset">
-                <i class="fi fi-rs-shopping-cart text-xl text-primary flex-shrink-0" aria-hidden="true"></i>
+                <i data-lucide="shopping-cart" class="w-6 h-6 text-primary flex-shrink-0" aria-hidden="true"></i>
                 <div class="min-w-0">
                     <div id="stat-spare-orders" class="font-headline-sm text-headline-sm text-on-surface tabular-nums tracking-tight leading-none group-hover:text-primary transition-colors">
                         @Model.TotalSparePartOrders.ToString("N0")
@@ -91,7 +91,7 @@
             <!-- Stat 4: Reference Prices count -->
             <a href="/PriceReference"
                class="group flex items-start gap-md px-md md:px-lg py-md md:py-lg hover:bg-primary/5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset">
-                <i class="fi fi-rs-database text-xl text-primary flex-shrink-0" aria-hidden="true"></i>
+                <i data-lucide="database" class="w-6 h-6 text-primary flex-shrink-0" aria-hidden="true"></i>
                 <div class="min-w-0">
                     <div id="stat-ref-prices" class="font-headline-sm text-headline-sm text-on-surface tabular-nums tracking-tight leading-none group-hover:text-primary transition-colors">
                         @Model.TotalReferencePrices.ToString("N0")
@@ -179,7 +179,7 @@
                 {
                     <div class="flex flex-col items-center justify-center flex-1 p-lg bg-surface-container-lowest rounded-lg border border-dashed border-outline-variant/80 text-center min-h-[200px] shadow-sm">
                         <div class="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-3">
-                            <i class="fi fi-rs-folder-open text-xl"></i>
+                            <i data-lucide="folder-open" class="w-6 h-6"></i>
                         </div>
                         <h3 class="font-label-bold text-label-bold text-on-surface mb-1">ยังไม่มีรายงานในระบบ</h3>
                         <p class="font-body-md text-body-md text-on-surface-variant mb-4">เริ่มต้นตรวจสอบต้นทุนโดยเปรียบเทียบข้อมูลไฟล์ผลิตของคุณ</p>
@@ -197,10 +197,10 @@
 
                         <a href="@Url.Action("Details", "Report", new { fileName = r.ReportName })" class="group p-md border border-outline-variant/60 rounded-lg bg-surface-container-lowest hover:bg-primary/5 hover:border-primary/40 transition-colors flex flex-col gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 shadow-sm">
                             <div class="flex justify-between items-start">
-                                <time datetime="@r.CreatedAt.ToString("O")" class="font-data-tabular text-data-tabular text-secondary">@formattedDate</time>
+                                <time datetime="@r.CreatedAt.ToString("O")" class="font-data-tabular text-data-tabular text-secondary">@formattedDate • โดย @(r.CreatedBy ?? "ไม่ระบุ")</time>
                                 <span class="font-label-bold text-[10px] text-primary opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
                                     เปิด
-                                    <i class="fi fi-rs-arrow-up-right"></i>
+                                    <i data-lucide="arrow-up-right" class="w-4 h-4"></i>
                                 </span>
                             </div>
                             <h3 class="font-label-bold text-label-bold text-on-surface group-hover:text-primary transition-colors truncate" title="@Html.Raw(r.ReportName)">
@@ -252,7 +252,7 @@
                             container.innerHTML = `
                                 <div class="flex flex-col items-center justify-center flex-1 p-lg bg-surface-container-lowest rounded-lg border border-dashed border-outline-variant/80 text-center min-h-[200px] shadow-sm">
                                     <div class="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-3">
-                                        <i class="fi fi-rs-folder-open text-xl"></i>
+                                        <i data-lucide="folder-open" class="w-6 h-6"></i>
                                     </div>
                                     <h3 class="font-label-bold text-label-bold text-on-surface mb-1">ยังไม่มีรายงานในระบบ</h3>
                                     <p class="font-body-md text-body-md text-on-surface-variant mb-4">เริ่มต้นตรวจสอบต้นทุนโดยเปรียบเทียบข้อมูลไฟล์ผลิตของคุณ</p>
@@ -266,10 +266,10 @@
                                 html += `
                                     <a href="${r.detailsUrl}" class="group p-md border border-outline-variant/60 rounded-lg bg-surface-container-lowest hover:bg-primary/5 hover:border-primary/40 transition-colors flex flex-col gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 shadow-sm">
                                         <div class="flex justify-between items-start">
-                                            <time class="font-data-tabular text-data-tabular text-secondary">${r.formattedDate}</time>
+                                            <time class="font-data-tabular text-data-tabular text-secondary">${r.formattedDate} • โดย ${r.createdBy || 'ไม่ระบุ'}</time>
                                             <span class="font-label-bold text-[10px] text-primary opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
                                                 เปิด
-                                                <i class="fi fi-rs-arrow-up-right"></i>
+                                                <i data-lucide="arrow-up-right" class="w-4 h-4"></i>
                                             </span>
                                         </div>
                                         <h3 class="font-label-bold text-label-bold text-on-surface group-hover:text-primary transition-colors truncate" title="${r.reportName}">
@@ -282,6 +282,9 @@
                                     </a>`;
                             });
                             container.innerHTML = html;
+                        }
+                        if (typeof lucide !== 'undefined') {
+                            lucide.createIcons();
                         }
                     }
                 })

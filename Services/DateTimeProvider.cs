@@ -11,10 +11,12 @@ namespace CostFlow.Services
     public class DateTimeProvider : IDateTimeProvider
     {
         private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly IMockDateStore _mockDateStore;
 
-        public DateTimeProvider(IHttpContextAccessor httpContextAccessor)
+        public DateTimeProvider(IHttpContextAccessor httpContextAccessor, IMockDateStore mockDateStore)
         {
             _httpContextAccessor = httpContextAccessor;
+            _mockDateStore = mockDateStore;
         }
 
         public DateTime Now
@@ -34,6 +36,7 @@ namespace CostFlow.Services
                             HttpOnly = true,
                             IsEssential = true
                         });
+                        _mockDateStore.MockDate = parsedQueryDate;
                         return parsedQueryDate;
                     }
 
@@ -41,12 +44,21 @@ namespace CostFlow.Services
                     if (context.Request.Cookies.TryGetValue("MockSystemDate", out var cookieDate)
                         && DateTime.TryParse(cookieDate, out var parsedCookieDate))
                     {
+                        _mockDateStore.MockDate = parsedCookieDate;
                         return parsedCookieDate;
                     }
                 }
 
+                // 3. Fallback to Singleton MockDateStore (สำหรับ Background Service หรือเมื่อไม่มีใน Context)
+                if (_mockDateStore.MockDate.HasValue)
+                {
+                    return _mockDateStore.MockDate.Value;
+                }
+
+                // 4. Fallback สุดท้าย: เวลาจริงของระบบ
                 return DateTime.Now;
             }
         }
     }
 }
+

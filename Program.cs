@@ -48,8 +48,19 @@ builder.Services.AddDbContext<TiDbContext>(options =>
     options.UseMySql(tidbConnectionString, ServerVersion.AutoDetect(tidbConnectionString)));
 
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddSingleton<IMockDateStore, MockDateStore>();
 builder.Services.AddScoped<IProductPriceRepository, ProductPriceRepository>();
 builder.Services.AddScoped<IDateTimeProvider, DateTimeProvider>();
+
+// ⭐ Service สำหรับ Sync ข้อมูลไป Google Sheets (แชร์ระหว่าง Controller และ Background Service)
+builder.Services.AddScoped<MonthlyOrderSyncService>();
+
+// ⭐ Background Service สำหรับ Auto-Skip อัตโนมัติทุกวัน 00:00 (เฉพาะ Production ไม่รันตอนทดสอบ Dev)
+if (!builder.Environment.IsDevelopment())
+{
+    builder.Services.AddHostedService<AutoSkipBackgroundService>();
+}
+
 
 // ASP.NET Core Identity
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
@@ -138,6 +149,33 @@ using (var scope = app.Services.CreateScope())
     try
     {
         tiDb.Database.ExecuteSqlRaw("ALTER TABLE SavedOrderItems ADD COLUMN ReceiveDate DATETIME NULL;");
+    }
+    catch
+    {
+        /* Ignore if column already exists */
+    }
+
+    try
+    {
+        db.Database.ExecuteSqlRaw("ALTER TABLE Reports ADD COLUMN CreatedBy TEXT NULL;");
+    }
+    catch
+    {
+        /* Ignore if column already exists */
+    }
+
+    try
+    {
+        db.Database.ExecuteSqlRaw("ALTER TABLE Reports ADD COLUMN CreatedByUserId TEXT NULL;");
+    }
+    catch
+    {
+        /* Ignore if column already exists */
+    }
+
+    try
+    {
+        db.Database.ExecuteSqlRaw("ALTER TABLE WeeklyPlans ADD COLUMN UploadedBy TEXT NULL;");
     }
     catch
     {
@@ -405,6 +443,34 @@ using (var scope = app.Services.CreateScope())
             await userManager.AddToRoleAsync(devUser, "Dev");
             Console.WriteLine("Migrated DEV01 role: Admin → Dev.");
         }
+    }
+
+    // ทำความสะอาด MonthYear ที่มีความยาวเกิน 7 ตัวอักษร (เช่น 2025-122 -> 2025-12) และลบ duplicate actions
+    try
+    {
+        var appDb = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        await appDb.Database.ExecuteSqlRawAsync("UPDATE MonthlyOrderActions SET MonthYear = SUBSTR(MonthYear, 1, 7) WHERE LENGTH(MonthYear) > 7;");
+        await appDb.Database.ExecuteSqlRawAsync("UPDATE MonthlyOrderActions SET DeferredFromMonth = SUBSTR(DeferredFromMonth, 1, 7) WHERE DeferredFromMonth IS NOT NULL AND LENGTH(DeferredFromMonth) > 7;");
+        
+        // ลบ duplicate actions ถ้ามี (เก็บตัวล่าสุดไว้)
+        await appDb.Database.ExecuteSqlRawAsync(@"
+            DELETE FROM MonthlyOrderActions
+            WHERE Id NOT IN (
+                SELECT Id FROM (
+                    SELECT Id,
+                           ROW_NUMBER() OVER (
+                               PARTITION BY OrderTrackingMasterId, MonthYear 
+                               ORDER BY CreatedAt DESC, Id DESC
+                           ) as rn
+                    FROM MonthlyOrderActions
+                )
+                WHERE rn = 1
+            );");
+        Console.WriteLine("Verified and sanitized MonthlyOrderActions MonthYear formats.");
+    }
+    catch (Exception dbEx)
+    {
+        Console.WriteLine($"DB sanitize warning: {dbEx.Message}");
     }
 }
 

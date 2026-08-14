@@ -44,6 +44,8 @@ namespace CostFlow.Models
         public int TotalPOs { get; set; }
         public int MatchedPOs { get; set; }
         public DateTime CreatedAt { get; set; }
+        public string? CreatedBy { get; set; }
+        public string? CreatedByUserId { get; set; }
         
         // Navigation property
         public ICollection<OrderTrackingMaster> Orders { get; set; } = new List<OrderTrackingMaster>();
@@ -92,6 +94,7 @@ namespace CostFlow.Models
         public int TotalRecords { get; set; }
         public int MatchedCount { get; set; }
         public DateTime UploadedAt { get; set; }
+        public string? UploadedBy { get; set; }
         
         // Navigation properties
         public Report Report { get; set; } = null!;
@@ -158,5 +161,6 @@ namespace CostFlow.Models
         public DateTime CreatedAt { get; set; }
         public int TotalRows { get; set; }
         public int MatchedRows { get; set; }
+        public string? CreatedBy { get; set; }
     }
 }

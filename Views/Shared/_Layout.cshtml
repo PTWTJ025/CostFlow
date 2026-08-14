@@ -75,6 +75,7 @@
 
     <!-- Static Compiled & Minified Tailwind CSS -->
     <link rel="stylesheet" href="~/css/tailwind.min.css" asp-append-version="true"/>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         /* Arbitrary font-size fallbacks for static Tailwind CSS */
         .text-\[11px\] {
@@ -276,9 +277,8 @@
     <link
         href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@100;200;300;400;500;600;700&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap"
         rel="stylesheet">
-    <!-- Flaticon UIcons CDN -->
-    <link href="https://cdn-uicons.flaticon.com/2.6.0/uicons-regular-straight/css/uicons-regular-straight.css"
-          rel="stylesheet">
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true"/>
     <link rel="icon" type="image/png" href="~/favicon.png"/>
     <link rel="shortcut icon" href="~/favicon.ico"/>
@@ -300,7 +300,7 @@
     <!-- Redesigned Logo Header (static, no link) -->
     <div
         class="h-[64px] px-lg flex items-center gap-3 border-b border-outline-variant bg-surface-container-low/50 select-none">
-        <i class="fi fi-rs-chart-gantt text-[24px] text-primary flex-shrink-0 leading-none cursor-pointer"
+        <i data-lucide="chart-gantt" class="w-6 h-6 text-primary flex-shrink-0 leading-none cursor-pointer"
            id="sidebar-toggle-icon">
         </i>
         <div class="flex flex-col text-left">
@@ -830,6 +830,40 @@
                     </button>
                 }
             </div>
+
+            <!-- ⏳ Countdown Simulation Section -->
+            <div class="border-t border-slate-700/80 pt-2 flex flex-col gap-1.5">
+                <div class="flex items-center justify-between text-[11px]">
+                    <span class="text-amber-300 font-semibold flex items-center gap-1">
+                        <span>⏳</span> จำลองตัดรอบสิ้นเดือน
+                    </span>
+                    <span id="dev-sim-status" class="text-[10px] text-slate-400 font-mono">พร้อมทดสอบ</span>
+                </div>
+
+                <!-- Active Timer Box (hidden when idle) -->
+                <div id="dev-sim-timer-box" class="hidden bg-amber-950/40 border border-amber-500/50 rounded-md p-2 flex flex-col gap-1.5">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] text-amber-200">เหลือเวลาตัดรอบ:</span>
+                        <span id="dev-sim-timer" class="font-mono font-black text-amber-300 text-sm tracking-wider">02:00</span>
+                    </div>
+                    <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                        <div id="dev-sim-progress" class="bg-amber-400 h-1.5 rounded-full transition-all duration-1000" style="width: 100%;"></div>
+                    </div>
+                    <div class="flex items-center gap-1 mt-0.5">
+                        <button type="button" onclick="triggerMonthTransitionNow()" class="flex-1 bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-bold py-1 px-1.5 rounded text-[10px] transition-all flex items-center justify-center gap-1 cursor-pointer">
+                            ⚡ ตัดรอบทันที
+                        </button>
+                        <button type="button" onclick="cancelDevCountdown()" class="bg-slate-700 hover:bg-slate-600 active:scale-95 text-slate-300 py-1 px-2 rounded text-[10px] transition-all cursor-pointer">
+                            ยกเลิก
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Start Button (shown when idle) -->
+                <button id="dev-sim-start-btn" type="button" onclick="startDevCountdown(120)" class="w-full bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 active:scale-95 text-white font-bold py-1.5 px-2 rounded-md text-[11px] transition-all shadow flex items-center justify-center gap-1.5 cursor-pointer">
+                    <span>⏱️</span> เริ่มนับถอยหลัง 2 นาที (Auto-Skip & Sync)
+                </button>
+            </div>
         </div>
     </div>
 
@@ -915,6 +949,7 @@
 
         async function devSetCustomDate(dateStr) {
             if (!dateStr) return;
+            console.log(`%c[Dev Time Travel] ⏳ เปลี่ยนเวลาเป็น: ${dateStr} | 📊 Google Sheets: ❌ ไม่ได้ส่ง (Local DB Only)`, 'color: #3b82f6; font-weight: bold;');
             try {
                 const resp = await fetch('/MonthlyCost/SetMockDate', {
                     method: 'POST',
@@ -935,6 +970,7 @@
         }
 
         async function devResetMockDate() {
+            console.log('%c[Dev Time Travel] ⏳ คืนค่าเวลาจริง | 📊 Google Sheets: ❌ ไม่ได้ส่ง', 'color: #10b981; font-weight: bold;');
             try {
                 const resp = await fetch('/MonthlyCost/ResetMockDate', { method: 'POST' });
                 if (resp.ok) {
@@ -949,10 +985,154 @@
             document.cookie = "MockSystemDate=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
             window.location.reload();
         }
+
+        // ─── Countdown Simulation Logic ─────────────────────────────────────────────
+        let devTimerInterval = null;
+
+        function startDevCountdown(seconds = 120) {
+            const targetTime = Date.now() + seconds * 1000;
+            localStorage.setItem("costflow_dev_countdown_target", targetTime.toString());
+            localStorage.setItem("costflow_dev_countdown_total", seconds.toString());
+            renderCountdownState();
+        }
+
+        function cancelDevCountdown() {
+            if (devTimerInterval) clearInterval(devTimerInterval);
+            localStorage.removeItem("costflow_dev_countdown_target");
+            localStorage.removeItem("costflow_dev_countdown_total");
+            renderCountdownState();
+        }
+
+        function renderCountdownState() {
+            const targetTimeStr = localStorage.getItem("costflow_dev_countdown_target");
+            const totalSecStr = localStorage.getItem("costflow_dev_countdown_total") || "120";
+            const totalSec = parseInt(totalSecStr, 10);
+
+            const timerBox = document.getElementById("dev-sim-timer-box");
+            const startBtn = document.getElementById("dev-sim-start-btn");
+            const statusEl = document.getElementById("dev-sim-status");
+            const timerEl = document.getElementById("dev-sim-timer");
+            const progressEl = document.getElementById("dev-sim-progress");
+
+            if (!timerBox || !startBtn) return;
+
+            if (!targetTimeStr) {
+                if (devTimerInterval) clearInterval(devTimerInterval);
+                timerBox.classList.add("hidden");
+                startBtn.classList.remove("hidden");
+                if (statusEl) statusEl.textContent = "พร้อมทดสอบ";
+                return;
+            }
+
+            timerBox.classList.remove("hidden");
+            startBtn.classList.add("hidden");
+            if (statusEl) statusEl.textContent = "กำลังนับถอยหลัง...";
+
+            if (devTimerInterval) clearInterval(devTimerInterval);
+
+            function updateTick() {
+                const target = parseInt(localStorage.getItem("costflow_dev_countdown_target") || "0", 10);
+                const remainingMs = target - Date.now();
+
+                if (remainingMs <= 0) {
+                    if (devTimerInterval) clearInterval(devTimerInterval);
+                    localStorage.removeItem("costflow_dev_countdown_target");
+                    localStorage.removeItem("costflow_dev_countdown_total");
+                    triggerMonthTransitionNow();
+                    return;
+                }
+
+                const totalRemainingSec = Math.ceil(remainingMs / 1000);
+                const mins = Math.floor(totalRemainingSec / 60);
+                const secs = totalRemainingSec % 60;
+                const formattedTime = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+
+                if (timerEl) timerEl.textContent = formattedTime;
+
+                const percent = Math.max(0, Math.min(100, (totalRemainingSec / totalSec) * 100));
+                if (progressEl) progressEl.style.width = `${percent}%`;
+            }
+
+            updateTick();
+            devTimerInterval = setInterval(updateTick, 1000);
+        }
+
+        async function triggerMonthTransitionNow() {
+            if (devTimerInterval) clearInterval(devTimerInterval);
+            localStorage.removeItem("costflow_dev_countdown_target");
+            localStorage.removeItem("costflow_dev_countdown_total");
+            renderCountdownState();
+
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: '⏳ กำลังตัดรอบสิ้นเดือนอัตโนมัติ...',
+                    html: 'ระบบกำลังกวาดบันทึกรายการที่ยังไม่ได้เลือกเป็น <b>"ยังไม่รับสินค้า"</b> และส่งข้อมูลสรุปไป Google Sheets...',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+            }
+
+            try {
+                const resp = await fetch('/MonthlyCost/TriggerMonthEndTransition', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ fromMonthYear: CURRENT_MOCK_DATE_STR })
+                });
+
+                const data = await resp.json();
+
+                if (data.success) {
+                    if (typeof Swal !== 'undefined') {
+                        await Swal.fire({
+                            icon: 'success',
+                            title: '🎉 ตัดรอบสิ้นเดือนสำเร็จ!',
+                            html: `${data.message}<br><br><span class="text-sm text-slate-500">กำลังนำคุณเข้าสู่งวด <b>${data.nextMonthThai}</b>...</span>`,
+                            timer: 2500,
+                            showConfirmButton: false
+                        });
+                    }
+                    if (window.location.pathname.includes('/MonthlyCost/Detail')) {
+                        window.location.href = `/MonthlyCost/Detail/${encodeURIComponent(data.nextMonthThai)}`;
+                    } else {
+                        window.location.reload();
+                    }
+                } else {
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'เกิดข้อผิดพลาดในการตัดรอบ',
+                            text: data.message || 'ไม่สามารถดำเนินการตัดรอบได้'
+                        });
+                    } else {
+                        alert(data.message || 'เกิดข้อผิดพลาด');
+                    }
+                }
+            } catch (err) {
+                console.error('TriggerMonthEndTransition error:', err);
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'เกิดข้อผิดพลาดในการเชื่อมต่อ',
+                        text: err.message
+                    });
+                }
+            }
+        }
+
+        // Initialize countdown on page load
+        renderCountdownState();
     </script>
 }
 
 @await RenderSectionAsync("Scripts", required: false)
+<script>
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+</script>
 </body>
 
 </html>

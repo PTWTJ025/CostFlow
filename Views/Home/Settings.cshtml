@@ -39,24 +39,24 @@
         <div class="grid grid-cols-1 md:grid-cols-3 gap-md">
             <div class="bg-slate-50 p-md rounded border border-slate-200/80 flex flex-col justify-between">
                 <div>
-                    <span class="text-[10px] text-slate-500 font-semibold uppercase block mb-1">ประเภทฐานข้อมูล</span>
-                    <span class="text-base font-bold text-slate-800">SQLite (Local)</span>
+                    <span class="text-[10px] text-slate-500 font-semibold uppercase block mb-1">ประเภทฐานข้อมูลในระบบ</span>
+                    <span class="text-base font-bold text-slate-800">SQLite & TiDB Cloud</span>
                 </div>
-                <span class="text-[10px] text-slate-400 mt-2 block">เก็บข้อมูล Users, Reports, Tracking, MonthlyCost ฯลฯ</span>
+                <span class="text-[10px] text-slate-400 mt-2 block">ระบบหลัก (SQLite) + ระบบจัดซื้อสั่งอะไหล่ (TiDB)</span>
             </div>
 
             <div class="bg-slate-50 p-md rounded border border-slate-200/80 flex flex-col justify-between">
                 <div>
-                    <span class="text-[10px] text-slate-500 font-semibold uppercase block mb-1">ไฟล์ฐานข้อมูล</span>
-                    <span class="text-xs font-mono font-bold text-slate-700 break-all">Data/CostFlow.db</span>
+                    <span class="text-[10px] text-slate-500 font-semibold uppercase block mb-1">ไฟล์รวมสำรองข้อมูล</span>
+                    <span class="text-xs font-mono font-bold text-slate-700 break-all">CostFlow_FullBackup_*.zip</span>
                 </div>
-                <span class="text-[10px] text-slate-400 mt-2 block">ไฟล์จะถูกดาวน์โหลดพร้อม timestamp อัตโนมัติ</span>
+                <span class="text-[10px] text-slate-400 mt-2 block">บีบอัด .db (SQLite) + .json (TiDB) ใน ZIP เดียว</span>
             </div>
 
             <div class="bg-blue-50/60 p-md rounded border border-blue-200/80 flex flex-col justify-between">
                 <div>
-                    <span class="text-[10px] text-blue-800 font-semibold uppercase block mb-1">คำสั่งสำรองข้อมูล</span>
-                    <span class="text-xs text-blue-900 font-medium block">ดาวน์โหลด .db file มาเก็บในเครื่อง</span>
+                    <span class="text-[10px] text-blue-800 font-semibold uppercase block mb-1">คำสั่งสำรองข้อมูลทั้งหมด</span>
+                    <span class="text-xs text-blue-900 font-medium block">ดาวน์โหลดทั้ง 2 DB มาเก็บในเครื่อง (ZIP)</span>
                 </div>
                 <form id="backup-form" method="post" action="/Home/BackupDatabase">
                     @Html.AntiForgeryToken()
@@ -66,7 +66,7 @@
                         <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
                         </svg>
-                        <span style="color: #ffffff; font-weight: 700;">ดาวน์โหลด Backup ฐานข้อมูล</span>
+                        <span style="color: #ffffff; font-weight: 700;">ดาวน์โหลด Backup ทั้งหมด (.ZIP)</span>
                     </button>
                 </form>
             </div>
@@ -82,6 +82,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125m16.5 5.625c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125m16.5 5.625c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" />
                     </svg>
                     การจัดการฐานข้อมูลและการสำรองข้อมูล (Archive & Database Maintenance)
+                    <span class="text-[11px] font-bold text-amber-700 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-full inline-flex items-center gap-1">[รอพัฒนาระบบ]</span>
                 </h3>
                 <p class="text-xs text-secondary">ย้ายข้อมูลเก่าเกิน 2 ปีลง Google Sheet สำรอง และลบออกจากฐานข้อมูลเพื่อเพิ่มความเร็วของระบบ</p>
             </div>
@@ -207,7 +208,16 @@ function executeBackup() {
 }
 
 function openArchiveModal() {
-    document.getElementById("archive-modal").classList.remove("hidden");
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({
+            icon: 'info',
+            title: 'แจ้งเตือน',
+            text: 'รอพัฒนาระบบ',
+            confirmButtonColor: '#2563eb'
+        });
+    } else {
+        alert('รอพัฒนาระบบ');
+    }
 }
 
 function closeArchiveModal() {
