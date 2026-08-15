@@ -206,13 +206,13 @@
         </div>
 
         <!-- ปุ่ม Export Excel สรุปราคา -->
-        <a href="/MonthlyCost/ExportDetailExcel?monthYear=@Uri.EscapeDataString(Model.MonthYear)"
-           class="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition-all cursor-pointer hover:shadow">
+        <button type="button" onclick="openExportModal()"
+                class="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition-all cursor-pointer hover:shadow">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/>
             </svg>
             Export สรุปราคา
-        </a>
+        </button>
     </div>
 </div>
 
@@ -252,10 +252,21 @@
                 </span>
             </button>
         </div>
-        <!-- Search -->
-        <div class="relative" id="search-wrap">
-            <input type="text" id="search-pending" placeholder="ค้นหา..."
-                   class="pr-3 py-1.5 text-xs border border-slate-200 rounded-md w-40 focus:ring-1 focus:ring-primary focus:border-primary outline-none bg-white">
+        <!-- Search (Multi-PO support) -->
+        <div class="relative flex items-center" id="search-wrap">
+            <div class="relative flex items-center w-48 sm:w-60 focus-within:w-60 sm:focus-within:w-72 transition-all duration-200">
+                <input type="text" id="search-pending" placeholder="ค้นหา / วางหลายเลข PO..."
+                       title="สามารถ Copy เลข PO หลายรายการ (คั่นด้วยเว้นวรรค, ลูกน้ำ หรือจาก Excel) มาวางได้เลย"
+                       class="pl-7 pr-7 py-1.5 text-xs border border-slate-200 rounded-md w-full focus:ring-1 focus:ring-primary focus:border-primary outline-none bg-white shadow-2xs">
+               
+                <button type="button" id="clear-search-btn" onclick="clearSearchInput()" style="display:none;"
+                        title="ล้างคำค้นหา"
+                        class="absolute right-2 text-slate-400 hover:text-slate-600 p-0.5 rounded-full hover:bg-slate-100 transition-all cursor-pointer">
+                    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
         </div>
     </div>
 
@@ -645,15 +656,37 @@
 <div class="bg-white border border-blue-200 rounded-md flex flex-col min-h-0 overflow-hidden shadow-xs">
 
     <!-- Panel header -->
-    <div class="px-4 py-2.5 border-b border-blue-100 bg-blue-50/60 shrink-0 flex items-center justify-between">
+    <div class="px-4 py-2.5 border-b border-blue-100 bg-blue-50/60 shrink-0 flex items-center justify-between flex-wrap gap-2">
         <div class="flex items-center">
             <span class="font-bold text-blue-800 text-sm">รายการที่เลือก</span>
             <span class="ml-2 text-xs text-blue-500 font-semibold" id="cart-count-label">0 รายการ</span>
         </div>
-        <button type="button" id="clear-cart-btn" onclick="clearAllCart()" style="display:none;"
-                class="px-2.5 py-1 rounded text-[11px] font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 border border-rose-200 transition-all cursor-pointer">
-            ✕ เคลียร์
-        </button>
+        <div class="flex items-center gap-1.5 flex-wrap" id="cart-header-actions" style="display:none;">
+            <span class="text-[11px] text-slate-400 font-medium mr-0.5 hidden xl:inline-block">ปรับทั้งหมดเป็น:</span>
+            <button type="button" onclick="setAllCartAction('ReceivedFull')"
+                    class="px-2 py-1 rounded-md text-[11px] font-bold bg-white text-emerald-700 border border-emerald-200 hover:bg-emerald-50 hover:border-emerald-300 shadow-2xs transition-all flex items-center gap-1 cursor-pointer"
+                    title="ปรับทุกรายการในตะกร้าเป็น รับเต็มจำนวน">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                รับเต็มจำนวน
+            </button>
+            <button type="button" onclick="setAllCartAction('Deferred')"
+                    class="px-2 py-1 rounded-md text-[11px] font-bold bg-white text-amber-700 border border-amber-200 hover:bg-amber-50 hover:border-amber-300 shadow-2xs transition-all flex items-center gap-1 cursor-pointer"
+                    title="ปรับทุกรายการในตะกร้าเป็น ผ่อนชำระ">
+                <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                ผ่อนชำระ
+            </button>
+            <button type="button" onclick="setAllCartAction('Skipped')"
+                    class="px-2 py-1 rounded-md text-[11px] font-bold bg-white text-purple-700 border border-purple-200 hover:bg-purple-50 hover:border-purple-300 shadow-2xs transition-all flex items-center gap-1 cursor-pointer"
+                    title="ปรับทุกรายการในตะกร้าเป็น ยังไม่รับสินค้า">
+                <span class="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
+                ยังไม่รับสินค้า
+            </button>
+            <div class="h-4 w-px bg-blue-200 mx-0.5"></div>
+            <button type="button" id="clear-cart-btn" onclick="clearAllCart()"
+                    class="px-2.5 py-1 rounded text-[11px] font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 border border-rose-200 transition-all cursor-pointer">
+                ✕ เคลียร์
+            </button>
+        </div>
     </div>
 
     <!-- Cart list with right scrollbar -->
@@ -757,6 +790,7 @@
                 if (pendingSort) pendingSort.value = 'default';
                 const searchPending = document.getElementById('search-pending');
                 if (searchPending) searchPending.value = '';
+                toggleClearSearchBtn();
                 applyPendingFilters();
             } else {
                 savedPanel.classList.remove('hidden');
@@ -774,6 +808,7 @@
                 if (savedSelect) savedSelect.value = 'all';
                 const searchSaved = document.getElementById('search-pending');
                 if (searchSaved) searchSaved.value = '';
+                toggleClearSearchBtn();
                 applySavedFilters();
             }
         }
@@ -841,6 +876,28 @@
             if (clearBtn) {
                 clearBtn.style.display = ids.length > 0 ? 'inline-block' : 'none';
             }
+
+            const cartHeaderActions = document.getElementById('cart-header-actions');
+            if (cartHeaderActions) {
+                cartHeaderActions.style.display = ids.length > 0 ? 'flex' : 'none';
+            }
+        }
+
+        // ปรับ Action ของทุกรายการที่อยู่ในตะกร้าพร้อมกัน (Bulk Set All in Cart)
+        function setAllCartAction(action) {
+            const ids = Object.keys(cart);
+            if (!ids.length) return;
+
+            ids.forEach(orderId => {
+                const item = cart[orderId];
+                let targetAction = action;
+                if (item.forwardedStatus === 'Deferred' && targetAction === 'Deferred') {
+                    targetAction = 'ReceivedFull';
+                }
+                setAction(orderId, targetAction);
+            });
+
+            updateSummary();
         }
 
         function clearAllCart() {
@@ -1181,18 +1238,47 @@
             }
         }
 
-        // ─── Search & Filter ───────────────────────────────────────────────────────────
+        // ─── Search & Filter (Multi-PO keyword support) ──────────────────────────────
+        function getSearchKeywords() {
+            const searchInput = document.getElementById('search-pending');
+            if (!searchInput) return [];
+            const raw = searchInput.value.toLowerCase().trim();
+            if (!raw) return [];
+            // แยกคำค้นหาด้วย ช่องว่าง, การขึ้นบรรทัดใหม่ (Excel), ลูกน้ำ (,), อัฒภาค (;), แท็บ (\t)
+            return raw.split(/[\s,;\n\r\t]+/).map(k => k.trim()).filter(k => k.length > 0);
+        }
+
+        function clearSearchInput() {
+            const searchInput = document.getElementById('search-pending');
+            if (searchInput) {
+                searchInput.value = '';
+                toggleClearSearchBtn();
+                applyPendingFilters();
+                applySavedFilters();
+                searchInput.focus();
+            }
+        }
+
+        function toggleClearSearchBtn() {
+            const searchInput = document.getElementById('search-pending');
+            const clearBtn = document.getElementById('clear-search-btn');
+            if (clearBtn && searchInput) {
+                clearBtn.style.display = searchInput.value.trim().length > 0 ? 'block' : 'none';
+            }
+        }
+
         function applyPendingFilters() {
             const select = document.getElementById('pending-sort-select');
             const filterType = select ? select.value : 'default';
-            const searchInput = document.getElementById('search-pending');
-            const q = searchInput ? searchInput.value.toLowerCase().trim() : '';
+            const keywords = getSearchKeywords();
 
             let visible = 0;
             document.querySelectorAll('.order-card').forEach(card => {
                 const po = card.dataset.poNumber ? card.dataset.poNumber.toLowerCase() : '';
                 const name = card.dataset.orderName ? card.dataset.orderName.toLowerCase() : '';
-                const matchSearch = po.includes(q) || name.includes(q);
+                
+                // Multi-keyword OR search: ถ้าตรงกับเลขใดเลขหนึ่งที่ค้นหา
+                const matchSearch = keywords.length === 0 || keywords.some(k => po.includes(k) || name.includes(k));
 
                 const fwdStatus = card.getAttribute('data-forwarded-status') || '';
                 let matchType = true;
@@ -1215,14 +1301,15 @@
         function applySavedFilters() {
             const select = document.getElementById('saved-action-select');
             const filterAction = select ? select.value : 'all';
-            const searchInput = document.getElementById('search-pending');
-            const q = searchInput ? searchInput.value.toLowerCase().trim() : '';
+            const keywords = getSearchKeywords();
 
             let visible = 0;
             document.querySelectorAll('.saved-card').forEach(card => {
                 const po = card.dataset.poNumber ? card.dataset.poNumber.toLowerCase() : '';
                 const name = card.dataset.orderName ? card.dataset.orderName.toLowerCase() : '';
-                const matchSearch = po.includes(q) || name.includes(q);
+                
+                // Multi-keyword OR search: ถ้าตรงกับเลขใดเลขหนึ่งที่ค้นหา
+                const matchSearch = keywords.length === 0 || keywords.some(k => po.includes(k) || name.includes(k));
 
                 const action = card.dataset.action || '';
                 let matchAction = true;
@@ -1242,10 +1329,23 @@
             onSavedCardCheckboxChange();
         }
 
-        document.getElementById('search-pending').addEventListener('input', function () {
-            applyPendingFilters();
-            applySavedFilters();
-        });
+        const searchInputEl = document.getElementById('search-pending');
+        if (searchInputEl) {
+            searchInputEl.addEventListener('input', function () {
+                toggleClearSearchBtn();
+                applyPendingFilters();
+                applySavedFilters();
+            });
+
+            // ดักจับเมื่อผู้ใช้ Paste ข้อความ (เช่น ก๊อปจาก Excel หลายบรรทัด)
+            searchInputEl.addEventListener('paste', function () {
+                setTimeout(() => {
+                    toggleClearSearchBtn();
+                    applyPendingFilters();
+                    applySavedFilters();
+                }, 50);
+            });
+        }
 
         function bulkAddToCart(action) {
             const checkedBoxes = Array.from(document.querySelectorAll('.pending-card-checkbox')).filter(cb => {
@@ -1496,6 +1596,99 @@
 
         function sortPendingOrders(filterType) {
             applyPendingFilters();
+        }
+
+        // ─── Export Modal ─────────────────────────────────────────────────────────────
+        async function openExportModal() {
+            const monthYear = '@Html.Raw(Model.MonthYear)';
+
+            const htmlContent = `
+                <div class="text-left space-y-4 py-1 text-xs" style="font-family: inherit;">
+                    <p class="text-slate-500 mb-3">เลือกเงื่อนไขข้อมูลที่ต้องการส่งออกเป็น Excel สำหรับเดือน <b>${monthYear}</b></p>
+                    
+                    <!-- 1. Category Filter -->
+                    <div class="space-y-2">
+                        <label class="font-bold text-slate-700 block text-xs">1. ประเภทรายการที่ต้องการ:</label>
+                        <div class="space-y-1.5">
+                            <label class="flex items-center gap-2.5 p-2 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer transition-all">
+                                <input type="radio" name="swal_action_filter" value="all" checked class="text-emerald-600 focus:ring-emerald-500 w-4 h-4 cursor-pointer">
+                                <div class="flex-1">
+                                    <span class="font-bold text-slate-800 text-xs">ทั้งหมดทุกประเภท (All Categories)</span>
+                                    <p class="text-[11px] text-slate-400">ส่งออกครบทุกรายการ ทั้งรับสินค้า, ผ่อนชำระ และยังไม่รับสินค้า</p>
+                                </div>
+                            </label>
+                            <label class="flex items-center gap-2.5 p-2 rounded-lg border border-slate-200 hover:bg-emerald-50/50 cursor-pointer transition-all">
+                                <input type="radio" name="swal_action_filter" value="ReceivedFull" class="text-emerald-600 focus:ring-emerald-500 w-4 h-4 cursor-pointer">
+                                <div class="flex-1">
+                                    <span class="font-bold text-emerald-800 text-xs">เฉพาะรายการรับสินค้าแล้ว (Received)</span>
+                                    <p class="text-[11px] text-slate-400">รายการที่ได้รับมอบสินค้าและชำระเต็มจำนวนในงวดนี้</p>
+                                </div>
+                            </label>
+                            <label class="flex items-center gap-2.5 p-2 rounded-lg border border-slate-200 hover:bg-amber-50/50 cursor-pointer transition-all">
+                                <input type="radio" name="swal_action_filter" value="Deferred" class="text-amber-600 focus:ring-amber-500 w-4 h-4 cursor-pointer">
+                                <div class="flex-1">
+                                    <span class="font-bold text-amber-800 text-xs">เฉพาะรายการผ่อนชำระ (Deferred)</span>
+                                    <p class="text-[11px] text-slate-400">รายการที่ตั้งยอดผ่อนไปเดือนหน้า หรือรายการผ่อนยกยอดมางวดนี้</p>
+                                </div>
+                            </label>
+                            <label class="flex items-center gap-2.5 p-2 rounded-lg border border-slate-200 hover:bg-purple-50/50 cursor-pointer transition-all">
+                                <input type="radio" name="swal_action_filter" value="Skipped" class="text-purple-600 focus:ring-purple-500 w-4 h-4 cursor-pointer">
+                                <div class="flex-1">
+                                    <span class="font-bold text-purple-800 text-xs">เฉพาะรายการยังไม่รับสินค้า / ค้างส่งมอบ (Skipped)</span>
+                                    <p class="text-[11px] text-slate-400">รายการที่ของยังไม่มา หรือยังรอดำเนินการ</p>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- 2. Status Filter -->
+                    <div class="space-y-2 pt-2 border-t border-slate-100">
+                        <label class="font-bold text-slate-700 block text-xs">2. สถานะการทำรายการ:</label>
+                        <div class="grid grid-cols-3 gap-2">
+                            <label class="flex items-center gap-2 p-2 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer text-center">
+                                <input type="radio" name="swal_status_filter" value="all" checked class="text-slate-700 focus:ring-slate-700 cursor-pointer">
+                                <span class="text-xs font-semibold text-slate-700">ทั้งหมด</span>
+                            </label>
+                            <label class="flex items-center gap-2 p-2 rounded-lg border border-slate-200 hover:bg-emerald-50/50 cursor-pointer text-center">
+                                <input type="radio" name="swal_status_filter" value="saved" class="text-emerald-600 focus:ring-emerald-500 cursor-pointer">
+                                <span class="text-xs font-semibold text-emerald-700">บันทึกแล้ว</span>
+                            </label>
+                            <label class="flex items-center gap-2 p-2 rounded-lg border border-slate-200 hover:bg-amber-50/50 cursor-pointer text-center">
+                                <input type="radio" name="swal_status_filter" value="pending" class="text-amber-600 focus:ring-amber-500 cursor-pointer">
+                                <span class="text-xs font-semibold text-amber-700">รอดำเนินการ</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const { value: formValues } = await Swal.fire({
+                title: '<span class="text-base font-bold text-slate-800">📊 ตัวเลือกการส่งออก Excel สรุปราคา</span>',
+                html: htmlContent,
+                showCancelButton: true,
+                confirmButtonText: '📥 ดาวน์โหลด Excel',
+                cancelButtonText: 'ยกเลิก',
+                confirmButtonColor: '#059669',
+                cancelButtonColor: '#64748b',
+                customClass: {
+                    popup: 'rounded-xl max-w-lg',
+                    confirmButton: 'px-5 py-2 rounded-lg font-bold text-xs shadow-sm',
+                    cancelButton: 'px-4 py-2 rounded-lg font-bold text-xs'
+                },
+                preConfirm: () => {
+                    const actionRadio = document.querySelector('input[name="swal_action_filter"]:checked');
+                    const statusRadio = document.querySelector('input[name="swal_status_filter"]:checked');
+                    return {
+                        action: actionRadio ? actionRadio.value : 'all',
+                        status: statusRadio ? statusRadio.value : 'all'
+                    };
+                }
+            });
+
+            if (formValues) {
+                const url = `/MonthlyCost/ExportDetailExcel?monthYear=${encodeURIComponent(monthYear)}&actionFilter=${encodeURIComponent(formValues.action)}&statusFilter=${encodeURIComponent(formValues.status)}`;
+                window.location.href = url;
+            }
         }
 
         document.getElementById('save-btn').addEventListener('click', function () {

@@ -1992,14 +1992,15 @@ namespace CostFlow.Controllers
             return null;
         }
 
-        // GET: /MonthlyCost/ExportDetailExcel?monthYear=มกราคม+2569
+        // GET: /MonthlyCost/ExportDetailExcel?monthYear=มกราคม+2569&actionFilter=all&statusFilter=all
         [HttpGet]
-        public async Task<IActionResult> ExportDetailExcel(string monthYear)
+        public async Task<IActionResult> ExportDetailExcel(string monthYear, string? actionFilter = "all", string? statusFilter = "all")
         {
             if (string.IsNullOrEmpty(monthYear))
                 return BadRequest("monthYear parameter is required");
 
             var monthYearKey = ConvertThaiMonthToKey(monthYear);
+            var canonicalThaiMonth = ConvertKeyToThaiMonth(monthYearKey);
 
             // Register Mock Graphic Engine for ClosedXML
             ClosedXML.Excel.LoadOptions.DefaultGraphicEngine = new MockGraphicEngine();
@@ -2010,6 +2011,7 @@ namespace CostFlow.Controllers
                 .ThenInclude(o => o.MatchedInWeeklyPlans)
                 .ThenInclude(w => w.WeeklyPlan)
                 .Where(moa => moa.MonthYear == monthYearKey)
+                .OrderByDescending(moa => moa.CreatedAt)
                 .ToListAsync();
 
             // 2. ดึงรายการในเดือนก่อนหน้าเพื่อหาตัวที่ผ่อนหรือค้างยกยอดมา
@@ -2026,33 +2028,25 @@ namespace CostFlow.Controllers
                 .GroupBy(a => a.OrderTrackingMasterId)
                 .ToDictionary(g => g.Key, g => g.First());
 
-            var carryOverIds = latestPriorActionMap
-                .Where(kvp =>
-                {
-                    if (kvp.Value.Action == "Skipped" || kvp.Value.Action == "Deferred")
-                    {
-                        var pp = kvp.Value.MonthYear.Split('-');
-                        var tp = monthYearKey.Split('-');
-                        if (pp.Length == 2 && tp.Length == 2
-                                           && int.TryParse(pp[0], out var pY) && int.TryParse(pp[1], out var pM)
-                                           && int.TryParse(tp[0], out var tY) && int.TryParse(tp[1], out var tM))
-                        {
-                            return ((tY - pY) * 12) + (tM - pM) == 1; // เฉพาะเดือนถัดไปเท่านั้น
-                        }
-                    }
-
-                    return false;
-                })
-                .Select(kvp => kvp.Key)
-                .ToHashSet();
-
             var existingActionIds = existingActions.Select(ea => ea.OrderTrackingMasterId).ToHashSet();
+
+            // Parse month date range
+            var keyParts = monthYearKey.Split('-');
+            DateTime monthStart = DateTime.MinValue, monthEnd = DateTime.MaxValue;
+            if (keyParts.Length == 2 &&
+                int.TryParse(keyParts[0], out var kYear) &&
+                int.TryParse(keyParts[1], out var kMonth))
+            {
+                monthStart = new DateTime(kYear, kMonth, 1, 0, 0, 0, DateTimeKind.Utc);
+                monthEnd = monthStart.AddMonths(1);
+            }
 
             // 3. ดึงรายการรอดำเนินการในเดือนนี้
             var pendingOrdersRaw = await _context.OrderTrackingMasters
                 .Include(o => o.MatchedInWeeklyPlans)
                 .ThenInclude(w => w.WeeklyPlan)
                 .Where(otm => !existingActionIds.Contains(otm.Id))
+                .OrderBy(otm => otm.PoNumber)
                 .ToListAsync();
 
             var pendingOrders = pendingOrdersRaw
@@ -2060,57 +2054,160 @@ namespace CostFlow.Controllers
                 {
                     if (latestPriorActionMap.TryGetValue(otm.Id, out var prior) && prior.Action == "ReceivedFull")
                         return false;
-                    return carryOverIds.Contains(otm.Id);
+
+                    var approvedDate = ParseThaiDate(otm.ApprovedDate);
+                    if (approvedDate == null) return false;
+
+                    return approvedDate.Value < monthEnd;
                 })
                 .ToList();
 
-            // กรองเฉพาะรายการผ่อนชำระที่มีภาระต้องจ่ายประจำเดือนนี้
-            // 1) รายการที่กดผ่อนชำระในเดือนนี้ หรือกดรับสินค้าชำระเต็มโดยที่เป็นการชำระรายการผ่อนยกยอดมา
-            var deferredExistingActions = existingActions
-                .Where(a => a.Action == "Deferred" ||
-                            (a.Action == "ReceivedFull" &&
-                             latestPriorActionMap.TryGetValue(a.OrderTrackingMasterId, out var p) &&
-                             p.Action == "Deferred"))
-                .ToList();
+            // 4. รวบรวมข้อมูลสำหรับ Export
+            var exportRows = new List<ExcelExportRowDto>();
 
-            // 2) รายการรอดำเนินการเฉพาะที่เป็นรายการผ่อนยกยอดมาจากเดือนก่อน
-            var deferredPendingOrders = pendingOrders
-                .Where(otm =>
-                    latestPriorActionMap.TryGetValue(otm.Id, out var priorAction) && priorAction.Action == "Deferred")
-                .ToList();
+            // A. รายการที่บันทึกแล้ว (Saved)
+            if (statusFilter == "all" || statusFilter == "saved")
+            {
+                foreach (var action in existingActions)
+                {
+                    var otm = action.OrderTrackingMaster;
+                    var latestPlan = otm?.MatchedInWeeklyPlans?.OrderByDescending(w => w.WeeklyPlan?.UploadedAt).FirstOrDefault();
 
+                    string sourceText = "สั่งผลิตประจำเดือนนี้";
+                    if (otm != null && latestPriorActionMap.TryGetValue(otm.Id, out var prior))
+                    {
+                        if (prior.Action == "Deferred")
+                            sourceText = $"ผ่อนยกยอดมาจาก {ConvertKeyToThaiMonth(prior.MonthYear)}";
+                        else if (prior.Action == "Skipped")
+                            sourceText = $"ค้างมาจาก {ConvertKeyToThaiMonth(prior.MonthYear)}";
+                    }
+
+                    string actionLabel = action.Action switch
+                    {
+                        "ReceivedFull" => "รับสินค้าแล้ว",
+                        "Deferred" => "ผ่อนชำระ",
+                        "Skipped" => "ยังไม่รับสินค้า",
+                        _ => action.Action
+                    };
+
+                    decimal amount = action.ActionPrice > 0 ? action.ActionPrice : ParseDecimal(otm?.Amount);
+
+                    exportRows.Add(new ExcelExportRowDto
+                    {
+                        PoNumber = otm?.PoNumber ?? "-",
+                        ProductName = otm?.Remarks ?? "-",
+                        Department = !string.IsNullOrEmpty(latestPlan?.Department) ? latestPlan.Department : (!string.IsNullOrEmpty(otm?.Urgency) ? otm.Urgency : "-"),
+                        Urgency = !string.IsNullOrEmpty(otm?.Urgency) ? otm.Urgency : "-",
+                        DeliveryTarget = !string.IsNullOrEmpty(latestPlan?.DeliveryTarget) ? latestPlan.DeliveryTarget : "-",
+                        Source = sourceText,
+                        ActionType = action.Action,
+                        ActionLabel = actionLabel,
+                        Status = "บันทึกแล้ว",
+                        Quantity = !string.IsNullOrEmpty(otm?.RemarksQuantity) ? otm.RemarksQuantity : "1",
+                        Amount = amount,
+                        DateText = action.CreatedAt.ToString("dd/MM/yyyy HH:mm")
+                    });
+                }
+            }
+
+            // B. รายการรอดำเนินการ (Pending)
+            if (statusFilter == "all" || statusFilter == "pending")
+            {
+                foreach (var otm in pendingOrders)
+                {
+                    var latestPlan = otm.MatchedInWeeklyPlans?.OrderByDescending(w => w.WeeklyPlan?.UploadedAt).FirstOrDefault();
+
+                    string sourceText = "สั่งผลิตประจำเดือนนี้";
+                    string actionType = "Pending";
+                    string actionLabel = "รอดำเนินการ";
+
+                    if (latestPriorActionMap.TryGetValue(otm.Id, out var prior))
+                    {
+                        if (prior.Action == "Deferred")
+                        {
+                            sourceText = $"ผ่อนยกยอดมาจาก {ConvertKeyToThaiMonth(prior.MonthYear)}";
+                            actionType = "Deferred";
+                            actionLabel = "ผ่อนชำระ (รอยืนยัน)";
+                        }
+                        else if (prior.Action == "Skipped")
+                        {
+                            sourceText = $"ค้างมาจาก {ConvertKeyToThaiMonth(prior.MonthYear)}";
+                            actionType = "Skipped";
+                            actionLabel = "ยังไม่รับสินค้า (รอยืนยัน)";
+                        }
+                    }
+
+                    decimal amount = ParseDecimal(otm.Amount);
+
+                    exportRows.Add(new ExcelExportRowDto
+                    {
+                        PoNumber = otm.PoNumber ?? "-",
+                        ProductName = otm.Remarks ?? "-",
+                        Department = !string.IsNullOrEmpty(latestPlan?.Department) ? latestPlan.Department : (!string.IsNullOrEmpty(otm.Urgency) ? otm.Urgency : "-"),
+                        Urgency = !string.IsNullOrEmpty(otm.Urgency) ? otm.Urgency : "-",
+                        DeliveryTarget = !string.IsNullOrEmpty(latestPlan?.DeliveryTarget) ? latestPlan.DeliveryTarget : "-",
+                        Source = sourceText,
+                        ActionType = actionType,
+                        ActionLabel = actionLabel,
+                        Status = "รอดำเนินการ",
+                        Quantity = !string.IsNullOrEmpty(otm.RemarksQuantity) ? otm.RemarksQuantity : "1",
+                        Amount = amount,
+                        DateText = otm.ApprovedDate ?? "-"
+                    });
+                }
+            }
+
+            // C. กรองตาม actionFilter (ถ้าไม่ใช่ "all")
+            if (!string.IsNullOrEmpty(actionFilter) && actionFilter != "all")
+            {
+                exportRows = exportRows.Where(r => r.ActionType.Equals(actionFilter, StringComparison.OrdinalIgnoreCase)).ToList();
+            }
+
+            // 5. สร้าง Workbook & Format ตารางให้อ่านเข้าใจง่าย ไม่มีสีจัดจ้าน
             using var workbook = new ClosedXML.Excel.XLWorkbook();
-            var ws = workbook.Worksheets.Add("สรุปยอดผ่อนชำระประจำเดือน");
+            var ws = workbook.Worksheets.Add("รายงานค่าใช้จ่ายประจำเดือน");
 
             var fontName = "Noto Sans Thai";
             var colorBorder = ClosedXML.Excel.XLColor.FromHtml("#CBD5E1");
 
             // Title
-            ws.Cell(1, 1).Value = $"รายงานสรุปยอดเงินผ่อนชำระที่ต้องจ่าย — {monthYear}";
+            ws.Cell(1, 1).Value = $"รายงานสรุปรายการสั่งผลิตและค่าใช้จ่าย — {canonicalThaiMonth}";
             ws.Cell(1, 1).Style.Font.FontName = fontName;
             ws.Cell(1, 1).Style.Font.FontSize = 14;
             ws.Cell(1, 1).Style.Font.Bold = true;
             ws.Cell(1, 1).Style.Font.FontColor = ClosedXML.Excel.XLColor.Black;
-            ws.Range(1, 1, 1, 11).Merge();
+            ws.Range(1, 1, 1, 12).Merge();
+
+            // เงื่อนไข Filter ภาษาไทยสำหรับ Subtitle
+            string actionTextDesc = actionFilter switch
+            {
+                "ReceivedFull" => "เฉพาะรับสินค้าแล้ว",
+                "Deferred" => "เฉพาะผ่อนชำระ",
+                "Skipped" => "เฉพาะยังไม่รับสินค้า",
+                _ => "ทั้งหมดทุกประเภท"
+            };
+            string statusTextDesc = statusFilter switch
+            {
+                "saved" => "เฉพาะที่บันทึกแล้ว",
+                "pending" => "เฉพาะที่รอดำเนินการ",
+                _ => "ทั้งหมด (บันทึกแล้ว + รอดำเนินการ)"
+            };
 
             // Sub-info
-            ws.Cell(2, 1).Value = $"วันที่ส่งออกรายงาน: {DateTime.Now:dd/MM/yyyy HH:mm}    " +
-                                  $"รายการผ่อนชำระที่บันทึกแล้ว: {deferredExistingActions.Count} รายการ    " +
-                                  $"รายการผ่อนชำระรอดำเนินการ: {deferredPendingOrders.Count} รายการ";
+            ws.Cell(2, 1).Value = $"เงื่อนไข: หมวดหมู่ [{actionTextDesc}] | สถานะ [{statusTextDesc}] | รวมทั้งสิ้น: {exportRows.Count} รายการ | วันที่ออกรายงาน: {DateTime.Now:dd/MM/yyyy HH:mm}";
             ws.Cell(2, 1).Style.Font.FontName = fontName;
             ws.Cell(2, 1).Style.Font.FontSize = 10;
             ws.Cell(2, 1).Style.Font.FontColor = ClosedXML.Excel.XLColor.FromHtml("#475569");
-            ws.Range(2, 1, 2, 11).Merge();
+            ws.Range(2, 1, 2, 12).Merge();
 
             ws.Row(3).Height = 8;
 
-            // Header row (No fill color)
+            // Header row (White background, No fill color, Clear borders)
             int headerRow = 4;
             var headers = new[]
             {
-                "ลำดับ", "เลขที่อนุมัติ (PO)", "ชื่อสินค้า / รายการอะไหล่", "ปภ.ความเร่งด่วน", "แผนก / หน่วยงาน",
-                "เป้าหมายส่งมอบ",
-                "ที่มาของรายการ", "สถานะการผ่อนชำระ", "จำนวน", "ยอดเงินผ่อนชำระ (บาท)", "วันที่บันทึก"
+                "ลำดับ", "เลขที่อนุมัติ (PO)", "ชื่อสินค้า / รายการอะไหล่", "แผนก / หน่วยงาน", "ความเร่งด่วน",
+                "เป้าหมายส่งมอบ", "ที่มาของรายการ", "การดำเนินการ", "สถานะ", "จำนวน", "มูลค่า (บาท)", "วันที่บันทึก/อนุมัติ"
             };
 
             for (int c = 0; c < headers.Length; c++)
@@ -2127,60 +2224,36 @@ namespace CostFlow.Controllers
                 cell.Style.Border.OutsideBorderColor = colorBorder;
             }
 
-            ws.Row(headerRow).Height = 22;
+            ws.Row(headerRow).Height = 24;
 
             int currentRow = headerRow + 1;
             int itemNo = 1;
-            decimal totalPaidAmount = 0m;
-            decimal totalPendingAmount = 0m;
+            decimal totalAmount = 0m;
+            decimal receivedAmount = 0m;
+            decimal deferredAmount = 0m;
+            decimal skippedOrPendingAmount = 0m;
 
-            // A. เพิ่มรายการผ่อนชำระที่บันทึกแล้ว
-            foreach (var action in deferredExistingActions)
+            foreach (var row in exportRows)
             {
-                var otm = action.OrderTrackingMaster;
-                string poNumber = otm?.PoNumber ?? "N/A";
-                string productName = otm?.Remarks ?? "N/A";
-
-                var latestMatchedPlan = otm?.MatchedInWeeklyPlans?
-                    .OrderByDescending(w => w.WeeklyPlan?.UploadedAt)
-                    .FirstOrDefault();
-
-                string department = !string.IsNullOrEmpty(latestMatchedPlan?.Department)
-                    ? latestMatchedPlan.Department
-                    : "-";
-                string urgency = !string.IsNullOrEmpty(otm?.Urgency) ? otm.Urgency : "-";
-                string deliveryTarget = latestMatchedPlan?.DeliveryTarget ?? "-";
-
-                string sourceText = "ผ่อนชำระประจำเดือน";
-                if (latestPriorActionMap.TryGetValue(action.OrderTrackingMasterId, out var prior) &&
-                    prior.Action == "Deferred")
-                {
-                    sourceText = $"ผ่อนยกยอดมาจาก {ConvertKeyToThaiMonth(prior.MonthYear)}";
-                }
-
-                string actionText = action.Action == "ReceivedFull"
-                    ? "ชำระยอดผ่อนครบแล้ว"
-                    : "ผ่อนชำระ (ตั้งยอดเดือนนี้)";
-
-                string quantity = !string.IsNullOrEmpty(otm?.RemarksQuantity) ? otm.RemarksQuantity : "1";
-                decimal amt = action.ActionPrice > 0
-                    ? action.ActionPrice
-                    : (decimal.TryParse(otm?.Amount, out var p) ? p : 0m);
-                totalPaidAmount += amt;
+                totalAmount += row.Amount;
+                if (row.ActionType == "ReceivedFull") receivedAmount += row.Amount;
+                else if (row.ActionType == "Deferred") deferredAmount += row.Amount;
+                else skippedOrPendingAmount += row.Amount;
 
                 ws.Cell(currentRow, 1).Value = itemNo++;
-                ws.Cell(currentRow, 2).Value = poNumber;
-                ws.Cell(currentRow, 3).Value = productName;
-                ws.Cell(currentRow, 4).Value = urgency;
-                ws.Cell(currentRow, 5).Value = department;
-                ws.Cell(currentRow, 6).Value = deliveryTarget;
-                ws.Cell(currentRow, 7).Value = sourceText;
-                ws.Cell(currentRow, 8).Value = actionText;
-                ws.Cell(currentRow, 9).Value = quantity;
-                ws.Cell(currentRow, 10).Value = amt;
-                ws.Cell(currentRow, 11).Value = action.CreatedAt.ToString("dd/MM/yyyy HH:mm");
+                ws.Cell(currentRow, 2).Value = row.PoNumber;
+                ws.Cell(currentRow, 3).Value = row.ProductName;
+                ws.Cell(currentRow, 4).Value = row.Department;
+                ws.Cell(currentRow, 5).Value = row.Urgency;
+                ws.Cell(currentRow, 6).Value = row.DeliveryTarget;
+                ws.Cell(currentRow, 7).Value = row.Source;
+                ws.Cell(currentRow, 8).Value = row.ActionLabel;
+                ws.Cell(currentRow, 9).Value = row.Status;
+                ws.Cell(currentRow, 10).Value = row.Quantity;
+                ws.Cell(currentRow, 11).Value = row.Amount;
+                ws.Cell(currentRow, 12).Value = row.DateText;
 
-                for (int c = 1; c <= 11; c++)
+                for (int c = 1; c <= 12; c++)
                 {
                     var cell = ws.Cell(currentRow, c);
                     cell.Style.Font.FontName = fontName;
@@ -2192,79 +2265,122 @@ namespace CostFlow.Controllers
 
                 ws.Cell(currentRow, 1).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Center;
                 ws.Cell(currentRow, 2).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Center;
+                ws.Cell(currentRow, 3).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Left;
+                ws.Cell(currentRow, 3).Style.Alignment.WrapText = true;
                 ws.Cell(currentRow, 4).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Center;
                 ws.Cell(currentRow, 5).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Center;
                 ws.Cell(currentRow, 6).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Center;
                 ws.Cell(currentRow, 7).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Center;
                 ws.Cell(currentRow, 8).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Center;
                 ws.Cell(currentRow, 9).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Center;
-                ws.Cell(currentRow, 10).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Right;
-                ws.Cell(currentRow, 10).Style.NumberFormat.Format = "#,##0.00";
-                ws.Cell(currentRow, 11).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Center;
-                ws.Row(currentRow).Height = 20;
+                ws.Cell(currentRow, 10).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Center;
+                ws.Cell(currentRow, 11).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Right;
+                ws.Cell(currentRow, 11).Style.NumberFormat.Format = "#,##0.00";
+                ws.Cell(currentRow, 12).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Center;
+                ws.Row(currentRow).Height = 22;
                 currentRow++;
             }
 
-            // Summary row
+            // Summary Rows (Clean bottom summary)
             currentRow++;
-            ws.Cell(currentRow, 8).Value = "รวมยอดผ่อนชำระที่บันทึกแล้ว";
-            ws.Cell(currentRow, 8).Style.Font.FontName = fontName;
-            ws.Cell(currentRow, 8).Style.Font.Bold = true;
-            ws.Cell(currentRow, 8).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Right;
-            ws.Cell(currentRow, 10).Value = totalPaidAmount;
-            ws.Cell(currentRow, 10).Style.Font.FontName = fontName;
-            ws.Cell(currentRow, 10).Style.Font.Bold = true;
-            ws.Cell(currentRow, 10).Style.NumberFormat.Format = "#,##0.00";
-            ws.Cell(currentRow, 10).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Right;
-            currentRow++;
+            if (receivedAmount > 0)
+            {
+                ws.Cell(currentRow, 9).Value = "รวมยอดรับสินค้าแล้ว";
+                ws.Cell(currentRow, 9).Style.Font.FontName = fontName;
+                ws.Cell(currentRow, 9).Style.Font.Bold = true;
+                ws.Cell(currentRow, 9).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Right;
+                ws.Cell(currentRow, 11).Value = receivedAmount;
+                ws.Cell(currentRow, 11).Style.Font.FontName = fontName;
+                ws.Cell(currentRow, 11).Style.Font.Bold = true;
+                ws.Cell(currentRow, 11).Style.NumberFormat.Format = "#,##0.00";
+                ws.Cell(currentRow, 11).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Right;
+                currentRow++;
+            }
 
-            ws.Cell(currentRow, 8).Value = "รวมยอดผ่อนชำระที่รอชำระงวดนี้";
-            ws.Cell(currentRow, 8).Style.Font.FontName = fontName;
-            ws.Cell(currentRow, 8).Style.Font.Bold = true;
-            ws.Cell(currentRow, 8).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Right;
-            ws.Cell(currentRow, 10).Value = totalPendingAmount;
-            ws.Cell(currentRow, 10).Style.Font.FontName = fontName;
-            ws.Cell(currentRow, 10).Style.Font.Bold = true;
-            ws.Cell(currentRow, 10).Style.NumberFormat.Format = "#,##0.00";
-            ws.Cell(currentRow, 10).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Right;
-            currentRow++;
+            if (deferredAmount > 0)
+            {
+                ws.Cell(currentRow, 9).Value = "รวมยอดผ่อนชำระ";
+                ws.Cell(currentRow, 9).Style.Font.FontName = fontName;
+                ws.Cell(currentRow, 9).Style.Font.Bold = true;
+                ws.Cell(currentRow, 9).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Right;
+                ws.Cell(currentRow, 11).Value = deferredAmount;
+                ws.Cell(currentRow, 11).Style.Font.FontName = fontName;
+                ws.Cell(currentRow, 11).Style.Font.Bold = true;
+                ws.Cell(currentRow, 11).Style.NumberFormat.Format = "#,##0.00";
+                ws.Cell(currentRow, 11).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Right;
+                currentRow++;
+            }
 
-            ws.Cell(currentRow, 8).Value = "รวมยอดเงินผ่อนชำระที่ต้องจ่ายทั้งสิ้นเดือนนี้";
-            ws.Cell(currentRow, 8).Style.Font.FontName = fontName;
-            ws.Cell(currentRow, 8).Style.Font.Bold = true;
-            ws.Cell(currentRow, 8).Style.Font.FontColor = ClosedXML.Excel.XLColor.Black;
-            ws.Cell(currentRow, 8).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Right;
-            ws.Cell(currentRow, 10).Value = totalPaidAmount + totalPendingAmount;
-            ws.Cell(currentRow, 10).Style.Font.FontName = fontName;
-            ws.Cell(currentRow, 10).Style.Font.Bold = true;
-            ws.Cell(currentRow, 10).Style.Font.FontColor = ClosedXML.Excel.XLColor.Black;
-            ws.Cell(currentRow, 10).Style.NumberFormat.Format = "#,##0.00";
-            ws.Cell(currentRow, 10).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Right;
-            ws.Range(currentRow, 8, currentRow, 10).Style.Border.OutsideBorder =
-                ClosedXML.Excel.XLBorderStyleValues.Thin;
-            ws.Range(currentRow, 8, currentRow, 10).Style.Border.OutsideBorderColor = colorBorder;
+            if (skippedOrPendingAmount > 0)
+            {
+                ws.Cell(currentRow, 9).Value = "รวมยอดยังไม่รับ/รอดำเนินการ";
+                ws.Cell(currentRow, 9).Style.Font.FontName = fontName;
+                ws.Cell(currentRow, 9).Style.Font.Bold = true;
+                ws.Cell(currentRow, 9).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Right;
+                ws.Cell(currentRow, 11).Value = skippedOrPendingAmount;
+                ws.Cell(currentRow, 11).Style.Font.FontName = fontName;
+                ws.Cell(currentRow, 11).Style.Font.Bold = true;
+                ws.Cell(currentRow, 11).Style.NumberFormat.Format = "#,##0.00";
+                ws.Cell(currentRow, 11).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Right;
+                currentRow++;
+            }
 
-            // ── Column Widths ─────────────────────────────────────────
-            ws.Column(1).Width = 8; // ลำดับ
-            ws.Column(2).Width = 22; // เลขที่อนุมัติ (PO)
-            ws.Column(3).Width = 45; // ชื่อสินค้า / รายการอะไหล่
-            ws.Column(4).Width = 18; // ความเร่งด่วน
-            ws.Column(5).Width = 18; // แผนก
-            ws.Column(6).Width = 18; // เป้าหมายส่งมอบ
-            ws.Column(7).Width = 26; // ที่มาของรายการ
-            ws.Column(8).Width = 22; // สถานะการบันทึก
-            ws.Column(9).Width = 12; // จำนวน
-            ws.Column(10).Width = 22; // ยอดเงินที่ต้องจ่าย
-            ws.Column(11).Width = 20; // วันที่บันทึก
+            // Grand Total Row (With double bottom border)
+            ws.Cell(currentRow, 9).Value = $"รวมมูลค่าทั้งสิ้น ({exportRows.Count} รายการ)";
+            ws.Cell(currentRow, 9).Style.Font.FontName = fontName;
+            ws.Cell(currentRow, 9).Style.Font.Bold = true;
+            ws.Cell(currentRow, 9).Style.Font.FontSize = 11;
+            ws.Cell(currentRow, 9).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Right;
+            ws.Cell(currentRow, 11).Value = totalAmount;
+            ws.Cell(currentRow, 11).Style.Font.FontName = fontName;
+            ws.Cell(currentRow, 11).Style.Font.Bold = true;
+            ws.Cell(currentRow, 11).Style.Font.FontSize = 11;
+            ws.Cell(currentRow, 11).Style.NumberFormat.Format = "#,##0.00";
+            ws.Cell(currentRow, 11).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Right;
+
+            ws.Range(currentRow, 9, currentRow, 11).Style.Border.TopBorder = ClosedXML.Excel.XLBorderStyleValues.Thin;
+            ws.Range(currentRow, 9, currentRow, 11).Style.Border.TopBorderColor = colorBorder;
+            ws.Range(currentRow, 9, currentRow, 11).Style.Border.BottomBorder = ClosedXML.Excel.XLBorderStyleValues.Double;
+            ws.Range(currentRow, 9, currentRow, 11).Style.Border.BottomBorderColor = ClosedXML.Excel.XLColor.Black;
+
+            // ── Column Widths (Well-proportioned, Easy to Read) ─────────────
+            ws.Column(1).Width = 8;   // ลำดับ
+            ws.Column(2).Width = 20;  // เลขที่อนุมัติ (PO)
+            ws.Column(3).Width = 45;  // ชื่อสินค้า / รายการอะไหล่
+            ws.Column(4).Width = 18;  // แผนก / หน่วยงาน
+            ws.Column(5).Width = 16;  // ความเร่งด่วน
+            ws.Column(6).Width = 18;  // เป้าหมายส่งมอบ
+            ws.Column(7).Width = 28;  // ที่มาของรายการ
+            ws.Column(8).Width = 22;  // การดำเนินการ
+            ws.Column(9).Width = 16;  // สถานะ
+            ws.Column(10).Width = 10; // จำนวน
+            ws.Column(11).Width = 22; // มูลค่ารวม (บาท)
+            ws.Column(12).Width = 20; // วันที่บันทึก/อนุมัติ
 
             using var stream = new MemoryStream();
             workbook.SaveAs(stream);
 
-            string cleanMonth = monthYear.Trim().Replace(" ", "_");
-            string downloadName = $"สรุปรายการที่ต้องจ่าย_{cleanMonth}.xlsx";
+            string cleanMonth = canonicalThaiMonth.Trim().Replace(" ", "_");
+            string downloadName = $"รายงานค่าใช้จ่าย_{cleanMonth}_{actionFilter}.xlsx";
             return File(stream.ToArray(),
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 downloadName);
+        }
+
+        private class ExcelExportRowDto
+        {
+            public string PoNumber { get; set; } = "-";
+            public string ProductName { get; set; } = "-";
+            public string Department { get; set; } = "-";
+            public string Urgency { get; set; } = "-";
+            public string DeliveryTarget { get; set; } = "-";
+            public string Source { get; set; } = "-";
+            public string ActionType { get; set; } = "-";
+            public string ActionLabel { get; set; } = "-";
+            public string Status { get; set; } = "-";
+            public string Quantity { get; set; } = "1";
+            public decimal Amount { get; set; }
+            public string DateText { get; set; } = "-";
         }
 
         // ─── Time Travel / Date Mocking Endpoints ─────────────────────────────────────
