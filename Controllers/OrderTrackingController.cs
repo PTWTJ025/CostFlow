@@ -24,29 +24,14 @@ namespace CostFlow.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Index(int? year, int? month, string? batchName)
+        public async Task<IActionResult> Index()
         {
-            var batches = new List<TrackingBatchViewModel>();
             var availableYears = new List<int> { DateTime.Now.Year };
 
-            var query = _tiDbContext.SavedOrderBatches
+            var dbBatches = await _tiDbContext.SavedOrderBatches
                 .Include(b => b.Items)
-                .AsQueryable();
-
-            if (year.HasValue && year.Value > 0)
-            {
-                query = query.Where(b => b.CreatedAt.Year == year.Value);
-            }
-            if (month.HasValue && month.Value > 0)
-            {
-                query = query.Where(b => b.CreatedAt.Month == month.Value);
-            }
-            if (!string.IsNullOrWhiteSpace(batchName))
-            {
-                query = query.Where(b => b.BatchName == batchName);
-            }
-
-            var dbBatches = await query.OrderByDescending(b => b.CreatedAt).ToListAsync();
+                .OrderByDescending(b => b.CreatedAt)
+                .ToListAsync();
 
             // Populate available years for dropdown
             var distinctYears = await _tiDbContext.SavedOrderBatches.Select(b => b.CreatedAt.Year).Distinct().ToListAsync();
@@ -55,36 +40,35 @@ namespace CostFlow.Controllers
                 if (!availableYears.Contains(y)) availableYears.Add(y);
             }
 
+            // Build flat item list
+            var flatItems = new List<FlatOrderItemViewModel>();
             foreach (var b in dbBatches)
             {
                 int totalItems = b.Items.Count;
-                int receivedItems = b.Items.Count(i => i.IsReceived);
-                bool isReceived = (totalItems > 0 && receivedItems >= totalItems);
+                double batchTotal = (double)b.Items.Sum(i => i.Quantity * i.UnitPrice);
 
-                var lastReceiveDate = b.Items.Where(i => i.IsReceived && i.ReceiveDate.HasValue)
-                                             .OrderByDescending(i => i.ReceiveDate)
-                                             .Select(i => i.ReceiveDate)
-                                             .FirstOrDefault();
-
-                batches.Add(new TrackingBatchViewModel
+                foreach (var it in b.Items)
                 {
-                    BatchName = b.BatchName,
-                    CreatedAt = b.CreatedAt,
-                    TotalItems = totalItems,
-                    ReceivedItems = receivedItems,
-                    TotalAmount = (double)b.Items.Sum(i => i.Quantity * i.UnitPrice),
-                    IsReceived = isReceived,
-                    ReceiveDate = lastReceiveDate?.ToString("dd/MM/yyyy HH:mm")
-                });
+                    flatItems.Add(new FlatOrderItemViewModel
+                    {
+                        BatchName = b.BatchName,
+                        BatchCreatedAt = b.CreatedAt,
+                        BatchTotalItems = totalItems,
+                        BatchTotalAmount = batchTotal,
+                        ProductCode = it.ProductCode,
+                        ProductName = it.ProductName,
+                        Quantity = it.Quantity.ToString("0.##"),
+                        Unit = it.Unit,
+                        IsReceived = it.IsReceived,
+                        ReceiveDate = it.ReceiveDate?.ToString("dd/MM/yyyy HH:mm")
+                    });
+                }
             }
 
             availableYears = availableYears.OrderByDescending(y => y).ToList();
-            ViewData["SelectedYear"] = year;
-            ViewData["SelectedMonth"] = month;
-            ViewData["SelectedBatch"] = batchName;
             ViewData["AvailableYears"] = availableYears;
 
-            return View(batches);
+            return View(flatItems);
         }
 
         [HttpGet]
@@ -272,6 +256,23 @@ namespace CostFlow.Controllers
         public int TotalItems { get; set; }
         public int ReceivedItems { get; set; }
         public double TotalAmount { get; set; }
+        public bool IsReceived { get; set; }
+        public string? ReceiveDate { get; set; }
+    }
+
+    public class FlatOrderItemViewModel
+    {
+        // Batch info
+        public string BatchName { get; set; } = string.Empty;
+        public DateTime BatchCreatedAt { get; set; }
+        public int BatchTotalItems { get; set; }
+        public double BatchTotalAmount { get; set; }
+
+        // Item info
+        public string ProductCode { get; set; } = string.Empty;
+        public string ProductName { get; set; } = string.Empty;
+        public string Quantity { get; set; } = string.Empty;
+        public string Unit { get; set; } = string.Empty;
         public bool IsReceived { get; set; }
         public string? ReceiveDate { get; set; }
     }
