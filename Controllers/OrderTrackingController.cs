@@ -51,6 +51,7 @@ namespace CostFlow.Controllers
                 {
                     flatItems.Add(new FlatOrderItemViewModel
                     {
+                        ItemId = it.Id,
                         BatchName = b.BatchName,
                         BatchCreatedAt = b.CreatedAt,
                         BatchTotalItems = totalItems,
@@ -247,6 +248,104 @@ namespace CostFlow.Controllers
                 return Json(new { success = false, error = $"เกิดข้อผิดพลาด: {ex.Message}" });
             }
         }
+
+        [HttpPost]
+        public async Task<IActionResult> MarkBulkReceived([FromBody] BulkMarkItemsRequest request)
+        {
+            if (request == null || request.Items == null || !request.Items.Any())
+            {
+                return Json(new { success = false, error = "กรุณาเลือกรายการที่ต้องการรับสินค้า" });
+            }
+
+            DateTime? parsedReceiveDate = null;
+            if (!string.IsNullOrWhiteSpace(request.ReceiveDate))
+            {
+                var parts = request.ReceiveDate.Split(' ')[0].Split('/'); // expects dd/MM/yyyy
+                if (parts.Length == 3 && int.TryParse(parts[0], out int d) && int.TryParse(parts[1], out int m) && int.TryParse(parts[2], out int y))
+                {
+                    try
+                    {
+                        parsedReceiveDate = new DateTime(y, m, d);
+                    }
+                    catch { }
+                }
+            }
+            var receiveDateTime = parsedReceiveDate ?? DateTime.Now;
+            var receiveDateStr = request.ReceiveDate ?? receiveDateTime.ToString("dd/MM/yyyy");
+
+            string? appScriptUrl = _configuration["GoogleSheets:OrderHistoryAppScriptUrl"];
+            if (!string.IsNullOrWhiteSpace(appScriptUrl) && !appScriptUrl.Contains("_placeholder"))
+            {
+                try
+                {
+                    var groups = request.Items.GroupBy(x => x.BatchName);
+                    var client = _httpClientFactory.CreateClient();
+                    client.Timeout = TimeSpan.FromSeconds(30);
+
+                    foreach (var group in groups)
+                    {
+                        if (string.IsNullOrWhiteSpace(group.Key)) continue;
+
+                        var payload = new
+                        {
+                            action = "markItemsReceived",
+                            batchName = group.Key,
+                            productCodes = group.Select(x => x.ProductCode).Distinct().ToList(),
+                            receiveDate = receiveDateStr,
+                            markedBy = User.Identity?.Name ?? "Unknown"
+                        };
+
+                        var jsonString = JsonSerializer.Serialize(payload);
+                        var content = new StringContent(jsonString, Encoding.UTF8, "application/json");
+                        await client.PostAsync(appScriptUrl, content);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[OrderTracking GoogleSheets Sync Warning] {ex.Message}");
+                }
+            }
+
+            try
+            {
+                var itemIds = request.Items.Where(x => x.ItemId > 0).Select(x => x.ItemId).Distinct().ToList();
+                if (itemIds.Any())
+                {
+                    var dbItems = await _tiDbContext.SavedOrderItems.Where(i => itemIds.Contains(i.Id)).ToListAsync();
+                    foreach (var it in dbItems)
+                    {
+                        it.IsReceived = true;
+                        it.ReceiveDate = receiveDateTime;
+                    }
+                }
+
+                // Fallback / backup by BatchName + ProductCode
+                var batchGroups = request.Items.GroupBy(x => x.BatchName);
+                foreach (var grp in batchGroups)
+                {
+                    if (string.IsNullOrWhiteSpace(grp.Key)) continue;
+                    var codes = grp.Select(x => x.ProductCode).Distinct().ToList();
+                    var batch = await _tiDbContext.SavedOrderBatches
+                        .Include(b => b.Items)
+                        .FirstOrDefaultAsync(b => b.BatchName == grp.Key);
+                    if (batch != null)
+                    {
+                        foreach (var it in batch.Items.Where(i => codes.Contains(i.ProductCode)))
+                        {
+                            it.IsReceived = true;
+                            it.ReceiveDate = receiveDateTime;
+                        }
+                    }
+                }
+
+                await _tiDbContext.SaveChangesAsync();
+                return Json(new { success = true, count = request.Items.Count });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, error = $"เกิดข้อผิดพลาดในการบันทึกฐานข้อมูล: {ex.Message}" });
+            }
+        }
     }
 
     public class TrackingBatchViewModel
@@ -263,6 +362,7 @@ namespace CostFlow.Controllers
     public class FlatOrderItemViewModel
     {
         // Batch info
+        public int ItemId { get; set; }
         public string BatchName { get; set; } = string.Empty;
         public DateTime BatchCreatedAt { get; set; }
         public int BatchTotalItems { get; set; }
@@ -292,5 +392,18 @@ namespace CostFlow.Controllers
         public string BatchName { get; set; } = string.Empty;
         public List<string> ProductCodes { get; set; } = new();
         public string ReceiveDate { get; set; } = string.Empty;
+    }
+
+    public class BulkMarkItemsRequest
+    {
+        public List<BulkItemDto> Items { get; set; } = new();
+        public string ReceiveDate { get; set; } = string.Empty;
+    }
+
+    public class BulkItemDto
+    {
+        public int ItemId { get; set; }
+        public string BatchName { get; set; } = string.Empty;
+        public string ProductCode { get; set; } = string.Empty;
     }
 }
