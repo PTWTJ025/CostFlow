@@ -105,6 +105,10 @@ namespace CostFlow.Controllers
             try
             {
                 var now = GetThaiNow();
+                if (!string.IsNullOrWhiteSpace(request.OrderDate) && DateTime.TryParseExact(request.OrderDate, "yyyy-MM-dd", null, System.Globalization.DateTimeStyles.None, out var parsedDate))
+                {
+                    now = new DateTime(parsedDate.Year, parsedDate.Month, parsedDate.Day, now.Hour, now.Minute, now.Second);
+                }
                 var batchName = string.IsNullOrWhiteSpace(request.BatchName)
                     ? $"รายการคีย์ข้อมูลวันที่ {now.ToString("dd/MM/yyyy HH:mm")}"
                     : request.BatchName.Trim();
@@ -906,6 +910,7 @@ namespace CostFlow.Controllers
     public class SaveOrdersRequest
     {
         public string BatchName { get; set; } = string.Empty;
+        public string? OrderDate { get; set; }
         public List<SparePartOrderSaveModel> Orders { get; set; } = new();
     }
 

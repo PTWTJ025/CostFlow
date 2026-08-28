@@ -217,14 +217,14 @@
 </div>
 
 <!-- ── Split screen ── -->
-<div class="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-2 gap-6" style="min-height: 480px;">
+<div class="flex-1 min-h-0 flex flex-col lg:flex-row gap-4 lg:gap-6">
 
 <!-- LEFT: รายการรอดำเนินการ -->
-<div class="bg-white border border-slate-200 rounded-md flex flex-col min-h-0 overflow-hidden">
+<div class="bg-white border border-slate-200 rounded-md flex flex-col min-h-0 overflow-hidden flex-1 lg:w-1/2" style="min-height: 400px;">
 
 <!-- Panel header with tabs -->
 <div class="px-4 pt-3 border-b border-slate-100 bg-slate-50/60 shrink-0">
-    <div class="flex items-center justify-between mb-2">
+    <div class="flex items-center justify-between mb-2 gap-2 flex-wrap">
         <!-- Tabs -->
         <div class="flex gap-2">
             <button id="tab-pending" onclick="switchTab('pending')"
@@ -256,7 +256,7 @@
         <div class="relative flex items-center" id="search-wrap">
             <div class="relative flex items-center w-48 sm:w-60 focus-within:w-60 sm:focus-within:w-72 transition-all duration-200">
                 <input type="text" id="search-pending" placeholder="ค้นหา / วางหลายเลข PO..."
-                       title="สามารถ Copy เลข PO หลายรายการ (คั่นด้วยเว้นวรรค, ลูกน้ำ หรือจาก Excel) มาวางได้เลย"
+                       title="สามารถ Copy เลข PO หลายรายการ (คั่นด้วยการขึ้นบรรทัดใหม่จาก Excel หรือลูกน้ำ) มาวางได้เลย"
                        class="pl-7 pr-7 py-1.5 text-xs border border-slate-200 rounded-md w-full focus:ring-1 focus:ring-primary focus:border-primary outline-none bg-white shadow-2xs">
                
                 <button type="button" id="clear-search-btn" onclick="clearSearchInput()" style="display:none;"
@@ -653,7 +653,7 @@
 </div>
 
 <!-- RIGHT: รายการที่เลือก -->
-<div class="bg-white border border-blue-200 rounded-md flex flex-col min-h-0 overflow-hidden shadow-xs">
+<div class="bg-white border border-blue-200 rounded-md flex flex-col min-h-0 overflow-hidden shadow-xs flex-1 lg:w-1/2" style="min-height: 400px;">
 
     <!-- Panel header -->
     <div class="px-4 py-2.5 border-b border-blue-100 bg-blue-50/60 shrink-0 flex items-center justify-between flex-wrap gap-2">
@@ -690,7 +690,7 @@
     </div>
 
     <!-- Cart list with right scrollbar -->
-    <div class="panel-body p-3 space-y-4 overflow-y-auto" id="cart-list" style="max-height: calc(100vh - 300px); min-height: 220px;">
+    <div class="panel-body p-3 space-y-4" id="cart-list">
         <div id="cart-empty" class="flex flex-col items-center justify-center h-full min-h-[200px] text-slate-300">
             <p class="text-sm font-medium text-slate-400">ยังไม่ได้เลือกรายการ</p>
             <p class="text-xs text-slate-300 mt-1">กด <span class="font-bold">+ เพิ่ม</span> จากรายการซ้าย</p>
@@ -839,32 +839,45 @@
             const deferredRow = document.getElementById('breakdown-deferred');
             const skippedRow = document.getElementById('breakdown-skipped');
 
-            if (receivedTotal > 0) {
-                receivedRow.style.display = 'flex';
-                document.getElementById('total-received').textContent = fmt(receivedTotal);
-            } else {
-                receivedRow.style.display = 'none';
+            if (receivedRow) {
+                if (receivedTotal > 0) {
+                    receivedRow.style.display = 'flex';
+                    const el = document.getElementById('total-received');
+                    if (el) el.textContent = fmt(receivedTotal);
+                } else {
+                    receivedRow.style.display = 'none';
+                }
             }
 
-            if (deferredTotal > 0) {
-                deferredRow.style.display = 'flex';
-                document.getElementById('total-deferred').textContent = fmt(deferredTotal);
-            } else {
-                deferredRow.style.display = 'none';
+            if (deferredRow) {
+                if (deferredTotal > 0) {
+                    deferredRow.style.display = 'flex';
+                    const el = document.getElementById('total-deferred');
+                    if (el) el.textContent = fmt(deferredTotal);
+                } else {
+                    deferredRow.style.display = 'none';
+                }
             }
 
-            if (skippedCount > 0) {
-                if (skippedRow) skippedRow.style.display = 'flex';
-                const el = document.getElementById('count-skipped');
-                if (el) el.textContent = skippedCount + ' รายการ';
-            } else {
-                if (skippedRow) skippedRow.style.display = 'none';
+            if (skippedRow) {
+                if (skippedCount > 0) {
+                    skippedRow.style.display = 'flex';
+                    const el = document.getElementById('count-skipped');
+                    if (el) el.textContent = skippedCount + ' รายการ';
+                } else {
+                    skippedRow.style.display = 'none';
+                }
             }
 
             // Update totals
-            document.getElementById('cart-count-label').textContent = ids.length + ' รายการ';
-            document.getElementById('cart-total').textContent = fmt(total);
-            document.getElementById('save-btn').disabled = ids.length === 0;
+            const cartCountLabel = document.getElementById('cart-count-label');
+            if (cartCountLabel) cartCountLabel.textContent = ids.length + ' รายการ';
+            
+            const cartTotalEl = document.getElementById('cart-total');
+            if (cartTotalEl) cartTotalEl.textContent = fmt(total);
+            
+            const saveBtn = document.getElementById('save-btn');
+            if (saveBtn) saveBtn.disabled = ids.length === 0;
 
             const allPendingCount = @Model.PendingOrders.Count;
             const closeBtn = document.getElementById('close-month-btn');
@@ -1244,8 +1257,8 @@
             if (!searchInput) return [];
             const raw = searchInput.value.toLowerCase().trim();
             if (!raw) return [];
-            // แยกคำค้นหาด้วย ช่องว่าง, การขึ้นบรรทัดใหม่ (Excel), ลูกน้ำ (,), อัฒภาค (;), แท็บ (\t)
-            return raw.split(/[\s,;\n\r\t]+/).map(k => k.trim()).filter(k => k.length > 0);
+            // แยกคำค้นหาด้วย การขึ้นบรรทัดใหม่ (Excel), ลูกน้ำ (,), อัฒภาค (;), แท็บ (\t) (ไม่แยกด้วยช่องว่าง)
+            return raw.split(/[\n\r\t,;]+/).map(k => k.trim()).filter(k => k.length > 0);
         }
 
         function clearSearchInput() {
