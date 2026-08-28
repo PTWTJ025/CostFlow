@@ -133,4 +133,47 @@ namespace CostFlow.Models
         public decimal CurrentDebt { get; set; }
         public decimal DebtAtYearStart { get; set; }
     }
+
+    // ─── ViewModel สำหรับหน้า Summary (แสดงรายการสั่งซื้อทั้งหมดของปี) ───
+    public class YearlyOrderSummaryViewModel
+    {
+        public int SelectedYear { get; set; }
+        public List<int> AvailableYears { get; set; } = new();
+
+        // Filters (ใช้เก็บค่าที่เลือกไว้)
+        public int? FilterMonth { get; set; }
+        public string? FilterStatus { get; set; }
+
+        // รายการ orders ทั้งหมด
+        public List<YearlyOrderItem> Items { get; set; } = new();
+
+        // KPI (คำนวณจาก Items ทั้งหมดก่อน filter)
+        public int TotalOrders { get; set; }
+        public int TotalReceivedCount { get; set; }
+        public decimal TotalReceivedAmount { get; set; }
+        public int TotalDeferredCount { get; set; }
+        public decimal TotalDeferredAmount { get; set; }
+        public int TotalSkippedCount { get; set; }
+        public decimal TotalSkippedAmount { get; set; }
+    }
+
+    public class YearlyOrderItem
+    {
+        public Guid ActionId { get; set; }
+        public Guid OrderId { get; set; }
+        public string PoNumber { get; set; } = "-";
+        public string OrderName { get; set; } = "ไม่ระบุ";
+        public string Quantity { get; set; } = "-";
+        public string Department { get; set; } = "-";
+        public decimal Amount { get; set; }
+        public string MonthKey { get; set; } = string.Empty;   // "2026-08"
+        public string MonthDisplay { get; set; } = string.Empty; // "สิงหาคม 2569"
+        public int MonthNumber { get; set; } // 1-12 สำหรับ filter
+        public string Action { get; set; } = string.Empty; // ReceivedFull / Deferred / Skipped
+        public string ActionDisplay { get; set; } = string.Empty; // ภาษาไทย
+        public string ApprovedDate { get; set; } = "-";
+        public string ApprovedMonthDisplay { get; set; } = "-"; // "กรกฎาคม 2569"
+        public int ApprovedMonthNumber { get; set; } // 1-12 สำหรับ filter
+        public DateTime CreatedAt { get; set; }
+    }
 }

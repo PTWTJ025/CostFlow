@@ -1,44 +1,39 @@
-@model CostFlow.Models.MonthlySummaryViewModel
+@model CostFlow.Models.YearlyOrderSummaryViewModel
 @{
-    ViewData["Title"] = "สรุปค่าใช้จ่ายประจำปี";
-    ViewData["HeaderTitle"] = "สรุปค่าใช้จ่ายประจำปี";
-    var availableYears = ViewBag.AvailableYears as List<int> ?? new List<int>();
-    var selectedYear = (int)(ViewBag.SelectedYear ?? DateTime.Now.Year);
-    var now = DateTime.Now;
-    var currentMonthKey = now.ToString("yyyy-MM");
+    ViewData["Title"] = "รายการสั่งซื้อประจำปี";
+    ViewData["HeaderTitle"] = "รายการสั่งซื้อประจำปี";
+    var selectedYear = Model.SelectedYear;
 }
 
-<div class="flex-1 p-md md:p-lg lg:p-xl flex flex-col gap-lg max-w-container-max mx-auto w-full">
+<div class="flex-1 p-md md:p-lg flex flex-col gap-md max-w-container-max mx-auto w-full">
 
-    <!-- ── Header & Dropdown Section ──────────────────────────────────── -->
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-md">
-        <!-- Left: Title & Subtitle -->
+    <!-- ── Header & Year Selector ──────────────────────────────────── -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-md mb-xs">
         <div>
             <div class="flex items-center gap-2">
-                <span class="text-slate-400 font-medium">สรุปค่าใช้จ่าย</span>
+                <span class="text-slate-400 font-medium text-sm">รายการสั่งซื้อ</span>
                 <span class="text-slate-300">/</span>
                 <h1 class="text-xl font-bold text-slate-800">
                     ประจำปี พ.ศ. @(selectedYear + 543)
                 </h1>
             </div>
-            <p class="text-xs text-slate-500 mt-1">Annual Financial Ledger & Settlement</p>
+            <p class="text-xs text-slate-500 mt-0.5">สรุปรายการสั่งซื้อทั้งหมด การจัดการรับสินค้า และผ่อนชำระ</p>
         </div>
 
-        <!-- Right: Year Selector Dropdown -->
+        <!-- Year Selector Dropdown -->
         <div class="relative">
-            <!-- ปุ่มเลือกปีที่ปรับระยะห่างให้หายอึดอัดแล้ว -->
             <button type="button" onclick="document.getElementById('year-dropdown').classList.toggle('hidden')"
                     onblur="setTimeout(() => document.getElementById('year-dropdown').classList.add('hidden'), 200)"
-                    class="flex items-center justify-between min-w-[140px] px-4 py-2 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 shadow-xs focus:border-blue-500 outline-none cursor-pointer transition-all gap-3">
+                    class="flex items-center justify-between min-w-[140px] px-4 py-2 border border-slate-300 rounded text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 shadow-xs focus:border-blue-500 outline-none cursor-pointer transition-all gap-3">
                 <span>ปี @(selectedYear + 543)</span>
                 <svg class="w-4 h-4 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/>
                 </svg>
             </button>
 
-            <div id="year-dropdown" class="hidden absolute right-0 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg z-50 overflow-hidden">
+            <div id="year-dropdown" class="hidden absolute right-0 mt-1 w-full bg-white  rounded-lg shadow-lg z-50 overflow-hidden">
                 <ul class="py-1 flex flex-col">
-                    @foreach (var y in availableYears)
+                    @foreach (var y in Model.AvailableYears)
                     {
                         <li>
                             <a href="/MonthlyCost/Summary?year=@y"
@@ -52,169 +47,481 @@
         </div>
     </div>
 
-    <!-- ── KPI Cards Grid (4 Cards) ──────────────────────────────────── -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-md">
-        <!-- หนี้คงเหลือ -->
-        <div class="flex items-center justify-between px-4 py-3 rounded-xl border border-rose-200 bg-rose-50/50">
-            <span class="text-xs font-medium text-rose-700">หนี้คงเหลือสะสม</span>
-            <span class="text-sm font-bold text-rose-900">฿@Model.CurrentDebt.ToString("N2")</span>
+    <!-- ── Custom Toolbar: Filters & KPI Summary Badges & Excel Export ──────────────────────────── -->
+    <div class="bg-white rounded border border-outline-variant shadow-sm p-3 sm:p-4 custom-toolbar flex items-center justify-between gap-2 overflow-x-auto scrollbar-none">
+        <!-- Left Side: Search, Month and Status Dropdown Filters -->
+        <div class="flex items-center gap-2 shrink">
+            <!-- Search -->
+            <div class="flex-1 min-w-[130px] max-w-[200px]">
+                <input
+                    id="po-search"
+                    type="text"
+                    placeholder="ค้นหาเลข PO / รายการ..."
+                    class="block w-full border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-white"
+                    style="height: 34px; padding: 6px 10px; font-size: 12.5px;">
+            </div>
+            <!-- Month Filter -->
+            <div class="flex-1 min-w-[120px] max-w-[160px]">
+                <select id="filter-month" onchange="applyFilters()" class="block w-full border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-white cursor-pointer" style="height: 34px; padding: 6px 8px; font-size: 12.5px; font-weight: 500;">
+                    <option value="">ทุกเดือน (ทั้งปี)</option>
+                    <option value="1">มกราคม</option>
+                    <option value="2">กุมภาพันธ์</option>
+                    <option value="3">มีนาคม</option>
+                    <option value="4">เมษายน</option>
+                    <option value="5">พฤษภาคม</option>
+                    <option value="6">มิถุนายน</option>
+                    <option value="7">กรกฎาคม</option>
+                    <option value="8">สิงหาคม</option>
+                    <option value="9">กันยายน</option>
+                    <option value="10">ตุลาคม</option>
+                    <option value="11">พฤศจิกายน</option>
+                    <option value="12">ธันวาคม</option>
+                </select>
+            </div>
+            <!-- Status Filter Dropdown -->
+            <div class="flex-1 min-w-[120px] max-w-[150px]">
+                <select id="filter-status" onchange="onStatusSelectChange()" class="block w-full border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-white cursor-pointer" style="height: 34px; padding: 6px 8px; font-size: 12.5px; font-weight: 500;">
+                    <option value="all">ทุกสถานะ</option>
+                    <option value="ReceivedFull">รับสินค้าแล้ว</option>
+                    <option value="Deferred">ผ่อนชำระ</option>
+                    <option value="Skipped">ยังไม่รับสินค้า</option>
+                </select>
+            </div>
         </div>
 
-        <!-- จ่ายจริง -->
-        <div class="flex items-center justify-between px-4 py-3 rounded-xl border border-emerald-200 bg-emerald-50/50">
-            <span class="text-xs font-medium text-emerald-700">จ่ายจริงทั้งปี</span>
-            <span class="text-sm font-bold text-emerald-900">฿@Model.GrandTotal.ToString("N2")</span>
-        </div>
+        <!-- Right Side: KPI Summary Badges & Action Buttons -->
+        <div class="custom-toolbar-right flex items-center gap-2 shrink-0 ml-auto">
+            <!-- KPI Summary Badges with Lucide Icons -->
+            <div class="flex items-center gap-1.5 shrink-0">
+                <div class="inline-flex items-center gap-1.5 px-2.5 text-xs font-semibold rounded-md text-slate-700 border border-slate-200 select-none whitespace-nowrap transition-all status-badge-pill" data-filter="all" title="คลิกเพื่อกรองทั้งหมด" style="height: 34px;">
+                    <svg class="w-3.5 h-3.5 text-slate-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25a2.25 2.25 0 0 1 13.5 18v-2.25Z"/>
+                    </svg>
+                    <span>ทั้งหมด</span>
+                    <span class="font-bold px-1.5 py-0.5 bg-white text-slate-800 text-[11px] rounded shadow-2xs" id="count-all">@Model.TotalOrders</span>
+                </div>
+                <div class="inline-flex items-center gap-1.5 px-2.5 text-xs font-semibold rounded-md text-emerald-700 border border-emerald-200 select-none whitespace-nowrap transition-all status-badge-pill" data-filter="ReceivedFull" title="คลิกเพื่อกรองรับสินค้าแล้ว" style="height: 34px;">
+                    <svg class="w-3.5 h-3.5 text-emerald-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+                    </svg>
+                    <span>รับสินค้าแล้ว</span>
+                    <span class="font-bold px-1.5 py-0.5 bg-white text-emerald-800 text-[11px] rounded shadow-2xs" id="count-received">@Model.TotalReceivedCount</span>
+                </div>
+                <div class="inline-flex items-center gap-1.5 px-2.5 text-xs font-semibold rounded-md text-amber-700 border border-amber-200 select-none whitespace-nowrap transition-all status-badge-pill" data-filter="Deferred" title="คลิกเพื่อกรองผ่อนชำระ" style="height: 34px;">
+                    <svg class="w-3.5 h-3.5 text-amber-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+                    </svg>
+                    <span>ผ่อนชำระ</span>
+                    <span class="font-bold px-1.5 py-0.5 bg-white text-amber-800 text-[11px] rounded shadow-2xs" id="count-deferred">@Model.TotalDeferredCount</span>
+                </div>
+                <div class="inline-flex items-center gap-1.5 px-2.5 text-xs font-semibold rounded-md text-slate-600 border border-slate-200 select-none whitespace-nowrap transition-all status-badge-pill" data-filter="Skipped" title="คลิกเพื่อกรองยังไม่รับสินค้า" style="height: 34px;">
+                    <svg class="w-3.5 h-3.5 text-slate-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636"/>
+                    </svg>
+                    <span>ยังไม่รับสินค้า</span>
+                    <span class="font-bold px-1.5 py-0.5 bg-white text-slate-700 text-[11px] rounded shadow-2xs" id="count-skipped">@Model.TotalSkippedCount</span>
+                </div>
+            </div>
 
-        <!-- รับสินค้า -->
-        <div class="flex items-center justify-between px-4 py-3 rounded-xl border border-blue-200 bg-blue-50/50">
-            <span class="text-xs font-medium text-blue-700">รับสินค้า (จ่ายเต็ม)</span>
-            <span class="text-sm font-bold text-blue-900">฿@Model.TotalReceived.ToString("N2")</span>
-        </div>
-
-        <!-- ผ่อนชำระ -->
-        <div class="flex items-center justify-between px-4 py-3 rounded-xl border border-amber-200 bg-amber-50/50">
-            <span class="text-xs font-medium text-amber-700">ผ่อนชำระสะสม</span>
-            <span class="text-sm font-bold text-amber-900">฿@Model.TotalDeferred.ToString("N2")</span>
+            <!-- Export Excel Button -->
+            <div class="flex items-center gap-1.5 shrink-0">
+                <button type="button" id="btn-export-excel"
+                        title="ส่งออก Excel ตามตัวกรองปัจจุบัน"
+                        class="flex items-center justify-center btn-custom-green shadow-sm transition-all active:scale-95 shrink-0 cursor-pointer"
+                        style="width: 34px !important; height: 34px !important; padding: 0 !important;">
+                    <svg xmlns="http://www.w3.org/2000/svg" x="0px" y="0px" viewBox="0 0 48 48" style="width: 18px !important; height: 18px !important;">
+                        <path fill="#169154" d="M29,6H15.744C14.781,6,14,6.781,14,7.744v7.259h15V6z"></path>
+                        <path fill="#18482a" d="M14,33.054v7.202C14,41.219,14.781,42,15.743,42H29v-8.946H14z"></path>
+                        <path fill="#0c8045" d="M14 15.003H29V24.005000000000003H14z"></path>
+                        <path fill="#17472a" d="M14 24.005H29V33.055H14z"></path>
+                        <g>
+                            <path fill="#29c27f" d="M42.256,6H29v9.003h15V7.744C44,6.781,43.219,6,44,6z"></path>
+                            <path fill="#27663f" d="M29,33.054V42h13.257C43.219,42,44,41.219,44,40.257v-7.202H29z"></path>
+                            <path fill="#19ac65" d="M29 15.003H44V24.005000000000003H29z"></path>
+                            <path fill="#129652" d="M29 24.005H44V33.055H29z"></path>
+                        </g>
+                        <path fill="#0c7238" d="M22.319,34H5.681C4.753,34,4,33.247,4,32.319V15.681C4,14.753,4.753,14,5.681,14h16.638 C23.247,14,24,14.753,24,15.681v16.638C24,33.247,23.247,34,22.319,34z"></path>
+                        <path fill="#fff" d="M9.807 19L12.193 19 14.129 22.754 16.175 19 18.404 19 15.333 24 18.474 29 16.123 29 14.013 25.07 11.912 29 9.526 29 12.719 23.982z"></path>
+                    </svg>
+                </button>
+            </div>
         </div>
     </div>
 
-    <!-- ── Ledger Table Container ──────────────────────────────────── -->
-    <div class="flex-1 bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden flex flex-col min-h-0">
-        <!-- Table Toolbar -->
-        <div class="shrink-0 px-5 py-3.5 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
-            <span class="text-xs font-bold text-slate-700 uppercase tracking-wider">สมุดบัญชีแยกรายเดือน (Monthly Cost Register)</span>
-            <span class="text-[11px] font-semibold text-slate-400 uppercase">หน่วย: บาท (THB)</span>
-        </div>
-
-        <!-- Table Container -->
-        <div class="flex-1 overflow-auto">
-            <table class="w-full text-sm text-left border-collapse">
-                <thead>
-                <tr class="text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200 bg-slate-50/80 sticky top-0 bg-white z-10">
-                    <th class="px-5 py-3.5 w-48">เดือน</th>
-                    <th class="px-4 py-3.5 text-center w-36">สถานะ</th>
-                    <th class="px-5 py-3.5 text-right">ผ่อนชำระยกมา (จากเดือนก่อน)</th>
-                    <th class="px-5 py-3.5 text-right">จ่ายเต็มในเดือนนี้</th>
-                    <th class="px-5 py-3.5 text-right font-semibold text-slate-750">ยอดจ่ายจริง</th>
-                    <th class="px-5 py-3.5 text-center w-32">การจัดการ</th>
+    <!-- ── Table Container ──────────────────────────────────── -->
+    <div class="bg-white rounded border border-outline-variant shadow-sm overflow-hidden flex-1 flex flex-col min-h-0">
+        <div class="overflow-x-auto">
+            <table class="w-full table-compact text-sm min-w-[1000px]" id="orders-table">
+                <thead class="bg-slate-100 border-b border-outline-variant">
+                <tr>
+                    <th class="text-center text-on-surface font-bold whitespace-nowrap cursor-pointer hover:bg-slate-200 transition-colors th-sortable group" data-sort-key="po" title="คลิกเพื่อเรียงตามเลขที่อนุมัติ">
+                        <div class="flex items-center justify-center gap-1">
+                            <span>เลขที่อนุมัติ</span>
+                            <span class="sort-icon inline-flex items-center text-slate-400">
+                                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 15L12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9"/>
+                                </svg>
+                            </span>
+                        </div>
+                    </th>
+                    <th class="text-left text-on-surface font-bold whitespace-nowrap" style="min-width: 250px;">
+                        <span>ชื่อรายการ</span>
+                    </th>
+                    <th class="text-center text-on-surface font-bold whitespace-nowrap">
+                        <span>จำนวน</span>
+                    </th>
+                    <th class="text-right text-on-surface font-bold whitespace-nowrap cursor-pointer hover:bg-slate-200 transition-colors th-sortable group" data-sort-key="amount" title="คลิกเพื่อเรียงตามมูลค่า">
+                        <div class="flex items-center justify-end gap-1">
+                            <span>มูลค่า (฿)</span>
+                            <span class="sort-icon inline-flex items-center text-slate-400">
+                                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 15L12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9"/>
+                                </svg>
+                            </span>
+                        </div>
+                    </th>
+                    <th class="text-center text-on-surface font-bold whitespace-nowrap cursor-pointer hover:bg-slate-200 transition-colors th-sortable group" data-sort-key="month" title="คลิกเพื่อเรียงตามเดือนที่อนุมัติ">
+                        <div class="flex items-center justify-center gap-1">
+                            <span>เดือนที่อนุมัติ</span>
+                            <span class="sort-icon inline-flex items-center text-slate-400">
+                                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 15L12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9"/>
+                                </svg>
+                            </span>
+                        </div>
+                    </th>
+                    <th class="text-center text-on-surface font-bold whitespace-nowrap">
+                        <span>สถานะ</span>
+                    </th>
                 </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-150 text-slate-600">
-                @foreach (var row in Model.Rows)
+                <tbody class="divide-y divide-outline-variant" id="orders-tbody">
+                @if (Model.Items.Count == 0)
                 {
-                    var isCurrent = row.MonthKey == currentMonthKey;
-                    var isPast = String.CompareOrdinal(row.MonthKey, currentMonthKey) < 0;
-                    var hasData = row.HasData;
-                    var hasCarryOver = row.CarryOverDeferredCount > 0;
-
-                    string rowClass = "hover:bg-slate-50/80 transition-colors duration-150";
-                    if (isCurrent)
-                    {
-                        rowClass = "bg-blue-50/30 hover:bg-blue-50/50 font-semibold";
-                    }
-                    else if (!hasData && !hasCarryOver && !isPast)
-                    {
-                        rowClass = "opacity-45 hover:bg-slate-50/80";
-                    }
-
-                    <tr class="@rowClass">
-                        <!-- Month Name -->
-                        <td class="px-5 py-3.5">
-                            <span class="@(isCurrent ? "text-slate-800 font-bold" : "text-slate-600")">
-                                @row.MonthDisplay
-                            </span>
-                        </td>
-
-                        <!-- Status Badge -->
-                        <td class="px-4 py-3.5 text-center">
-                            @if (isCurrent)
-                            {
-                                <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-100 text-blue-700 uppercase tracking-wider">
-                                    เดือนปัจจุบัน
-                                </span>
-                            }
-                            else if (hasData)
-                            {
-                                <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-700 uppercase tracking-wider">
-                                    บันทึกแล้ว
-                                </span>
-                            }
-                            else if (hasCarryOver)
-                            {
-                                <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 text-amber-700 uppercase tracking-wider animate-pulse">
-                                    รอรับสินค้า
-                                </span>
-                            }
-                            else
-                            {
-                                <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium bg-slate-50 text-slate-300 uppercase tracking-wider">
-                                    ไม่มีรายการ
-                                </span>
-                            }
-                        </td>
-
-                        <!-- ผ่อนสะสมยกมา -->
-                        <td class="px-5 py-3.5 text-right">
-                            @if (hasCarryOver)
-                            {
-                                <span class="text-amber-700 font-semibold">฿@row.CarryOverDeferredAmount.ToString("N2")</span>
-                                <span class="text-xs text-slate-400 block font-sans">@row.CarryOverDeferredCount รายการ</span>
-                            }
-                            else
-                            {
-                                <span class="text-slate-300">—</span>
-                            }
-                        </td>
-
-                        <!-- จ่ายเต็มในเดือนนี้ -->
-                        <td class="px-5 py-3.5 text-right">
-                            @if (row.ReceivedCount > 0)
-                            {
-                                <span class="text-slate-750">฿@row.ReceivedAmount.ToString("N2")</span>
-                                <span class="text-xs text-slate-400 block font-sans">@row.ReceivedCount รายการ</span>
-                            }
-                            else
-                            {
-                                <span class="text-slate-300">—</span>
-                            }
-                        </td>
-
-                        <!-- ยอดจ่ายจริง -->
-                        <td class="px-5 py-3.5 text-right font-bold text-slate-800">
-                            @if (hasData || hasCarryOver)
-                            {
-                                <span>฿@row.TotalPaid.ToString("N2")</span>
-                            }
-                            else
-                            {
-                                <span class="text-slate-300">—</span>
-                            }
-                        </td>
-
-                        <!-- Actions -->
-                        <td class="px-5 py-3.5 text-center">
-                            @if (isCurrent || hasData || hasCarryOver || isPast)
-                            {
-                                <a href="/MonthlyCost/Detail/@row.MonthDisplay"
-                                   class="inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-600 hover:text-white transition-all duration-150">
-                                    จัดการ
-                                </a>
-                            }
-                            else
-                            {
-                                <span class="text-xs text-slate-300 font-medium">ยังไม่เปิด</span>
-                            }
+                    <tr id="empty-row">
+                        <td colspan="6" class="px-5 py-16 text-center">
+                            <div class="flex flex-col items-center gap-2">
+                                <svg class="w-10 h-10 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5m8.25 3v6.75m0 0l-3-3m3 3 3-3M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z"/>
+                                </svg>
+                                <p class="text-sm font-medium text-slate-400">ไม่มีรายการสั่งซื้อในปีนี้</p>
+                                <p class="text-xs text-slate-300">ลองเปลี่ยนปีที่ต้องการดู</p>
+                            </div>
                         </td>
                     </tr>
                 }
+                else
+                {
+                    @foreach (var item in Model.Items)
+                    {
+                        <tr class="order-row hover:bg-slate-50 transition-colors text-sm"
+                            data-po="@item.PoNumber"
+                            data-name="@item.OrderName"
+                            data-quantity="@item.Quantity"
+                            data-amount="@item.Amount"
+                            data-month="@item.ApprovedMonthNumber"
+                            data-month-sort="@item.ApprovedMonthNumber"
+                            data-status="@item.Action">
+                            <td class="font-medium text-on-surface text-center whitespace-nowrap">@item.PoNumber</td>
+                            <td class="text-secondary detail-cell text-left" style="min-width: 250px;">@item.OrderName</td>
+                            <td class="text-center text-secondary whitespace-nowrap">@item.Quantity</td>
+                            <td class="text-right font-medium text-on-surface whitespace-nowrap">฿@item.Amount.ToString("N2")</td>
+                            <td class="text-center text-secondary whitespace-nowrap">@item.ApprovedMonthDisplay</td>
+                            <td class="text-center whitespace-nowrap">
+                                @if (item.Action == "ReceivedFull")
+                                {
+                                    <span class="inline-flex items-center justify-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md whitespace-nowrap" style="background: #d1fae5; color: #059669; border: 1px solid #a7f3d0;">
+                                        <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/>
+                                        </svg>
+                                        <span class="leading-none">รับสินค้าแล้ว</span>
+                                    </span>
+                                }
+                                else if (item.Action == "Deferred")
+                                {
+                                    <span class="inline-flex items-center justify-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md whitespace-nowrap" style="background: #fef3c7; color: #d97706; border: 1px solid #fde68a;">
+                                        <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+                                        </svg>
+                                        <span class="leading-none">ผ่อนชำระ</span>
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="inline-flex items-center justify-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md whitespace-nowrap" style="background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0;">
+                                        <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636"/>
+                                        </svg>
+                                        <span class="leading-none">ยังไม่รับสินค้า</span>
+                                    </span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                }
                 </tbody>
             </table>
+        </div>
+
+        <!-- No results container -->
+        <div id="no-filter-results" class="hidden px-5 py-12 text-center border-t border-slate-100">
+            <p class="text-sm font-medium text-slate-400">ไม่มีรายการที่ตรงกับตัวกรอง</p>
+            <button type="button" onclick="resetFilters()" class="mt-2 text-xs text-blue-600 hover:text-blue-800 font-medium cursor-pointer">ล้างตัวกรองทั้งหมด</button>
         </div>
     </div>
 
 </div>
 
 @section Scripts {
-    <!-- Ledger Table Layout — no scripts required -->
+<script>
+(function () {
+    let currentStatusFilter = 'all';
+    let currentSortKey = null;
+    let currentSortAsc = true;
+
+    // ── Status Filter Badges (Pills) & Dropdown Synchronization ──
+    const badgePills = document.querySelectorAll('.status-badge-pill');
+    badgePills.forEach(pill => {
+        pill.addEventListener('click', function () {
+            const filterVal = this.dataset.filter || 'all';
+            const statusSelect = document.getElementById('filter-status');
+            if (statusSelect) {
+                statusSelect.value = filterVal;
+            }
+            setStatusFilter(filterVal);
+        });
+    });
+
+    window.onStatusSelectChange = function () {
+        const statusSelect = document.getElementById('filter-status');
+        const filterVal = statusSelect ? statusSelect.value : 'all';
+        setStatusFilter(filterVal);
+    };
+
+    function setStatusFilter(filterVal) {
+        currentStatusFilter = filterVal;
+
+        badgePills.forEach(p => {
+            const f = p.dataset.filter;
+            if (f === currentStatusFilter) {
+                p.classList.add('ring-2', 'ring-offset-1', 'shadow-xs');
+                if (f === 'all') p.classList.add('ring-slate-500', 'bg-slate-200');
+                else if (f === 'ReceivedFull') p.classList.add('ring-emerald-500', 'bg-emerald-100');
+                else if (f === 'Deferred') p.classList.add('ring-amber-500', 'bg-amber-100');
+                else if (f === 'Skipped') p.classList.add('ring-slate-400', 'bg-slate-200');
+            } else {
+                p.classList.remove('ring-2', 'ring-offset-1', 'ring-slate-500', 'ring-emerald-500', 'ring-amber-500', 'ring-slate-400', 'shadow-xs');
+                if (f === 'all') p.classList.remove('bg-slate-200');
+                else if (f === 'ReceivedFull') p.classList.remove('bg-emerald-100');
+                else if (f === 'Deferred') p.classList.remove('bg-amber-100');
+                else if (f === 'Skipped') p.classList.remove('bg-slate-200');
+            }
+        });
+
+        applyFilters();
+    }
+
+    // ── Search & Filter Logic (Multi-PO Keyword Support) ──
+    function getSearchKeywords() {
+        const raw = (document.getElementById('po-search')?.value || '').toLowerCase().trim();
+        if (!raw) return [];
+        // แยกคำค้นหาด้วย ช่องว่าง, การขึ้นบรรทัดใหม่จาก Excel (\n, \r), ลูกน้ำ (,), อัฒภาค (;), แท็บ (\t)
+        return raw.split(/[\s,;\n\r\t]+/).map(k => k.trim()).filter(k => k.length > 0);
+    }
+
+    const searchInput = document.getElementById('po-search');
+    if (searchInput) {
+        searchInput.addEventListener('input', applyFilters);
+        searchInput.addEventListener('paste', () => setTimeout(applyFilters, 50));
+    }
+
+    window.applyFilters = function () {
+        const keywords = getSearchKeywords();
+        const monthVal = document.getElementById('filter-month')?.value || '';
+        const rows = document.querySelectorAll('.order-row');
+        let visibleCount = 0;
+
+        rows.forEach(function (row) {
+            const rowPo = (row.getAttribute('data-po') || '').toLowerCase();
+            const rowName = (row.getAttribute('data-name') || '').toLowerCase();
+            const rowMonth = row.getAttribute('data-month');
+            const rowStatus = row.getAttribute('data-status');
+
+            let show = true;
+
+            // Search query (Multi-PO / Multi-keyword OR search)
+            if (keywords.length > 0) {
+                const matchSearch = keywords.some(kw => rowPo.includes(kw) || rowName.includes(kw));
+                if (!matchSearch) {
+                    show = false;
+                }
+            }
+
+            // Month filter
+            if (monthVal && rowMonth !== monthVal) {
+                show = false;
+            }
+
+            // Status filter
+            if (currentStatusFilter !== 'all' && rowStatus !== currentStatusFilter) {
+                show = false;
+            }
+
+            row.style.display = show ? '' : 'none';
+            if (show) visibleCount++;
+        });
+
+        // Show/hide no results
+        const noResults = document.getElementById('no-filter-results');
+        if (noResults) {
+            noResults.classList.toggle('hidden', visibleCount > 0 || @(Model.Items.Count == 0 ? "true" : "false"));
+        }
+    };
+
+    window.resetFilters = function () {
+        if (searchInput) searchInput.value = '';
+        const monthSel = document.getElementById('filter-month');
+        if (monthSel) monthSel.value = '';
+        const statusSelect = document.getElementById('filter-status');
+        if (statusSelect) statusSelect.value = 'all';
+        
+        setStatusFilter('all');
+    };
+
+    // ── Sorting Logic ──
+    const thElements = document.querySelectorAll('.th-sortable');
+    thElements.forEach(th => {
+        th.addEventListener('click', function () {
+            const sortKey = this.dataset.sortKey;
+            if (!sortKey) return;
+
+            if (currentSortKey === sortKey) {
+                currentSortAsc = !currentSortAsc;
+            } else {
+                currentSortKey = sortKey;
+                currentSortAsc = true;
+            }
+
+            sortTable(sortKey, currentSortAsc);
+            updateSortIcons(this, currentSortAsc);
+        });
+    });
+
+    function sortTable(key, asc) {
+        const tbody = document.getElementById('orders-tbody');
+        if (!tbody) return;
+        const rows = Array.from(tbody.querySelectorAll('.order-row'));
+
+        rows.sort(function (a, b) {
+            let valA, valB;
+
+            switch (key) {
+                case 'po':
+                    valA = (a.getAttribute('data-po') || '').toLowerCase();
+                    valB = (b.getAttribute('data-po') || '').toLowerCase();
+                    break;
+                case 'name':
+                    valA = (a.getAttribute('data-name') || '').toLowerCase();
+                    valB = (b.getAttribute('data-name') || '').toLowerCase();
+                    break;
+                case 'quantity':
+                    valA = parseFloat(a.getAttribute('data-quantity')) || 0;
+                    valB = parseFloat(b.getAttribute('data-quantity')) || 0;
+                    return asc ? valA - valB : valB - valA;
+                case 'amount':
+                    valA = parseFloat(a.getAttribute('data-amount')) || 0;
+                    valB = parseFloat(b.getAttribute('data-amount')) || 0;
+                    return asc ? valA - valB : valB - valA;
+                case 'month':
+                    valA = parseInt(a.getAttribute('data-month-sort')) || 0;
+                    valB = parseInt(b.getAttribute('data-month-sort')) || 0;
+                    return asc ? valA - valB : valB - valA;
+                case 'status':
+                    const orderMap = { 'ReceivedFull': 1, 'Deferred': 2, 'Skipped': 3 };
+                    valA = orderMap[a.getAttribute('data-status')] || 9;
+                    valB = orderMap[b.getAttribute('data-status')] || 9;
+                    return asc ? valA - valB : valB - valA;
+                default:
+                    return 0;
+            }
+
+            if (valA < valB) return asc ? -1 : 1;
+            if (valA > valB) return asc ? 1 : -1;
+            return 0;
+        });
+
+        rows.forEach(r => tbody.appendChild(r));
+    }
+
+    function updateSortIcons(activeTh, asc) {
+        thElements.forEach(th => {
+            const icon = th.querySelector('.sort-icon svg');
+            if (icon) {
+                icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M8.25 15L12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9"/>';
+                th.querySelector('.sort-icon').className = 'sort-icon inline-flex items-center text-slate-400';
+            }
+        });
+
+        const activeIcon = activeTh.querySelector('.sort-icon svg');
+        if (activeIcon) {
+            activeTh.querySelector('.sort-icon').className = 'sort-icon inline-flex items-center text-blue-600';
+            if (asc) {
+                activeIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5"/>';
+            } else {
+                activeIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>';
+            }
+        }
+    }
+
+    // ── Export to Excel with Prompt ──
+    const btnExport = document.getElementById('btn-export-excel');
+    if (btnExport) {
+        btnExport.addEventListener('click', function () {
+            const year = "@selectedYear";
+            const month = document.getElementById('filter-month')?.value || '';
+            const status = currentStatusFilter;
+            const search = (document.getElementById('po-search')?.value || '').trim();
+
+            let statusThai = 'ทั้งหมด';
+            if (status === 'ReceivedFull') statusThai = 'รับสินค้าแล้ว';
+            else if (status === 'Deferred') statusThai = 'ผ่อนชำระ';
+            else if (status === 'Skipped') statusThai = 'ยังไม่รับสินค้า';
+
+            const defaultFileName = `รายงานสรุปรายการสั่งซื้อ_ปี${parseInt(year) + 543}_${statusThai}`;
+
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: 'ตั้งชื่อไฟล์สำหรับส่งออก Excel',
+                    input: 'text',
+                    inputValue: defaultFileName,
+                    inputPlaceholder: 'กรอกชื่อไฟล์...',
+                    showCancelButton: true,
+                    confirmButtonText: 'ดาวน์โหลด',
+                    cancelButtonText: 'ยกเลิก',
+                    confirmButtonColor: '#059669',
+                    cancelButtonColor: '#94a3b8',
+                    inputValidator: (value) => {
+                        if (!value || !value.trim()) {
+                            return 'กรุณากรอกชื่อไฟล์ที่ต้องการบันทึก!';
+                        }
+                    }
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        const customName = result.value.trim();
+                        let exportUrl = `/MonthlyCost/ExportYearlySummaryExcel?year=${encodeURIComponent(year)}&status=${encodeURIComponent(status)}&customName=${encodeURIComponent(customName)}`;
+                        if (month) exportUrl += `&month=${encodeURIComponent(month)}`;
+                        if (search) exportUrl += `&search=${encodeURIComponent(search)}`;
+                        window.location.href = exportUrl;
+                    }
+                });
+            } else {
+                let exportUrl = `/MonthlyCost/ExportYearlySummaryExcel?year=${encodeURIComponent(year)}&status=${encodeURIComponent(status)}`;
+                if (month) exportUrl += `&month=${encodeURIComponent(month)}`;
+                if (search) exportUrl += `&search=${encodeURIComponent(search)}`;
+                window.location.href = exportUrl;
+            }
+        });
+    }
+})();
+</script>
 }

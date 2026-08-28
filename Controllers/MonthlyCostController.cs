@@ -1811,7 +1811,7 @@ namespace CostFlow.Controllers
         // GET: /MonthlyCost/Summary
         public async Task<IActionResult> Summary(int? year)
         {
-            ViewData["HeaderTitle"] = "สรุปค่าใช้จ่ายประจำเดือน";
+            ViewData["HeaderTitle"] = "รายการสั่งซื้อประจำปี";
 
             var thaiMonths = new[]
             {
@@ -1823,6 +1823,7 @@ namespace CostFlow.Controllers
             var now = _dateTimeProvider.Now;
             var selectedYear = year ?? now.Year;
 
+            // ── Available Years ──
             var dbActionYears = await _context.MonthlyOrderActions
                 .Where(a => !string.IsNullOrEmpty(a.MonthYear) && a.MonthYear.Length >= 4)
                 .Select(a => a.MonthYear.Substring(0, 4))
@@ -1849,83 +1850,117 @@ namespace CostFlow.Controllers
                 .OrderByDescending(y => y)
                 .ToList();
 
-            ViewBag.AvailableYears = availableYears;
-            ViewBag.SelectedYear = selectedYear;
-
-            // Use MonthYear string prefix ("yyyy-MM") instead of CreatedAt to avoid timezone issues
+            // ── Query all actions for selected year ──
             var yearPrefix = $"{selectedYear:0000}-";
-            var prevDecKey = $"{selectedYear - 1}-12";
 
             var allActions = await _context.MonthlyOrderActions
-                .Where(a => a.MonthYear.StartsWith(yearPrefix) || a.MonthYear == prevDecKey)
+                .Include(a => a.OrderTrackingMaster)
+                .ThenInclude(o => o!.MatchedInWeeklyPlans)
+                .ThenInclude(m => m.WeeklyPlan)
+                .Where(a => a.MonthYear.StartsWith(yearPrefix))
+                .OrderBy(a => a.MonthYear)
+                .ThenByDescending(a => a.CreatedAt)
                 .ToListAsync();
 
-            var rows = new List<MonthlySummaryRow>();
-            decimal cumulative = 0;
+            // Deduplicate: 1 order ต่อ 1 เดือน (เอา action ล่าสุด)
+            var deduplicated = allActions
+                .GroupBy(a => (a.OrderTrackingMasterId, MonthKey: a.MonthYear.Length > 7 ? a.MonthYear.Substring(0, 7) : a.MonthYear))
+                .Select(g => g.First())
+                .ToList();
 
-            for (int m = 1; m <= 12; m++)
+            // ── Map to YearlyOrderItem ──
+            var items = new List<YearlyOrderItem>();
+
+            foreach (var act in deduplicated)
             {
-                var key = $"{selectedYear:0000}-{m:00}";
-                var display = $"{thaiMonths[m]} {selectedYear + 543}";
-                var monthActions = allActions.Where(a => a.MonthYear == key).ToList();
+                var otm = act.OrderTrackingMaster;
+                if (otm == null) continue;
 
-                var prevKey = m == 1 ? prevDecKey : $"{selectedYear:0000}-{m - 1:00}";
-                var carryOverActions = allActions.Where(a => a.MonthYear == prevKey && a.Action == "Deferred").ToList();
+                var latestPlan = otm.MatchedInWeeklyPlans
+                    .OrderByDescending(w => w.WeeklyPlan?.UploadedAt)
+                    .FirstOrDefault();
 
-                // เช็คว่ารายการ carry-over เหล่านั้น ยังไม่มี action ในเดือนนี้
-                // ถ้ามี action แล้ว (ผ่อนต่อ/รับแล้ว) ก็ไม่ควรนับเป็น carry-over ของเดือนนี้
-                var thisMonthActionedIds = monthActions.Select(a => a.OrderTrackingMasterId).ToHashSet();
-                var activeCarryOvers = carryOverActions
-                    .Where(a => !thisMonthActionedIds.Contains(a.OrderTrackingMasterId))
-                    .ToList();
+                string orderName = !string.IsNullOrWhiteSpace(otm.Remarks)
+                    ? otm.Remarks.Replace("สั่งทำ ", "").Replace("สั่งทำ", "").Trim()
+                    : "ไม่ระบุ";
 
-                var carryOverCount = activeCarryOvers.Count;
-                var carryOverAmount = activeCarryOvers.Sum(a => a.ActionPrice);
+                string dept = latestPlan?.Department ?? otm.Urgency ?? "-";
 
-                var received = monthActions.Where(a => a.Action == "ReceivedFull").Sum(a => a.ActionPrice);
-                var deferred = monthActions.Where(a => a.Action == "Deferred").Sum(a => a.ActionPrice);
-
-                cumulative += received;
-
-                rows.Add(new MonthlySummaryRow
+                decimal amount = 0m;
+                if (act.Action == "Deferred" || act.Action == "ReceivedFull")
                 {
-                    MonthKey = key,
-                    MonthDisplay = display,
-                    ReceivedCount = monthActions.Count(a => a.Action == "ReceivedFull"),
-                    ReceivedAmount = received,
-                    DeferredCount = monthActions.Count(a => a.Action == "Deferred"),
-                    DeferredAmount = deferred,
-                    SkippedCount = monthActions.Count(a => a.Action == "Skipped"),
-                    TotalPaid = received,
-                    Cumulative = cumulative,
-                    CarryOverDeferredCount = carryOverCount,
-                    CarryOverDeferredAmount = carryOverAmount,
-                    HasData = monthActions.Any()
+                    amount = act.ActionPrice > 0 ? act.ActionPrice : 0m;
+                }
+                if (amount == 0 && !string.IsNullOrEmpty(otm.Amount) && decimal.TryParse(otm.Amount, out var parsed))
+                {
+                    amount = parsed;
+                }
+
+                string actionDisplay = act.Action switch
+                {
+                    "ReceivedFull" => "รับสินค้าแล้ว",
+                    "Deferred" => "ผ่อนชำระ",
+                    "Skipped" => "ยังไม่รับสินค้า",
+                    _ => act.Action
+                };
+
+                var normalizedKey = act.MonthYear.Length > 7 ? act.MonthYear.Substring(0, 7) : act.MonthYear;
+                var keyParts = normalizedKey.Split('-');
+                int monthNum = keyParts.Length == 2 && int.TryParse(keyParts[1], out var mn) ? mn : 0;
+                int yearNum = keyParts.Length >= 1 && int.TryParse(keyParts[0], out var yn) ? yn : selectedYear;
+                string monthDisplay = monthNum >= 1 && monthNum <= 12
+                    ? $"{thaiMonths[monthNum]} {yearNum + 543}"
+                    : normalizedKey;
+
+                string qtyDisplay = !string.IsNullOrWhiteSpace(otm.RemarksQuantity)
+                    ? (otm.RemarksQuantity.Trim().EndsWith("ชิ้น") ? otm.RemarksQuantity.Trim() : $"{otm.RemarksQuantity.Trim()} ชิ้น")
+                    : "-";
+
+                var approvedDt = ParseThaiDate(otm.ApprovedDate);
+                string approvedMonthDisplay = "-";
+                int approvedMonthNum = 0;
+                if (approvedDt.HasValue)
+                {
+                    approvedMonthNum = approvedDt.Value.Month;
+                    approvedMonthDisplay = approvedMonthNum >= 1 && approvedMonthNum <= 12
+                        ? $"{thaiMonths[approvedMonthNum]} {approvedDt.Value.Year + 543}"
+                        : "-";
+                }
+
+                items.Add(new YearlyOrderItem
+                {
+                    ActionId = act.Id,
+                    OrderId = otm.Id,
+                    PoNumber = otm.PoNumber ?? "-",
+                    OrderName = orderName,
+                    Quantity = qtyDisplay,
+                    Department = dept,
+                    Amount = amount,
+                    MonthKey = normalizedKey,
+                    MonthDisplay = monthDisplay,
+                    MonthNumber = monthNum,
+                    Action = act.Action,
+                    ActionDisplay = actionDisplay,
+                    ApprovedDate = otm.ApprovedDate ?? "-",
+                    ApprovedMonthDisplay = approvedMonthDisplay,
+                    ApprovedMonthNumber = approvedMonthNum,
+                    CreatedAt = act.CreatedAt
                 });
             }
 
-            var latestActionsByOrder = allActions
-                .GroupBy(a => a.OrderTrackingMasterId)
-                .Select(g => g.OrderByDescending(a => a.MonthYear).ThenByDescending(a => a.CreatedAt).First())
-                .ToList();
-
-            var currentDebt = latestActionsByOrder.Where(a => a.Action == "Deferred" || a.Action == "Skipped")
-                .Sum(a => a.ActionPrice);
-
-            var uniqueDeferredThisYear = allActions
-                .Where(a => a.MonthYear.StartsWith(yearPrefix) && a.Action == "Deferred")
-                .GroupBy(a => a.OrderTrackingMasterId)
-                .Select(g => g.First())
-                .Sum(a => a.ActionPrice);
-
-            var vm = new MonthlySummaryViewModel
+            // ── KPI (จากข้อมูลทั้งหมดก่อน filter) ──
+            var vm = new YearlyOrderSummaryViewModel
             {
-                Year = selectedYear,
-                Rows = rows,
-                GrandTotal = rows.Sum(r => r.TotalPaid),
-                TotalReceived = rows.Sum(r => r.ReceivedAmount),
-                TotalDeferred = uniqueDeferredThisYear,
-                CurrentDebt = currentDebt
+                SelectedYear = selectedYear,
+                AvailableYears = availableYears,
+                Items = items,
+                TotalOrders = items.Count,
+                TotalReceivedCount = items.Count(i => i.Action == "ReceivedFull"),
+                TotalReceivedAmount = items.Where(i => i.Action == "ReceivedFull").Sum(i => i.Amount),
+                TotalDeferredCount = items.Count(i => i.Action == "Deferred"),
+                TotalDeferredAmount = items.Where(i => i.Action == "Deferred").Sum(i => i.Amount),
+                TotalSkippedCount = items.Count(i => i.Action == "Skipped"),
+                TotalSkippedAmount = items.Where(i => i.Action == "Skipped").Sum(i => i.Amount)
             };
 
             return View(vm);
@@ -2365,6 +2400,264 @@ namespace CostFlow.Controllers
             return File(stream.ToArray(),
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 downloadName);
+        }
+
+        // GET: /MonthlyCost/ExportYearlySummaryExcel?year=2026&month=7&status=ReceivedFull&search=...&customName=...
+        [HttpGet]
+        public async Task<IActionResult> ExportYearlySummaryExcel(int? year, int? month, string? status, string? search, string? customName)
+        {
+            var now = _dateTimeProvider.Now;
+            var selectedYear = year ?? now.Year;
+
+            var thaiMonths = new[]
+            {
+                "", "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน",
+                "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม",
+                "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"
+            };
+
+            var yearPrefix = $"{selectedYear:0000}-";
+
+            var allActions = await _context.MonthlyOrderActions
+                .Include(a => a.OrderTrackingMaster)
+                .ThenInclude(o => o!.MatchedInWeeklyPlans)
+                .ThenInclude(m => m.WeeklyPlan)
+                .Where(a => a.MonthYear.StartsWith(yearPrefix))
+                .OrderBy(a => a.MonthYear)
+                .ThenByDescending(a => a.CreatedAt)
+                .ToListAsync();
+
+            var deduplicated = allActions
+                .GroupBy(a => (a.OrderTrackingMasterId, MonthKey: a.MonthYear.Length > 7 ? a.MonthYear.Substring(0, 7) : a.MonthYear))
+                .Select(g => g.First())
+                .ToList();
+
+            var items = new List<YearlyOrderItem>();
+
+            foreach (var act in deduplicated)
+            {
+                var otm = act.OrderTrackingMaster;
+                if (otm == null) continue;
+
+                var latestPlan = otm.MatchedInWeeklyPlans
+                    .OrderByDescending(w => w.WeeklyPlan?.UploadedAt)
+                    .FirstOrDefault();
+
+                string orderName = !string.IsNullOrWhiteSpace(otm.Remarks)
+                    ? otm.Remarks.Replace("สั่งทำ ", "").Replace("สั่งทำ", "").Trim()
+                    : "ไม่ระบุ";
+
+                string dept = latestPlan?.Department ?? otm.Urgency ?? "-";
+
+                decimal amount = 0m;
+                if (act.Action == "Deferred" || act.Action == "ReceivedFull")
+                {
+                    amount = act.ActionPrice > 0 ? act.ActionPrice : 0m;
+                }
+                if (amount == 0 && !string.IsNullOrEmpty(otm.Amount) && decimal.TryParse(otm.Amount, out var parsed))
+                {
+                    amount = parsed;
+                }
+
+                string actionDisplay = act.Action switch
+                {
+                    "ReceivedFull" => "รับสินค้าแล้ว",
+                    "Deferred" => "ผ่อนชำระ",
+                    "Skipped" => "ยังไม่รับสินค้า",
+                    _ => act.Action
+                };
+
+                var normalizedKey = act.MonthYear.Length > 7 ? act.MonthYear.Substring(0, 7) : act.MonthYear;
+                var keyParts = normalizedKey.Split('-');
+                int monthNum = keyParts.Length == 2 && int.TryParse(keyParts[1], out var mn) ? mn : 0;
+                int yearNum = keyParts.Length >= 1 && int.TryParse(keyParts[0], out var yn) ? yn : selectedYear;
+                string monthDisplay = monthNum >= 1 && monthNum <= 12
+                    ? $"{thaiMonths[monthNum]} {yearNum + 543}"
+                    : normalizedKey;
+
+                string qtyDisplay = !string.IsNullOrWhiteSpace(otm.RemarksQuantity)
+                    ? (otm.RemarksQuantity.Trim().EndsWith("ชิ้น") ? otm.RemarksQuantity.Trim() : $"{otm.RemarksQuantity.Trim()} ชิ้น")
+                    : "-";
+
+                var approvedDt = ParseThaiDate(otm.ApprovedDate);
+                string approvedMonthDisplay = "-";
+                int approvedMonthNum = 0;
+                if (approvedDt.HasValue)
+                {
+                    approvedMonthNum = approvedDt.Value.Month;
+                    approvedMonthDisplay = approvedMonthNum >= 1 && approvedMonthNum <= 12
+                        ? $"{thaiMonths[approvedMonthNum]} {approvedDt.Value.Year + 543}"
+                        : "-";
+                }
+
+                items.Add(new YearlyOrderItem
+                {
+                    ActionId = act.Id,
+                    OrderId = otm.Id,
+                    PoNumber = otm.PoNumber ?? "-",
+                    OrderName = orderName,
+                    Quantity = qtyDisplay,
+                    Department = dept,
+                    Amount = amount,
+                    MonthKey = normalizedKey,
+                    MonthDisplay = monthDisplay,
+                    MonthNumber = monthNum,
+                    Action = act.Action,
+                    ActionDisplay = actionDisplay,
+                    ApprovedDate = otm.ApprovedDate ?? "-",
+                    ApprovedMonthDisplay = approvedMonthDisplay,
+                    ApprovedMonthNumber = approvedMonthNum,
+                    CreatedAt = act.CreatedAt
+                });
+            }
+
+            // Apply Filters
+            if (month.HasValue && month.Value >= 1 && month.Value <= 12)
+            {
+                items = items.Where(i => i.ApprovedMonthNumber == month.Value).ToList();
+            }
+
+            if (!string.IsNullOrWhiteSpace(status) && !status.Equals("all", StringComparison.OrdinalIgnoreCase))
+            {
+                items = items.Where(i => i.Action.Equals(status, StringComparison.OrdinalIgnoreCase)).ToList();
+            }
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var keywords = search.Split(new[] { ' ', ',', ';', '\n', '\r', '\t' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                if (keywords.Length > 0)
+                {
+                    items = items.Where(i => keywords.Any(kw =>
+                        i.PoNumber.Contains(kw, StringComparison.OrdinalIgnoreCase) ||
+                        i.OrderName.Contains(kw, StringComparison.OrdinalIgnoreCase))).ToList();
+                }
+            }
+
+            // ClosedXML
+            ClosedXML.Excel.LoadOptions.DefaultGraphicEngine = new MockGraphicEngine();
+            using var workbook = new ClosedXML.Excel.XLWorkbook();
+            var ws = workbook.Worksheets.Add($"สรุปรายการสั่งซื้อ {selectedYear + 543}");
+
+            var fontName = "Noto Sans Thai";
+            var colorBorder = ClosedXML.Excel.XLColor.FromHtml("#CBD5E1");
+
+            // Title
+            ws.Cell(1, 1).Value = $"รายงานสรุปรายการสั่งซื้อประจำปี พ.ศ. {selectedYear + 543}";
+            ws.Cell(1, 1).Style.Font.FontName = fontName;
+            ws.Cell(1, 1).Style.Font.FontSize = 14;
+            ws.Cell(1, 1).Style.Font.Bold = true;
+            ws.Range(1, 1, 1, 7).Merge();
+
+            // Filter subtitle
+            string monthFilterText = month.HasValue && month.Value >= 1 && month.Value <= 12 ? thaiMonths[month.Value] : "ทุกเดือน";
+            string statusFilterText = status switch
+            {
+                "ReceivedFull" => "รับสินค้าแล้ว",
+                "Deferred" => "ผ่อนชำระ",
+                "Skipped" => "ยังไม่รับสินค้า",
+                _ => "ทุกสถานะ"
+            };
+            ws.Cell(2, 1).Value = $"ปี: พ.ศ. {selectedYear + 543} | เดือนที่อนุมัติ: {monthFilterText} | สถานะ: {statusFilterText} | รวมทั้งสิ้น: {items.Count} รายการ | วันที่ออกรายงาน: {DateTime.Now:dd/MM/yyyy HH:mm}";
+            ws.Cell(2, 1).Style.Font.FontName = fontName;
+            ws.Cell(2, 1).Style.Font.FontSize = 10;
+            ws.Cell(2, 1).Style.Font.FontColor = ClosedXML.Excel.XLColor.FromHtml("#475569");
+            ws.Range(2, 1, 2, 7).Merge();
+
+            ws.Row(3).Height = 8;
+
+            int headerRow = 4;
+            var headers = new[]
+            {
+                "ลำดับ", "เลขที่อนุมัติ (PO)", "ชื่อรายการ / สินค้า", "จำนวน", "มูลค่า (บาท)", "เดือนที่อนุมัติ", "สถานะ"
+            };
+
+            for (int c = 0; c < headers.Length; c++)
+            {
+                var cell = ws.Cell(headerRow, c + 1);
+                cell.Value = headers[c];
+                cell.Style.Font.FontName = fontName;
+                cell.Style.Font.FontSize = 11;
+                cell.Style.Font.Bold = true;
+                cell.Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Center;
+                cell.Style.Alignment.Vertical = ClosedXML.Excel.XLAlignmentVerticalValues.Center;
+                cell.Style.Border.OutsideBorder = ClosedXML.Excel.XLBorderStyleValues.Thin;
+                cell.Style.Border.OutsideBorderColor = colorBorder;
+                cell.Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.FromHtml("#F1F5F9");
+            }
+            ws.Row(headerRow).Height = 24;
+
+            int currentRow = headerRow + 1;
+            int itemNo = 1;
+            decimal totalAmt = 0m;
+
+            foreach (var item in items)
+            {
+                totalAmt += item.Amount;
+
+                ws.Cell(currentRow, 1).Value = itemNo++;
+                ws.Cell(currentRow, 2).Value = item.PoNumber;
+                ws.Cell(currentRow, 3).Value = item.OrderName;
+                ws.Cell(currentRow, 4).Value = item.Quantity;
+                ws.Cell(currentRow, 5).Value = item.Amount;
+                ws.Cell(currentRow, 6).Value = item.ApprovedMonthDisplay;
+                ws.Cell(currentRow, 7).Value = item.ActionDisplay;
+
+                for (int c = 1; c <= 7; c++)
+                {
+                    var cell = ws.Cell(currentRow, c);
+                    cell.Style.Font.FontName = fontName;
+                    cell.Style.Font.FontSize = 10;
+                    cell.Style.Border.OutsideBorder = ClosedXML.Excel.XLBorderStyleValues.Thin;
+                    cell.Style.Border.OutsideBorderColor = colorBorder;
+                    cell.Style.Alignment.Vertical = ClosedXML.Excel.XLAlignmentVerticalValues.Center;
+                }
+
+                ws.Cell(currentRow, 1).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Center;
+                ws.Cell(currentRow, 2).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Center;
+                ws.Cell(currentRow, 3).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Left;
+                ws.Cell(currentRow, 4).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Center;
+                ws.Cell(currentRow, 5).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Right;
+                ws.Cell(currentRow, 5).Style.NumberFormat.Format = "#,##0.00";
+                ws.Cell(currentRow, 6).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Center;
+                ws.Cell(currentRow, 7).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Center;
+
+                ws.Row(currentRow).Height = 22;
+                currentRow++;
+            }
+
+            // Summary Rows
+            if (items.Count > 0)
+            {
+                currentRow++;
+                ws.Cell(currentRow, 4).Value = $"รวมมูลค่าทั้งสิ้น ({items.Count} รายการ)";
+                ws.Cell(currentRow, 4).Style.Font.FontName = fontName;
+                ws.Cell(currentRow, 4).Style.Font.Bold = true;
+                ws.Cell(currentRow, 4).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Right;
+                ws.Cell(currentRow, 5).Value = totalAmt;
+                ws.Cell(currentRow, 5).Style.Font.FontName = fontName;
+                ws.Cell(currentRow, 5).Style.Font.Bold = true;
+                ws.Cell(currentRow, 5).Style.NumberFormat.Format = "#,##0.00";
+                ws.Cell(currentRow, 5).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Right;
+            }
+
+            ws.Column(1).Width = 8;
+            ws.Column(2).Width = 18;
+            ws.Column(3).Width = 40;
+            ws.Column(4).Width = 12;
+            ws.Column(5).Width = 20;
+            ws.Column(6).Width = 20;
+            ws.Column(7).Width = 18;
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+
+            string finalFileName = !string.IsNullOrWhiteSpace(customName)
+                ? (customName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase) ? customName : $"{customName}.xlsx")
+                : $"รายงานสรุปรายการสั่งซื้อ_{selectedYear + 543}_{(month.HasValue ? thaiMonths[month.Value] : "ทั้งปี")}_{status ?? "ทั้งหมด"}.xlsx";
+
+            return File(stream.ToArray(),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                finalFileName);
         }
 
         private class ExcelExportRowDto
