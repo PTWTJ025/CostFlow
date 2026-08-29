@@ -2025,15 +2025,33 @@ namespace CostFlow.Controllers
             return null;
         }
 
-        // GET: /MonthlyCost/ExportDetailExcel?monthYear=มกราคม+2569&actionFilter=all&statusFilter=all
-        [HttpGet]
-        public async Task<IActionResult> ExportDetailExcel(string monthYear, string? actionFilter = "all", string? statusFilter = "all")
+        // POST: /MonthlyCost/ExportDetailExcel
+        [HttpPost]
+        public async Task<IActionResult> ExportDetailExcel([FromForm] string monthYear, [FromForm] string? actionFilter = "all", [FromForm] string? statusFilter = "all", [FromForm] string? draftCartJson = null)
         {
             if (string.IsNullOrEmpty(monthYear))
                 return BadRequest("monthYear parameter is required");
 
             var monthYearKey = ConvertThaiMonthToKey(monthYear);
             var canonicalThaiMonth = ConvertKeyToThaiMonth(monthYearKey);
+
+            var draftCart = new Dictionary<Guid, DraftCartItem>();
+            if (!string.IsNullOrEmpty(draftCartJson))
+            {
+                try 
+                { 
+                    var parsed = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, DraftCartItem>>(draftCartJson);
+                    if (parsed != null)
+                    {
+                        foreach (var kvp in parsed)
+                        {
+                            if (Guid.TryParse(kvp.Key, out Guid id))
+                                draftCart[id] = kvp.Value;
+                        }
+                    }
+                } 
+                catch { }
+            }
 
             // Register Mock Graphic Engine for ClosedXML
             ClosedXML.Excel.LoadOptions.DefaultGraphicEngine = new MockGraphicEngine();
@@ -2099,7 +2117,7 @@ namespace CostFlow.Controllers
             var exportRows = new List<ExcelExportRowDto>();
 
             // A. รายการที่บันทึกแล้ว (Saved)
-            if (statusFilter == "all" || statusFilter == "saved")
+            if (actionFilter != "DraftOnly" && (statusFilter == "all" || statusFilter == "saved"))
             {
                 foreach (var action in existingActions)
                 {
@@ -2148,6 +2166,10 @@ namespace CostFlow.Controllers
             {
                 foreach (var otm in pendingOrders)
                 {
+                    if (actionFilter == "DraftOnly" && !draftCart.ContainsKey(otm.Id))
+                    {
+                        continue; // ข้ามรายการที่ไม่ได้อยู่ในตะกร้าจำลอง
+                    }
                     var latestPlan = otm.MatchedInWeeklyPlans?.OrderByDescending(w => w.WeeklyPlan?.UploadedAt).FirstOrDefault();
 
                     string sourceText = "สั่งผลิตประจำเดือนนี้";
@@ -2171,6 +2193,22 @@ namespace CostFlow.Controllers
                     }
 
                     decimal amount = ParseDecimal(otm.Amount);
+                    string statusText = "รอดำเนินการ";
+
+                    // OVERLAY DRAFT CART
+                    if (draftCart.TryGetValue(otm.Id, out var draft))
+                    {
+                        actionType = draft.action;
+                        actionLabel = draft.action switch
+                        {
+                            "ReceivedFull" => "รับสินค้าแล้ว",
+                            "Deferred" => "ผ่อนชำระ",
+                            "Skipped" => "ยังไม่รับสินค้า",
+                            _ => draft.action
+                        };
+                        amount = draft.actionPrice > 0 ? draft.actionPrice : amount;
+                        statusText = "บันทึกแล้ว (จำลอง)";
+                    }
 
                     exportRows.Add(new ExcelExportRowDto
                     {
@@ -2182,7 +2220,7 @@ namespace CostFlow.Controllers
                         Source = sourceText,
                         ActionType = actionType,
                         ActionLabel = actionLabel,
-                        Status = "รอดำเนินการ",
+                        Status = statusText,
                         Quantity = !string.IsNullOrEmpty(otm.RemarksQuantity) ? otm.RemarksQuantity : "1",
                         Amount = amount,
                         DateText = otm.ApprovedDate ?? "-"
@@ -2190,8 +2228,8 @@ namespace CostFlow.Controllers
                 }
             }
 
-            // C. กรองตาม actionFilter (ถ้าไม่ใช่ "all")
-            if (!string.IsNullOrEmpty(actionFilter) && actionFilter != "all")
+            // C. กรองตาม actionFilter (ถ้าไม่ใช่ "all" และไม่ใช่ "DraftOnly")
+            if (!string.IsNullOrEmpty(actionFilter) && actionFilter != "all" && actionFilter != "DraftOnly")
             {
                 exportRows = exportRows.Where(r => r.ActionType.Equals(actionFilter, StringComparison.OrdinalIgnoreCase)).ToList();
             }
@@ -2217,6 +2255,7 @@ namespace CostFlow.Controllers
                 "ReceivedFull" => "เฉพาะรับสินค้าแล้ว",
                 "Deferred" => "เฉพาะผ่อนชำระ",
                 "Skipped" => "เฉพาะยังไม่รับสินค้า",
+                "DraftOnly" => "เฉพาะรายการจำลองในตะกร้า",
                 _ => "ทั้งหมดทุกประเภท"
             };
             string statusTextDesc = statusFilter switch
@@ -3022,5 +3061,11 @@ namespace CostFlow.Controllers
     public class TriggerMonthEndTransitionRequest
     {
         public string? FromMonthYear { get; set; }
+    }
+
+    public class DraftCartItem
+    {
+        public string action { get; set; } = string.Empty;
+        public decimal actionPrice { get; set; }
     }
 }

@@ -150,13 +150,33 @@
             }
         }
     
+        #sidebar span,
+        #sidebar div.text-\[10px\],
+        #sidebar hr,
+        #sidebar .h-\[64px\] div {
+            transition: opacity 0.15s ease-out, width 0.2s cubic-bezier(0.4, 0, 0.2, 1), margin 0.2s, padding 0.2s;
+            white-space: nowrap;
+            overflow: hidden;
+            opacity: 1;
+        }
+
         body.sidebar-collapsed #sidebar span,
         body.sidebar-collapsed #sidebar div.text-\[10px\],
         body.sidebar-collapsed #sidebar hr,
         body.sidebar-collapsed #sidebar .h-\[64px\] div {
-            display: none !important;
+            opacity: 0 !important;
+            width: 0 !important;
+            height: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: none !important;
+            pointer-events: none;
         }
-    
+
+        #sidebar a {
+            transition: padding 0.2s cubic-bezier(0.4, 0, 0.2, 1), justify-content 0.2s;
+        }
+
         body.sidebar-collapsed #sidebar a {
             justify-content: center;
             padding-left: 0;
@@ -297,10 +317,9 @@
 <nav id="sidebar"
      class="flex flex-col h-[100dvh] w-64 fixed left-0 top-0 bg-surface-container-low dark:bg-inverse-surface border-r border-outline-variant shadow-sm z-40">
     <!-- Redesigned Logo Header (static, no link) -->
-    <div
-        class="h-[64px] px-lg flex items-center gap-3 border-b border-outline-variant bg-surface-container-low/50 select-none">
-        <i data-lucide="chart-gantt" class="w-6 h-6 text-primary flex-shrink-0 leading-none cursor-pointer"
-           id="sidebar-toggle-icon">
+    <div id="sidebar-toggle-icon"
+        class="h-[64px] px-lg flex items-center gap-3 border-b border-outline-variant bg-surface-container-low/50 select-none cursor-pointer hover:bg-slate-200/50 transition-colors">
+        <i data-lucide="chart-gantt" class="w-6 h-6 text-primary flex-shrink-0 leading-none">
         </i>
         <div class="flex flex-col text-left">
             <span

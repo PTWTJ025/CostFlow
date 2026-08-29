@@ -89,52 +89,47 @@ namespace CostFlow.Controllers
                 /* ถ้า Sheets ไม่ตอบ แสดง 0 แทน */
             }
 
-            var groupedReports = new List<ReportSummaryViewModel>();
+            var allReports = new List<CostFlow.Models.Report>();
             try
             {
-                groupedReports = await _context.Reports
-                    .OrderByDescending(r => r.CreatedAt)
-                    .Select(r => new ReportSummaryViewModel
-                    {
-                        ReportName = r.ReportName,
-                        TotalRows = r.TotalPOs,
-                        MatchedRows = r.MatchedPOs,
-                        CreatedAt = r.CreatedAt,
-                        CompareFileName = r.OriginalFileName,
-                        CreatedBy = r.CreatedBy
-                    })
-                    .ToListAsync();
+                allReports = await _context.Reports.ToListAsync();
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"[Dashboard] Warning fetching reports: {ex.Message}");
             }
 
-            int totalMergedReports = groupedReports.Count;
+            int totalMergedReports = allReports.Count;
             double avgSuccessRate = 0;
-            var recentReports = groupedReports.Take(3).Select(r => new
-            {
-                ReportName = r.ReportName,
-                TotalRows = r.TotalRows,
-                MatchedRows = r.MatchedRows,
-                CreatedAt = r.CreatedAt,
-                CreatedBy = r.CreatedBy ?? "ไม่ระบุ",
-                FormattedDate =
-                    r.CreatedAt.ToString("dd MMM yyyy HH:mm น.", new System.Globalization.CultureInfo("th-TH")),
-                Accuracy = r.TotalRows > 0 ? Math.Round((double)r.MatchedRows / r.TotalRows * 100, 1) : 0,
-                DetailsUrl = Url.Action("Details", "Report", new { fileName = r.ReportName })
-            }).ToList();
 
             if (totalMergedReports > 0)
             {
                 double totalAccuracy = 0;
-                foreach (var report in groupedReports)
+                foreach (var report in allReports)
                 {
-                    double accuracy = report.TotalRows > 0 ? (double)report.MatchedRows / report.TotalRows * 100 : 0;
+                    double accuracy = report.TotalPOs > 0 ? (double)report.MatchedPOs / report.TotalPOs * 100 : 0;
                     totalAccuracy += accuracy;
                 }
-
                 avgSuccessRate = Math.Round(totalAccuracy / totalMergedReports, 1);
+            }
+
+            var groupedReports = new List<ReportSummaryViewModel>();
+            var now = DateTime.Now;
+            for (int i = 0; i < 3; i++)
+            {
+                var targetMonth = now.AddMonths(-i);
+                var monthReports = allReports.Where(r => r.CreatedAt.Year == targetMonth.Year && r.CreatedAt.Month == targetMonth.Month).ToList();
+                
+                var date = new DateTime(targetMonth.Year, targetMonth.Month, 1, 0, 0, 0, DateTimeKind.Local);
+                groupedReports.Add(new ReportSummaryViewModel
+                {
+                    ReportName = $"สรุปประจำเดือน {date.ToString("MMMM yyyy", new System.Globalization.CultureInfo("th-TH"))}",
+                    TotalRows = monthReports.Sum(r => r.TotalPOs),
+                    MatchedRows = monthReports.Sum(r => r.MatchedPOs),
+                    CreatedAt = date,
+                    CreatedBy = "ระบบ",
+                    CompareFileName = ""
+                });
             }
 
             int currentYear = DateTime.Now.Year;
@@ -196,9 +191,9 @@ namespace CostFlow.Controllers
                 matchedRows = r.MatchedRows,
                 createdAt = r.CreatedAt,
                 formattedDate =
-                    r.CreatedAt.ToString("dd MMM yyyy HH:mm น.", new System.Globalization.CultureInfo("th-TH")),
+                    "ประจำเดือน " + r.CreatedAt.ToString("MMMM yyyy", new System.Globalization.CultureInfo("th-TH")) + " • รวบรวมโดย " + (r.CreatedBy ?? "ไม่ระบุ"),
                 accuracy = r.TotalRows > 0 ? Math.Round((double)r.MatchedRows / r.TotalRows * 100, 1) : 0,
-                detailsUrl = Url.Action("Details", "Report", new { fileName = r.ReportName })
+                detailsUrl = "/Report"
             }).ToList();
 
             return Json(new

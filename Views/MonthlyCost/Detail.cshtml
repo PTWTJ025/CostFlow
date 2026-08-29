@@ -206,12 +206,13 @@
         </div>
 
         <!-- ปุ่ม Export Excel สรุปราคา -->
-        <button type="button" onclick="openExportModal()"
-                class="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition-all cursor-pointer hover:shadow">
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/>
+        <button type="button" onclick="openExportModal()" title="ส่งออก Excel" class="flex items-center justify-center btn-custom-green rounded-md text-white shadow-sm transition-all active:scale-95 shrink-0 cursor-pointer" style="width: 34px !important; height: 34px !important; padding: 0 !important;">
+            <svg xmlns="http://www.w3.org/2000/svg" x="0px" y="0px" viewBox="0 0 48 48" style="width: 18px !important; height: 18px !important;">
+                <path fill="#169154" d="M29,6H15.744C14.781,6,14,6.781,14,7.744v7.259h15V6z"></path><path fill="#18482a" d="M14,33.054v7.202C14,41.219,14.781,42,15.743,42H29v-8.946H14z"></path><path fill="#0c8045" d="M14 15.003H29V24.005000000000003H14z"></path><path fill="#17472a" d="M14 24.005H29V33.055H14z"></path>
+                <g>
+                    <path fill="#29c27f" d="M42.256,6H29v9.003h15V7.744C44,6.781,43.219,6,44,6z"></path><path fill="#27663f" d="M29,33.054V42h13.257C43.219,42,44,41.219,44,40.257v-7.202H29z"></path><path fill="#19ac65" d="M29 15.003H44V24.005000000000003H29z"></path><path fill="#129652" d="M29 24.005H44V33.055H29z"></path>
+                </g><path fill="#0c7238" d="M22.319,34H5.681C4.753,34,4,33.247,4,32.319V15.681C4,14.753,4.753,14,5.681,14h16.638 C23.247,14,24,14.753,24,15.681v16.638C24,33.247,23.247,34,22.319,34z"></path><path fill="#fff" d="M9.807 19L12.193 19 14.129 22.754 16.175 19 18.404 19 15.333 24 18.474 29 16.123 29 14.013 25.07 11.912 29 9.526 29 12.719 23.982z"></path>
             </svg>
-            Export สรุปราคา
         </button>
     </div>
 </div>
@@ -817,6 +818,44 @@
         const isCurrentMonthPage = @(Model.IsCurrentMonth ? "true" : "false");
         const IS_FUTURE_MONTH = @(Model.IsFutureMonth ? "true" : "false");
         const cart = {}; // orderId → { poNumber, orderName, price, department, delivery, action, actionPrice }
+        const CART_STORAGE_KEY = `costflow_cart_${'@Html.Raw(Model.MonthYear)'}`;
+
+        function saveCartToStorage() {
+            try {
+                localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
+            } catch (e) { console.error('Failed to save cart to storage', e); }
+        }
+
+        function loadCartFromStorage() {
+            try {
+                const stored = localStorage.getItem(CART_STORAGE_KEY);
+                if (!stored) return;
+                const parsed = JSON.parse(stored);
+                if (!parsed || typeof parsed !== 'object') return;
+                
+                let hasItems = false;
+                Object.keys(parsed).forEach(orderId => {
+                    const item = parsed[orderId];
+                    const card = document.querySelector(`.order-card[data-order-id="${orderId}"]`);
+                    if (card && card.style.display !== 'none' && !card.classList.contains('in-cart')) {
+                        cart[orderId] = item;
+                        card.classList.add('in-cart');
+                        const btn = card.querySelector('.add-btn');
+                        if (btn) btn.textContent = '✓ เพิ่มแล้ว';
+                        
+                        renderCartItem(orderId);
+                        hasItems = true;
+                    }
+                });
+                
+                if (hasItems) {
+                    const emptyEl = document.getElementById('cart-empty');
+                    if (emptyEl) emptyEl.style.display = 'none';
+                }
+            } catch (e) {
+                console.error('Failed to load cart from storage', e);
+            }
+        }
 
         // ─── Helpers ─────────────────────────────────────────────────────────────────
         function fmt(n) {
@@ -824,6 +863,7 @@
         }
 
         function updateSummary() {
+            saveCartToStorage();
             const ids = Object.keys(cart);
             const total = ids.reduce((s, id) => s + (cart[id].actionPrice || 0), 0);
 
@@ -896,6 +936,12 @@
             }
         }
 
+        // ─── Initialization ──────────────────────────────────────────────────────────
+        window.addEventListener('DOMContentLoaded', () => {
+            loadCartFromStorage();
+            updateSummary();
+        });
+
         // ปรับ Action ของทุกรายการที่อยู่ในตะกร้าพร้อมกัน (Bulk Set All in Cart)
         function setAllCartAction(action) {
             const ids = Object.keys(cart);
@@ -929,6 +975,8 @@
                     if (btn) btn.textContent = '+ เพิ่ม';
                 }
             });
+
+            localStorage.removeItem(CART_STORAGE_KEY);
 
             const selectAll = document.getElementById('select-all-pending');
             if (selectAll) selectAll.checked = false;
@@ -1651,24 +1699,12 @@
                                     <p class="text-[11px] text-slate-400">รายการที่ของยังไม่มา หรือยังรอดำเนินการ</p>
                                 </div>
                             </label>
-                        </div>
-                    </div>
-
-                    <!-- 2. Status Filter -->
-                    <div class="space-y-2 pt-2 border-t border-slate-100">
-                        <label class="font-bold text-slate-700 block text-xs">2. สถานะการทำรายการ:</label>
-                        <div class="grid grid-cols-3 gap-2">
-                            <label class="flex items-center gap-2 p-2 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer text-center">
-                                <input type="radio" name="swal_status_filter" value="all" checked class="text-slate-700 focus:ring-slate-700 cursor-pointer">
-                                <span class="text-xs font-semibold text-slate-700">ทั้งหมด</span>
-                            </label>
-                            <label class="flex items-center gap-2 p-2 rounded-lg border border-slate-200 hover:bg-emerald-50/50 cursor-pointer text-center">
-                                <input type="radio" name="swal_status_filter" value="saved" class="text-emerald-600 focus:ring-emerald-500 cursor-pointer">
-                                <span class="text-xs font-semibold text-emerald-700">บันทึกแล้ว</span>
-                            </label>
-                            <label class="flex items-center gap-2 p-2 rounded-lg border border-slate-200 hover:bg-amber-50/50 cursor-pointer text-center">
-                                <input type="radio" name="swal_status_filter" value="pending" class="text-amber-600 focus:ring-amber-500 cursor-pointer">
-                                <span class="text-xs font-semibold text-amber-700">รอดำเนินการ</span>
+                            <label class="flex items-center gap-2.5 p-2 rounded-lg border border-slate-200 hover:bg-blue-50/50 cursor-pointer transition-all">
+                                <input type="radio" name="swal_action_filter" value="DraftOnly" class="text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer">
+                                <div class="flex-1">
+                                    <span class="font-bold text-blue-800 text-xs">เฉพาะรายการในตะกร้าจำลอง (Draft Only)</span>
+                                    <p class="text-[11px] text-slate-500">ส่งออกเฉพาะรายการที่คุณกำลังติ๊กเลือกไว้ในตะกร้า เพื่อดูยอดประมาณการ</p>
+                                </div>
                             </label>
                         </div>
                     </div>
@@ -1676,7 +1712,7 @@
             `;
 
             const { value: formValues } = await Swal.fire({
-                title: '<span class="text-base font-bold text-slate-800">📊 ตัวเลือกการส่งออก Excel สรุปราคา</span>',
+                title: '<span class="text-base font-bold text-slate-800">ตัวเลือกการส่งออก Excel สรุปราคา</span>',
                 html: htmlContent,
                 showCancelButton: true,
                 confirmButtonText: '📥 ดาวน์โหลด Excel',
@@ -1690,17 +1726,45 @@
                 },
                 preConfirm: () => {
                     const actionRadio = document.querySelector('input[name="swal_action_filter"]:checked');
-                    const statusRadio = document.querySelector('input[name="swal_status_filter"]:checked');
                     return {
                         action: actionRadio ? actionRadio.value : 'all',
-                        status: statusRadio ? statusRadio.value : 'all'
+                        status: 'all'
                     };
                 }
             });
 
             if (formValues) {
-                const url = `/MonthlyCost/ExportDetailExcel?monthYear=${encodeURIComponent(monthYear)}&actionFilter=${encodeURIComponent(formValues.action)}&statusFilter=${encodeURIComponent(formValues.status)}`;
-                window.location.href = url;
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '/MonthlyCost/ExportDetailExcel';
+                
+                const inputMonth = document.createElement('input');
+                inputMonth.type = 'hidden';
+                inputMonth.name = 'monthYear';
+                inputMonth.value = monthYear;
+                form.appendChild(inputMonth);
+                
+                const inputAction = document.createElement('input');
+                inputAction.type = 'hidden';
+                inputAction.name = 'actionFilter';
+                inputAction.value = formValues.action;
+                form.appendChild(inputAction);
+                
+                const inputStatus = document.createElement('input');
+                inputStatus.type = 'hidden';
+                inputStatus.name = 'statusFilter';
+                inputStatus.value = formValues.status;
+                form.appendChild(inputStatus);
+
+                const inputCart = document.createElement('input');
+                inputCart.type = 'hidden';
+                inputCart.name = 'draftCartJson';
+                inputCart.value = JSON.stringify(cart);
+                form.appendChild(inputCart);
+
+                document.body.appendChild(form);
+                form.submit();
+                document.body.removeChild(form);
             }
         }
 
@@ -1744,6 +1808,7 @@
         }
 
         // Initialize summary UI on page load
+        loadCartFromStorage();
         updateSummary();
 
         // SignalR Instant Push

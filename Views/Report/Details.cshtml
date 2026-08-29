@@ -153,16 +153,6 @@
 
             <!-- Action Buttons -->
             <div class="flex items-center gap-1.5 shrink-0">
-                <button id="btn-open-upload-modal"
-                        class="flex items-center gap-1 btn-custom-amber shadow-sm transition-all active:scale-95 whitespace-nowrap"
-                        style="padding: 6px 10px; font-size: 12.5px;">
-                    <svg xmlns="http://www.w3.org/2000/svg" style="color: #b45309 !important;" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V3m0 0L7.5 7.5M12 3l4.5 4.5M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5"/>
-                    </svg>
-                    <span>เป้าหมายส่งมอบ</span>
-                    <span class="text-xs font-bold" style="color: #b45309 !important;">(@uploadedPlansCount)</span>
-                </button>
-
                 <button type="button" id="btn-view-all-system"
                         title="ดูรายการใบสั่งซื้อและเป้าหมายส่งมอบทั้งหมดในระบบ (สามารถกรองตามเดือนหรือเลือกดูทั้งหมดทุกปีได้)"
                         class="flex items-center gap-1.5 btn-custom-white shadow-sm transition-all active:scale-95 whitespace-nowrap"
@@ -338,51 +328,7 @@
     </div>
 </div>
 
-<div id="upload-modal" class="hidden fixed inset-0 modal-backdrop-premium flex items-center justify-center z-50 p-4">
-    <div id="upload-modal-container" class="modal-content-premium w-full max-w-lg transition-all duration-300">
-        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-            <h3 class="text-base font-bold text-slate-800">นำเข้าไฟล์แผนผลิตสัปดาห์ (สูงสุด 10 ไฟล์)</h3>
-            <button id="btn-close-upload-modal" class="text-slate-400 hover:text-slate-600 transition p-1 hover:bg-slate-100 rounded-full">
-                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
-                </svg>
-            </button>
-        </div>
-        <div style="padding: 24px;">
-            <div id="upload-step">
-                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider" style="margin-bottom: 12px; display: block;">อัปโหลดไฟล์ Excel (สูงสุด 10 ไฟล์)</label>
-                <div id="dropzone-area" class="border-2 border-dashed border-slate-200 rounded flex flex-col items-center justify-center bg-slate-50/30 hover:bg-slate-50/70 hover:border-slate-400 cursor-pointer transition-all" style="padding: 36px 24px; border-radius: 8px;">
-                    <input type="file" id="weeklyPlanFiles" multiple accept=".xlsx,.csv" class="hidden"/>
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-slate-400" style="margin-bottom: 16px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z"/>
-                    </svg>
-                    <span class="text-sm font-semibold text-slate-600" style="margin-bottom: 6px; display: block; text-align: center;">ลากและวางไฟล์ที่นี่ หรือ คลิกเพื่อเลือกไฟล์</span>
-                    <span class="text-xs text-slate-400" style="text-align: center; display: block;">Excel (.xlsx) หรือ .csv สูงสุด 10 ไฟล์</span>
-                </div>
-                <div id="files-list" style="margin-top: 16px; display: flex; flex-direction: column; gap: 8px;"></div>
-                <button id="btn-upload-files" class="hidden btn-custom-blue font-bold rounded shadow-sm" style="margin-top: 16px; width: 100%;">
-                    อัปโหลดและเลือก Sheet
-                </button>
-            </div>
 
-            <div id="sheet-selection-step" class="hidden">
-                <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
-                    <div>
-                        <h4 class="text-base font-bold text-slate-800">เลือก Sheet ที่ต้องการจากแต่ละไฟล์:</h4>
-                        <p class="text-xs text-slate-500 mt-0.5">ระบบได้ตรวจจับและเลือกชีตที่คาดว่าเป็นแผนผลิตสัปดาห์ให้อัตโนมัติ กรุณาตรวจสอบก่อนดำเนินการจับคู่</p>
-                    </div>
-                </div>
-                <div id="sheet-selectors" class="mb-6"></div>
-                <!-- ลบ style="gap: 12px;" ออกไปได้เลย -->
-                <div class="flex flex-col sm:flex-row items-center justify-end gap-3 pt-5 pb-1 mt-6">
-
-                    <button id="btn-back-to-files" class="btn-custom-white" style="padding: 10px 20px;">กลับไปเลือกไฟล์ใหม่</button>
-                    <button id="btn-confirm-match" class="btn-custom-blue" style="padding: 10px 22px;">ดำเนินการจับคู่</button>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 
 @await Html.PartialAsync("_OrderDetailModal")
 
@@ -390,7 +336,7 @@
 
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="~/js/weekly-plan-upload.js" asp-append-version="true"></script>
+
     <script>
         const formatPrice = (val) => {
             if (val === null || val === undefined || val === '') return '-';
@@ -405,34 +351,7 @@
             return val;
         };
 
-        // Initialize uploader
-        WeeklyPlanUploader.init('@Html.Raw(reportName)');
 
-        // Modal handlers
-        document.getElementById('btn-open-upload-modal').addEventListener('click', () => {
-            document.getElementById('upload-modal').classList.remove('hidden');
-        });
-
-        const closeUploadModal = () => {
-            if (WeeklyPlanUploader.isProcessing) return;
-            WeeklyPlanUploader.closeModal();
-        };
-
-        document.getElementById('btn-close-upload-modal').addEventListener('click', closeUploadModal);
-        document.getElementById('upload-modal').addEventListener('click', (e) => {
-            if (WeeklyPlanUploader.isProcessing) return;
-            if (e.target.id === 'upload-modal') closeUploadModal();
-        });
-
-        window.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && !document.getElementById('upload-modal').classList.contains('hidden')) {
-                if (WeeklyPlanUploader.isProcessing) {
-                    e.preventDefault();
-                } else {
-                    closeUploadModal();
-                }
-            }
-        });
 
         // Detail Modal
         const detailModal = document.getElementById('detail-modal');

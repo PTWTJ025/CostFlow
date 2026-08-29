@@ -42,10 +42,7 @@
             </div>
         </div>
         <div class="hidden lg:block z-0 opacity-10 absolute right-10 top-0 bottom-0 flex items-center">
-            <svg class="w-64 h-64 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6a7.5 7.5 0 1 0 7.5 7.5h-7.5V6Z"/>
-                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 10.5H21A7.5 7.5 0 0 0 13.5 3v7.5Z"/>
-            </svg>
+            <img src="~/images/logo.png" alt="CostFlow Logo" class="w-64 h-64 object-contain" />
         </div>
     </div>
 
@@ -121,8 +118,8 @@
                         </svg>
                     </div>
                     <div>
-                        <h3 class="font-label-bold text-label-bold text-on-surface group-hover:text-primary transition-colors mb-1">นำเข้า & เปรียบเทียบข้อมูลไฟล์ผลิต</h3>
-                        <p class="font-body-md text-body-md text-on-surface-variant line-clamp-2">เปรียบเทียบข้อมูลแผนผลิตประจำสัปดาห์ เข้ากับใบขออนุมัติสั่งผลิตชิ้นส่วน</p>
+                        <h3 class="font-label-bold text-label-bold text-on-surface group-hover:text-primary transition-colors mb-1">นำเข้าและจับคู่ข้อมูลการผลิต</h3>
+                        <p class="font-body-md text-body-md text-on-surface-variant line-clamp-2">ตรวจสอบและเปรียบเทียบยอดผลิตจริง กับใบเป้าหมายส่งมอบประจำสัปดาห์</p>
                     </div>
                 </a>
 
@@ -134,8 +131,8 @@
                         </svg>
                     </div>
                     <div>
-                        <h3 class="font-label-bold text-label-bold text-on-surface group-hover:text-primary transition-colors mb-1">คีย์ข้อมูลใบสั่งซื้ออะไหล่โรงงาน</h3>
-                        <p class="font-body-md text-body-md text-on-surface-variant line-clamp-2">คีย์ข้อมูลรายการซื้ออะไหล่แบบร่าง พร้อมระบบเทียบราคากลางทันที</p>
+                        <h3 class="font-label-bold text-label-bold text-on-surface group-hover:text-primary transition-colors mb-1">จำลองและคำนวณค่าใช้จ่ายจัดซื้อ</h3>
+                        <p class="font-body-md text-body-md text-on-surface-variant line-clamp-2">เพิ่มรายการเบิกอะไหล่ และเปรียบเทียบกับราคากลางเพื่อหาต้นทุนทันที</p>
                     </div>
                 </a>
 
@@ -147,8 +144,8 @@
                         </svg>
                     </div>
                     <div>
-                        <h3 class="font-label-bold text-label-bold text-on-surface group-hover:text-primary transition-colors mb-1">คลังข้อมูลและสรุปรายงานทางการเงิน</h3>
-                        <p class="font-body-md text-body-md text-on-surface-variant line-clamp-2">ตรวจสอบความถูกต้องย้อนหลัง และส่งออกข้อมูลเป็น Excel</p>
+                        <h3 class="font-label-bold text-label-bold text-on-surface group-hover:text-primary transition-colors mb-1">ประวัติรายงานและสรุปยอด</h3>
+                        <p class="font-body-md text-body-md text-on-surface-variant line-clamp-2">ดูรายงานย้อนหลังและส่งออกข้อมูลสรุปเป็นไฟล์ Excel สำหรับบัญชี</p>
                     </div>
                 </a>
 
@@ -160,8 +157,8 @@
                         </svg>
                     </div>
                     <div>
-                        <h3 class="font-label-bold text-label-bold text-on-surface group-hover:text-primary transition-colors mb-1">สืบค้นฐานข้อมูลราคากลางอะไหล่</h3>
-                        <p class="font-body-md text-body-md text-on-surface-variant line-clamp-2">สืบค้นและตรวจสอบฐานข้อมูลด้วยระบบ AJAX ทันทีขณะพิมพ์</p>
+                        <h3 class="font-label-bold text-label-bold text-on-surface group-hover:text-primary transition-colors mb-1">สืบค้นข้อมูลราคากลางอะไหล่</h3>
+                        <p class="font-body-md text-body-md text-on-surface-variant line-clamp-2">ตรวจสอบราคามาตรฐานของอะไหล่แต่ละรายการได้อย่างสะดวกรวดเร็ว</p>
                     </div>
                 </a>
             </div>
@@ -193,11 +190,11 @@
                     foreach (var r in Model.RecentReports)
                     {
                         double acc = r.TotalRows > 0 ? Math.Round((double)r.MatchedRows / r.TotalRows * 100, 1) : 0;
-                        string formattedDate = r.CreatedAt.ToString("dd MMM yyyy HH:mm น.", new System.Globalization.CultureInfo("th-TH"));
+                        string formattedDate = r.CreatedAt.ToString("MMMM yyyy", new System.Globalization.CultureInfo("th-TH"));
 
-                        <a href="@Url.Action("Details", "Report", new { fileName = r.ReportName })" class="group p-md border border-outline-variant/60 rounded bg-surface-container-lowest hover:bg-primary/5 hover:border-primary/40 transition-colors flex flex-col gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 shadow-sm">
+                        <a href="/Report" class="group p-md border border-outline-variant/60 rounded bg-surface-container-lowest hover:bg-primary/5 hover:border-primary/40 transition-colors flex flex-col gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 shadow-sm">
                             <div class="flex justify-between items-start">
-                                <time datetime="@r.CreatedAt.ToString("O")" class="font-data-tabular text-data-tabular text-secondary">@formattedDate • โดย @(r.CreatedBy ?? "ไม่ระบุ")</time>
+                                <time datetime="@r.CreatedAt.ToString("O")" class="font-data-tabular text-data-tabular text-secondary">ประจำเดือน @formattedDate</time>
                                 <span class="font-label-bold text-[10px] text-primary opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
                                     เปิด
                                     <i data-lucide="arrow-up-right" class="w-4 h-4"></i>
@@ -208,7 +205,7 @@
                             </h3>
 
                             <div class="flex justify-between items-center mt-1">
-                                <span class="font-body-md text-body-md text-on-surface-variant">ตรงตามแผน @r.MatchedRows / @r.TotalRows</span>
+                                <span class="font-body-md text-body-md text-on-surface-variant">ตรงตามใบเป้าหมายส่งมอบ @r.MatchedRows / @r.TotalRows</span>
                                 <span class="bg-primary/10 text-primary font-data-tabular text-[11px] px-2 py-0.5 rounded-sm inline-flex items-center">@acc%</span>
                             </div>
                         </a>
@@ -266,7 +263,7 @@
                                 html += `
                                     <a href="${r.detailsUrl}" class="group p-md border border-outline-variant/60 rounded bg-surface-container-lowest hover:bg-primary/5 hover:border-primary/40 transition-colors flex flex-col gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 shadow-sm">
                                         <div class="flex justify-between items-start">
-                                            <time class="font-data-tabular text-data-tabular text-secondary">${r.formattedDate} • โดย ${r.createdBy || 'ไม่ระบุ'}</time>
+                                            <time class="font-data-tabular text-data-tabular text-secondary">${r.formattedDate}</time>
                                             <span class="font-label-bold text-[10px] text-primary opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
                                                 เปิด
                                                 <i data-lucide="arrow-up-right" class="w-4 h-4"></i>
@@ -276,7 +273,7 @@
                                             ${r.reportName}
                                         </h3>
                                         <div class="flex justify-between items-center mt-1">
-                                            <span class="font-body-md text-body-md text-on-surface-variant">ตรงตามแผน ${r.matchedRows} / ${r.totalRows}</span>
+                                            <span class="font-body-md text-body-md text-on-surface-variant">ตรงตามใบเป้าหมายส่งมอบ ${r.matchedRows} / ${r.totalRows}</span>
                                             <span class="bg-primary/10 text-primary font-data-tabular text-[11px] px-2 py-0.5 rounded-sm inline-flex items-center">${r.accuracy}%</span>
                                         </div>
                                     </a>`;
