@@ -570,13 +570,13 @@ namespace CostFlow.Controllers
                 [nameof(WeeklyPlanColumnMap.PoNumber)] = new[] { "เลขที่อนุมัติ", "ใบขออนุมัติ", "PO Number", "PO" },
                 [nameof(WeeklyPlanColumnMap.Department)] = new[] { "หน่วยงาน", "แผนก" },
                 [nameof(WeeklyPlanColumnMap.OrderName)] = new[] { "ชื่อใบสั่ง", "รายละเอียดใบสั่ง" },
-                [nameof(WeeklyPlanColumnMap.Price)] = new[] { "ราคาประมาณการมี +-5%", "ราคาประมาณการมี +/-5%", "ราคาประมาณการ", "ราคา" },
+                [nameof(WeeklyPlanColumnMap.Price)] = new[] { "ราคาประมาณการมี +-5%", "ราคาประมาณการมี +/-5%", "ราคาประมาณการ", "ราคา", "ราคาประมาณการณ์ +-5%", "ราคาประมาณการณ์" },
                 [nameof(WeeklyPlanColumnMap.OrderStatus)] = new[] { "สถานะใบสั่ง", "สถานะ" },
                 [nameof(WeeklyPlanColumnMap.DeliveryTarget)] = new[] { "ส่งมอบ", "กำหนดส่งมอบ" }
             };
 
             var map = new WeeklyPlanColumnMap();
-            for (int rowIndex = 0; rowIndex < Math.Min(5, rows.Count); rowIndex++)
+            for (int rowIndex = 0; rowIndex < Math.Min(15, rows.Count); rowIndex++)
             {
                 var row = rows[rowIndex];
                 var found = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);

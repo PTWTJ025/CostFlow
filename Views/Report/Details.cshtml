@@ -239,8 +239,13 @@
                     var hasWeeklyPlan = order.MatchedInWeeklyPlans.Any();
                     var deliveryTarget = hasWeeklyPlan ? order.MatchedInWeeklyPlans.First().DeliveryTarget : "-";
 
+                    var latestWeeklyPlan = hasWeeklyPlan 
+                        ? order.MatchedInWeeklyPlans.OrderByDescending(wpd => wpd.WeeklyPlan.UploadedAt).First()
+                        : null;
+                    var productionStatus = latestWeeklyPlan?.OrderStatus;
+
                     var proposedPrice = hasWeeklyPlan
-                        ? order.MatchedInWeeklyPlans.OrderByDescending(wpd => wpd.WeeklyPlan.UploadedAt).First().Price
+                        ? latestWeeklyPlan.Price
                         : order.Amount;
 
                     if (string.IsNullOrEmpty(proposedPrice) || proposedPrice == "-")
@@ -273,22 +278,38 @@
                         data-index="@(i + 1)">
                         <td class="text-secondary px-3 py-2 text-center">@(i + 1)</td>
                         <td class="px-3 py-2 text-center">
-                            @if (isMatched)
+                            @if (hasWeeklyPlan)
                             {
-                                <span class="badge-status badge-matched inline-flex items-center justify-center gap-1 px-2.5 py-1 text-xs font-medium rounded-lg whitespace-nowrap">
-                                    <svg style="transform: translateY(-1.5px);" class="w-3.5 h-3.5 shrink-0 !inline-block" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16zm3.857-9.809a.75.75 0 0 0-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.137-.089l4-5.5z" clip-rule="evenodd"/>
-                                    </svg>
-                                    <span class="leading-none">ได้แผนผลิตแล้ว</span>
-                                </span>
+                                var statusText = !string.IsNullOrEmpty(productionStatus) ? productionStatus : "ได้แผนผลิตแล้ว";
+                                var isCompleted = statusText.StartsWith("C", StringComparison.OrdinalIgnoreCase) || statusText.Contains("ปิดใบสั่ง");
+                                var isOngoing = statusText.StartsWith("O", StringComparison.OrdinalIgnoreCase) || statusText.Contains("กำลังดำเนินการ");
+                                
+                                if (isCompleted)
+                                {
+                                    <span class="inline-flex items-center justify-center gap-1 px-2.5 py-1 text-[12px] font-semibold whitespace-nowrap text-emerald-700" title="สถานะล่าสุดจากแผนผลิต">
+                                        @statusText
+                                    </span>
+                                }
+                                else if (isOngoing)
+                                {
+                                    <span class="inline-flex items-center justify-center gap-1 px-2.5 py-1 text-[12px] font-semibold whitespace-nowrap text-blue-700" title="สถานะล่าสุดจากแผนผลิต">
+                                        @statusText
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="inline-flex items-center justify-center gap-1 px-2.5 py-1 text-[12px] font-semibold whitespace-nowrap text-slate-700" title="สถานะล่าสุดจากแผนผลิต">
+                                        @statusText
+                                    </span>
+                                }
                             }
                             else
                             {
-                                <span class="badge-status badge-pending inline-flex items-center justify-center gap-1 px-2.5 py-1 text-xs font-medium rounded-lg whitespace-nowrap">
+                                <span class="badge-status badge-pending inline-flex items-center justify-center gap-1 px-2.5 py-1 text-xs font-medium rounded-lg whitespace-nowrap bg-amber-50 text-amber-700">
                                     <svg style="transform: translateY(-1.5px);" class="w-3.5 h-3.5 shrink-0 !inline-block" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
                                     </svg>
-                                    <span class="leading-none">ยังไม่มีแผนผลิต</span>
+                                    <span class="leading-none">รอแผนผลิต</span>
                                 </span>
                             }
                         </td>

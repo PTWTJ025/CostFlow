@@ -270,6 +270,10 @@ body.sidebar-collapsed .purchase-dropdown-item {
 body.sidebar-collapsed .purchase-dropdown-item span,
 body.sidebar-collapsed #sidebar .purchase-dropdown-item span {
   display: inline !important;
+  opacity: 1 !important;
+  width: auto !important;
+  height: auto !important;
+  pointer-events: auto !important;
 }
 
 /* Tooltip for collapsed state */
