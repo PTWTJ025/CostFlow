@@ -812,7 +812,7 @@
                         localStorage.removeItem(REMEMBER_KEY);
                     }
                     showToast('เข้าสู่ระบบสำเร็จ', 'success');
-                    setTimeout(() => { window.location.href = data.redirectUrl; }, 800);
+                    setTimeout(() => { window.location.href = data.redirectUrl; }, 150);
                 } else {
                     errorText.textContent = data.error || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง';
                     errorMsg.classList.add('show');

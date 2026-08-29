@@ -87,6 +87,12 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
     .AddDefaultTokenProviders()
     .AddClaimsPrincipalFactory<CustomUserClaimsPrincipalFactory>();
 
+// Configure Password Hasher to use fewer iterations for faster login (internal system)
+builder.Services.Configure<PasswordHasherOptions>(options =>
+{
+    options.IterationCount = 10000;
+});
+
 // Cookie Authentication Settings
 builder.Services.ConfigureApplicationCookie(options =>
 {
