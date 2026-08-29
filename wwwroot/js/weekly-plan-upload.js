@@ -329,7 +329,7 @@ const WeeklyPlanUploader = {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          reportName: document.getElementById('targetReportName') ? document.getElementById('targetReportName').value : this.reportName,
+          reportName: this.reportName,
           files: filesData,
         }),
       });
@@ -423,7 +423,7 @@ const WeeklyPlanUploader = {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          reportName: document.getElementById('targetReportName') ? document.getElementById('targetReportName').value : this.reportName,
+          reportName: this.reportName,
           files: filesData,
         }),
       });
