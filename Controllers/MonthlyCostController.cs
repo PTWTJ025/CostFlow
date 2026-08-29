@@ -640,6 +640,11 @@ namespace CostFlow.Controllers
                                            && int.TryParse(tp[0], out var tY) && int.TryParse(tp[1], out var tM))
                         {
                             var monthDiff = ((tY - pY) * 12) + (tM - pM);
+                            
+                            // ถ้าเป้าหมายคือเดือนอนาคต ห้ามลอยงานที่ข้ามไว้มาโชว์เด็ดขาด (หยุดลอยแค่เดือนปัจจุบัน)
+                            var isFutureMonthCheck = string.Compare(monthYearKey, currentMonthKey) > 0;
+                            if (isFutureMonthCheck) return false;
+
                             return monthDiff >= 1;
                         }
                     }
@@ -672,8 +677,9 @@ namespace CostFlow.Controllers
                 .OrderBy(otm => otm.PoNumber)
                 .ToListAsync();
 
+            var isFutureMonth = string.Compare(monthYearKey, currentMonthKey) > 0;
+
             // Filter: แสดงทุก WO ที่ ApprovedDate ≤ เดือนปัจจุบัน และยังไม่รับครบ
-            // (ไม่ว่าจะเคยถูก Skipped/Deferred หรือไม่ก็ตาม ลอยมาเรื่อยๆ จนกว่าจะรับครบ)
             allPendingOrders = allPendingOrders
                 .Where(otm =>
                 {
@@ -682,9 +688,20 @@ namespace CostFlow.Controllers
                         prevCheck.Action == "ReceivedFull")
                         return false;
 
+                    // ถ้าถูกหอบมาจาก Defer อย่างจงใจ ให้แสดงแน่นอน (แม้จะเป็นเดือนอนาคต)
+                    if (carryOverIds.Contains(otm.Id))
+                        return true;
+
                     var approvedDate = ParseThaiDate(otm.ApprovedDate);
                     if (approvedDate == null)
                         return false;
+
+                    // ถ้าเป็นเดือนอนาคต: จะแสดงเฉพาะ WO ที่ถูกสร้าง(Approved)ในเดือนอนาคตนั้นจริงๆ เท่านั้น
+                    // (ไม่ดูดย้อนหลังเอางานค้างอดีตมาโชว์)
+                    if (isFutureMonth)
+                    {
+                        return approvedDate.Value >= monthStart && approvedDate.Value < monthEnd;
+                    }
 
                     // แสดงทุก WO ที่ ApprovedDate อยู่ในเดือนนี้หรือก่อนหน้า
                     return approvedDate.Value < monthEnd;
