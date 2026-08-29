@@ -251,6 +251,7 @@ namespace CostFlow.Controllers
         {
             var items = new List<SavedOrderItemViewModel>();
             var availableYears = new List<int> { GetThaiNow().Year };
+            var availableMonths = new List<int>();
             var availableBatches = new List<string>();
 
             var priceDict = await _context.ProductPrices
@@ -273,15 +274,22 @@ namespace CostFlow.Controllers
                 {
                     availableYears.Add(b.CreatedAt.Year);
                 }
+                
+                if (!availableMonths.Contains(b.CreatedAt.Month))
+                {
+                    availableMonths.Add(b.CreatedAt.Month);
+                }
             }
 
             availableYears = availableYears.Distinct().OrderByDescending(y => y).ToList();
+            availableMonths = availableMonths.Distinct().OrderBy(m => m).ToList();
             availableBatches = availableBatches.Distinct().OrderBy(b => b).ToList();
 
             ViewData["SelectedYear"] = year;
             ViewData["SelectedMonth"] = month;
             ViewData["SelectedBatch"] = batchName;
             ViewData["AvailableYears"] = availableYears;
+            ViewData["AvailableMonths"] = availableMonths;
             ViewData["AvailableBatches"] = availableBatches;
 
             return View(items);
