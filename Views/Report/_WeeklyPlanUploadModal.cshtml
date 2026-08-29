@@ -1,4 +1,4 @@
-@model IEnumerable<dynamic>
+
 
 <div id="upload-modal" class="hidden fixed inset-0 modal-backdrop-premium flex items-center justify-center z-50 p-4">
     <div id="upload-modal-container" class="modal-content-premium w-full max-w-lg transition-all duration-300">
@@ -16,9 +16,12 @@
                 <div class="mb-4">
                     <label for="targetReportName" class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">เลือกประจำเดือนที่ต้องการเชื่อมโยง</label>
                     <select id="targetReportName" class="w-full px-3 py-2 border border-slate-300 rounded text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none">
-                        @foreach(var report in Model)
+                        @if(ViewData["ExistingReports"] is List<string> existingReports)
                         {
-                            <option value="@report.ReportName">@report.ReportName</option>
+                            foreach(var reportName in existingReports)
+                            {
+                                <option value="@reportName">@reportName</option>
+                            }
                         }
                     </select>
                 </div>

@@ -118,8 +118,12 @@ namespace CostFlow.Controllers
                 .Distinct()
                 .OrderByDescending(yr => yr)
                 .ToList();
-
             ViewData["AvailableYears"] = availableYears;
+
+            ViewData["ExistingReports"] = await _context.Reports
+                .OrderByDescending(r => r.CreatedAt)
+                .Select(r => r.ReportName)
+                .ToListAsync();
             
             return View(cards);
         }
