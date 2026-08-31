@@ -549,85 +549,41 @@ namespace CostFlow.Controllers
 
             try
             {
-                var client = _httpClientFactory.CreateClient();
-                client.Timeout = TimeSpan.FromSeconds(30);
+                // ดึงข้อมูล Batch และ Items ทั้งหมดจาก TiDB
+                var dbBatch = await _tiDbContext.SavedOrderBatches
+                    .Include(b => b.Items)
+                    .FirstOrDefaultAsync(b => b.BatchName == request.BatchName);
 
-                var getRes = await client.GetAsync(appScriptUrl);
-                if (!getRes.IsSuccessStatusCode)
+                if (dbBatch == null)
                 {
-                    return Json(new { success = false, error = "ไม่สามารถอ่านข้อมูลจาก Google Sheets ได้" });
+                    return Json(new { success = false, error = "ไม่พบแผ่นงานนี้ในฐานข้อมูลระบบ" });
                 }
 
-                var json = await getRes.Content.ReadAsStringAsync();
-                using var doc = JsonDocument.Parse(json);
-                var root = doc.RootElement;
-
-                List<SparePartOrderSaveModel> updatedOrders = new();
-                string createdAtStr = "";
-                bool found = false;
-
-                if (root.TryGetProperty("batches", out var batchesEl))
-                {
-                    foreach (var b in batchesEl.EnumerateArray())
-                    {
-                        var bName = GetStringProp(b, "BatchName");
-                        if (bName.Equals(request.BatchName, StringComparison.OrdinalIgnoreCase))
-                        {
-                            createdAtStr = GetStringProp(b, "CreatedAt");
-
-                            JsonElement itemsEl = default;
-                            if (b.TryGetProperty("Orders", out itemsEl) || b.TryGetProperty("items", out itemsEl))
-                            {
-                                if (itemsEl.ValueKind == JsonValueKind.Array)
-                                {
-                                    foreach (var item in itemsEl.EnumerateArray())
-                                    {
-                                        var pCode = GetStringProp(item, "ProductCode");
-                                        var pName = GetStringProp(item, "ProductName");
-                                        var unit = GetStringProp(item, "Unit");
-                                        var unitPrice = GetStringProp(item, "UnitPrice");
-                                        var qtyStr = GetStringProp(item, "Quantity");
-                                        var remarks = GetStringProp(item, "Remarks");
-
-                                        if (pCode.Equals(request.ProductCode, StringComparison.OrdinalIgnoreCase))
-                                        {
-                                            qtyStr = request.NewQuantity.ToString();
-                                            found = true;
-                                        }
-
-                                        updatedOrders.Add(new SparePartOrderSaveModel
-                                        {
-                                            ProductCode = pCode,
-                                            ProductName = pName,
-                                            Unit = unit,
-                                            UnitPrice = unitPrice,
-                                            Quantity = qtyStr,
-                                            Remarks = remarks
-                                        });
-                                    }
-                                }
-                            }
-                            break;
-                        }
-                    }
-                }
-
-                if (!found)
+                var itemToUpdate = dbBatch.Items.FirstOrDefault(i => i.ProductCode == request.ProductCode);
+                if (itemToUpdate == null)
                 {
                     return Json(new { success = false, error = "ไม่พบรายการสินค้าที่ระบุ" });
                 }
 
+                // 1. อัปเดตข้อมูลใน Memory ของ TiDB ก่อน
+                itemToUpdate.Quantity = request.NewQuantity;
+                dbBatch.TotalAmount = dbBatch.Items.Sum(i => i.Quantity * i.UnitPrice);
+
+                // 2. ส่งข้อมูลทั้ง Batch กลับไปทับใน Google Sheets (doPost ของ App Script จะลบของเก่าแล้ว Insert ใหม่)
+                var client = _httpClientFactory.CreateClient();
+                client.Timeout = TimeSpan.FromSeconds(30);
+
                 var savePayload = new
                 {
-                    BatchName = request.BatchName,
-                    CreatedAt = string.IsNullOrWhiteSpace(createdAtStr) ? GetThaiNow().ToString("dd/MM/yyyy HH:mm:ss") : createdAtStr,
-                    Orders = updatedOrders.Select(o => new
+                    BatchName = dbBatch.BatchName,
+                    CreatedAt = dbBatch.CreatedAt.ToString("dd/MM/yyyy HH:mm:ss"),
+                    Orders = dbBatch.Items.Select(o => new
                     {
                         ProductCode = o.ProductCode ?? string.Empty,
                         ProductName = o.ProductName ?? string.Empty,
                         Unit = o.Unit ?? string.Empty,
-                        UnitPrice = ParseDecimal(o.UnitPrice),
-                        Quantity = ParseDecimal(o.Quantity),
+                        UnitPrice = o.UnitPrice,
+                        Quantity = o.Quantity,
                         Remarks = o.Remarks ?? string.Empty
                     }).ToList()
                 };
@@ -641,19 +597,12 @@ namespace CostFlow.Controllers
                     return Json(new { success = false, error = $"เกิดข้อผิดพลาดจาก Google Sheets (HTTP {(int)saveResponse.StatusCode})" });
                 }
 
+                // 3. ถ้า Google Sheets สำเร็จ ค่อย Save ลง TiDB
                 try
                 {
-                    var dbBatch = await _tiDbContext.SavedOrderBatches.Include(b => b.Items).FirstOrDefaultAsync(b => b.BatchName == request.BatchName);
-                    if (dbBatch != null)
-                    {
-                        var item = dbBatch.Items.FirstOrDefault(i => i.ProductCode == request.ProductCode);
-                        if (item != null)
-                        {
-                            item.Quantity = request.NewQuantity;
-                            dbBatch.TotalAmount = dbBatch.Items.Sum(i => i.Quantity * i.UnitPrice);
-                            await _tiDbContext.SaveChangesAsync();
-                        }
-                    }
+                    _tiDbContext.SavedOrderItems.Update(itemToUpdate);
+                    _tiDbContext.SavedOrderBatches.Update(dbBatch);
+                    await _tiDbContext.SaveChangesAsync();
                 }
                 catch (Exception dbEx)
                 {
@@ -685,98 +634,59 @@ namespace CostFlow.Controllers
 
             try
             {
+                // ดึงข้อมูล Batch จาก TiDB
+                var dbBatch = await _tiDbContext.SavedOrderBatches
+                    .Include(b => b.Items)
+                    .FirstOrDefaultAsync(b => b.BatchName == request.BatchName);
+
+                if (dbBatch == null)
+                {
+                    return Json(new { success = false, error = "ไม่พบแผ่นงานนี้ในฐานข้อมูลระบบ" });
+                }
+
+                var itemToDelete = dbBatch.Items.FirstOrDefault(i => i.ProductCode == request.ProductCode);
+                if (itemToDelete == null)
+                {
+                    return Json(new { success = false, error = "ไม่พบรายการสินค้าที่ระบุในฐานข้อมูล" });
+                }
+
+                // 1. อัปเดตข้อมูลใน Memory ของ TiDB ก่อน
+                dbBatch.Items.Remove(itemToDelete);
+                dbBatch.TotalAmount = dbBatch.Items.Sum(i => i.Quantity * i.UnitPrice);
+                dbBatch.TotalItems = dbBatch.Items.Count;
+
                 var client = _httpClientFactory.CreateClient();
                 client.Timeout = TimeSpan.FromSeconds(30);
 
-                var getRes = await client.GetAsync(appScriptUrl);
-                if (!getRes.IsSuccessStatusCode)
+                if (dbBatch.Items.Count == 0)
                 {
-                    return Json(new { success = false, error = "ไม่สามารถอ่านข้อมูลจาก Google Sheets ได้" });
-                }
-
-                var json = await getRes.Content.ReadAsStringAsync();
-                using var doc = JsonDocument.Parse(json);
-                var root = doc.RootElement;
-
-                List<SparePartOrderSaveModel> remainingOrders = new();
-                string createdAtStr = "";
-                bool found = false;
-
-                if (root.TryGetProperty("batches", out var batchesEl))
-                {
-                    foreach (var b in batchesEl.EnumerateArray())
-                    {
-                        var bName = GetStringProp(b, "BatchName");
-                        if (bName.Equals(request.BatchName, StringComparison.OrdinalIgnoreCase))
-                        {
-                            createdAtStr = GetStringProp(b, "CreatedAt");
-
-                            JsonElement itemsEl = default;
-                            if (b.TryGetProperty("Orders", out itemsEl) || b.TryGetProperty("items", out itemsEl))
-                            {
-                                if (itemsEl.ValueKind == JsonValueKind.Array)
-                                {
-                                    foreach (var item in itemsEl.EnumerateArray())
-                                    {
-                                        var pCode = GetStringProp(item, "ProductCode");
-                                        var pName = GetStringProp(item, "ProductName");
-                                        var unit = GetStringProp(item, "Unit");
-                                        var unitPrice = GetStringProp(item, "UnitPrice");
-                                        var qtyStr = GetStringProp(item, "Quantity");
-                                        var remarks = GetStringProp(item, "Remarks");
-
-                                        if (pCode.Equals(request.ProductCode, StringComparison.OrdinalIgnoreCase) && !found)
-                                        {
-                                            found = true;
-                                            continue;
-                                        }
-
-                                        remainingOrders.Add(new SparePartOrderSaveModel
-                                        {
-                                            ProductCode = pCode,
-                                            ProductName = pName,
-                                            Unit = unit,
-                                            UnitPrice = unitPrice,
-                                            Quantity = qtyStr,
-                                            Remarks = remarks
-                                        });
-                                    }
-                                }
-                            }
-                            break;
-                        }
-                    }
-                }
-
-                if (!found)
-                {
-                    return Json(new { success = false, error = "ไม่พบรายการสินค้าที่ต้องการลบ" });
-                }
-
-                if (!remainingOrders.Any())
-                {
+                    // 2a. ถ้าไม่มีสินค้าเหลือเลย ให้ลบทั้ง Batch ออกจาก Google Sheets
                     var deletePayload = new { Action = "delete", BatchName = request.BatchName };
-                    var delJson = JsonSerializer.Serialize(deletePayload);
-                    var delContent = new StringContent(delJson, Encoding.UTF8, "application/json");
-                    var delRes = await client.PostAsync(appScriptUrl, delContent);
-                    if (!delRes.IsSuccessStatusCode)
+                    var jsonString = JsonSerializer.Serialize(deletePayload);
+                    var content = new StringContent(jsonString, Encoding.UTF8, "application/json");
+
+                    var deleteResponse = await client.PostAsync(appScriptUrl, content);
+                    if (!deleteResponse.IsSuccessStatusCode)
                     {
-                        return Json(new { success = false, error = $"Google Sheets ตอบกลับ HTTP {(int)delRes.StatusCode}" });
+                        return Json(new { success = false, error = $"เกิดข้อผิดพลาดจาก Google Sheets (HTTP {(int)deleteResponse.StatusCode})" });
                     }
+
+                    _tiDbContext.SavedOrderBatches.Remove(dbBatch);
                 }
                 else
                 {
+                    // 2b. ถ้ายังมีสินค้าเหลือ ให้ส่งข้อมูลที่เหลือกลับไปทับใน Google Sheets
                     var savePayload = new
                     {
-                        BatchName = request.BatchName,
-                        CreatedAt = string.IsNullOrWhiteSpace(createdAtStr) ? GetThaiNow().ToString("dd/MM/yyyy HH:mm:ss") : createdAtStr,
-                        Orders = remainingOrders.Select(o => new
+                        BatchName = dbBatch.BatchName,
+                        CreatedAt = dbBatch.CreatedAt.ToString("dd/MM/yyyy HH:mm:ss"),
+                        Orders = dbBatch.Items.Select(o => new
                         {
                             ProductCode = o.ProductCode ?? string.Empty,
                             ProductName = o.ProductName ?? string.Empty,
                             Unit = o.Unit ?? string.Empty,
-                            UnitPrice = ParseDecimal(o.UnitPrice),
-                            Quantity = ParseDecimal(o.Quantity),
+                            UnitPrice = o.UnitPrice,
+                            Quantity = o.Quantity,
                             Remarks = o.Remarks ?? string.Empty
                         }).ToList()
                     };
@@ -789,36 +699,19 @@ namespace CostFlow.Controllers
                     {
                         return Json(new { success = false, error = $"เกิดข้อผิดพลาดจาก Google Sheets (HTTP {(int)saveResponse.StatusCode})" });
                     }
+
+                    _tiDbContext.SavedOrderBatches.Update(dbBatch);
                 }
 
+                // 3. เซฟลง TiDB
                 try
                 {
-                    var dbBatch = await _tiDbContext.SavedOrderBatches.Include(b => b.Items).FirstOrDefaultAsync(b => b.BatchName == request.BatchName);
-                    if (dbBatch != null)
-                    {
-                        var item = dbBatch.Items.FirstOrDefault(i => i.ProductCode == request.ProductCode);
-                        if (item != null)
-                        {
-                            _tiDbContext.SavedOrderItems.Remove(item);
-                            
-                            // If it was the last item, remove the whole batch. Otherwise update totals.
-                            if (dbBatch.Items.Count <= 1)
-                            {
-                                _tiDbContext.SavedOrderBatches.Remove(dbBatch);
-                            }
-                            else
-                            {
-                                dbBatch.TotalItems--;
-                                dbBatch.TotalAmount = dbBatch.Items.Where(i => i.Id != item.Id).Sum(i => i.Quantity * i.UnitPrice);
-                            }
-                            
-                            await _tiDbContext.SaveChangesAsync();
-                        }
-                    }
+                    _tiDbContext.SavedOrderItems.Remove(itemToDelete);
+                    await _tiDbContext.SaveChangesAsync();
                 }
                 catch (Exception dbEx)
                 {
-                    return Json(new { success = false, error = $"ลบจาก Sheet สำเร็จ แต่ลบจาก TiDB ล้มเหลว: {dbEx.Message}" });
+                    return Json(new { success = false, error = $"ลบใน Sheet สำเร็จ แต่ TiDB ล้มเหลว: {dbEx.Message}" });
                 }
 
                 return Json(new { success = true });

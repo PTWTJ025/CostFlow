@@ -895,9 +895,14 @@ namespace CostFlow.Controllers
                         new System.Net.Http.StringContent(jsonString, System.Text.Encoding.UTF8, "application/json");
 
                     var response = await client.PostAsync(appScriptUrl, content);
+                    var responseString = await response.Content.ReadAsStringAsync();
                     if (response.IsSuccessStatusCode)
                     {
-                        Console.WriteLine("Successfully synced WeeklyPlan_Matching to Google Sheets after FileMerge.");
+                        Console.WriteLine($"Successfully synced WeeklyPlan_Matching to Google Sheets after FileMerge. Response: {responseString}");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Failed to sync. Status: {response.StatusCode}, Response: {responseString}");
                     }
                 }
             }
