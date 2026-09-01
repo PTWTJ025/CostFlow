@@ -161,10 +161,20 @@ namespace CostFlow.Controllers
                 // --- Dual Write: Save to TiDB ---
                 try
                 {
+                    // For edits: remove existing batch with the same name first, but preserve its original CreatedAt
+                    var existingBatch = await _tiDbContext.SavedOrderBatches.FirstOrDefaultAsync(b => b.BatchName == batchName);
+                    DateTime batchCreatedAt = now;
+                    if (existingBatch != null)
+                    {
+                        batchCreatedAt = existingBatch.CreatedAt; // Preserve original creation time
+                        _tiDbContext.SavedOrderBatches.Remove(existingBatch);
+                        await _tiDbContext.SaveChangesAsync();
+                    }
+
                     var newBatch = new CostFlow.Models.TiDb.SavedOrderBatch
                     {
                         BatchName = batchName,
-                        CreatedAt = now,
+                        CreatedAt = batchCreatedAt,
                         TotalItems = payload.Orders.Count,
                         TotalAmount = payload.Orders.Sum(o => o.UnitPrice * o.Quantity)
                     };
@@ -260,6 +270,7 @@ namespace CostFlow.Controllers
 
             var batches = await _tiDbContext.SavedOrderBatches
                 .AsNoTracking()
+                .OrderByDescending(b => b.Id)
                 .Select(b => new { b.BatchName, b.CreatedAt })
                 .ToListAsync();
 
@@ -318,11 +329,14 @@ namespace CostFlow.Controllers
                 query = query.Where(b => b.BatchName == batchName);
             }
 
-            var batches = await query.OrderByDescending(b => b.CreatedAt).ToListAsync();
+            // Order batches by original physical insertion order (Id descending) to perfectly match Google Sheet
+            var batches = await query.OrderByDescending(b => b.Id).ToListAsync();
 
             foreach (var b in batches)
             {
-                foreach (var item in b.Items)
+                // Order items exactly as they were inserted (Id descending) so the latest item in the batch shows at the top
+                var sortedItems = b.Items.OrderByDescending(i => i.Id).ToList();
+                foreach (var item in sortedItems)
                 {
                     items.Add(new SavedOrderItemViewModel
                     {
@@ -568,6 +582,7 @@ namespace CostFlow.Controllers
                 // 1. อัปเดตข้อมูลใน Memory ของ TiDB ก่อน
                 itemToUpdate.Quantity = request.NewQuantity;
                 dbBatch.TotalAmount = dbBatch.Items.Sum(i => i.Quantity * i.UnitPrice);
+                // Do NOT bump CreatedAt to preserve chronological history order
 
                 // 2. Save ลง TiDB อย่างเดียว ไม่ต้องลง Google Sheets ตามที่คุณต้องการ
                 try
@@ -624,8 +639,9 @@ namespace CostFlow.Controllers
 
                 // 1. อัปเดตข้อมูลใน Memory ของ TiDB ก่อน
                 dbBatch.Items.Remove(itemToDelete);
-                dbBatch.TotalAmount = dbBatch.Items.Sum(i => i.Quantity * i.UnitPrice);
                 dbBatch.TotalItems = dbBatch.Items.Count;
+                dbBatch.TotalAmount = dbBatch.Items.Sum(i => i.Quantity * i.UnitPrice);
+                // Do NOT bump CreatedAt to preserve chronological history order
 
                 // 2. เซฟลง TiDB อย่างเดียว ไม่ต้องลง Google Sheets
                 try
