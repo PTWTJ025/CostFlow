@@ -235,7 +235,7 @@ namespace CostFlow.Controllers
         // POST: /PriceReference/SyncFromGoogleSheets
         [HttpPost]
         [Authorize(Roles = "Admin,Dev")]
-        public async Task<IActionResult> SyncFromGoogleSheets()
+        public async Task<IActionResult> SyncFromGoogleSheets([FromQuery] bool confirmDelete = false)
         {
             try
             {
@@ -266,9 +266,11 @@ namespace CostFlow.Controllers
                 csv.ReadHeader();
 
                 var existingMap = await _priceRepository.Query().ToDictionaryAsync(p => p.ProductCode);
+                var processedCodes = new HashSet<string>();
 
                 int addedCount = 0;
                 int updatedCount = 0;
+                int deletedCount = 0;
                 int totalProcessed = 0;
 
                 while (await csv.ReadAsync())
@@ -284,6 +286,7 @@ namespace CostFlow.Controllers
                     string sources = csv.GetField(6)?.Trim() ?? "Google Sheets";
 
                     totalProcessed++;
+                    processedCodes.Add(code);
 
                     if (existingMap.TryGetValue(code, out var existingItem))
                     {
@@ -313,14 +316,47 @@ namespace CostFlow.Controllers
                     }
                 }
 
-                await _priceRepository.SaveChangesAsync();
+                var codesToDelete = new List<ProductPrice>();
+                foreach (var item in existingMap.Values)
+                {
+                    if (!processedCodes.Contains(item.ProductCode))
+                    {
+                        codesToDelete.Add(item);
+                    }
+                }
 
-                return Json(new { 
-                    success = true, 
-                    total = totalProcessed, 
-                    added = addedCount, 
-                    updated = updatedCount 
-                });
+                deletedCount = codesToDelete.Count;
+
+                // ถ้ายืนยันแล้ว หรือไม่มีรายการต้องลบ ให้ลบและบันทึกเลย
+                if (confirmDelete || deletedCount == 0)
+                {
+                    foreach (var item in codesToDelete)
+                    {
+                        await _priceRepository.DeleteAsync(item);
+                    }
+                    await _priceRepository.SaveChangesAsync();
+
+                    return Json(new { 
+                        success = true, 
+                        total = totalProcessed, 
+                        added = addedCount, 
+                        updated = updatedCount,
+                        deleted = deletedCount
+                    });
+                }
+                else
+                {
+                    // ถ้ามีรายการต้องลบ แต่ยังไม่ได้ยืนยัน ให้ส่งค่ากลับไปถามก่อน
+                    // ยังไม่ SaveChanges() สำหรับการลบ (ส่วนที่เพิ่ม/อัปเดตจะยังไม่ถูกบันทึกด้วย ต้องทำใหม่พร้อมยืนยัน)
+                    return Json(new {
+                        success = true,
+                        requiresConfirmation = true,
+                        total = totalProcessed,
+                        added = addedCount,
+                        updated = updatedCount,
+                        deleted = deletedCount
+                    });
+                }
             }
             catch (Exception ex)
             {

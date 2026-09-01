@@ -677,10 +677,15 @@ document.addEventListener("DOMContentLoaded", function() {
         btn.disabled = false;
     }
 
-    window.syncFromGoogleSheets = function() {
+    window.syncFromGoogleSheets = function(confirmDelete = false) {
         startSyncSpin();
 
-        fetch('/PriceReference/SyncFromGoogleSheets', {
+        let url = '/PriceReference/SyncFromGoogleSheets';
+        if (confirmDelete) {
+            url += '?confirmDelete=true';
+        }
+
+        fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' }
         })
@@ -688,24 +693,47 @@ document.addEventListener("DOMContentLoaded", function() {
         .then(data => {
             stopSyncSpin();
             if (data.success) {
+                if (data.requiresConfirmation) {
+                    // แจ้งเตือนผู้ใช้ก่อนลบ
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'พบรายการที่ถูกลบ',
+                        html: `ระบบพบว่ามีข้อมูลถูกลบออกจาก Google Sheets จำนวน <b>${data.deleted}</b> รายการ<br><br>คุณต้องการลบข้อมูลเหล่านี้ออกจากฐานข้อมูลระบบด้วยหรือไม่?`,
+                        showCancelButton: true,
+                        confirmButtonText: 'ใช่, ลบตามชีท',
+                        cancelButtonText: 'ยกเลิกการซิงค์',
+                        confirmButtonColor: '#e11d48',
+                        cancelButtonColor: '#64748b'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            // ซิงค์ใหม่แบบยืนยันการลบ
+                            window.syncFromGoogleSheets(true);
+                        } else {
+                            showToast("ยกเลิกการซิงค์ข้อมูลแล้ว");
+                        }
+                    });
+                    return;
+                }
+
                 let messageHtml = "";
-                if (data.added === 0 && data.updated === 0) {
+                if (data.added === 0 && data.updated === 0 && (data.deleted || 0) === 0) {
                     messageHtml = "ไม่มีข้อมูลอัปเดตเพิ่มเติม (ข้อมูลในระบบตรงกับ Google Sheets แล้ว)";
                 } else {
                     let updates = [];
                     if (data.added > 0) updates.push(`เพิ่มรายการใหม่ <b>${data.added}</b> รายการ`);
                     if (data.updated > 0) updates.push(`อัปเดตรายการเดิม <b>${data.updated}</b> รายการ`);
-                    messageHtml = updates.join(" และ ");
+                    if (data.deleted > 0) updates.push(`ลบรายการเก่า <b>${data.deleted}</b> รายการ`);
+                    messageHtml = updates.join("<br>");
                 }
 
                 Swal.fire({
                     icon: 'success',
-                    title: data.added === 0 && data.updated === 0 ? 'ไม่มีข้อมูลอัปเดต' : 'อัปเดตข้อมูลสำเร็จ!',
+                    title: (data.added === 0 && data.updated === 0 && (data.deleted || 0) === 0) ? 'ไม่มีข้อมูลอัปเดต' : 'อัปเดตข้อมูลสำเร็จ!',
                     html: messageHtml,
                     confirmButtonText: 'ตกลง',
                     confirmButtonColor: '#059669'
                 }).then(() => {
-                    if (data.added > 0 || data.updated > 0) {
+                    if (data.added > 0 || data.updated > 0 || data.deleted > 0) {
                         window.location.reload();
                     }
                 });
