@@ -569,35 +569,7 @@ namespace CostFlow.Controllers
                 itemToUpdate.Quantity = request.NewQuantity;
                 dbBatch.TotalAmount = dbBatch.Items.Sum(i => i.Quantity * i.UnitPrice);
 
-                // 2. ส่งข้อมูลทั้ง Batch กลับไปทับใน Google Sheets (doPost ของ App Script จะลบของเก่าแล้ว Insert ใหม่)
-                var client = _httpClientFactory.CreateClient();
-                client.Timeout = TimeSpan.FromSeconds(120);
-
-                var savePayload = new
-                {
-                    BatchName = dbBatch.BatchName,
-                    CreatedAt = dbBatch.CreatedAt.ToString("dd/MM/yyyy HH:mm:ss"),
-                    Orders = dbBatch.Items.Select(o => new
-                    {
-                        ProductCode = o.ProductCode ?? string.Empty,
-                        ProductName = o.ProductName ?? string.Empty,
-                        Unit = o.Unit ?? string.Empty,
-                        UnitPrice = o.UnitPrice,
-                        Quantity = o.Quantity,
-                        Remarks = o.Remarks ?? string.Empty
-                    }).ToList()
-                };
-
-                var jsonString = JsonSerializer.Serialize(savePayload);
-                var content = new StringContent(jsonString, Encoding.UTF8, "application/json");
-
-                var saveResponse = await client.PostAsync(appScriptUrl, content);
-                if (!saveResponse.IsSuccessStatusCode)
-                {
-                    return Json(new { success = false, error = $"เกิดข้อผิดพลาดจาก Google Sheets (HTTP {(int)saveResponse.StatusCode})" });
-                }
-
-                // 3. ถ้า Google Sheets สำเร็จ ค่อย Save ลง TiDB
+                // 2. Save ลง TiDB อย่างเดียว ไม่ต้องลง Google Sheets ตามที่คุณต้องการ
                 try
                 {
                     _tiDbContext.SavedOrderItems.Update(itemToUpdate);
@@ -606,7 +578,7 @@ namespace CostFlow.Controllers
                 }
                 catch (Exception dbEx)
                 {
-                    return Json(new { success = false, error = $"อัปเดต Sheet สำเร็จ แต่ TiDB ล้มเหลว: {dbEx.Message}" });
+                    return Json(new { success = false, error = $"บันทึกข้อมูลล้มเหลว: {dbEx.Message}" });
                 }
 
                 return Json(new { success = true });
@@ -655,63 +627,23 @@ namespace CostFlow.Controllers
                 dbBatch.TotalAmount = dbBatch.Items.Sum(i => i.Quantity * i.UnitPrice);
                 dbBatch.TotalItems = dbBatch.Items.Count;
 
-                var client = _httpClientFactory.CreateClient();
-                client.Timeout = TimeSpan.FromSeconds(120);
-
-                if (dbBatch.Items.Count == 0)
-                {
-                    // 2a. ถ้าไม่มีสินค้าเหลือเลย ให้ลบทั้ง Batch ออกจาก Google Sheets
-                    var deletePayload = new { Action = "delete", BatchName = request.BatchName };
-                    var jsonString = JsonSerializer.Serialize(deletePayload);
-                    var content = new StringContent(jsonString, Encoding.UTF8, "application/json");
-
-                    var deleteResponse = await client.PostAsync(appScriptUrl, content);
-                    if (!deleteResponse.IsSuccessStatusCode)
-                    {
-                        return Json(new { success = false, error = $"เกิดข้อผิดพลาดจาก Google Sheets (HTTP {(int)deleteResponse.StatusCode})" });
-                    }
-
-                    _tiDbContext.SavedOrderBatches.Remove(dbBatch);
-                }
-                else
-                {
-                    // 2b. ถ้ายังมีสินค้าเหลือ ให้ส่งข้อมูลที่เหลือกลับไปทับใน Google Sheets
-                    var savePayload = new
-                    {
-                        BatchName = dbBatch.BatchName,
-                        CreatedAt = dbBatch.CreatedAt.ToString("dd/MM/yyyy HH:mm:ss"),
-                        Orders = dbBatch.Items.Select(o => new
-                        {
-                            ProductCode = o.ProductCode ?? string.Empty,
-                            ProductName = o.ProductName ?? string.Empty,
-                            Unit = o.Unit ?? string.Empty,
-                            UnitPrice = o.UnitPrice,
-                            Quantity = o.Quantity,
-                            Remarks = o.Remarks ?? string.Empty
-                        }).ToList()
-                    };
-
-                    var jsonString = JsonSerializer.Serialize(savePayload);
-                    var content = new StringContent(jsonString, Encoding.UTF8, "application/json");
-
-                    var saveResponse = await client.PostAsync(appScriptUrl, content);
-                    if (!saveResponse.IsSuccessStatusCode)
-                    {
-                        return Json(new { success = false, error = $"เกิดข้อผิดพลาดจาก Google Sheets (HTTP {(int)saveResponse.StatusCode})" });
-                    }
-
-                    _tiDbContext.SavedOrderBatches.Update(dbBatch);
-                }
-
-                // 3. เซฟลง TiDB
+                // 2. เซฟลง TiDB อย่างเดียว ไม่ต้องลง Google Sheets
                 try
                 {
+                    if (dbBatch.Items.Count == 0)
+                    {
+                        _tiDbContext.SavedOrderBatches.Remove(dbBatch);
+                    }
+                    else
+                    {
+                        _tiDbContext.SavedOrderBatches.Update(dbBatch);
+                    }
                     _tiDbContext.SavedOrderItems.Remove(itemToDelete);
                     await _tiDbContext.SaveChangesAsync();
                 }
                 catch (Exception dbEx)
                 {
-                    return Json(new { success = false, error = $"ลบใน Sheet สำเร็จ แต่ TiDB ล้มเหลว: {dbEx.Message}" });
+                    return Json(new { success = false, error = $"บันทึกข้อมูลล้มเหลว: {dbEx.Message}" });
                 }
 
                 return Json(new { success = true });
