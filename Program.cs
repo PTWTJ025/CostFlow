@@ -109,10 +109,9 @@ var app = builder.Build();
 // ─── Forwarded Headers (สำหรับ Reverse Proxy เช่น Render.com) ───
 // ทำให้ ASP.NET เข้าใจว่า user เข้าผ่าน HTTPS จริง
 // แก้ปัญหา Mixed Content Error ที่ redirect ไป http:// แทน https://
-app.UseForwardedHeaders(new Microsoft.AspNetCore.HttpOverrides.ForwardedHeadersOptions
+app.UseForwardedHeaders(new ForwardedHeadersOptions
 {
-    ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor
-                     | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto
+    ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto
 });
 
 // Configure the HTTP request pipeline.

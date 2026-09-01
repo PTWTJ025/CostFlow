@@ -918,30 +918,44 @@ namespace CostFlow.Controllers
             {
                 var clean = dateStr.Trim();
 
-                if (DateTime.TryParse(clean, new CultureInfo("th-TH"), DateTimeStyles.None, out var dtThai))
+                // รองรับ format วันที่ทั้งแบบมีเวลาและไม่มีเวลา (dd/MM/yyyy HH:mm:ss หรือ dd/MM/yyyy)
+                var formats = new[]
                 {
-                    int year = dtThai.Year > 2500 ? dtThai.Year - 543 : dtThai.Year;
-                    return $"{year:0000}-{dtThai.Month:02}";
+                    "dd/MM/yyyy HH:mm:ss", "d/M/yyyy HH:mm:ss",
+                    "dd/MM/yyyy H:mm:ss",  "d/M/yyyy H:mm:ss",
+                    "dd/MM/yyyy",          "d/M/yyyy",
+                    "yyyy-MM-dd HH:mm:ss", "yyyy-MM-dd",
+                    "dd-MM-yyyy",          "d/M/yy", "dd/MM/yy"
+                };
+                if (DateTime.TryParseExact(clean, formats, CultureInfo.InvariantCulture, DateTimeStyles.None, out var dtExact))
+                {
+                    int year = dtExact.Year > 2500 ? dtExact.Year - 543 : dtExact.Year;
+                    if (year >= 1990 && year <= 2200 && dtExact.Month >= 1 && dtExact.Month <= 12)
+                        return $"{year:0000}-{dtExact.Month:02}";
                 }
 
-                if (DateTime.TryParse(clean, CultureInfo.InvariantCulture, DateTimeStyles.None, out var dtInv))
+                // fallback: en-GB ใช้ dd/MM/yyyy เหมือนไทย จะ parse ได้ถูกต้องกว่า InvariantCulture
+                if (DateTime.TryParse(clean, new CultureInfo("en-GB"), DateTimeStyles.None, out var dtGB))
                 {
-                    int year = dtInv.Year > 2500 ? dtInv.Year - 543 : dtInv.Year;
-                    return $"{year:0000}-{dtInv.Month:02}";
+                    int year = dtGB.Year > 2500 ? dtGB.Year - 543 : dtGB.Year;
+                    if (year >= 1990 && year <= 2200 && dtGB.Month >= 1 && dtGB.Month <= 12)
+                        return $"{year:0000}-{dtGB.Month:02}";
                 }
             }
 
             if (!string.IsNullOrWhiteSpace(poNumber))
             {
                 var cleanPo = poNumber.Trim().ToUpper();
-                if (cleanPo.StartsWith("WO") && cleanPo.Length >= 6)
+                // รองรับทั้ง "WO" (ตัว O) และ "W0" (เลขศูนย์)
+                if ((cleanPo.StartsWith("WO") || cleanPo.StartsWith("W0")) && cleanPo.Length >= 8)
                 {
                     var yearStr = cleanPo.Substring(2, 2);
                     var monthStr = cleanPo.Substring(4, 2);
                     if (int.TryParse(yearStr, out int y2) && int.TryParse(monthStr, out int m) && m >= 1 && m <= 12)
                     {
                         int fullYear = y2 > 50 ? (y2 + 2500 - 543) : (y2 + 2000);
-                        return $"{fullYear:0000}-{m:02}";
+                        if (fullYear >= 1990 && fullYear <= 2200)
+                            return $"{fullYear:0000}-{m:02}";
                     }
                 }
             }
