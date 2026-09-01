@@ -245,7 +245,7 @@
                     var productionStatus = latestWeeklyPlan?.OrderStatus;
 
                     var proposedPrice = hasWeeklyPlan
-                        ? latestWeeklyPlan?.Price
+                        ? latestWeeklyPlan.Price
                         : order.Amount;
 
                     if (string.IsNullOrEmpty(proposedPrice) || proposedPrice == "-")

@@ -46,7 +46,7 @@ namespace CostFlow.Controllers
                     try
                     {
                         var client = _httpClientFactory.CreateClient("GoogleAppsScript");
-                        client.Timeout = TimeSpan.FromSeconds(30);
+                        client.Timeout = TimeSpan.FromSeconds(120);
                         var response = await client.GetAsync(appScriptUrl);
                         if (response.IsSuccessStatusCode)
                         {
@@ -136,7 +136,7 @@ namespace CostFlow.Controllers
                 };
 
                 var client = _httpClientFactory.CreateClient();
-                client.Timeout = TimeSpan.FromSeconds(60);
+                client.Timeout = TimeSpan.FromSeconds(120);
 
                 var jsonString = JsonSerializer.Serialize(payload);
                 var content = new StringContent(jsonString, Encoding.UTF8, "application/json");
@@ -215,7 +215,7 @@ namespace CostFlow.Controllers
             try
             {
                 var client = _httpClientFactory.CreateClient();
-                client.Timeout = TimeSpan.FromSeconds(30);
+                client.Timeout = TimeSpan.FromSeconds(120);
                 var payload = new { Action = "delete", BatchName = batchName };
                 var jsonString = JsonSerializer.Serialize(payload);
                 var content = new StringContent(jsonString, Encoding.UTF8, "application/json");
@@ -380,7 +380,7 @@ namespace CostFlow.Controllers
             try
             {
                 var client = _httpClientFactory.CreateClient();
-                client.Timeout = TimeSpan.FromSeconds(60);
+                client.Timeout = TimeSpan.FromSeconds(120);
                 var response = await client.GetAsync(appScriptUrl);
                 if (response.IsSuccessStatusCode)
                 {
@@ -571,7 +571,7 @@ namespace CostFlow.Controllers
 
                 // 2. ส่งข้อมูลทั้ง Batch กลับไปทับใน Google Sheets (doPost ของ App Script จะลบของเก่าแล้ว Insert ใหม่)
                 var client = _httpClientFactory.CreateClient();
-                client.Timeout = TimeSpan.FromSeconds(30);
+                client.Timeout = TimeSpan.FromSeconds(120);
 
                 var savePayload = new
                 {
@@ -656,7 +656,7 @@ namespace CostFlow.Controllers
                 dbBatch.TotalItems = dbBatch.Items.Count;
 
                 var client = _httpClientFactory.CreateClient();
-                client.Timeout = TimeSpan.FromSeconds(30);
+                client.Timeout = TimeSpan.FromSeconds(120);
 
                 if (dbBatch.Items.Count == 0)
                 {
