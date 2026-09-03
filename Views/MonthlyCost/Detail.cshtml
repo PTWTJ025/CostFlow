@@ -253,6 +253,12 @@
                 </span>
             </button>
         </div>
+        <!-- Total Amount Display -->
+        <div class="flex-1 flex justify-end sm:px-2">
+            <div id="filtered-total-container" class="flex items-center gap-1.5 bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-md border border-emerald-100 shadow-sm transition-colors duration-300">
+                <span id="filtered-total-amount" class="text-[13px] font-bold">฿0.00</span>
+            </div>
+        </div>
         <!-- Search (Multi-PO support) -->
         <div class="relative flex items-center" id="search-wrap">
             <div class="relative flex items-center w-48 sm:w-60 focus-within:w-60 sm:focus-within:w-72 transition-all duration-200">
@@ -1324,6 +1330,7 @@
             const keywords = getSearchKeywords();
 
             let visible = 0;
+            let totalAmount = 0;
             document.querySelectorAll('.order-card').forEach(card => {
                 const po = card.dataset.poNumber ? card.dataset.poNumber.toLowerCase() : '';
                 const name = card.dataset.orderName ? card.dataset.orderName.toLowerCase() : '';
@@ -1340,12 +1347,30 @@
                 if (matchSearch && matchType) {
                     card.style.display = '';
                     visible++;
+                    const price = parseFloat(card.dataset.price) || 0;
+                    totalAmount += price;
                 } else {
                     card.style.display = 'none';
                 }
             });
             const countEl = document.getElementById('tab-pending-count');
             if (countEl) countEl.textContent = visible;
+
+            const totalAmountEl = document.getElementById('filtered-total-amount');
+            const totalContainerEl = document.getElementById('filtered-total-container');
+            if (totalAmountEl && totalContainerEl) {
+                totalAmountEl.textContent = new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB', minimumFractionDigits: 2 }).format(totalAmount);
+                
+                totalContainerEl.className = 'flex items-center gap-1.5 px-2.5 py-1 rounded-md border shadow-sm transition-colors duration-300';
+                
+                if (filterType === 'deferred') {
+                    totalContainerEl.classList.add('bg-amber-50', 'text-amber-700', 'border-amber-100');
+                } else if (filterType === 'skipped') {
+                    totalContainerEl.classList.add('bg-purple-50', 'text-purple-700', 'border-purple-100');
+                } else {
+                    totalContainerEl.classList.add('bg-emerald-50', 'text-emerald-700', 'border-emerald-100');
+                }
+            }
             onCardCheckboxChange();
         }
 

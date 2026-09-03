@@ -422,6 +422,22 @@ namespace CostFlow.Controllers
 
         // POST: /Home/ArchiveAndPurge
         // สำรองข้อมูลที่เก่าเกิน RetentionMonths ลง Google Sheets แล้วลบออกจาก DB
+        // POST: /Home/SyncAllToGoogleSheets
+        [HttpPost]
+        [Authorize(Roles = "Admin,Dev")]
+        public async Task<IActionResult> SyncAllToGoogleSheets([FromServices] CostFlow.Services.MonthlyOrderSyncService syncService)
+        {
+            var result = await syncService.SyncAllMonthsToGoogleSheetsAsync("Manual Admin Trigger from Settings Page");
+            if (result.Success)
+            {
+                return Json(new { success = true, message = result.Message, totalActions = result.TotalActions, totalMonths = result.TotalMonths });
+            }
+            else
+            {
+                return Json(new { success = false, error = result.Message });
+            }
+        }
+
         //
         // [เทสผ่าน Postman]
         // POST /Home/ArchiveAndPurge?cutoffOverride=2025-01-01

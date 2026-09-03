@@ -121,16 +121,16 @@
     <div class="bg-white rounded border border-outline-variant shadow-sm p-3 sm:p-4 custom-toolbar flex items-center justify-between gap-2 overflow-x-auto scrollbar-none">
         <!-- Left Side: Search and Sort Filters -->
         <div class="flex items-center gap-2 shrink">
-            <div class="flex-1 min-w-[130px] max-w-[200px]">
+            <div class="flex-1 min-w-[140px] max-w-[210px]">
                 <input
                     id="po-search"
                     type="text"
                     placeholder="ค้นหาเลขที่อนุมัติ..."
-                    class="block w-full border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-white"
-                    style="height: 36px; padding: 6px 10px; font-size: 12.5px;">
+                    class="block w-full border border-slate-200 rounded-md outline-none transition-all bg-white text-slate-700 text-xs shadow-2xs focus:border-primary focus:ring-1 focus:ring-primary"
+                    style="height: 32px; padding: 6px 10px; font-size: 12px;">
             </div>
-            <div class="flex-1 min-w-[150px] max-w-[200px]">
-                <select id="sort-order" class="block w-full border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-white cursor-pointer" style="height: 36px; padding: 6px 8px; font-size: 12.5px; font-weight: 500;">
+            <div class="flex-1 min-w-[160px] max-w-[220px]">
+                <select id="sort-order" class="block w-full border border-slate-200 rounded-md outline-none transition-all bg-white text-slate-700 cursor-pointer font-medium text-xs shadow-2xs hover:border-slate-300 focus:border-primary" style="height: 32px; padding: 4px 8px; font-size: 12px;">
                     <option value="default">รายการเฉพาะเดือนที่เลือก (เริ่มต้น)</option>
                     <option value="show-all">รายการสะสมทั้งปี (เรียงตามเลขอนุมัติ)</option>
                     <option value="approved-desc">วันที่อนุมัติ: ใหม่ล่าสุด</option>
@@ -750,7 +750,33 @@
             const reportName = "@Html.Raw(reportName)";
             const currentMonth = "@currentMonth";
             const currentYear = "@currentYear";
-            const defaultExportName = `รายงานใบสั่งผลิต_${reportName}`.replace(/[\s\-_]+/g, '_');
+            
+            // สร้างชื่อไฟล์อัตโนมัติตามเงื่อนไขที่เลือก กรอง และ Sort อยู่
+            let nameParts = [`รายงานใบสั่งผลิต_${reportName}`.replace(/[\s\-_]+/g, '_')];
+
+            if (activeFilter === 'matched') {
+                nameParts.push('ได้แผนแล้ว');
+            } else if (activeFilter === 'pending') {
+                nameParts.push('รอแผนผลิต');
+            }
+
+            if (currentTableSortKey) {
+                const sortLabels = {
+                    'po': 'เรียงเลขPO',
+                    'approved-date': 'เรียงวันที่อนุมัติ',
+                    'price': 'เรียงราคา',
+                    'quantity': 'เรียงจำนวน'
+                };
+                const sortName = sortLabels[currentTableSortKey] || currentTableSortKey;
+                const orderName = currentTableSortOrder === 'desc' ? 'มากไปน้อย' : 'น้อยไปมาก';
+                nameParts.push(`${sortName}_${orderName}`);
+            }
+
+            const defaultExportName = nameParts.join('_');
+            const searchVal = document.getElementById('po-search')?.value?.trim() || '';
+            const statusVal = activeFilter || '';
+            const sortKeyVal = currentTableSortKey || '';
+            const sortOrderVal = currentTableSortOrder || '';
 
             Swal.fire({
                 title: 'ตั้งชื่อไฟล์สำหรับส่งออก',
@@ -760,7 +786,7 @@
                 showCancelButton: true,
                 confirmButtonText: 'ดาวน์โหลด',
                 cancelButtonText: 'ยกเลิก',
-                confirmButtonColor: '#00288e',
+                confirmButtonColor: '#059669',
                 cancelButtonColor: '#94a3b8',
                 inputValidator: (value) => {
                     if (!value.trim()) {
@@ -773,10 +799,10 @@
                     let exportUrl;
                     if (currentMonth && currentYear) {
                         // month/year mode
-                        exportUrl = `/Report/ExportToExcel?month=${encodeURIComponent(currentMonth)}&year=${encodeURIComponent(currentYear)}&customName=${encodeURIComponent(customName)}`;
+                        exportUrl = `/Report/ExportToExcel?month=${encodeURIComponent(currentMonth)}&year=${encodeURIComponent(currentYear)}&customName=${encodeURIComponent(customName)}&status=${encodeURIComponent(statusVal)}&search=${encodeURIComponent(searchVal)}&sortBy=${encodeURIComponent(sortKeyVal)}&sortOrder=${encodeURIComponent(sortOrderVal)}`;
                     } else {
                         // legacy fileName mode
-                        exportUrl = `/Report/ExportToExcel?fileName=${encodeURIComponent(reportName)}&customName=${encodeURIComponent(customName)}`;
+                        exportUrl = `/Report/ExportToExcel?fileName=${encodeURIComponent(reportName)}&customName=${encodeURIComponent(customName)}&status=${encodeURIComponent(statusVal)}&search=${encodeURIComponent(searchVal)}&sortBy=${encodeURIComponent(sortKeyVal)}&sortOrder=${encodeURIComponent(sortOrderVal)}`;
                     }
                     window.location.href = exportUrl;
                 }

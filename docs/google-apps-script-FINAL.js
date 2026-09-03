@@ -3,6 +3,7 @@ function doPost(e) {
     var data = JSON.parse(e.postData.contents);
     var ss = SpreadsheetApp.getActiveSpreadsheet();
 
+    // 1. แผนผลิตประจำสัปดาห์
     var resultPlans = 0;
     if (data.PlanGroups || data.planRows || data.SheetName_Plans) {
       resultPlans = processSection(
@@ -15,6 +16,7 @@ function doPost(e) {
       );
     }
 
+    // 2. บันทึกการรับของประจำเดือน
     var resultActions = 0;
     if (data.ActionGroups || data.actionRows || data.SheetName_Actions) {
       resultActions = processSection(
@@ -27,12 +29,34 @@ function doPost(e) {
       );
     }
 
+    // 3. ประวัติการสั่งซื้อ (Order Batches History)
+    var resultOrderHistory = 0;
+    if (data.OrderHistoryRows || data.SheetName_OrderHistory) {
+      resultOrderHistory = processOrderHistory(
+        ss,
+        data.SheetName_OrderHistory || "ประวัติการสั่งซื้อ",
+        data.OrderHistoryRows || []
+      );
+    }
+
+    // 4. ติดตามการรับสินค้า (Received Items Tracking)
+    var resultReceivedTracking = 0;
+    if (data.ReceivedTrackingGroups || data.SheetName_ReceivedTracking) {
+      resultReceivedTracking = processReceivedTracking(
+        ss,
+        data.SheetName_ReceivedTracking || "ติดตามการรับสินค้า",
+        data.ReceivedTrackingGroups || []
+      );
+    }
+
     return ContentService.createTextOutput(
       JSON.stringify({
         success: true,
         archivedPlans: resultPlans,
         archivedActions: resultActions,
-        message: "บันทึกข้อมูลและจัดรูปแบบตามเงื่อนไขเรียบร้อยแล้ว",
+        archivedOrderHistory: resultOrderHistory,
+        archivedReceivedTracking: resultReceivedTracking,
+        message: "บันทึกข้อมูลและจัดรูปแบบตามเงื่อนไขเรียบร้อยแล้วทุกแท็บ",
       }),
     ).setMimeType(ContentService.MimeType.JSON);
   } catch (err) {
@@ -218,17 +242,26 @@ function saveOrUpdateMonthBlock(sheet, monthYearKey, headers, rows, type) {
     );
     var statuses = statusRange.getValues();
     var bgColors = [];
+    var fontColors = [];
     for (var r = 0; r < statuses.length; r++) {
       var stat = String(statuses[r][0]).trim();
       if (stat === "รับสินค้าแล้ว") {
-        bgColors.push(["#00FF00"]); // 🟢 เขียวสว่าง
+        bgColors.push(["#00E676"]); // 🟢 เขียว
+        fontColors.push(["#004D20"]);
       } else if (stat === "ผ่อนชำระ") {
-        bgColors.push(["#FF9900"]); // 🟠 ส้มเหลือง
+        bgColors.push(["#FF9800"]); // 🟠 ส้ม
+        fontColors.push(["#5D2B00"]);
+      } else if (stat === "ยังไม่รับสินค้า") {
+        bgColors.push(["#B39DDB"]); // 🟣 ม่วง
+        fontColors.push(["#311B92"]);
       } else {
-        bgColors.push([null]); // ⚪ ไม่ใส่สี
+        bgColors.push([null]); // ⚪ ปกติ
+        fontColors.push(["#000000"]);
       }
     }
     statusRange.setBackgrounds(bgColors);
+    statusRange.setFontColors(fontColors);
+    statusRange.setFontWeight("bold");
   }
 
   // ─── 6. ตีเส้นขอบ ──────────────────────────────────────────────
@@ -248,6 +281,202 @@ function saveOrUpdateMonthBlock(sheet, monthYearKey, headers, rows, type) {
     "#595959",
     SpreadsheetApp.BorderStyle.SOLID,
   );
+}
+
+// ─────────────────────────────────────────────────────────────────
+// 3. จัดการแท็บ "ประวัติการสั่งซื้อ" (Order Batches History)
+// ─────────────────────────────────────────────────────────────────
+function processOrderHistory(ss, sheetName, rows) {
+  var sheet = ss.getSheetByName(sheetName);
+  if (!sheet) {
+    sheet = ss.insertSheet(sheetName);
+  }
+
+  sheet.clear(); // ล้างเพื่อเขียนใหม่แบบครบถ้วน
+
+  var headers = [
+    "วันที่บันทึก",
+    "ชื่อแผนงาน (รหัสอ้างอิง)",
+    "รหัสสินค้า",
+    "ชื่อสินค้า / รายการอะไหล่",
+    "หน่วย",
+    "ราคาต่อหน่วย",
+    "จำนวน",
+    "มูลค่ารวม",
+    "หมายเหตุ"
+  ];
+  var numCols = headers.length;
+  var myFont = "Chakra Petch";
+
+  // Header
+  var headerRange = sheet.getRange(1, 1, 1, numCols);
+  headerRange.setValues([headers]);
+  headerRange.setFontFamily(myFont).setFontWeight("bold").setFontSize(11);
+  headerRange.setFontColor("#FFFFFF").setBackground("#1B365D"); // น้ำเงินเข้ม Premium
+  headerRange.setHorizontalAlignment("center").setVerticalAlignment("middle");
+
+  if (!rows || rows.length === 0) {
+    applyOrderHistoryWidths(sheet);
+    return 0;
+  }
+
+  var formattedRows = rows.map(function(row) {
+    var newRow = [];
+    for (var c = 0; c < numCols; c++) {
+      newRow.push(row[c] !== undefined ? row[c] : "");
+    }
+    return newRow;
+  });
+
+  var dataRange = sheet.getRange(2, 1, formattedRows.length, numCols);
+  dataRange.setValues(formattedRows);
+  dataRange.setFontFamily(myFont).setFontSize(10).setFontColor("#000000");
+  dataRange.setVerticalAlignment("middle").setWrap(true);
+
+  // Alignments
+  sheet.getRange(2, 1, formattedRows.length, 1).setHorizontalAlignment("center"); // A วันที่บันทึก
+  sheet.getRange(2, 2, formattedRows.length, 1).setHorizontalAlignment("left");   // B ชื่อแผนงาน
+  sheet.getRange(2, 3, formattedRows.length, 1).setHorizontalAlignment("center"); // C รหัสสินค้า
+  sheet.getRange(2, 4, formattedRows.length, 1).setHorizontalAlignment("left");   // D ชื่อสินค้า
+  sheet.getRange(2, 5, formattedRows.length, 1).setHorizontalAlignment("center"); // E หน่วย
+  sheet.getRange(2, 6, formattedRows.length, 1).setHorizontalAlignment("right").setNumberFormat("฿#,##0.00"); // F ราคาต่อหน่วย
+  sheet.getRange(2, 7, formattedRows.length, 1).setHorizontalAlignment("center"); // G จำนวน
+  sheet.getRange(2, 8, formattedRows.length, 1).setHorizontalAlignment("right").setNumberFormat("฿#,##0.00"); // H มูลค่ารวม
+  sheet.getRange(2, 9, formattedRows.length, 1).setHorizontalAlignment("left");   // I หมายเหตุ
+
+  // Borders
+  var fullRange = sheet.getRange(1, 1, formattedRows.length + 1, numCols);
+  fullRange.setBorder(true, true, true, true, true, true, "#595959", SpreadsheetApp.BorderStyle.SOLID);
+
+  applyOrderHistoryWidths(sheet);
+  return formattedRows.length;
+}
+
+function applyOrderHistoryWidths(sheet) {
+  sheet.setColumnWidth(1, 150); // A วันที่บันทึก
+  sheet.setColumnWidth(2, 240); // B ชื่อแผนงาน
+  sheet.setColumnWidth(3, 110); // C รหัสสินค้า
+  sheet.setColumnWidth(4, 300); // D ชื่อสินค้า
+  sheet.setColumnWidth(5, 80);  // E หน่วย
+  sheet.setColumnWidth(6, 110); // F ราคาต่อหน่วย
+  sheet.setColumnWidth(7, 80);  // G จำนวน
+  sheet.setColumnWidth(8, 120); // H มูลค่ารวม
+  sheet.setColumnWidth(9, 140); // I หมายเหตุ
+}
+
+// ─────────────────────────────────────────────────────────────────
+// 4. จัดการแท็บ "ติดตามการรับสินค้า" (Received Items Tracking)
+// ─────────────────────────────────────────────────────────────────
+function processReceivedTracking(ss, sheetName, groups) {
+  var sheet = ss.getSheetByName(sheetName);
+  if (!sheet) {
+    sheet = ss.insertSheet(sheetName);
+  }
+
+  sheet.clear(); // ล้างเพื่อเขียนใหม่แบบครบถ้วน
+
+  var headers = [
+    "รหัสสินค้า",
+    "ชื่อสินค้า",
+    "จำนวนที่รับ",
+    "สถานะ",
+    "ผู้บันทึก",
+    "วันที่รับ"
+  ];
+  var numCols = headers.length;
+  var myFont = "Chakra Petch";
+  var totalSaved = 0;
+  var currentRow = 1;
+
+  if (!groups || groups.length === 0) {
+    // Write empty template
+    var titleRange = sheet.getRange(1, 1, 1, numCols);
+    titleRange.merge().setValue("รับสินค้า: เดือน .........");
+    titleRange.setFontFamily(myFont).setFontWeight("bold").setFontSize(11).setFontColor("#FFFFFF").setBackground("#1B365D").setHorizontalAlignment("center");
+    
+    var hRange = sheet.getRange(2, 1, 1, numCols);
+    hRange.setValues([headers]);
+    hRange.setFontFamily(myFont).setFontWeight("bold").setFontSize(10).setFontColor("#FFFFFF").setBackground("#2B579A").setHorizontalAlignment("center");
+    applyReceivedTrackingWidths(sheet);
+    return 0;
+  }
+
+  for (var i = 0; i < groups.length; i++) {
+    var grp = groups[i];
+    var rows = grp.Rows || [];
+    if (rows.length === 0) continue;
+
+    var monthTitle = "รับสินค้า: " + formatThaiMonthTitle(grp.MonthYear);
+
+    // 1. Title
+    var titleRange = sheet.getRange(currentRow, 1, 1, numCols);
+    titleRange.merge().setValue(monthTitle);
+    titleRange.setFontFamily(myFont).setFontWeight("bold").setFontSize(11).setFontColor("#FFFFFF").setBackground("#1B365D").setHorizontalAlignment("center").setVerticalAlignment("middle");
+
+    // 2. Header
+    var hRange = sheet.getRange(currentRow + 1, 1, 1, numCols);
+    hRange.setValues([headers]);
+    hRange.setFontFamily(myFont).setFontWeight("bold").setFontSize(10).setFontColor("#FFFFFF").setBackground("#2B579A").setHorizontalAlignment("center").setVerticalAlignment("middle");
+
+    // 3. Data
+    var formattedRows = rows.map(function(row) {
+      var newRow = [];
+      for (var c = 0; c < numCols; c++) {
+        newRow.push(row[c] !== undefined ? row[c] : "");
+      }
+      return newRow;
+    });
+
+    var dataRange = sheet.getRange(currentRow + 2, 1, formattedRows.length, numCols);
+    dataRange.setValues(formattedRows);
+    dataRange.setFontFamily(myFont).setFontSize(10).setFontColor("#000000").setVerticalAlignment("middle").setWrap(true);
+
+    // Alignments
+    sheet.getRange(currentRow + 2, 1, formattedRows.length, 1).setHorizontalAlignment("center"); // รหัสสินค้า
+    sheet.getRange(currentRow + 2, 2, formattedRows.length, 1).setHorizontalAlignment("left");   // ชื่อสินค้า
+    sheet.getRange(currentRow + 2, 3, formattedRows.length, 1).setHorizontalAlignment("center"); // จำนวนที่รับ
+    sheet.getRange(currentRow + 2, 4, formattedRows.length, 1).setHorizontalAlignment("center"); // สถานะ
+    sheet.getRange(currentRow + 2, 5, formattedRows.length, 1).setHorizontalAlignment("center"); // ผู้บันทึก
+    sheet.getRange(currentRow + 2, 6, formattedRows.length, 1).setHorizontalAlignment("center"); // วันที่รับ
+
+    // Status Green highlight
+    var statusRange = sheet.getRange(currentRow + 2, 4, formattedRows.length, 1);
+    var statuses = statusRange.getValues();
+    var bgColors = [];
+    var fontColors = [];
+    for (var r = 0; r < statuses.length; r++) {
+      var stat = String(statuses[r][0]).trim();
+      if (stat === "รับสินค้าแล้ว") {
+        bgColors.push(["#00E676"]); // 🟢 เขียว
+        fontColors.push(["#004D20"]);
+      } else {
+        bgColors.push([null]);
+        fontColors.push(["#000000"]);
+      }
+    }
+    statusRange.setBackgrounds(bgColors);
+    statusRange.setFontColors(fontColors);
+    statusRange.setFontWeight("bold");
+
+    // Borders
+    var blockRange = sheet.getRange(currentRow, 1, formattedRows.length + 2, numCols);
+    blockRange.setBorder(true, true, true, true, true, true, "#595959", SpreadsheetApp.BorderStyle.SOLID);
+
+    totalSaved += formattedRows.length;
+    currentRow += formattedRows.length + 3; // Leave space for next block
+  }
+
+  applyReceivedTrackingWidths(sheet);
+  return totalSaved;
+}
+
+function applyReceivedTrackingWidths(sheet) {
+  sheet.setColumnWidth(1, 130); // A รหัสสินค้า
+  sheet.setColumnWidth(2, 320); // B ชื่อสินค้า
+  sheet.setColumnWidth(3, 100); // C จำนวนที่รับ
+  sheet.setColumnWidth(4, 120); // D สถานะ
+  sheet.setColumnWidth(5, 120); // E ผู้บันทึก
+  sheet.setColumnWidth(6, 140); // F วันที่รับ
 }
 
 function applyColumnWidths(sheet, type) {

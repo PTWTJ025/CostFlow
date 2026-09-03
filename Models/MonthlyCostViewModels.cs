@@ -166,14 +166,26 @@ namespace CostFlow.Models
         public string Quantity { get; set; } = "-";
         public string Department { get; set; } = "-";
         public decimal Amount { get; set; }
-        public string MonthKey { get; set; } = string.Empty;   // "2026-08"
+        public string MonthKey { get; set; } = string.Empty;   // "2026-08" (เดือนที่เกิด action จริง)
         public string MonthDisplay { get; set; } = string.Empty; // "สิงหาคม 2569"
-        public int MonthNumber { get; set; } // 1-12 สำหรับ filter
+        public int MonthNumber { get; set; } // 1-12 (เดือนที่เกิด action จริง)
         public string Action { get; set; } = string.Empty; // ReceivedFull / Deferred / Skipped
         public string ActionDisplay { get; set; } = string.Empty; // ภาษาไทย
         public string ApprovedDate { get; set; } = "-";
         public string ApprovedMonthDisplay { get; set; } = "-"; // "กรกฎาคม 2569"
         public int ApprovedMonthNumber { get; set; } // 1-12 สำหรับ filter
+
+        // เดือนที่สินค้าโผล่ในหน้า Detail (สำหรับ Deferred = MonthYear+1, อื่นๆ = MonthYear)
+        public int DisplayMonthNumber { get; set; } // 1-12
+        public string DisplayMonthDisplay { get; set; } = string.Empty; // "กันยายน 2569"
+
         public DateTime CreatedAt { get; set; }
+
+        // ── ข้อมูลเพิ่มเติมสำหรับหน้า Summary (ตามรูปแบบ Excel) ──
+        public string DeliveryTarget { get; set; } = "-";        // เป้าหมายวันส่ง (จาก WeeklyPlanDetail)
+        public string ReceivedDate { get; set; } = "-";          // ว.ด.ป. ที่รับของ (CreatedAt ของ ReceivedFull action)
+        public decimal UnitPrice { get; set; }                   // ราคา/หน่วย (Amount / Qty)
+        public string FullOrderName { get; set; } = "";          // ชื่อเต็ม (ใช้ใน tooltip)
     }
 }
+

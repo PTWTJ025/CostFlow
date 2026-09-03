@@ -145,19 +145,7 @@ namespace CostFlow.Services
             {
                 await context.SaveChangesAsync();
                 _logger.LogInformation(
-                    $"💾 บันทึก {totalAutoSkipped} รายการใน {affectedMonths.Count} เดือน: {string.Join(", ", affectedMonths)}");
-                
-                // ส่งไปชีท
-                try
-                {
-                    _logger.LogInformation("📤 กำลังส่งข้อมูลไป Google Sheets...");
-                    await syncService.SyncSpecificMonthsToGoogleSheetsAsync(affectedMonths.ToList());
-                    _logger.LogInformation("✅ ส่งข้อมูลไป Google Sheets สำเร็จ");
-                }
-                catch (Exception syncEx)
-                {
-                    _logger.LogError(syncEx, $"❌ ส่งข้อมูลไป Google Sheets ล้มเหลว: {syncEx.Message}");
-                }
+                    $"💾 บันทึก {totalAutoSkipped} รายการใน {affectedMonths.Count} เดือนลงฐานข้อมูล: {string.Join(", ", affectedMonths)}");
             }
             else
             {

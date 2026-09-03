@@ -261,7 +261,7 @@ namespace CostFlow.Controllers
             }
             return Json(new { success = false, error = "ไม่พบข้อมูลที่ต้องการลบ" });
         }
-        public async Task<IActionResult> ExportToExcel(string? fileName, string? customName, int? month, int? year)
+        public async Task<IActionResult> ExportToExcel(string? fileName, string? customName, int? month, int? year, string? status = null, string? search = null, string? sortBy = null, string? sortOrder = null)
         {
             List<OrderTrackingMaster> orders;
             string sheetTitle;
@@ -285,7 +285,6 @@ namespace CostFlow.Controllers
                         var parsed = ParseThaiDate(o.ApprovedDate);
                         return parsed.HasValue && parsed.Value.Year == year.Value && parsed.Value.Month == month.Value;
                     })
-                    .OrderBy(o => o.PoNumber)
                     .ToList();
             }
             else if (!string.IsNullOrEmpty(fileName))
@@ -298,10 +297,7 @@ namespace CostFlow.Controllers
                     .FirstOrDefaultAsync(r => r.ReportName == fileName);
                 if (report == null) return NotFound();
 
-                orders = report.Orders
-                    .OrderBy(o => o.Status == "Pending" ? 0 : 1)
-                    .ThenBy(o => o.PoNumber)
-                    .ToList();
+                orders = report.Orders.ToList();
                 sheetTitle = fileName;
             }
             else
@@ -309,45 +305,141 @@ namespace CostFlow.Controllers
                 return NotFound();
             }
 
+            // Apply Status Filter
+            if (!string.IsNullOrWhiteSpace(status) && !status.Equals("all", StringComparison.OrdinalIgnoreCase))
+            {
+                if (status.Equals("matched", StringComparison.OrdinalIgnoreCase))
+                    orders = orders.Where(o => o.Status == "Matched").ToList();
+                else if (status.Equals("pending", StringComparison.OrdinalIgnoreCase))
+                    orders = orders.Where(o => o.Status != "Matched").ToList();
+            }
+
+            // Apply Search Filter
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var keywords = search.Split(new[] { ' ', ',', ';', '\n', '\r', '\t' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                if (keywords.Length > 0)
+                {
+                    orders = orders.Where(o => keywords.Any(kw =>
+                        (o.PoNumber != null && o.PoNumber.Contains(kw, StringComparison.OrdinalIgnoreCase)) ||
+                        (o.Remarks != null && o.Remarks.Contains(kw, StringComparison.OrdinalIgnoreCase)) ||
+                        (o.Urgency != null && o.Urgency.Contains(kw, StringComparison.OrdinalIgnoreCase))
+                    )).ToList();
+                }
+            }
+
+            // Apply Column Sorting
+            if (!string.IsNullOrWhiteSpace(sortBy))
+            {
+                bool isDesc = string.Equals(sortOrder, "desc", StringComparison.OrdinalIgnoreCase);
+                switch (sortBy.ToLower())
+                {
+                    case "po":
+                        orders = isDesc ? orders.OrderByDescending(o => o.PoNumber).ToList() : orders.OrderBy(o => o.PoNumber).ToList();
+                        break;
+                    case "approved-date":
+                        orders = isDesc
+                            ? orders.OrderByDescending(o => ParseThaiDate(o.ApprovedDate) ?? DateTime.MinValue).ThenByDescending(o => o.PoNumber).ToList()
+                            : orders.OrderBy(o => ParseThaiDate(o.ApprovedDate) ?? DateTime.MaxValue).ThenBy(o => o.PoNumber).ToList();
+                        break;
+                    case "price":
+                        orders = isDesc
+                            ? orders.OrderByDescending(o => {
+                                var p = o.MatchedInWeeklyPlans?.OrderByDescending(w => w.WeeklyPlan?.UploadedAt).FirstOrDefault()?.Price ?? o.Amount;
+                                return decimal.TryParse((p ?? "").Replace("฿", "").Replace(",", "").Trim(), out var val) ? val : 0m;
+                            }).ThenBy(o => o.PoNumber).ToList()
+                            : orders.OrderBy(o => {
+                                var p = o.MatchedInWeeklyPlans?.OrderByDescending(w => w.WeeklyPlan?.UploadedAt).FirstOrDefault()?.Price ?? o.Amount;
+                                return decimal.TryParse((p ?? "").Replace("฿", "").Replace(",", "").Trim(), out var val) ? val : 0m;
+                            }).ThenBy(o => o.PoNumber).ToList();
+                        break;
+                    case "quantity":
+                        orders = isDesc
+                            ? orders.OrderByDescending(o => int.TryParse(o.RemarksQuantity, out var q) ? q : 0).ThenBy(o => o.PoNumber).ToList()
+                            : orders.OrderBy(o => int.TryParse(o.RemarksQuantity, out var q) ? q : 0).ThenBy(o => o.PoNumber).ToList();
+                        break;
+                    default:
+                        orders = orders.OrderBy(o => o.PoNumber).ToList();
+                        break;
+                }
+            }
+            else
+            {
+                // Standard default sort: PO Number
+                orders = orders.OrderBy(o => o.PoNumber).ToList();
+            }
+
+            // ClosedXML Graphic Engine
+            ClosedXML.Excel.LoadOptions.DefaultGraphicEngine = new MockGraphicEngine();
             using var workbook = new XLWorkbook();
             var ws = workbook.Worksheets.Add("รายการสั่งผลิต");
+            ws.ShowGridLines = true;
 
             // ── Font & style constants ───────────────────────────────────────
-            var fontName    = "Noto Sans Thai";
-            var colorBorder = XLColor.FromHtml("#CBD5E1");   // slate-300
-            var colorGreen   = XLColor.FromHtml("#065F46");
-            var colorRed     = XLColor.FromHtml("#991B1B");
+            var fontName = "Noto Sans Thai";
+            var colorBorder = XLColor.FromHtml("#E2E8F0");
+            var colorBorderDark = XLColor.FromHtml("#CBD5E1");
 
             int totalRows = orders.Count;
             int matchedCount = orders.Count(o => o.Status == "Matched");
             int pendingCount = totalRows - matchedCount;
             decimal totalAmount = orders.Sum(o => decimal.TryParse(o.Amount, out var a) ? a : 0m);
 
-            // ── Row 1: Title ─────────────────────────────────────────────────
-            ws.Cell(1, 1).Value = $"รายงานใบสั่งผลิต — {sheetTitle}";
+            // ── 1. Title Banner (Row 1) ──────────────────────────────────────
+            ws.Row(1).Height = 32;
             var titleCell = ws.Cell(1, 1);
+            titleCell.Value = $"  รายงานใบสั่งผลิต — {sheetTitle}";
             titleCell.Style.Font.FontName = fontName;
-            titleCell.Style.Font.FontSize = 14;
+            titleCell.Style.Font.FontSize = 13.5;
             titleCell.Style.Font.Bold = true;
-            titleCell.Style.Font.FontColor = XLColor.Black;
+            titleCell.Style.Font.FontColor = XLColor.FromHtml("#0F172A");
+            titleCell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+            titleCell.Style.Fill.BackgroundColor = XLColor.FromHtml("#F8FAFC");
             ws.Range(1, 1, 1, 10).Merge();
+            ws.Range(1, 1, 1, 10).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            ws.Range(1, 1, 1, 10).Style.Border.OutsideBorderColor = colorBorder;
 
-            // ── Row 2: Sub-info ──────────────────────────────────────────────
-            ws.Cell(2, 1).Value = $"วันที่ส่งออก: {DateTime.Now:dd/MM/yyyy HH:mm}    " +
-                                   $"รายการทั้งหมด: {totalRows}    " +
-                                   $"ได้แผนผลิตแล้ว: {matchedCount}    " +
-                                   $"ยังไม่มีแผนผลิต: {pendingCount}    " +
-                                   $"ยอดรวม: {totalAmount:N2} บาท";
-            ws.Cell(2, 1).Style.Font.FontName = fontName;
-            ws.Cell(2, 1).Style.Font.FontSize = 10;
-            ws.Cell(2, 1).Style.Font.FontColor = XLColor.FromHtml("#475569");
+            // ── 2. Filter Subtitle (Row 2) ──────────────────────────────────
+            ws.Row(2).Height = 24;
+            string statusDesc = status switch
+            {
+                "matched" => "ได้แผนผลิตแล้ว",
+                "pending" => "ยังไม่มีแผนผลิต",
+                _ => "ทุกสถานะ"
+            };
+            string searchDesc = !string.IsNullOrWhiteSpace(search) ? $"   |   ค้นหา: \"{search}\"" : "";
+            string sortDesc = "";
+            if (!string.IsNullOrWhiteSpace(sortBy))
+            {
+                string colName = sortBy.ToLower() switch
+                {
+                    "po" => "เลขที่อนุมัติ (PO)",
+                    "approved-date" => "วันที่อนุมัติ",
+                    "price" => "ราคา",
+                    "quantity" => "จำนวน",
+                    _ => sortBy
+                };
+                string orderDir = string.Equals(sortOrder, "desc", StringComparison.OrdinalIgnoreCase) ? "มากไปน้อย" : "น้อยไปมาก";
+                sortDesc = $"   |   เรียงตาม: {colName} ({orderDir})";
+            }
+
+            var subCell = ws.Cell(2, 1);
+            subCell.Value = $"  งวด: {sheetTitle}   |   สถานะ: {statusDesc}{searchDesc}{sortDesc}   |   ข้อมูลที่ส่งออก: {totalRows} รายการ   |   ยอดรวม: {totalAmount:N2} บาท   |   วันที่ออกรายงาน: {DateTime.Now:dd/MM/yyyy HH:mm}";
+            subCell.Style.Font.FontName = fontName;
+            subCell.Style.Font.FontSize = 9.5;
+            subCell.Style.Font.FontColor = XLColor.FromHtml("#64748B");
+            subCell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+            subCell.Style.Fill.BackgroundColor = XLColor.FromHtml("#F8FAFC");
             ws.Range(2, 1, 2, 10).Merge();
+            ws.Range(2, 1, 2, 10).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            ws.Range(2, 1, 2, 10).Style.Border.OutsideBorderColor = colorBorder;
 
-            // ── Row 3: blank spacer ──────────────────────────────────────────
-            ws.Row(3).Height = 8;
+            // ── Row 3: Blank Spacer ──────────────────────────────────────────
+            ws.Row(3).Height = 10;
 
-            // ── Row 4: Column Headers (No fill color) ────────────────────────
+            // ── 3. Table Header (Row 4) ──────────────────────────────────────
             int headerRow = 4;
+            ws.Row(headerRow).Height = 28;
             var headers = new[]
             {
                 "ลำดับ", "สถานะ", "เลขที่อนุมัติ (PO)", "วันที่สั่ง",
@@ -359,18 +451,22 @@ namespace CostFlow.Controllers
             {
                 var cell = ws.Cell(headerRow, c + 1);
                 cell.Value = headers[c];
-                cell.Style.Font.FontName  = fontName;
-                cell.Style.Font.FontSize  = 11;
-                cell.Style.Font.Bold      = true;
-                cell.Style.Font.FontColor = XLColor.Black;
-                cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                cell.Style.Alignment.Vertical   = XLAlignmentVerticalValues.Center;
-                cell.Style.Border.OutsideBorder  = XLBorderStyleValues.Thin;
-                cell.Style.Border.OutsideBorderColor = colorBorder;
+                cell.Style.Font.FontName = fontName;
+                cell.Style.Font.FontSize = 10.5;
+                cell.Style.Font.Bold = true;
+                cell.Style.Font.FontColor = XLColor.FromHtml("#1E293B");
+                cell.Style.Alignment.Horizontal = c == 7 ? XLAlignmentHorizontalValues.Left :
+                                                  c == 6 ? XLAlignmentHorizontalValues.Right :
+                                                  XLAlignmentHorizontalValues.Center;
+                cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+                cell.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                cell.Style.Border.OutsideBorderColor = colorBorderDark;
+                cell.Style.Border.BottomBorder = XLBorderStyleValues.Medium;
+                cell.Style.Border.BottomBorderColor = XLColor.FromHtml("#94A3B8");
+                cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#F1F5F9");
             }
-            ws.Row(headerRow).Height = 22;
 
-            // ── Data Rows ────────────────────────────────────────────────────
+            // ── 4. Table Data Rows ──────────────────────────────────────────
             for (int i = 0; i < orders.Count; i++)
             {
                 var order = orders[i];
@@ -394,6 +490,8 @@ namespace CostFlow.Controllers
                     (proposedPrice ?? "").Replace("฿", "").Replace(",", "").Trim(),
                     out priceVal);
 
+                string singleLineRemarks = (order.Remarks ?? "-").Replace("\r\n", " ").Replace("\n", " ").Replace("\r", " ").Trim();
+
                 var values = new object?[]
                 {
                     i + 1,
@@ -403,67 +501,98 @@ namespace CostFlow.Controllers
                     order.ApprovedDate ?? "-",
                     order.Urgency ?? "-",
                     hasPriceVal ? (object)priceVal : (proposedPrice ?? "-"),
-                    order.Remarks ?? "-",
+                    singleLineRemarks,
                     order.RemarksQuantity ?? "-",
                     deliveryTarget
                 };
+
+                // Standard uniform row height
+                ws.Row(row).Height = 22;
 
                 for (int c = 0; c < values.Length; c++)
                 {
                     var cell = ws.Cell(row, c + 1);
                     cell.Value = values[c] switch
                     {
-                        int    iv => XLCellValue.FromObject(iv),
+                        int iv => XLCellValue.FromObject(iv),
                         decimal dv => XLCellValue.FromObject(dv),
                         string sv => XLCellValue.FromObject(sv),
-                        _          => XLCellValue.FromObject(values[c]?.ToString() ?? "")
+                        _ => XLCellValue.FromObject(values[c]?.ToString() ?? "")
                     };
-                    cell.Style.Font.FontName  = fontName;
-                    cell.Style.Font.FontSize  = 10;
+                    cell.Style.Font.FontName = fontName;
+                    cell.Style.Font.FontSize = 10;
                     cell.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
                     cell.Style.Border.OutsideBorderColor = colorBorder;
                     cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
-                    cell.Style.Alignment.WrapText = true;
 
-                    // ปรับสี text สถานะ
+                    // ปรับสไตล์ Pill สถานะ
                     if (c == 1)
                     {
-                        cell.Style.Font.Bold      = true;
-                        cell.Style.Font.FontColor = isMatched ? colorGreen : colorRed;
+                        cell.Style.Font.Bold = true;
                         cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                        if (isMatched)
+                        {
+                            cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#D1FAE5");
+                            cell.Style.Font.FontColor = XLColor.FromHtml("#065F46");
+                        }
+                        else
+                        {
+                            cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#FFE4E6");
+                            cell.Style.Font.FontColor = XLColor.FromHtml("#9F1239");
+                        }
                     }
                     // จัด center: ลำดับ, PO, วันที่, ปภ, จำนวน, เป้าหมาย
                     else if (c == 0 || c == 2 || c == 3 || c == 4 || c == 5 || c == 8 || c == 9)
                     {
                         cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                        cell.Style.Font.FontColor = c == 2 ? XLColor.FromHtml("#0F172A") : XLColor.FromHtml("#475569");
+                        if (c == 2) cell.Style.Font.Bold = true;
+                    }
+                    // จัด left: รายละเอียด
+                    else if (c == 7)
+                    {
+                        cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
+                        cell.Style.Font.FontColor = XLColor.FromHtml("#334155");
                     }
                     // จัด right: ราคา
-                    else if (c == 6 && hasPriceVal)
+                    else if (c == 6)
                     {
                         cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
-                        cell.Style.NumberFormat.Format  = "#,##0.00";
+                        if (hasPriceVal)
+                        {
+                            cell.Style.NumberFormat.Format = "#,##0.00";
+                            cell.Style.Font.Bold = true;
+                            cell.Style.Font.FontColor = XLColor.FromHtml("#0F172A");
+                        }
                     }
                 }
-
-                ws.Row(row).Height = 20;
             }
 
-            // ── Summary row ──────────────────────────────────────────────────
+            // ── 5. Summary Row ──────────────────────────────────────────────
             int sumRow = headerRow + 1 + orders.Count + 1;
-            ws.Cell(sumRow, 6).Value = "รวมทั้งหมด";
-            ws.Cell(sumRow, 6).Style.Font.FontName  = fontName;
-            ws.Cell(sumRow, 6).Style.Font.Bold      = true;
-            ws.Cell(sumRow, 6).Style.Font.FontColor = XLColor.Black;
+            ws.Row(sumRow).Height = 24;
+
+            ws.Cell(sumRow, 6).Value = $"รวมทั้งสิ้น ({totalRows} รายการ)";
+            ws.Cell(sumRow, 6).Style.Font.FontName = fontName;
+            ws.Cell(sumRow, 6).Style.Font.Bold = true;
+            ws.Cell(sumRow, 6).Style.Font.FontSize = 11;
+            ws.Cell(sumRow, 6).Style.Font.FontColor = XLColor.FromHtml("#0F172A");
             ws.Cell(sumRow, 6).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+            ws.Cell(sumRow, 6).Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
 
             ws.Cell(sumRow, 7).Value = totalAmount;
-            ws.Cell(sumRow, 7).Style.Font.FontName  = fontName;
-            ws.Cell(sumRow, 7).Style.Font.Bold      = true;
-            ws.Cell(sumRow, 7).Style.Font.FontColor = XLColor.Black;
-            ws.Cell(sumRow, 7).Style.NumberFormat.Format  = "#,##0.00";
+            ws.Cell(sumRow, 7).Style.Font.FontName = fontName;
+            ws.Cell(sumRow, 7).Style.Font.Bold = true;
+            ws.Cell(sumRow, 7).Style.Font.FontSize = 11;
+            ws.Cell(sumRow, 7).Style.Font.FontColor = XLColor.FromHtml("#0F172A");
+            ws.Cell(sumRow, 7).Style.NumberFormat.Format = "#,##0.00";
             ws.Cell(sumRow, 7).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
-            ws.Range(sumRow, 6, sumRow, 7).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
-            ws.Range(sumRow, 6, sumRow, 7).Style.Border.OutsideBorderColor = colorBorder;
+            ws.Cell(sumRow, 7).Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+
+            ws.Range(sumRow, 6, sumRow, 7).Style.Border.TopBorder = XLBorderStyleValues.Thin;
+            ws.Range(sumRow, 6, sumRow, 7).Style.Border.TopBorderColor = colorBorder;
+            ws.Range(sumRow, 6, sumRow, 7).Style.Border.BottomBorder = XLBorderStyleValues.Double;
+            ws.Range(sumRow, 6, sumRow, 7).Style.Border.BottomBorderColor = XLColor.Black;
 
             // ── Column widths ────────────────────────────────────────────────
             ws.Column(1).Width  = 7;   // ลำดับ

@@ -202,7 +202,9 @@ namespace CostFlow.Controllers
 
                 _context.SaveChanges();
 
-                await SyncWeeklyPlansToGoogleSheetsAsync(newReport.Id);
+                // /* --- Temporarily disabled Google Sheets Sync ---
+                // await SyncWeeklyPlansToGoogleSheetsAsync(newReport.Id);
+                // ------------------------------------------------ */
 
                 _storageService.DeleteImport(sessionId);
 
@@ -544,7 +546,9 @@ namespace CostFlow.Controllers
 
                 _context.SaveChanges();
 
-                await SyncWeeklyPlansToGoogleSheetsAsync();
+                // /* --- Temporarily disabled Google Sheets Sync ---
+                // await SyncWeeklyPlansToGoogleSheetsAsync();
+                // ------------------------------------------------ */
 
                 return Json(new
                 {

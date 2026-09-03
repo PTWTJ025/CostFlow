@@ -169,47 +169,9 @@ namespace CostFlow.Controllers
                 return Json(new { success = false, error = "ข้อมูลไม่ครบถ้วน" });
             }
 
-            string? appScriptUrl = _configuration["GoogleSheets:OrderHistoryAppScriptUrl"];
-            if (string.IsNullOrWhiteSpace(appScriptUrl) || appScriptUrl.Contains("_placeholder"))
-            {
-                return Json(new { success = false, error = "ยังไม่ได้ตั้งค่า Google Sheets API URL" });
-            }
-
             try
             {
-                var payload = new
-                {
-                    action = "markItemsReceived",
-                    batchName = request.BatchName,
-                    productCodes = request.ProductCodes,
-                    receiveDate = request.ReceiveDate,
-                    markedBy = User.Identity?.Name ?? "Unknown"
-                };
-
-                var client = _httpClientFactory.CreateClient();
-                client.Timeout = TimeSpan.FromSeconds(30);
-
-                var jsonString = JsonSerializer.Serialize(payload);
-                var content = new StringContent(jsonString, Encoding.UTF8, "application/json");
-
-                var response = await client.PostAsync(appScriptUrl, content);
-                if (!response.IsSuccessStatusCode)
-                {
-                    return Json(new { success = false, error = $"เกิดข้อผิดพลาดจาก Google Sheets (HTTP {(int)response.StatusCode})" });
-                }
-
-                var responseString = await response.Content.ReadAsStringAsync();
-                using var doc = JsonDocument.Parse(responseString);
-                var root = doc.RootElement;
-
-                bool isSuccess = root.TryGetProperty("success", out var succProp) && succProp.GetBoolean();
-                if (!isSuccess)
-                {
-                    string errorMsg = root.TryGetProperty("error", out var errProp) ? errProp.GetString() ?? "" : "การบันทึกลง Google Sheets ล้มเหลว";
-                    return Json(new { success = false, error = errorMsg });
-                }
-
-                // Update TiDB
+                // Update Database (TiDB)
                 var batch = await _tiDbContext.SavedOrderBatches
                     .Include(b => b.Items)
                     .FirstOrDefaultAsync(b => b.BatchName == request.BatchName);
@@ -271,40 +233,6 @@ namespace CostFlow.Controllers
                 }
             }
             var receiveDateTime = parsedReceiveDate ?? DateTime.Now;
-            var receiveDateStr = request.ReceiveDate ?? receiveDateTime.ToString("dd/MM/yyyy");
-
-            string? appScriptUrl = _configuration["GoogleSheets:OrderHistoryAppScriptUrl"];
-            if (!string.IsNullOrWhiteSpace(appScriptUrl) && !appScriptUrl.Contains("_placeholder"))
-            {
-                try
-                {
-                    var groups = request.Items.GroupBy(x => x.BatchName);
-                    var client = _httpClientFactory.CreateClient();
-                    client.Timeout = TimeSpan.FromSeconds(30);
-
-                    foreach (var group in groups)
-                    {
-                        if (string.IsNullOrWhiteSpace(group.Key)) continue;
-
-                        var payload = new
-                        {
-                            action = "markItemsReceived",
-                            batchName = group.Key,
-                            productCodes = group.Select(x => x.ProductCode).Distinct().ToList(),
-                            receiveDate = receiveDateStr,
-                            markedBy = User.Identity?.Name ?? "Unknown"
-                        };
-
-                        var jsonString = JsonSerializer.Serialize(payload);
-                        var content = new StringContent(jsonString, Encoding.UTF8, "application/json");
-                        await client.PostAsync(appScriptUrl, content);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"[OrderTracking GoogleSheets Sync Warning] {ex.Message}");
-                }
-            }
 
             try
             {

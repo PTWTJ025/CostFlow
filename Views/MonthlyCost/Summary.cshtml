@@ -24,14 +24,14 @@
         <div class="relative">
             <button type="button" onclick="document.getElementById('year-dropdown').classList.toggle('hidden')"
                     onblur="setTimeout(() => document.getElementById('year-dropdown').classList.add('hidden'), 200)"
-                    class="flex items-center justify-between min-w-[140px] px-4 py-2 border border-slate-300 rounded text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 shadow-xs focus:border-blue-500 outline-none cursor-pointer transition-all gap-3">
+                    class="flex items-center justify-between min-w-[130px] px-3 py-1.5 border border-slate-200 rounded-md text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 shadow-xs outline-none cursor-pointer transition-all gap-2">
                 <span>ปี @(selectedYear + 543)</span>
                 <svg class="w-4 h-4 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/>
                 </svg>
             </button>
 
-            <div id="year-dropdown" class="hidden absolute right-0 mt-1 w-full bg-white  rounded-lg shadow-lg z-50 overflow-hidden">
+            <div id="year-dropdown" class="hidden absolute right-0 mt-1 w-full bg-white rounded-lg shadow-lg z-50 overflow-hidden border border-slate-100">
                 <ul class="py-1 flex flex-col">
                     @foreach (var y in Model.AvailableYears)
                     {
@@ -52,41 +52,23 @@
         <!-- Left Side: Search, Month and Status Dropdown Filters -->
         <div class="flex items-center gap-2 shrink">
             <!-- Search -->
-            <div class="flex-1 min-w-[130px] max-w-[200px]">
+            <div class="flex-1 min-w-[140px] max-w-[210px]">
                 <input
                     id="po-search"
                     type="text"
                     placeholder="ค้นหาเลข PO / รายการ..."
-                    class="block w-full border border-slate-300 rounded focus:border-slate-400 outline-none transition-all bg-white"
-                    style="height: 34px; padding: 6px 10px; font-size: 12.5px;">
+                    class="block w-full border border-slate-200 rounded-md outline-none transition-all bg-white text-slate-700 text-xs shadow-2xs focus:border-primary focus:ring-1 focus:ring-primary"
+                    style="height: 32px; padding: 6px 10px; font-size: 12px;">
             </div>
-            <!-- Month Filter -->
-            <div class="flex-1 min-w-[120px] max-w-[160px]">
-                <select id="filter-month" onchange="applyFilters()" class="block w-full border border-slate-300 rounded focus:border-slate-400 outline-none transition-all bg-white cursor-pointer" style="height: 34px; padding: 6px 8px; font-size: 12.5px; font-weight: 500;">
-                    <option value="">ทุกเดือน (ทั้งปี)</option>
-                    <option value="1">มกราคม</option>
-                    <option value="2">กุมภาพันธ์</option>
-                    <option value="3">มีนาคม</option>
-                    <option value="4">เมษายน</option>
-                    <option value="5">พฤษภาคม</option>
-                    <option value="6">มิถุนายน</option>
-                    <option value="7">กรกฎาคม</option>
-                    <option value="8">สิงหาคม</option>
-                    <option value="9">กันยายน</option>
-                    <option value="10">ตุลาคม</option>
-                    <option value="11">พฤศจิกายน</option>
-                    <option value="12">ธันวาคม</option>
-                </select>
-            </div>
-            <!-- Status Filter Dropdown -->
+            <!-- Status Filter Dropdown
             <div class="flex-1 min-w-[120px] max-w-[150px]">
-                <select id="filter-status" onchange="onStatusSelectChange()" class="block w-full border border-slate-300 rounded focus:border-slate-400 outline-none transition-all bg-white cursor-pointer" style="height: 34px; padding: 6px 8px; font-size: 12.5px; font-weight: 500;">
+                <select id="filter-status" onchange="onStatusSelectChange()" class="block w-full border border-slate-200 rounded-md outline-none transition-all bg-white text-slate-700 cursor-pointer font-medium text-xs shadow-2xs hover:border-slate-300 focus:border-primary" style="height: 32px; padding: 4px 8px; font-size: 12px;">
                     <option value="all">ทุกสถานะ</option>
                     <option value="ReceivedFull">รับสินค้าแล้ว</option>
                     <option value="Deferred">ผ่อนชำระ</option>
                     <option value="Skipped">ยังไม่รับสินค้า</option>
                 </select>
-            </div>
+            </div> -->
         </div>
 
         <!-- Right Side: KPI Summary Badges & Action Buttons -->
@@ -151,57 +133,82 @@
     <!-- ── Table Container ──────────────────────────────────── -->
     <div class="bg-white rounded border border-outline-variant shadow-sm overflow-hidden flex-1 flex flex-col min-h-0">
         <div class="overflow-x-auto">
-            <table class="w-full table-compact text-sm min-w-[1000px]" id="orders-table">
+            <table class="w-full table-compact text-sm min-w-[1200px]" id="orders-table">
                 <thead class="bg-slate-100 border-b border-outline-variant">
                 <tr>
+                    <!-- ว.ด.ป.ที่สั่ง -->
                     <th class="text-center text-on-surface font-bold whitespace-nowrap cursor-pointer hover:bg-slate-200 transition-colors th-sortable group select-none"
-                        data-sort-key="po"
-                        onclick="handleSort('po', this)"
-                        title="คลิกเพื่อเรียงตามเลขที่อนุมัติ">
+                        data-sort-key="approved"
+                        onclick="handleSort('approved', this)"
+                        title="วันที่อนุมัติใบสั่งผลิต">
                         <div class="flex items-center justify-center gap-1 pointer-events-none">
-                            <span>เลขที่อนุมัติ</span>
+                            <span>ว.ด.ป.ที่สั่ง</span>
                             <span class="sort-icon inline-flex items-center text-slate-400">
                                 <svg class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="m7 15 5 5 5-5"/>
-                                    <path d="m7 9 5-5 5 5"/>
+                                    <path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/>
                                 </svg>
                             </span>
                         </div>
                     </th>
-                    <th class="text-left text-on-surface font-bold whitespace-nowrap" style="min-width: 250px;">
-                        <span>ชื่อรายการ</span>
+                    <!-- รหัสใบสั่ง -->
+                    <th class="text-center text-on-surface font-bold whitespace-nowrap cursor-pointer hover:bg-slate-200 transition-colors th-sortable group select-none"
+                        data-sort-key="po"
+                        onclick="handleSort('po', this)"
+                        title="รหัสใบสั่งผลิต (WO)">
+                        <div class="flex items-center justify-center gap-1 pointer-events-none">
+                            <span>รหัสใบสั่ง</span>
+                            <span class="sort-icon inline-flex items-center text-slate-400">
+                                <svg class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/>
+                                </svg>
+                            </span>
+                        </div>
                     </th>
+                    <!-- รายการ -->
+                    <th class="text-left text-on-surface font-bold whitespace-nowrap" style="min-width: 220px;">
+                        <span>รายการ</span>
+                    </th>
+                    <!-- จำนวน -->
                     <th class="text-center text-on-surface font-bold whitespace-nowrap">
                         <span>จำนวน</span>
                     </th>
+                    <!-- ราคา/หน่วย -->
+                    <th class="text-right text-on-surface font-bold whitespace-nowrap">
+                        <span>ราคา/หน่วย</span>
+                    </th>
+                    <!-- ราคารวม -->
                     <th class="text-right text-on-surface font-bold whitespace-nowrap cursor-pointer hover:bg-slate-200 transition-colors th-sortable group select-none"
                         data-sort-key="amount"
                         onclick="handleSort('amount', this)"
                         title="คลิกเพื่อเรียงตามมูลค่า">
                         <div class="flex items-center justify-end gap-1 pointer-events-none">
-                            <span>มูลค่า (฿)</span>
+                            <span>ราคารวม (฿)</span>
                             <span class="sort-icon inline-flex items-center text-slate-400">
                                 <svg class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="m7 15 5 5 5-5"/>
-                                    <path d="m7 9 5-5 5 5"/>
+                                    <path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/>
                                 </svg>
                             </span>
                         </div>
                     </th>
+                    <!-- เป้าหมาย -->
+                    <th class="text-center text-on-surface font-bold whitespace-nowrap" title="วันเป้าหมายส่งสินค้า">
+                        <span>เป้าหมาย</span>
+                    </th>
+                    <!-- ว.ด.ป.ที่รับของ -->
                     <th class="text-center text-on-surface font-bold whitespace-nowrap cursor-pointer hover:bg-slate-200 transition-colors th-sortable group select-none"
                         data-sort-key="month"
                         onclick="handleSort('month', this)"
-                        title="คลิกเพื่อเรียงตามเดือนตามใบสั่งผลิต">
+                        title="วันที่รับสินค้าจริง">
                         <div class="flex items-center justify-center gap-1 pointer-events-none">
-                            <span>เดือนตามใบสั่งผลิต</span>
+                            <span>ว.ด.ป.ที่รับของ</span>
                             <span class="sort-icon inline-flex items-center text-slate-400">
                                 <svg class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="m7 15 5 5 5-5"/>
-                                    <path d="m7 9 5-5 5 5"/>
+                                    <path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/>
                                 </svg>
                             </span>
                         </div>
                     </th>
+                    <!-- สถานะ -->
                     <th class="text-center text-on-surface font-bold whitespace-nowrap">
                         <span>สถานะ</span>
                     </th>
@@ -211,7 +218,7 @@
                 @if (Model.Items.Count == 0)
                 {
                     <tr id="empty-row">
-                        <td colspan="6" class="px-5 py-16 text-center">
+                        <td colspan="9" class="px-5 py-16 text-center">
                             <div class="flex flex-col items-center gap-2">
                                 <svg class="w-10 h-10 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5m8.25 3v6.75m0 0l-3-3m3 3 3-3M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z"/>
@@ -224,53 +231,194 @@
                 }
                 else
                 {
-                    @foreach (var item in Model.Items)
+                    var groupedList = Model.Items
+                        .GroupBy(i => i.Action == "Skipped" ? 99 : i.DisplayMonthNumber)
+                        .Select(g => new {
+                            MonthNumber = g.Key,
+                            Items = g.ToList()
+                        })
+                        .ToList();
+
+                    // แทรกเดือนปัจจุบันถ้ายังไม่มีในระบบ (เฉพาะกรณีดูปีปัจจุบัน)
+                    var currentMonth = DateTime.Now.Month;
+                    var currentYear = DateTime.Now.Year;
+                    if (selectedYear == currentYear && !groupedList.Any(g => g.MonthNumber == currentMonth))
                     {
-                        <tr class="order-row hover:bg-slate-50 transition-colors text-sm"
-                            data-po="@item.PoNumber"
-                            data-name="@item.OrderName"
-                            data-quantity="@item.Quantity"
-                            data-amount="@item.Amount.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)"
-                            data-month="@item.ApprovedMonthNumber"
-                            data-month-sort="@item.ApprovedMonthNumber"
-                            data-status="@item.Action">
-                            <td class="font-medium text-on-surface text-center whitespace-nowrap">@item.PoNumber</td>
-                            <td class="text-secondary detail-cell text-left" style="min-width: 250px;">@item.OrderName</td>
-                            <td class="text-center text-secondary whitespace-nowrap">@item.Quantity</td>
-                            <td class="text-right font-medium text-on-surface whitespace-nowrap">฿@item.Amount.ToString("N2")</td>
-                            <td class="text-center text-secondary whitespace-nowrap">@item.ApprovedMonthDisplay</td>
-                            <td class="text-center whitespace-nowrap">
-                                @if (item.Action == "ReceivedFull")
-                                {
-                                    <span class="inline-flex items-center justify-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md whitespace-nowrap" style="background: #d1fae5; color: #059669; border: 1px solid #a7f3d0;">
-                                        <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/>
-                                        </svg>
-                                        <span class="leading-none">รับสินค้าแล้ว</span>
-                                    </span>
-                                }
-                                else if (item.Action == "Deferred")
-                                {
-                                    <span class="inline-flex items-center justify-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md whitespace-nowrap" style="background: #fef3c7; color: #d97706; border: 1px solid #fde68a;">
-                                        <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
-                                        </svg>
-                                        <span class="leading-none">ผ่อนชำระ</span>
-                                    </span>
-                                }
-                                else
-                                {
-                                    <span class="inline-flex items-center justify-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md whitespace-nowrap" style="background: #f3e8ff; color: #9333ea; border: 1px solid #e9d5ff;">
-                                        <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636"/>
-                                        </svg>
-                                        <span class="leading-none">ยังไม่รับสินค้า</span>
-                                    </span>
-                                }
+                        groupedList.Add(new {
+                            MonthNumber = currentMonth,
+                            Items = new System.Collections.Generic.List<CostFlow.Models.YearlyOrderItem>()
+                        });
+                    }
+
+                    // เรียงเดือนล่าสุด (12) ไปเก่าสุด (1) โดยให้ Skipped (99) อยู่ล่างสุดเสมอ
+                    var sortedGroups = groupedList
+                        .OrderBy(g => g.MonthNumber == 99 ? 1 : 0)
+                        .ThenByDescending(g => g.MonthNumber)
+                        .ToList();
+
+                    var thaiMonths = new[] { "", "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม" };
+
+                    @foreach (var group in sortedGroups)
+                    {
+                        var groupName = group.MonthNumber == 99 
+                            ? "ยังไม่กำหนดเดือนรับ/ชำระ" 
+                            : (group.Items.FirstOrDefault()?.DisplayMonthDisplay ?? $"{thaiMonths[group.MonthNumber]} {selectedYear + 543}");
+                        
+                        var groupTotal = group.Items.Sum(i => i.Amount);
+                        var groupCount = group.Items.Count;
+                        var groupId = "group-" + group.MonthNumber;
+
+                        <!-- ── Group Header ── -->
+                        <tr class="bg-slate-100 hover:bg-slate-200 cursor-pointer transition-colors group-header-row select-none"
+                            onclick="toggleGroup('@groupId')"
+                            data-group-id="@groupId">
+                            <td colspan="9" class="py-2.5 px-3 border-y border-slate-200 shadow-sm">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-2">
+                                        <div class="p-1 rounded-md text-slate-500">
+                                            <svg id="icon-@groupId" class="w-4 h-4 transform transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        </div>
+                                        <span class="font-bold text-slate-800 text-sm">@groupName</span>
+                                        @if (group.MonthNumber == currentMonth && selectedYear == currentYear)
+                                        {
+                                            <span class="text-[10px] font-bold text-blue-700 bg-blue-100 px-1.5 py-0.5 rounded uppercase tracking-wider ml-1">เดือนปัจจุบัน</span>
+                                        }
+                                        <span class="text-xs font-medium text-slate-600 px-2 py-0.5 ml-1">@groupCount รายการ</span>
+                                    </div>
+                                    <div class="font-bold text-slate-900 text-sm">
+                                        <span class="text-emerald-700">฿@groupTotal.ToString("N2")</span>
+                                    </div>
+                                </div>
                             </td>
                         </tr>
-                    }
-                }
+
+                        if (groupCount == 0)
+                        {
+                            <tr class="order-row @groupId text-xs" data-group-class="@groupId" data-month-sort="@group.MonthNumber" data-empty="true">
+                                <td colspan="9" class="text-center py-6 text-slate-400 bg-slate-50/50">
+                                    <p class="font-medium text-slate-500">ยังไม่มีรายการรับสินค้า/ชำระเงินในเดือนนี้</p>
+                                    <p class="text-[11px] mt-0.5 text-slate-400">เมื่อมีรายการใหม่ จะแสดงผลที่นี่</p>
+                                </td>
+                            </tr>
+                        }
+                        else
+                        {
+                            @foreach (var item in group.Items)
+                            {
+                                // ตัดชื่อรายการให้สั้น
+                            var shortName = item.OrderName;
+                            var cutPatterns = new[] { " จำนวน", " เป้าหมาย", " แก้ไข", " (", " -" };
+                            foreach (var pat in cutPatterns)
+                            {
+                                var idx = shortName.IndexOf(pat, System.StringComparison.OrdinalIgnoreCase);
+                                if (idx > 0) { shortName = shortName.Substring(0, idx).Trim(); break; }
+                            }
+                            bool hasTooltip = shortName != item.FullOrderName && !string.IsNullOrEmpty(item.FullOrderName);
+
+                            <tr class="order-row hover:bg-slate-50/80 transition-colors text-xs @groupId"
+                                data-group-class="@groupId"
+                                data-po="@item.PoNumber"
+                                data-name="@item.OrderName"
+                                data-quantity="@item.Quantity"
+                                data-amount="@item.Amount.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)"
+                                data-month="@(item.Action == "Skipped" ? "" : item.DisplayMonthNumber.ToString())"
+                                data-month-sort="@(item.Action == "Skipped" ? 99 : item.DisplayMonthNumber)"
+                                data-approved="@item.ApprovedDate"
+                                data-status="@item.Action">
+
+                                <!-- ว.ด.ป.ที่สั่ง -->
+                                <td class="text-center text-slate-500 whitespace-nowrap py-3 px-3 font-mono text-[11px]">
+                                    @(item.ApprovedDate == "-" ? "-" : item.ApprovedDate)
+                                </td>
+
+                                <!-- รหัสใบสั่ง -->
+                                <td class="font-bold text-slate-800 text-center whitespace-nowrap py-3 px-3 font-mono">
+                                    @item.PoNumber
+                                </td>
+
+                                <!-- รายการ -->
+                                <td class="text-slate-700 text-left py-3 px-3 font-medium" style="min-width: 220px; max-width: 320px;">
+                                    <span class="truncate block w-full cursor-help" title="@item.FullOrderName">
+                                        @shortName@(hasTooltip ? "..." : "")
+                                    </span>
+                                </td>
+
+                                <!-- จำนวน -->
+                                <td class="text-center text-slate-600 whitespace-nowrap py-3 px-3 font-medium">
+                                    @item.Quantity
+                                </td>
+
+                                <!-- ราคา/หน่วย -->
+                                <td class="text-right text-slate-400 whitespace-nowrap py-3 px-3 font-mono text-[11px]">
+                                    @(item.UnitPrice > 0 ? "฿" + item.UnitPrice.ToString("N2") : "-")
+                                </td>
+
+                                <!-- ราคารวม -->
+                                <td class="text-right font-bold text-slate-800 whitespace-nowrap py-3 px-3 font-mono">
+                                    @if (item.Amount > 0)
+                                    {
+                                        <span class="text-slate-900">฿@item.Amount.ToString("N2")</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-slate-300">-</span>
+                                    }
+                                </td>
+
+                                <!-- เป้าหมาย -->
+                                <td class="text-center text-slate-500 whitespace-nowrap py-3 px-3 font-mono text-[11px]">
+                                    @(string.IsNullOrEmpty(item.DeliveryTarget) || item.DeliveryTarget == "-" ? "-" : item.DeliveryTarget)
+                                </td>
+
+                                <!-- ว.ด.ป.ที่รับของ -->
+                                <td class="text-center whitespace-nowrap py-3 px-3 font-mono text-[11px]">
+                                    @if (item.ReceivedDate == "-")
+                                    {
+                                        <span class="text-slate-300">-</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-emerald-600 font-semibold">@item.ReceivedDate</span>
+                                    }
+                                </td>
+
+                                <!-- สถานะ -->
+                                <td class="text-center whitespace-nowrap py-3 px-3">
+                                    @if (item.Action == "ReceivedFull")
+                                    {
+                                        <span class="inline-flex items-center justify-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md whitespace-nowrap" style="background: #d1fae5; color: #059669; border: 1px solid #a7f3d0;">
+                                            <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/>
+                                            </svg>
+                                            <span class="leading-none">รับสินค้าแล้ว</span>
+                                        </span>
+                                    }
+                                    else if (item.Action == "Deferred")
+                                    {
+                                        <span class="inline-flex items-center justify-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md whitespace-nowrap" style="background: #fef3c7; color: #d97706; border: 1px solid #fde68a;">
+                                            <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+                                            </svg>
+                                            <span class="leading-none">ผ่อนชำระ</span>
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="inline-flex items-center justify-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md whitespace-nowrap" style="background: #f3e8ff; color: #9333ea; border: 1px solid #e9d5ff;">
+                                            <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636"/>
+                                            </svg>
+                                            <span class="leading-none">ยังไม่รับสินค้า</span>
+                                        </span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                        } // end else (groupCount > 0)
+                    } // end foreach group
+                } 
                 </tbody>
             </table>
         </div>
@@ -284,9 +432,11 @@
 
 </div>
 
+
 @section Scripts {
 <script>
     let currentStatusFilter = 'all';
+
     let currentSortKey = null;
     let currentSortAsc = true;
 
@@ -346,41 +496,98 @@
         searchInput.addEventListener('paste', () => setTimeout(applyFilters, 50));
     }
 
+    // ── Group Toggle Logic ──
+    function toggleGroup(groupId) {
+        const header = document.querySelector(`.group-header-row[data-group-id="${groupId}"]`);
+        const icon = document.getElementById(`icon-${groupId}`);
+        const rows = document.querySelectorAll(`.${groupId}`);
+
+        const isCollapsed = header.classList.toggle('is-collapsed');
+        if (isCollapsed) {
+            icon.style.transform = 'rotate(-90deg)';
+            rows.forEach(r => r.classList.add('hidden', 'hidden-by-group'));
+        } else {
+            icon.style.transform = 'rotate(0deg)';
+            rows.forEach(r => r.classList.remove('hidden', 'hidden-by-group'));
+        }
+        applyFilters();
+    }
+
     function applyFilters() {
         const keywords = getSearchKeywords();
         const monthVal = document.getElementById('filter-month')?.value || '';
-        const rows = document.querySelectorAll('.order-row');
+        const groupHeaders = document.querySelectorAll('.group-header-row');
         let visibleCount = 0;
 
-        rows.forEach(function (row) {
-            const rowPo = (row.getAttribute('data-po') || '').toLowerCase();
-            const rowName = (row.getAttribute('data-name') || '').toLowerCase();
-            const rowMonth = row.getAttribute('data-month');
-            const rowStatus = row.getAttribute('data-status');
+        let totalMonthCount = 0;
+        let receivedCount = 0;
+        let deferredCount = 0;
+        let skippedCount = 0;
 
-            let show = true;
+        const isFiltering = keywords.length > 0 || currentStatusFilter !== 'all' || monthVal !== '';
 
-            // Search query (Multi-PO / Multi-keyword OR search)
-            if (keywords.length > 0) {
-                const matchSearch = keywords.some(kw => rowPo.includes(kw) || rowName.includes(kw));
-                if (!matchSearch) {
-                    show = false;
+        groupHeaders.forEach(header => {
+            const groupId = header.getAttribute('data-group-id');
+            const rows = document.querySelectorAll(`.${groupId}`);
+            let hasVisibleRow = false;
+
+            rows.forEach(function (row) {
+                const rowPo = (row.getAttribute('data-po') || '').toLowerCase();
+                const rowName = (row.getAttribute('data-name') || '').toLowerCase();
+                const rowMonth = row.getAttribute('data-month');
+                const rowStatus = row.getAttribute('data-status');
+
+                let matchSearch = true;
+                if (keywords.length > 0) {
+                    matchSearch = keywords.some(kw => rowPo.includes(kw) || rowName.includes(kw));
                 }
+
+                let matchMonth = !monthVal || rowMonth === monthVal;
+                let matchStatus = currentStatusFilter === 'all' || rowStatus === currentStatusFilter;
+
+                let show = matchSearch && matchMonth && matchStatus;
+
+                // คำนวณ KPI เฉพาะตัวที่แสดงผลและไม่ถูกพับซ่อน (แต่ถ้า filter อยู่ เราจะอิงตาม match logic)
+                if (show) {
+                    hasVisibleRow = true;
+                    visibleCount++;
+                    totalMonthCount++;
+                    if (rowStatus === 'ReceivedFull') receivedCount++;
+                    else if (rowStatus === 'Deferred') deferredCount++;
+                    else if (rowStatus === 'Skipped') skippedCount++;
+                }
+
+                if (row.classList.contains('hidden-by-group')) {
+                    show = false; // ถ้ากลุ่มถูกพับ ก็ซ่อนไว้
+                }
+
+                row.style.display = show ? '' : 'none';
+            });
+
+            // ถ้ามีการค้นหา ให้กางกล่องอัตโนมัติเพื่อให้เห็นผลลัพธ์
+            if (isFiltering && hasVisibleRow) {
+                header.classList.remove('is-collapsed');
+                const icon = document.getElementById(`icon-${groupId}`);
+                if (icon) icon.style.transform = 'rotate(0deg)';
+                rows.forEach(r => {
+                    r.classList.remove('hidden', 'hidden-by-group');
+                    r.style.display = ''; // force show
+                });
             }
 
-            // Month filter
-            if (monthVal && rowMonth !== monthVal) {
-                show = false;
-            }
-
-            // Status filter
-            if (currentStatusFilter !== 'all' && rowStatus !== currentStatusFilter) {
-                show = false;
-            }
-
-            row.style.display = show ? '' : 'none';
-            if (show) visibleCount++;
+            // ซ่อนหัวข้อเดือน ถ้าข้างในไม่มีรายการไหนตรงกับตัวกรองเลย
+            header.style.display = hasVisibleRow ? '' : 'none';
         });
+
+        // อัปเดตตัวเลขบน KPI Badges ตามเดือนที่เลือก
+        const countAllEl = document.getElementById('count-all');
+        const countRecEl = document.getElementById('count-received');
+        const countDefEl = document.getElementById('count-deferred');
+        const countSkipEl = document.getElementById('count-skipped');
+        if (countAllEl) countAllEl.innerText = totalMonthCount;
+        if (countRecEl) countRecEl.innerText = receivedCount;
+        if (countDefEl) countDefEl.innerText = deferredCount;
+        if (countSkipEl) countSkipEl.innerText = skippedCount;
 
         // Show/hide no results
         const noResults = document.getElementById('no-filter-results');
@@ -419,33 +626,47 @@
     const thElements = document.querySelectorAll('.th-sortable');
 
     function sortTable(key, asc) {
-        const tbody = document.getElementById('orders-tbody');
-        if (!tbody) return;
-        const rows = Array.from(tbody.querySelectorAll('.order-row'));
-        if (rows.length === 0) return;
+        // เรียงข้อมูล "ภายในกลุ่มเดือน" เท่านั้น เพื่อไม่ให้กลุ่มพัง
+        const groupHeaders = document.querySelectorAll('.group-header-row');
+        
+        groupHeaders.forEach(header => {
+            const groupId = header.getAttribute('data-group-id');
+            const rows = Array.from(document.querySelectorAll(`.${groupId}`));
+            if (rows.length === 0) return;
 
-        rows.sort(function (a, b) {
-            let valA, valB;
+            rows.sort(function (a, b) {
+                let valA, valB;
 
-            switch (key) {
-                case 'po':
-                    valA = a.getAttribute('data-po') || '';
-                    valB = b.getAttribute('data-po') || '';
-                    return asc ? valA.localeCompare(valB, undefined, { numeric: true }) : valB.localeCompare(valA, undefined, { numeric: true });
-                case 'amount':
-                    valA = parseFloat(a.getAttribute('data-amount')) || 0;
-                    valB = parseFloat(b.getAttribute('data-amount')) || 0;
-                    return asc ? valA - valB : valB - valA;
-                case 'month':
-                    valA = parseInt(a.getAttribute('data-month-sort')) || 0;
-                    valB = parseInt(b.getAttribute('data-month-sort')) || 0;
-                    return asc ? valA - valB : valB - valA;
-                default:
-                    return 0;
-            }
+                switch (key) {
+                    case 'approved': // ว.ด.ป. ที่สั่ง (เปรียบเทียบ string ไปก่อน)
+                        valA = a.getAttribute('data-approved') || '';
+                        valB = b.getAttribute('data-approved') || '';
+                        return asc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                    case 'po':
+                        valA = a.getAttribute('data-po') || '';
+                        valB = b.getAttribute('data-po') || '';
+                        return asc ? valA.localeCompare(valB, undefined, { numeric: true }) : valB.localeCompare(valA, undefined, { numeric: true });
+                    case 'amount':
+                        valA = parseFloat(a.getAttribute('data-amount')) || 0;
+                        valB = parseFloat(b.getAttribute('data-amount')) || 0;
+                        return asc ? valA - valB : valB - valA;
+                    case 'month':
+                        // กรณี month sort อาจไม่ค่อยมีผลเมื่อจัดกลุ่มแล้ว แต่เผื่อไว้
+                        valA = parseInt(a.getAttribute('data-month-sort')) || 0;
+                        valB = parseInt(b.getAttribute('data-month-sort')) || 0;
+                        return asc ? valA - valB : valB - valA;
+                    default:
+                        return 0;
+                }
+            });
+
+            // แทรก rows กลับเข้าไปต่อจาก Header ตามลำดับใหม่
+            let currentEl = header;
+            rows.forEach(r => {
+                currentEl.after(r);
+                currentEl = r;
+            });
         });
-
-        rows.forEach(r => tbody.appendChild(r));
     }
 
     function updateSortIcons(activeTh, asc) {

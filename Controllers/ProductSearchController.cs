@@ -36,39 +36,26 @@ namespace CostFlow.Controllers
 
         public async Task<IActionResult> Index(string? editBatchName = null)
         {
-            ViewData["SpreadsheetUrl"] = _configuration["GoogleSheets:SpreadsheetUrl"] ?? "https://docs.google.com/spreadsheets/d/1DJeeOYd1hGFAaRZ7emkdgLys7G88T13cylayh6Za1xc/edit";
             if (!string.IsNullOrWhiteSpace(editBatchName))
             {
-                // Fetch batch data from Google Apps Script
-                string? appScriptUrl = _configuration["GoogleSheets:OrderHistoryAppScriptUrl"];
-                if (!string.IsNullOrWhiteSpace(appScriptUrl) && !appScriptUrl.Contains("_placeholder"))
+                // Fetch batch data directly from Database
+                var batch = await _tiDbContext.SavedOrderBatches
+                    .Include(b => b.Items)
+                    .FirstOrDefaultAsync(b => b.BatchName == editBatchName);
+
+                if (batch != null)
                 {
-                    try
+                    ViewData["EditBatchName"] = editBatchName;
+                    var ordersJson = JsonSerializer.Serialize(batch.Items.Select(it => new
                     {
-                        var client = _httpClientFactory.CreateClient("GoogleAppsScript");
-                        client.Timeout = TimeSpan.FromSeconds(120);
-                        var response = await client.GetAsync(appScriptUrl);
-                        if (response.IsSuccessStatusCode)
-                        {
-                            var json = await response.Content.ReadAsStringAsync();
-                            using var doc = JsonDocument.Parse(json);
-                            var root = doc.RootElement;
-                            if (root.TryGetProperty("batches", out var batchesEl))
-                            {
-                                foreach (var b in batchesEl.EnumerateArray())
-                                {
-                                    var name = b.TryGetProperty("BatchName", out var nameProp) ? nameProp.GetString() : null;
-                                    if (name == editBatchName && b.TryGetProperty("Orders", out var ordersEl))
-                                    {
-                                        ViewData["EditBatchName"] = editBatchName;
-                                        ViewData["EditOrdersJson"] = ordersEl.GetRawText();
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    catch { /* silently ignore; user can re-enter data */ }
+                        ProductCode = it.ProductCode,
+                        ProductName = it.ProductName,
+                        Unit = it.Unit,
+                        UnitPrice = it.UnitPrice,
+                        Quantity = it.Quantity,
+                        Remarks = it.Remarks
+                    }));
+                    ViewData["EditOrdersJson"] = ordersJson;
                 }
             }
             return View();
@@ -113,95 +100,50 @@ namespace CostFlow.Controllers
                     ? $"รายการคีย์ข้อมูลวันที่ {now.ToString("dd/MM/yyyy HH:mm")}"
                     : request.BatchName.Trim();
 
-                // --- Send directly to Google Sheets (no DB) ---
-                string? appScriptUrl = _configuration["GoogleSheets:OrderHistoryAppScriptUrl"];
-                if (string.IsNullOrWhiteSpace(appScriptUrl) || appScriptUrl.Contains("_placeholder"))
+                var parsedOrders = request.Orders.Select(o => new
                 {
-                    return Json(new { success = false, error = "ยังไม่ได้ระบุลิงก์ Google Sheets Web App ในไฟล์ตั้งค่าระบบ" });
+                    ProductCode = o.ProductCode ?? string.Empty,
+                    ProductName = o.ProductName ?? string.Empty,
+                    Unit = o.Unit ?? string.Empty,
+                    UnitPrice = ParseDecimal(o.UnitPrice),
+                    Quantity = ParseDecimal(o.Quantity),
+                    Remarks = o.Remarks ?? string.Empty
+                }).ToList();
+
+                // Save directly to Database
+                var existingBatch = await _tiDbContext.SavedOrderBatches.FirstOrDefaultAsync(b => b.BatchName == batchName);
+                DateTime batchCreatedAt = now;
+                if (existingBatch != null)
+                {
+                    batchCreatedAt = existingBatch.CreatedAt; // Preserve original creation time
+                    _tiDbContext.SavedOrderBatches.Remove(existingBatch);
+                    await _tiDbContext.SaveChangesAsync();
                 }
 
-                var payload = new
+                var newBatch = new CostFlow.Models.TiDb.SavedOrderBatch
                 {
                     BatchName = batchName,
-                    CreatedAt = now.ToString("dd/MM/yyyy HH:mm:ss"),
-                    Orders = request.Orders.Select(o => new
-                    {
-                        ProductCode = o.ProductCode ?? string.Empty,
-                        ProductName = o.ProductName ?? string.Empty,
-                        Unit = o.Unit ?? string.Empty,
-                        UnitPrice = ParseDecimal(o.UnitPrice),
-                        Quantity = ParseDecimal(o.Quantity),
-                        Remarks = o.Remarks ?? string.Empty
-                    }).ToList()
+                    CreatedAt = batchCreatedAt,
+                    TotalItems = parsedOrders.Count,
+                    TotalAmount = parsedOrders.Sum(o => o.UnitPrice * o.Quantity)
                 };
 
-                var client = _httpClientFactory.CreateClient();
-                client.Timeout = TimeSpan.FromSeconds(120);
+                _tiDbContext.SavedOrderBatches.Add(newBatch);
+                await _tiDbContext.SaveChangesAsync();
 
-                var jsonString = JsonSerializer.Serialize(payload);
-                var content = new StringContent(jsonString, Encoding.UTF8, "application/json");
-
-                var response = await client.PostAsync(appScriptUrl, content);
-                if (!response.IsSuccessStatusCode)
+                var dbItems = parsedOrders.Select(o => new CostFlow.Models.TiDb.SavedOrderItem
                 {
-                    return Json(new { success = false, error = $"เกิดข้อผิดพลาดจาก Google Sheets (HTTP {(int)response.StatusCode})" });
-                }
+                    BatchId = newBatch.Id,
+                    ProductCode = o.ProductCode,
+                    ProductName = o.ProductName,
+                    Unit = o.Unit,
+                    UnitPrice = o.UnitPrice,
+                    Quantity = o.Quantity,
+                    Remarks = o.Remarks
+                }).ToList();
 
-                var responseString = await response.Content.ReadAsStringAsync();
-                using var doc = JsonDocument.Parse(responseString);
-                var root = doc.RootElement;
-
-                bool isSuccess = root.TryGetProperty("success", out var succProp) && succProp.GetBoolean();
-                if (!isSuccess)
-                {
-                    string errorMsg = root.TryGetProperty("error", out var errProp) ? errProp.GetString() ?? "" : "การบันทึกลง Google Sheets ล้มเหลว";
-                    return Json(new { success = false, error = errorMsg });
-                }
-
-                // --- Dual Write: Save to TiDB ---
-                try
-                {
-                    // For edits: remove existing batch with the same name first, but preserve its original CreatedAt
-                    var existingBatch = await _tiDbContext.SavedOrderBatches.FirstOrDefaultAsync(b => b.BatchName == batchName);
-                    DateTime batchCreatedAt = now;
-                    if (existingBatch != null)
-                    {
-                        batchCreatedAt = existingBatch.CreatedAt; // Preserve original creation time
-                        _tiDbContext.SavedOrderBatches.Remove(existingBatch);
-                        await _tiDbContext.SaveChangesAsync();
-                    }
-
-                    var newBatch = new CostFlow.Models.TiDb.SavedOrderBatch
-                    {
-                        BatchName = batchName,
-                        CreatedAt = batchCreatedAt,
-                        TotalItems = payload.Orders.Count,
-                        TotalAmount = payload.Orders.Sum(o => o.UnitPrice * o.Quantity)
-                    };
-
-                    _tiDbContext.SavedOrderBatches.Add(newBatch);
-                    await _tiDbContext.SaveChangesAsync();
-
-                    var dbItems = payload.Orders.Select(o => new CostFlow.Models.TiDb.SavedOrderItem
-                    {
-                        BatchId = newBatch.Id,
-                        ProductCode = o.ProductCode,
-                        ProductName = o.ProductName,
-                        Unit = o.Unit,
-                        UnitPrice = o.UnitPrice,
-                        Quantity = o.Quantity,
-                        Remarks = o.Remarks
-                    }).ToList();
-
-                    _tiDbContext.SavedOrderItems.AddRange(dbItems);
-                    await _tiDbContext.SaveChangesAsync();
-                }
-                catch (Exception dbEx)
-                {
-                    // If TiDB fails but Google Sheet succeeds, we might want to log it or return a warning.
-                    // For now, we will return an error so the user knows TiDB failed.
-                    return Json(new { success = false, error = $"บันทึกลง Sheet สำเร็จ แต่ TiDB ล้มเหลว: {dbEx.Message}" });
-                }
+                _tiDbContext.SavedOrderItems.AddRange(dbItems);
+                await _tiDbContext.SaveChangesAsync();
 
                 return Json(new { success = true });
             }
@@ -218,40 +160,20 @@ namespace CostFlow.Controllers
             if (string.IsNullOrWhiteSpace(batchName))
                 return Json(new { success = false, error = "ไม่ระบุชื่อแผ่นงานที่จะลบ" });
 
-            string? appScriptUrl = _configuration["GoogleSheets:OrderHistoryAppScriptUrl"];
-            if (string.IsNullOrWhiteSpace(appScriptUrl) || appScriptUrl.Contains("_placeholder"))
-                return Json(new { success = false, error = "ยังไม่ได้ตั้งค่า Google Sheets Web App URL" });
-
             try
             {
-                var client = _httpClientFactory.CreateClient();
-                client.Timeout = TimeSpan.FromSeconds(120);
-                var payload = new { Action = "delete", BatchName = batchName };
-                var jsonString = JsonSerializer.Serialize(payload);
-                var content = new StringContent(jsonString, Encoding.UTF8, "application/json");
-                var response = await client.PostAsync(appScriptUrl, content);
-                if (!response.IsSuccessStatusCode)
-                    return Json(new { success = false, error = $"Google Sheets ตอบกลับ HTTP {(int)response.StatusCode}" });
-
-                try
+                var dbBatch = await _tiDbContext.SavedOrderBatches.FirstOrDefaultAsync(b => b.BatchName == batchName);
+                if (dbBatch != null)
                 {
-                    var dbBatch = await _tiDbContext.SavedOrderBatches.FirstOrDefaultAsync(b => b.BatchName == batchName);
-                    if (dbBatch != null)
-                    {
-                        _tiDbContext.SavedOrderBatches.Remove(dbBatch);
-                        await _tiDbContext.SaveChangesAsync();
-                    }
-                }
-                catch (Exception dbEx)
-                {
-                    return Json(new { success = false, error = $"ลบจาก Sheet สำเร็จ แต่ลบจาก TiDB ล้มเหลว: {dbEx.Message}" });
+                    _tiDbContext.SavedOrderBatches.Remove(dbBatch);
+                    await _tiDbContext.SaveChangesAsync();
                 }
 
                 return Json(new { success = true });
             }
             catch (Exception ex)
             {
-                return Json(new { success = false, error = ex.Message });
+                return Json(new { success = false, error = $"ลบข้อมูลล้มเหลว: {ex.Message}" });
             }
         }
 
@@ -581,6 +503,10 @@ namespace CostFlow.Controllers
 
                 // 1. อัปเดตข้อมูลใน Memory ของ TiDB ก่อน
                 itemToUpdate.Quantity = request.NewQuantity;
+                if (request.NewPrice.HasValue)
+                {
+                    itemToUpdate.UnitPrice = request.NewPrice.Value;
+                }
                 dbBatch.TotalAmount = dbBatch.Items.Sum(i => i.Quantity * i.UnitPrice);
                 // Do NOT bump CreatedAt to preserve chronological history order
 
@@ -801,6 +727,7 @@ namespace CostFlow.Controllers
         public string BatchName { get; set; } = string.Empty;
         public string ProductCode { get; set; } = string.Empty;
         public decimal NewQuantity { get; set; }
+        public decimal? NewPrice { get; set; }
     }
 
     public class DeleteOrderItemRequest

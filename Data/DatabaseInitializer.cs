@@ -632,8 +632,8 @@ namespace CostFlow.Data
                                        ORDER BY CreatedAt DESC, Id DESC
                                    ) as rn
                             FROM MonthlyOrderActions
-                        )
-                        WHERE rn = 1
+                        ) AS t
+                        WHERE t.rn = 1
                     );");
                 Console.WriteLine("[DB Init] Verified and sanitized MonthlyOrderActions MonthYear formats.");
             }

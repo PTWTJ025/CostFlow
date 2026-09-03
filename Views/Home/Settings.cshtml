@@ -31,7 +31,7 @@
                 </h3>
                 <p class="text-xs text-secondary">ดาวน์โหลดไฟล์ฐานข้อมูลเพื่อสำรองข้อมูลไว้ในเครื่อง แนะนำให้ทำทุกเดือนหลังปิดยอด</p>
             </div>
-            <span class="text-[11px] font-bold text-blue-700 bg-blue-50 border border-blue-200/80 px-3 py-1 rounded-full">
+            <span class="text-[11px] font-bold text-blue-700 px-3 py-1">
                 สำหรับผู้ดูแลระบบ (Admin Only)
             </span>
         </div>
@@ -63,12 +63,65 @@
                     <button type="button" onclick="executeBackup()" id="backup-btn"
                         class="mt-3 font-bold text-xs px-4 py-2.5 rounded shadow-sm flex items-center justify-center gap-1.5 w-full cursor-pointer hover:opacity-90 border-none transition-all"
                         style="background-color: #2563eb; color: #ffffff;">
-                        <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                        </svg>
                         <span style="color: #ffffff; font-weight: 700;">ดาวน์โหลด Backup ทั้งหมด (.ZIP)</span>
                     </button>
                 </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Google Sheets Manual Sync & Backup Section -->
+    <div class="bg-white rounded border border-outline-variant shadow-sm p-md md:p-lg lg:p-xl">
+        <div class="border-b border-slate-100 pb-md mb-md flex flex-wrap justify-between items-center gap-sm">
+            <div>
+                <h3 class="font-headline-sm text-headline-sm text-on-surface mb-xs flex items-center gap-2">
+                    <svg class="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0 3 3m-3-3-3 3M6.75 19.5a4.5 4.5 0 0 1-1.41-8.775 a5.25 5.25 0 0 1 10.233-2.33 a3 3 0 0 1 3.758 3.848A3.752 3.752 0 0 1 18 19.5H6.75Z"/>
+                    </svg>
+                    ส่งออก & สำรองข้อมูลลง Google Sheet (Manual Sync to Google Sheet)
+                </h3>
+                <p class="text-xs text-secondary">ส่งข้อมูลค่าใช้จ่ายและบันทึกการรับของประจำเดือนทั้งหมดจากฐานข้อมูลไปยัง Google Sheet ทันที (ไม่ลบข้อมูลในระบบ)</p>
+            </div>
+            <span class="text-[11px] font-bold text-emerald-700 px-3 py-1">
+                สำหรับผู้ดูแลระบบ (Admin Only)
+            </span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-md">
+            <div class="bg-slate-50 p-md rounded border border-slate-200/80 flex flex-col justify-between">
+                <div>
+                    <span class="text-[10px] text-slate-500 font-semibold uppercase block mb-1">ข้อมูลที่จะส่งออก (3 แท็บหลัก)</span>
+                    <span class="text-xs font-bold text-slate-800 block">1. บันทึกการรับของประจำเดือน</span>
+                    <span class="text-xs font-bold text-slate-800 block">2. ประวัติการสั่งซื้อ (ชุดสั่งซื้อ)</span>
+                    <span class="text-xs font-bold text-slate-800 block">3. ติดตามการรับสินค้า</span>
+                </div>
+                <span class="text-[10px] text-slate-400 mt-2 block">กวาดข้อมูลจาก MySQL & TiDB ครบทุกชุด</span>
+            </div>
+
+            <div class="bg-slate-50 p-md rounded border border-slate-200/80 flex flex-col justify-between">
+                <div>
+                    <span class="text-[10px] text-slate-500 font-semibold uppercase block mb-1">Google Sheet ปลายทาง</span>
+                    <a href="https://docs.google.com/spreadsheets/d/1RFXMLRLjidiH6z9C6-DFHZcf8pP_K4TskJJcMVzPS5w/edit?usp=sharing" target="_blank" class="text-xs font-bold text-emerald-600 hover:underline flex items-center gap-1">
+                        เปิดดู Google Sheet ฐานข้อมูล
+                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+                        </svg>
+                    </a>
+                </div>
+                <span class="text-[10px] text-slate-400 mt-2 block">อัปเดตพร้อมกันทั้ง 3 แท็บในไฟล์เดียว</span>
+            </div>
+
+            <div class="bg-emerald-50/60 p-md rounded border border-emerald-200/80 flex flex-col justify-between">
+                <div>
+                    <span class="text-[10px] text-emerald-800 font-semibold uppercase block mb-1">คำสั่งส่งข้อมูลลง Sheet</span>
+                    <span class="text-xs text-emerald-900 font-medium block">ส่งข้อมูลล่าสุดจาก Database ไปบันทึกลงชีท</span>
+                </div>
+                <button type="button" onclick="executeSyncToGoogleSheets()" id="sync-sheet-btn"
+                    class="mt-3 font-bold text-xs px-4 py-2.5 rounded shadow-sm flex items-center justify-center gap-1.5 w-full cursor-pointer hover:opacity-90 border-none transition-all"
+                    style="background-color: #059669; color: #ffffff;">
+                    
+                    <span id="sync-sheet-btn-text" style="color: #ffffff; font-weight: 700;">ส่งข้อมูลลง Google Sheet ทันที</span>
+                </button>
             </div>
         </div>
     </div>
@@ -82,11 +135,10 @@
                         <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125m16.5 5.625c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125m16.5 5.625c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" />
                     </svg>
                     การจัดการฐานข้อมูลและการสำรองข้อมูล (Archive & Database Maintenance)
-                    <span class="text-[11px] font-bold text-emerald-700 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-full inline-flex items-center gap-1">พร้อมใช้งาน</span>
                 </h3>
                 <p class="text-xs text-secondary">ย้ายข้อมูลเก่าเกิน 2 ปีลง Google Sheet สำรอง และลบออกจากฐานข้อมูลเพื่อเพิ่มความเร็วของระบบ</p>
             </div>
-            <span class="text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200/80 px-3 py-1 rounded-full">
+            <span class="text-[11px] font-bold text-amber-700 px-3 py-1">
                 สำหรับผู้ดูแลระบบ (Admin Only)
             </span>
         </div>
@@ -119,9 +171,6 @@
                     <span class="text-xs text-amber-900 font-medium block">ย้ายข้อมูลย้อนหลังเกิน 2 ปีลง Sheet และลบออก</span>
                 </div>
                 <button type="button" onclick="openArchiveModal()" style="background-color: #d97706; color: #ffffff !important;" class="mt-3 font-bold text-xs px-4 py-2.5 rounded shadow-sm flex items-center justify-center gap-1.5 w-full cursor-pointer hover:opacity-90 border-none transition-all">
-                    <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5m6 4.125l2.25 2.25m0 0l2.25-2.25M12 13.875V8.25M3.75 7.5h16.5M6.75 7.5V4.875c0-.621.504-1.125 1.125-1.125h8.25c.621 0 1.125.504 1.125 1.125V7.5" />
-                    </svg>
                     <span style="color: #ffffff !important; font-weight: 700;">สำรองและลบข้อมูลเก่า (เกิน 2 ปี) ทันที</span>
                 </button>
             </div>
@@ -205,6 +254,94 @@ function executeBackup() {
         if (typeof showToast === 'function') showToast(err.message || 'เกิดข้อผิดพลาดในการ Backup', 'error');
         else alert(err.message || 'เกิดข้อผิดพลาดในการ Backup');
     });
+}
+
+function executeSyncToGoogleSheets() {
+    const btn = document.getElementById("sync-sheet-btn");
+    const originalHtml = btn.innerHTML;
+
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({
+            title: 'ส่งข้อมูลลง Google Sheet?',
+            text: 'ระบบจะกวาดข้อมูลค่าใช้จ่ายและบันทึกการรับของประจำเดือนทั้งหมดจาก Database ไปอัปเดตบน Google Sheet',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: '🚀 เริ่มส่งข้อมูล',
+            cancelButtonText: 'ยกเลิก',
+            confirmButtonColor: '#059669',
+            cancelButtonColor: '#64748b'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                performSync();
+            }
+        });
+    } else {
+        if (confirm("ต้องการส่งข้อมูลทั้งหมดไปยัง Google Sheet หรือไม่?")) {
+            performSync();
+        }
+    }
+
+    function performSync() {
+        btn.disabled = true;
+        btn.innerHTML = `<svg class="w-4 h-4 animate-spin text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span style="color:#ffffff;font-weight:700;">กำลังส่งข้อมูลไปยัง Google Sheet...</span>`;
+
+        fetch('/Home/SyncAllToGoogleSheets', {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+
+            if (data.success) {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'ส่งข้อมูลลง Google Sheet สำเร็จ!',
+                        html: `
+                            <div class="text-left text-xs text-slate-600 space-y-2 mt-2">
+                                <p><b>📊 จำนวนข้อมูลที่ส่ง:</b> ${data.totalActions || 0} รายการ</p>
+                                <p><b>📅 จำนวนเดือนที่อัปเดต:</b> ${data.totalMonths || 0} เดือน</p>
+                                <p class="text-emerald-700 bg-emerald-50 p-2 rounded border border-emerald-200 mt-2">
+                                    ✅ ข้อมูลใน Google Sheet แท็บ <b>"บันทึกการรับของประจำเดือน"</b> ได้รับการอัปเดตเรียบร้อยแล้ว
+                                </p>
+                            </div>
+                        `,
+                        confirmButtonColor: '#059669',
+                        confirmButtonText: 'ตกลง'
+                    });
+                } else if (typeof showToast === 'function') {
+                    showToast(data.message || 'ส่งข้อมูลลง Google Sheet สำเร็จ!', 'success');
+                }
+            } else {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'เกิดข้อผิดพลาด',
+                        text: data.error || 'ไม่สามารถส่งข้อมูลไปยัง Google Sheet ได้'
+                    });
+                } else if (typeof showToast === 'function') {
+                    showToast(data.error || 'ไม่สามารถส่งข้อมูลไปยัง Google Sheet ได้', 'error');
+                }
+            }
+        })
+        .catch(err => {
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'เชื่อมต่อล้มเหลว',
+                    text: err.message || 'เกิดข้อผิดพลาดในการเชื่อมต่อเครือข่าย'
+                });
+            } else if (typeof showToast === 'function') {
+                showToast(err.message || 'เกิดข้อผิดพลาดในการเชื่อมต่อเครือข่าย', 'error');
+            }
+        });
+    }
 }
 
 function openArchiveModal() {

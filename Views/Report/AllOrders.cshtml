@@ -94,7 +94,7 @@
             </div>
         </div>
         <!-- Toolbar (Filters & Search) -->
-        <div class="flex items-center gap-3 bg-slate-50/50 p-3.5 border border-slate-200/60 rounded shadow-2xs w-full">
+        <div class="flex items-center gap-3 bg-white p-3.5 border border-slate-200 rounded-lg shadow-2xs w-full">
 
             <!-- 1. ช่องค้นหา (Align Left, Fluid) -->
             <div class="relative flex-1 min-w-[280px]" style="max-width: 420px;">
@@ -102,19 +102,19 @@
                     id="system-orders-search"
                     type="text"
                     placeholder="ค้นหาเลขที่อนุมัติ, หมายเหตุ หรือชื่อไฟล์..."
-                    class="block w-full pl-3 pr-3 py-1.5 text-xs border border-slate-300 rounded focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all bg-white"
-                    style="height: 36px;">
+                    class="block w-full pl-3 pr-3 py-1.5 text-xs border border-slate-200 rounded-md focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all bg-white text-slate-700 shadow-2xs"
+                    style="height: 32px;">
             </div>
 
             <!-- 2. กลุ่ม Select (Align Right, width fix พอดีเนื้อหา + tooltip กันข้อความยาวโดน truncate) -->
             <div class="flex items-center gap-2 flex-shrink-0 ml-auto">
-                <select id="system-orders-status-filter" title="สถานะ: ทั้งหมด" class="w-[220px] border border-slate-300 rounded focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-xs font-semibold text-slate-600 bg-white truncate" style="height: 36px; padding: 0 12px;">
+                <select id="system-orders-status-filter" title="สถานะ: ทั้งหมด" class="w-[200px] border border-slate-200 rounded-md focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all text-xs font-medium text-slate-700 bg-white truncate shadow-2xs cursor-pointer" style="height: 32px; padding: 0 10px;">
                     <option value="All">สถานะ: ทั้งหมด</option>
                     <option value="Matched">สถานะ: จับคู่แล้ว</option>
                     <option value="Unmatched">สถานะ: ยังไม่จับคู่</option>
                 </select>
 
-                <select id="filter-mode" title="รายการไฟล์เป้าหมายส่งมอบทั้งหมดในระบบ (สามารถเลือกกรองตามเดือนที่อัปโหลด หรือแสดงทั้งหมดในระบบได้)" class="w-[220px] border border-slate-300 rounded focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-xs font-semibold text-slate-600 bg-white truncate" style="height: 36px; padding: 0 12px;">
+                <select id="filter-mode" title="รายการไฟล์เป้าหมายส่งมอบทั้งหมดในระบบ (สามารถเลือกกรองตามเดือนที่อัปโหลด หรือแสดงทั้งหมดในระบบได้)" class="w-[200px] border border-slate-200 rounded-md focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all text-xs font-medium text-slate-700 bg-white truncate shadow-2xs cursor-pointer" style="height: 32px; padding: 0 10px;">
                     <option value="upload" selected="@(filterMonth.HasValue && filterYear.HasValue ? "selected" : null)">อัปโหลด: -</option>
                     <option value="all" selected="@(filterMonth.HasValue && filterYear.HasValue ? null : "selected")">ทั้งหมดในระบบ (ทุกปี)</option>
                 </select>
@@ -150,7 +150,7 @@
             </div>
             <div class="flex items-center gap-2 flex-wrap">
                 <!-- ปุ่มก่อนหน้า -->
-                <button id="btn-system-orders-prev" class="h-8 px-3 flex items-center justify-center border border-slate-300 rounded text-xs font-semibold bg-white hover:bg-slate-50 text-slate-700 transition disabled:opacity-40 disabled:cursor-not-allowed shadow-2xs select-none">
+                <button id="btn-system-orders-prev" class="h-8 px-3 flex items-center justify-center border border-slate-200 rounded-md text-xs font-semibold bg-white hover:bg-slate-50 text-slate-700 transition disabled:opacity-40 disabled:cursor-not-allowed shadow-2xs select-none cursor-pointer">
                     ก่อนหน้า
                 </button>
 
@@ -160,7 +160,7 @@
                 </div>
 
                 <!-- ปุ่มถัดไป -->
-                <button id="btn-system-orders-next" class="h-8 px-3 flex items-center justify-center border border-slate-300 rounded text-xs font-semibold bg-white hover:bg-slate-50 text-slate-700 transition disabled:opacity-40 disabled:cursor-not-allowed shadow-2xs select-none">
+                <button id="btn-system-orders-next" class="h-8 px-3 flex items-center justify-center border border-slate-200 rounded-md text-xs font-semibold bg-white hover:bg-slate-50 text-slate-700 transition disabled:opacity-40 disabled:cursor-not-allowed shadow-2xs select-none cursor-pointer">
                     ถัดไป
                 </button>
             </div>
@@ -525,9 +525,9 @@
                 btn.textContent = i;
 
                 if (i === currentPage) {
-                    btn.className = 'h-8 w-8 flex items-center justify-center border-2 border-primary rounded-lg text-xs font-bold bg-primary text-white transition';
+                    btn.className = 'h-8 w-8 flex items-center justify-center border border-primary rounded-md text-xs font-bold bg-primary text-white transition shadow-xs';
                 } else {
-                    btn.className = 'h-8 w-8 flex items-center justify-center border border-slate-300 rounded-lg text-xs font-semibold bg-white hover:bg-slate-50 text-slate-700 transition cursor-pointer';
+                    btn.className = 'h-8 w-8 flex items-center justify-center border border-slate-200 rounded-md text-xs font-semibold bg-white hover:bg-slate-50 text-slate-700 transition cursor-pointer shadow-2xs';
                 }
 
                 btn.addEventListener('click', () => {
