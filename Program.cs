@@ -65,8 +65,12 @@ builder.Services.AddScoped<IDateTimeProvider, DateTimeProvider>();
 // ⭐ Service สำหรับ Sync ข้อมูลไป Google Sheets (แชร์ระหว่าง Controller และ Background Service)
 builder.Services.AddScoped<MonthlyOrderSyncService>();
 builder.Services.AddScoped<CostFlow.Services.StockMatchingService>();
+builder.Services.AddHttpClient<CostFlow.Services.ISupabaseStorageService, CostFlow.Services.SupabaseStorageService>();
 
-// ⭐ Background Service สำหรับ Auto-Skip อัตโนมัติทุกวัน 00:00 (เฉพาะ Production ไม่รันตอนทดสอบ Dev)
+// ⭐ Background Service สำหรับ Keep-Alive ป้องกัน Supabase หลับ (รันอัตโนมัติทุกๆ 12 ชม.)
+builder.Services.AddHostedService<CostFlow.Services.SupabaseKeepAliveBackgroundService>();
+
+// ⭐ Background Service สำหรับ Auto-Skip อัตโนมัติทุกวัน 00:00 (เฉพาะ Production)
 if (!builder.Environment.IsDevelopment())
 {
     builder.Services.AddHostedService<AutoSkipBackgroundService>();

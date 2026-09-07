@@ -21,12 +21,18 @@ namespace CostFlow.Controllers
         private readonly AppDbContext _context;
         private readonly StockMatchingService _matchingService;
         private readonly IWebHostEnvironment _env;
+        private readonly ISupabaseStorageService _supabaseStorage;
 
-        public StockController(AppDbContext context, StockMatchingService matchingService, IWebHostEnvironment env)
+        public StockController(
+            AppDbContext context, 
+            StockMatchingService matchingService, 
+            IWebHostEnvironment env,
+            ISupabaseStorageService supabaseStorage)
         {
             _context = context;
             _matchingService = matchingService;
             _env = env;
+            _supabaseStorage = supabaseStorage;
         }
 
         // หน้าต่างสำหรับ Admin ตรวจรับของเข้าคลัง (AI Matching)
@@ -526,7 +532,7 @@ namespace CostFlow.Controllers
             });
         }
 
-        // อัปโหลดรูปภาพสินค้าสต๊อก (ทั้งจากคลังภาพ และภาพถ่ายจากกล้อง)
+        // อัปโหลดรูปภาพสินค้าสต๊อก (ทั้งจากคลังภาพ และภาพถ่ายจากกล้อง) ขึ้น Supabase Storage
         [HttpPost]
         public async Task<IActionResult> UploadStockImage(IFormFile? file)
         {
@@ -549,33 +555,50 @@ namespace CostFlow.Controllers
 
             try
             {
-                var webRoot = _env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
-                var uploadsFolder = Path.Combine(webRoot, "uploads", "stock");
-                if (!Directory.Exists(uploadsFolder))
-                {
-                    Directory.CreateDirectory(uploadsFolder);
-                }
-
-                var fileName = $"stock_{DateTime.UtcNow:yyyyMMdd_HHmmss}_{Guid.NewGuid().ToString("N").Substring(0, 8)}{extension}";
-                var fullPath = Path.Combine(uploadsFolder, fileName);
-
-                using (var stream = new FileStream(fullPath, FileMode.Create))
-                {
-                    await file.CopyToAsync(stream);
-                }
-
-                var relativeUrl = $"/uploads/stock/{fileName}";
+                // 1. อัปโหลดขึ้น Supabase Storage (คลาวด์หลัก)
+                using var stream = file.OpenReadStream();
+                var contentType = file.ContentType ?? (extension == ".png" ? "image/png" : "image/jpeg");
+                var publicUrl = await _supabaseStorage.UploadFileAsync(stream, file.FileName, contentType);
 
                 return Json(new
                 {
                     success = true,
-                    imageUrl = relativeUrl,
-                    message = "อัปโหลดรูปภาพเรียบร้อยแล้ว"
+                    imageUrl = publicUrl,
+                    message = "อัปโหลดรูปภาพขึ้น Cloud Storage เรียบร้อยแล้ว"
                 });
             }
             catch (Exception ex)
             {
-                return Json(new { success = false, message = $"เกิดข้อผิดพลาดในการบันทึกรูปภาพ: {ex.Message}" });
+                // 2. หากคลาวด์มีปัญหา ให้ Fallback บันทึกลงเครื่องเซิร์ฟเวอร์สำรองชั่วคราว
+                try
+                {
+                    var webRoot = _env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+                    var uploadsFolder = Path.Combine(webRoot, "uploads", "stock");
+                    if (!Directory.Exists(uploadsFolder))
+                    {
+                        Directory.CreateDirectory(uploadsFolder);
+                    }
+
+                    var fileName = $"stock_{DateTime.UtcNow:yyyyMMdd_HHmmss}_{Guid.NewGuid().ToString("N").Substring(0, 8)}{extension}";
+                    var fullPath = Path.Combine(uploadsFolder, fileName);
+
+                    using (var localStream = new FileStream(fullPath, FileMode.Create))
+                    {
+                        await file.CopyToAsync(localStream);
+                    }
+
+                    var relativeUrl = $"/uploads/stock/{fileName}";
+                    return Json(new
+                    {
+                        success = true,
+                        imageUrl = relativeUrl,
+                        message = "อัปโหลดรูปภาพลงเซิร์ฟเวอร์สำรองเรียบร้อยแล้ว"
+                    });
+                }
+                catch
+                {
+                    return Json(new { success = false, message = $"เกิดข้อผิดพลาดในการบันทึกรูปภาพ: {ex.Message}" });
+                }
             }
         }
 
@@ -586,6 +609,19 @@ namespace CostFlow.Controllers
                    userName.Equals("ADMIN01", StringComparison.OrdinalIgnoreCase) ||
                    userName.Equals("DEV01", StringComparison.OrdinalIgnoreCase) ||
                    userName.Equals("STAFF01", StringComparison.OrdinalIgnoreCase);
+        }
+
+        // ตรวจสอบและส่งสัญญาณ Ping Keep-Alive ไปยัง Supabase (ป้องกันโปรเจกต์ Free Tier หลับ)
+        [HttpGet]
+        public async Task<IActionResult> PingSupabase()
+        {
+            var isAlive = await _supabaseStorage.PingKeepAliveAsync();
+            return Json(new
+            {
+                success = isAlive,
+                message = isAlive ? "Supabase ตอบรับสัญญาณ Heartbeat เรียบร้อย (โปรเจกต์ตื่นอยู่ตลอดเวลา)" : "ไม่สามารถส่งสัญญาณไปยัง Supabase ได้",
+                timestamp = DateTime.UtcNow.ToString("o")
+            });
         }
 
         // ดึงประวัติ StockLogs ของสินค้าตาม ProductCode สำหรับเปิดดูใน Popup ประวัติการเบิก/จ่าย

@@ -21,9 +21,8 @@ namespace CostFlow.Models
         [MaxLength(100)]
         public string? Category { get; set; }
 
-        [NotMapped]
         [MaxLength(500)]
-        public string? FilePath { get; set; } // ไฟล์เอกสาร / รูปภาพ / ลิงก์ (Mock/Client-Side)
+        public string? FilePath { get; set; } // ไฟล์เอกสาร / รูปภาพ / ลิงก์ (Cloud Storage URL บน Supabase / TiDB)
 
         public decimal InitialStock { get; set; } = 0; // สต๊อกเริ่มต้น
 
