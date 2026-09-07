@@ -2,6 +2,11 @@
 @{
     ViewData["Title"] = "ระบบสต๊อกสินค้า (Stock System)";
     var pendingCount = (int)(ViewBag.PendingReceiveCount ?? 0);
+    string userName = User.Identity?.Name ?? "";
+    bool isAdmin = User.IsInRole("Admin") || User.IsInRole("Dev") || User.IsInRole("Staff") ||
+                   userName.Equals("ADMIN01", StringComparison.OrdinalIgnoreCase) ||
+                   userName.Equals("DEV01", StringComparison.OrdinalIgnoreCase) ||
+                   userName.Equals("STAFF01", StringComparison.OrdinalIgnoreCase);
 }
 
 <style>
@@ -16,6 +21,10 @@
         .stock-header-search,
         .stock-search-container {
             width: 100% !important;
+        }
+
+        .stock-label-remaining {
+            display: none !important;
         }
     }
 
@@ -135,6 +144,46 @@
         font-weight: 600;
         color: #1e293b;
     }
+
+    /* Mobile vs Desktop Toolbar */
+    @@media (max-width: 767px) {
+        .stock-header-bar {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 0.75rem !important;
+            padding: 0.75rem 0.875rem !important;
+        }
+        .stock-header-toolbar {
+            width: 100% !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 0.5rem !important;
+        }
+        .stock-search-container {
+            flex: 1 1 auto !important;
+            width: 100% !important;
+            min-width: 0 !important;
+        }
+        .btn-text-desktop {
+            display: none !important;
+        }
+        #btnPendingReceiveBell {
+            padding-left: 0.625rem !important;
+            padding-right: 0.625rem !important;
+            flex-shrink: 0 !important;
+        }
+        .btn-add-stock {
+            padding-left: 0.625rem !important;
+            padding-right: 0.625rem !important;
+            flex-shrink: 0 !important;
+        }
+    }
+
+    @@media (min-width: 768px) {
+        .btn-text-desktop {
+            display: inline !important;
+        }
+    }
 </style>
 
 <div class="flex-1 p-md md:p-lg lg:p-xl flex flex-col gap-lg max-w-container-max mx-auto w-full">
@@ -149,34 +198,35 @@
 
     <!-- Data Table -->
     <div class="bg-white rounded border border-outline-variant shadow-sm overflow-hidden">
-        <div class="stock-header-bar px-md py-4 border-b border-outline-variant flex justify-between items-center bg-surface-container-low/50">
+        <div class="stock-header-bar px-md py-3.5 sm:py-4 border-b border-outline-variant flex justify-between items-center bg-surface-container-low/50">
             <h3 class="text-body-md font-bold text-on-surface">รายการสินค้าในสต๊อกทั้งหมด (@Model.Count() รายการ)</h3>
-            <div class="flex items-center gap-2">
+            <div class="stock-header-toolbar flex items-center gap-2">
                 <div class="relative w-48 md:w-60 stock-search-container">
                     <input type="text" id="stockCustomSearch" placeholder="ค้นหารหัส หรือชื่อสินค้า..." class="stock-header-search px-3 py-2 bg-white border border-outline-variant rounded text-sm text-on-surface placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary w-full transition-all shadow-sm" style="height: 38px;" autocomplete="off" />
                     <div id="stock-suggestions-dropdown" class="hidden absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-md shadow-lg z-50 max-h-[240px] overflow-y-auto divide-y divide-slate-100"></div>
                 </div>
                 <button type="button"
-        onclick="openReceiveModal()"
-        id="btnPendingReceiveBell"
-        class="px-3 py-2 bg-blue-50/70 border border-primary/30 rounded text-sm font-semibold text-primary hover:bg-blue-100/80 transition-colors flex items-center gap-1.5 shadow-sm whitespace-nowrap"
-        style="height: 38px;"
-        title="ตรวจรับสินค้าเข้าคลังจาก Monthly Cost / PO">
-
-    <i data-lucide="bell" class="w-4 h-4"></i>
-
-    <span>รายการรอรับ</span>
-
-    <span id="pendingReceiveBadge" 
-          class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-primary text-white text-[10px] font-bold shrink-0 leading-none @(pendingCount > 0 ? "animate-pulse" : "")" 
-          aria-label="จำนวนรายการรอรับเข้าคลัง">@pendingCount</span>
-
-
-</button>
-                <button onclick="openAddModal()" class="px-4 py-2 bg-white border border-outline-variant rounded text-sm font-medium text-secondary hover:text-primary hover:border-primary/50 transition-colors flex items-center gap-2 shadow-sm whitespace-nowrap" style="height: 38px;">
-                    <i data-lucide="plus" class="w-4 h-4"></i>
-                    เพิ่มสินค้าใหม่
+                        onclick="openReceiveModal()"
+                        id="btnPendingReceiveBell"
+                        class="px-2.5 sm:px-3 py-2 bg-blue-50/70 border border-primary/30 rounded text-sm font-semibold text-primary hover:bg-blue-100/80 transition-colors flex items-center gap-1.5 shadow-sm whitespace-nowrap"
+                        style="height: 38px;"
+                        title="ตรวจรับสินค้าเข้าคลังจาก Monthly Cost / PO">
+                    <i data-lucide="bell" class="w-4 h-4 shrink-0"></i>
+                    <span class="btn-text-desktop">รายการรอรับ</span>
+                    <span id="pendingReceiveBadge" 
+                          class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-primary text-white text-[10px] font-bold shrink-0 leading-none" 
+                          aria-label="จำนวนรายการรอรับเข้าคลัง">@pendingCount</span>
                 </button>
+                @if (isAdmin)
+                {
+                    <button onclick="openAddModal()" 
+                            class="btn-add-stock px-2.5 sm:px-4 py-2 bg-white border border-outline-variant rounded text-sm font-medium text-secondary hover:text-primary hover:border-primary/50 transition-colors flex items-center gap-1.5 shadow-sm whitespace-nowrap" 
+                            style="height: 38px;"
+                            title="เพิ่มสินค้าใหม่เข้าสต๊อก">
+                        <i data-lucide="plus" class="w-4 h-4 shrink-0"></i>
+                        <span class="btn-text-desktop">เพิ่มสินค้าใหม่</span>
+                    </button>
+                }
             </div>
         </div>
 
@@ -209,9 +259,13 @@
                         : mockImages[imgIndex];
 
                     <div class="stock-card bg-white border border-slate-200 hover:border-slate-300 rounded-lg shadow-2xs hover:shadow-sm transition-all overflow-hidden flex flex-col justify-between group"
+                         data-id="@item.Id"
                          data-code="@item.ProductCode"
                          data-name="@item.ProductName"
-                         data-category="@(item.Category ?? "")">
+                         data-category="@(item.Category ?? "")"
+                         data-min="@item.MinStock"
+                         data-max="@item.MaxStock"
+                         data-quantity="@item.Quantity">
                         
                         <!-- Top: Image Banner (สัดส่วน 4:3 ขนาดเท่ากัน 100% ทุกใบ) + Status Badges -->
                         <div class="stock-card-img-wrapper" style="position: relative; width: 100%; aspect-ratio: 4 / 3; overflow: hidden; background-color: #f1f5f9; flex-shrink: 0;">
@@ -226,19 +280,19 @@
                             <div class="stock-badge-top-right" style="position: absolute; top: 8px; right: 8px; z-index: 5;">
                                 @if (item.Quantity <= 0)
                                 {
-                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-600/95 text-white shadow-2xs">
+                                    <span class="stock-status-badge inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-600/95 text-white shadow-2xs">
                                         สต๊อกหมด
                                     </span>
                                 }
                                 else if (item.Quantity <= item.MinStock)
                                 {
-                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/95 text-white shadow-2xs">
+                                    <span class="stock-status-badge inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/95 text-white shadow-2xs">
                                         สต๊อกใกล้หมด
                                     </span>
                                 }
                                 else
                                 {
-                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-600/95 text-white shadow-2xs">
+                                    <span class="stock-status-badge inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-600/95 text-white shadow-2xs">
                                         สต๊อกเพียงพอ
                                     </span>
                                 }
@@ -260,44 +314,87 @@
                                     @item.ProductCode
                                 </div>
                                 <!-- Product Name (clamped to exactly 2 lines for uniform height) -->
-                                <h4 class="stock-card-title" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; height: 2.6em; line-height: 1.3; margin-top: 0.25rem; font-size: 0.75rem; font-weight: 600; color: #1e293b;" title="@item.ProductName">
+                                <h4 class="stock-card-title" style="display: -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; height: 2.6em; line-height: 1.3; margin-top: 0.25rem; font-size: 0.75rem; font-weight: 600; color: #1e293b;" title="@item.ProductName">
                                     @item.ProductName
                                 </h4>
                             </div>
 
-                            <!-- Card Footer: Quantity + Edit Button -->
-                            <div class="pt-2 border-t border-slate-100 flex items-end justify-between gap-1.5">
-                                <div class="flex flex-col min-w-0" title="ขั้นต่ำ: @item.MinStock.ToString("N0") | สูงสุด: @item.MaxStock.ToString("N0")">
-                                    <span class="text-[10px] text-slate-400 leading-none">คงเหลือ</span>
-                                    <div class="flex items-baseline gap-1 mt-0.5">
-                                        <span class="text-base font-bold @(item.Quantity <= item.MinStock ? "text-red-600" : "text-emerald-600") leading-none">
-                                            @item.Quantity.ToString("N0")
-                                        </span>
-                                        <span class="text-[10px] text-slate-400">ชิ้น</span>
+                            <!-- Card Footer: Quantity + Edit / Inline Adjust Button -->
+                            <div class="stock-card-footer pt-2 border-t border-slate-100">
+                                <!-- Normal View -->
+                                <div class="stock-card-normal-view flex items-end justify-between gap-1.5">
+                                    <div class="flex flex-col min-w-0" title="ขั้นต่ำ: @item.MinStock.ToString("N0") | สูงสุด: @item.MaxStock.ToString("N0")">
+                                        <span class="stock-label-remaining text-[10px] text-slate-400 leading-none">คงเหลือ</span>
+                                        <div class="flex items-baseline gap-1 mt-0.5">
+                                            <span class="stock-card-qty-val text-base font-bold @(item.Quantity <= item.MinStock ? "text-red-600" : "text-emerald-600") leading-none">
+                                                @item.Quantity.ToString("N0")
+                                            </span>
+                                            <span class="text-[10px] text-slate-400">ชิ้น</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="flex items-center gap-1 shrink-0">
+                                        @if (isAdmin)
+                                        {
+                                            <button type="button" 
+                                                    onclick="openEditModal(this)"
+                                                    data-id="@item.Id"
+                                                    data-code="@item.ProductCode"
+                                                    data-name="@item.ProductName"
+                                                    data-category="@(item.Category ?? "")"
+                                                    data-min="@item.MinStock"
+                                                    data-max="@item.MaxStock"
+                                                    data-quantity="@item.Quantity"
+                                                    class="h-7 px-2.5 bg-blue-50/80 hover:bg-blue-100 text-primary border border-blue-200/70 rounded text-xs font-semibold transition-colors flex items-center gap-1 cursor-pointer shadow-2xs"
+                                                    title="แก้ไขข้อมูลสินค้า">
+                                                <i data-lucide="edit" class="w-3 h-3"></i>
+                                                <span>แก้ไข</span>
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button type="button" 
+                                                    onclick="startInlineQuantityEdit(this)"
+                                                    class="h-7 px-2.5 bg-blue-50/80 hover:bg-blue-100 text-primary border border-blue-200/70 rounded text-xs font-semibold transition-colors flex items-center gap-1 cursor-pointer shadow-2xs"
+                                                    title="ปรับยอดคงเหลือหน้างาน">
+                                                <span>ปรับยอด</span>
+                                            </button>
+                                        }
+                                        <button type="button" 
+                                                onclick="openHistoryModal('@item.ProductCode', '@item.ProductName')" 
+                                                class="h-7 w-7 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 border border-slate-200 rounded transition-colors cursor-pointer shadow-2xs shrink-0" 
+                                                title="ประวัติเข้า-ออก">
+                                            <i data-lucide="history" class="w-3.5 h-3.5"></i>
+                                        </button>
                                     </div>
                                 </div>
 
-                                <div class="flex items-center gap-1 shrink-0">
-                                    <button type="button" 
-                                            onclick="openEditModal(this)"
-                                            data-id="@item.Id"
-                                            data-code="@item.ProductCode"
-                                            data-name="@item.ProductName"
-                                            data-category="@(item.Category ?? "")"
-                                            data-min="@item.MinStock"
-                                            data-max="@item.MaxStock"
-                                            data-quantity="@item.Quantity"
-                                            class="h-7 px-2.5 bg-blue-50/80 hover:bg-blue-100 text-primary border border-blue-200/70 rounded text-xs font-semibold transition-colors flex items-center gap-1 cursor-pointer shadow-2xs"
-                                            title="แก้ไขข้อมูลสินค้า">
-                                        <i data-lucide="edit" class="w-3 h-3"></i>
-                                        <span>แก้ไข</span>
-                                    </button>
-                                    <button type="button" 
-                                            onclick="openHistoryModal('@item.ProductCode', '@item.ProductName')" 
-                                            class="h-7 w-7 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 border border-slate-200 rounded transition-colors cursor-pointer shadow-2xs shrink-0" 
-                                            title="ประวัติเข้า-ออก">
-                                        <i data-lucide="history" class="w-3.5 h-3.5"></i>
-                                    </button>
+                                <!-- Inline Edit View for Staff (Hidden by default) -->
+                                <div class="stock-card-inline-edit-view hidden w-full flex items-center justify-between gap-1.5">
+                                    <div class="flex items-center gap-1 flex-1 min-w-0">
+                                        <input type="number" 
+                                               min="0" 
+                                               step="1" 
+                                               value="@item.Quantity.ToString("F0")" 
+                                               data-original="@item.Quantity.ToString("F0")"
+                                               class="stock-inline-qty-input w-full h-7 px-1.5 bg-blue-50/60 border border-primary/40 focus:border-primary focus:ring-1 focus:ring-primary rounded text-xs font-bold text-primary text-center outline-none shadow-2xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
+                                               placeholder="0" />
+                                        <span class="text-[10px] text-slate-400 shrink-0">ชิ้น</span>
+                                    </div>
+                                    <div class="flex items-center gap-1 shrink-0">
+                                        <button type="button" 
+                                                onclick="submitInlineQuantityEdit(this)"
+                                                class="btn-save-inline-qty h-7 px-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-semibold flex items-center justify-center gap-1 transition-colors cursor-pointer shadow-2xs"
+                                                title="บันทึกยอด (Enter)">
+                                            <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                                        </button>
+                                        <button type="button" 
+                                                onclick="cancelInlineQuantityEdit(this)"
+                                                class="btn-cancel-inline-qty h-7 w-7 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded flex items-center justify-center transition-colors cursor-pointer shadow-2xs shrink-0"
+                                                title="ยกเลิก (Esc)">
+                                            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -446,41 +543,49 @@
                 </div>
 
                 <!-- Footer Buttons -->
-                <div class="pt-3 border-t border-slate-100 flex justify-end gap-2 mt-2">
-                    <button type="button" onclick="closeEditModal()" class="px-4 py-2 bg-white border border-slate-300 rounded-md text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
-                        ยกเลิก
+                <div class="pt-3 border-t border-slate-100 flex items-center justify-between gap-2 mt-2">
+                    <button type="button" onclick="confirmDeleteStockItem()" class="px-3 py-2 bg-white border border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 rounded-md text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs" title="ลบสินค้านี้ออกจากระบบสต๊อก">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5 text-red-500"></i>
+                        <span>ลบสินค้า</span>
                     </button>
-                    <button type="submit" id="btnSubmitEditStock" class="px-5 py-2 bg-primary text-white rounded-md text-sm font-medium hover:bg-primary/90 transition-colors flex items-center gap-1.5 shadow-sm">
-                        บันทึกการแก้ไข
-                    </button>
+                    <div class="flex items-center gap-2">
+                        <button type="button" onclick="closeEditModal()" class="px-4 py-2 bg-white border border-slate-300 rounded-md text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer">
+                            ยกเลิก
+                        </button>
+                        <button type="submit" id="btnSubmitEditStock" class="px-5 py-2 bg-primary text-white rounded-md text-sm font-medium hover:bg-primary/90 transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer">
+                            บันทึกการแก้ไข
+                        </button>
+                    </div>
                 </div>
             </form>
         </div>
     </div>
 
     <!-- Modal ประวัติการเบิก/จ่าย (Stock Logs) -->
-    <div id="historyStockModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 hidden">
+    <div id="historyStockModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-3 sm:p-4 hidden">
         <div class="bg-white rounded-xl shadow-xl w-full max-w-lg border border-slate-200 overflow-hidden flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 duration-150">
             <!-- Modal Header -->
-            <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 shrink-0">
+            <div class="px-4 sm:px-5 py-3 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 shrink-0">
                 <div class="min-w-0 pr-2">
                     <div class="flex items-center gap-2">
-                        <h3 class="text-base font-bold text-slate-800">ประวัติการเบิก/จ่าย</h3>
+                        <h3 class="text-sm sm:text-base font-bold text-slate-800">ประวัติการเบิก/จ่าย</h3>
                         <span id="historyProductCodeBadge" class="text-xs font-bold font-mono px-2 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/20"></span>
                     </div>
                     <p id="historyProductNameSubtitle" class="text-xs text-slate-500 mt-0.5 truncate"></p>
                 </div>
-                <button type="button" onclick="closeHistoryModal()" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-md hover:bg-slate-100 transition-colors shrink-0" title="ปิด">
-                    <i data-lucide="x" class="w-5 h-5"></i>
+                <button type="button" onclick="closeHistoryModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-md hover:bg-slate-100 transition-colors shrink-0" title="ปิด">
+                    <i data-lucide="x" class="w-4 h-4 sm:w-5 sm:h-5"></i>
                 </button>
             </div>
 
-            <!-- Stats Bar (รหัส, หมวดหมู่, สต๊อกปัจจุบัน) -->
-            <div id="historyStatsBar" class="px-6 py-2.5 bg-slate-50/40 border-b border-slate-100 flex items-center justify-between gap-3 text-xs shrink-0">
-                <div class="flex items-center gap-3 text-slate-500 min-w-0">
+            <!-- Stats Bar (รหัส, หมวดหมู่, ขั้นต่ำ, สูงสุด, สต๊อกปัจจุบัน) -->
+            <div id="historyStatsBar" class="px-4 sm:px-5 py-2 bg-slate-50/40 border-b border-slate-100 flex items-center justify-between gap-2.5 text-xs shrink-0">
+                <div class="flex items-center gap-2 text-slate-500 min-w-0 flex-wrap">
                     <span class="truncate"><span class="text-slate-400">หมวด:</span> <span id="historyCategoryText" class="font-medium text-slate-700">-</span></span>
                     <span class="text-slate-300">|</span>
-                    <span class="truncate"><span class="text-slate-400">เกณฑ์:</span> <span id="historyMinMaxText" class="font-medium text-slate-700">-</span></span>
+                    <span><span class="text-slate-400">ขั้นต่ำ:</span> <span id="historyMinStockText" class="font-semibold text-slate-700">-</span></span>
+                    <span class="text-slate-300">|</span>
+                    <span><span class="text-slate-400">สูงสุด:</span> <span id="historyMaxStockText" class="font-semibold text-slate-700">-</span></span>
                 </div>
                 <div class="shrink-0 text-slate-600">
                     คงเหลือ: <span id="historyCurrentQtyText" class="font-bold text-sm text-primary">-</span>
@@ -490,15 +595,15 @@
             <!-- Modal Content (Scrollable activity list, divide-y, no nested box) -->
             <div class="overflow-y-auto flex-1 max-h-[55vh]">
                 <!-- Loading State -->
-                <div id="historyLoadingState" class="flex flex-col items-center justify-center py-12 text-slate-400 gap-2">
+                <div id="historyLoadingState" class="flex flex-col items-center justify-center py-8 text-slate-400 gap-2">
                     <div class="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
                     <span class="text-xs text-slate-500">กำลังโหลดประวัติ StockLogs...</span>
                 </div>
 
                 <!-- Empty State -->
-                <div id="historyEmptyState" class="hidden flex-col items-center justify-center py-12 text-center text-slate-400 gap-2 px-6">
-                    <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-1">
-                        <i data-lucide="inbox" class="w-5 h-5"></i>
+                <div id="historyEmptyState" class="hidden flex-col items-center justify-center py-8 text-center text-slate-400 gap-2 px-4">
+                    <div class="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-1">
+                        <i data-lucide="inbox" class="w-4 h-4"></i>
                     </div>
                     <p class="text-sm font-medium text-slate-700">ยังไม่มีประวัติการเบิก/จ่ายของสินค้านี้</p>
                     <p class="text-xs text-slate-400">เมื่อมีการรับเข้า เบิกจ่าย หรือแก้ไขสต๊อก ข้อมูลจะบันทึกที่นี่</p>
@@ -507,13 +612,6 @@
                 <!-- List Container (Clean-Craft: divide-y divide-slate-100, no nested box) -->
                 <div id="historyLogsList" class="divide-y divide-slate-100 hidden">
                 </div>
-            </div>
-
-            <!-- Modal Footer -->
-            <div class="px-6 py-3 border-t border-slate-100 flex justify-end bg-slate-50/50 shrink-0">
-                <button type="button" onclick="closeHistoryModal()" class="px-4 py-2 bg-white border border-slate-300 rounded-md text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
-                    ปิดหน้าต่าง
-                </button>
             </div>
         </div>
     </div>
@@ -688,12 +786,21 @@
                     </div>
                 </div>
 
-                <!-- 4. Option: หากสินค้าไม่มีในโกดังเดิม สามารถกดข้ามได้ -->
+                <!-- 4. Option: หากสินค้าไม่มีในโกดังเดิม สามารถกดข้ามได้ หรือสร้างสินค้าใหม่ (Admin) -->
                 <div id="simulateSkipOption" class="flex items-center justify-between text-xs text-slate-500 px-1 pt-0.5">
                     <span>หากสินค้าไม่มีในระบบสต๊อกเดิม หรือไม่ต้องการรับเข้า</span>
-                    <button type="button" onclick="closeSimulateModal()" class="text-xs text-slate-600 hover:text-slate-900 font-medium underline cursor-pointer">
-                        ข้ามรายการนี้
-                    </button>
+                    <div class="flex items-center gap-3 shrink-0">
+                        @if (isAdmin)
+                        {
+                            <button type="button" onclick="openAddStockFromReceive()" class="text-xs text-emerald-600 hover:text-emerald-700 font-semibold cursor-pointer flex items-center gap-1" title="สร้างรายการนี้เป็นสินค้าใหม่ลงสต๊อก">
+                                <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+                                <span>สร้างเป็นสินค้าใหม่</span>
+                            </button>
+                        }
+                        <button type="button" onclick="skipToNextReceiveOrder()" class="text-xs text-primary hover:text-primary/80 font-semibold underline cursor-pointer flex items-center gap-1" title="ข้ามไปยังรายการรอรับถัดไปใน Dropdown">
+                            <span>ข้ามรายการนี้</span>
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -715,6 +822,9 @@
 
 @section Scripts {
     <script>
+        const isAdminUser = @(isAdmin ? "true" : "false");
+        let isCreatedFromReceive = false;
+
         document.addEventListener('DOMContentLoaded', function() {
             if (typeof lucide !== 'undefined') {
                 lucide.createIcons();
@@ -834,6 +944,19 @@
                 }
             });
 
+            // รองรับการกด Enter (บันทึก) และ Escape (ยกเลิก) สำหรับช่องกรอกปรับยอดสต๊อกด่วนบนการ์ด
+            document.addEventListener('keydown', function(e) {
+                if (e.target && e.target.classList.contains('stock-inline-qty-input')) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        submitInlineQuantityEdit(e.target);
+                    } else if (e.key === 'Escape') {
+                        e.preventDefault();
+                        cancelInlineQuantityEdit(e.target);
+                    }
+                }
+            });
+
             // ปิด Modal เมื่อกดคลิกพื้นที่นอกกล่อง
             const modalEl = document.getElementById('addStockModal');
             if (modalEl) {
@@ -911,6 +1034,7 @@
             const modal = document.getElementById('addStockModal');
             const form = document.getElementById('addStockForm');
             if (form) form.reset();
+
             if (modal) {
                 modal.classList.remove('hidden');
                 if (typeof lucide !== 'undefined') {
@@ -925,6 +1049,44 @@
         function closeAddModal() {
             const modal = document.getElementById('addStockModal');
             if (modal) modal.classList.add('hidden');
+
+            // หากเปิดมาจากหน้าต่างตรวจรับสินค้า ให้เปิดหน้าต่างตรวจรับสินค้ากลับมา
+            if (isCreatedFromReceive) {
+                isCreatedFromReceive = false;
+                const receiveModal = document.getElementById('simulateReceiveModal');
+                if (receiveModal) receiveModal.classList.remove('hidden');
+            }
+        }
+
+        // ฟังก์ชันเปิด Popup เพิ่มสินค้าพร้อมดึงชื่อและจำนวนที่ตัดคำแล้วจากรายการตรวจรับสินค้า (Admin Only)
+        function openAddStockFromReceive() {
+            const rawText = (currentLoadedOrder?.orderName || currentSimulateData?.cleanName || document.getElementById('simulateRawText')?.value || '').trim();
+            const cleanName = currentSimulateData?.cleanName || rawText;
+
+            isCreatedFromReceive = true;
+
+            // ซ่อนหน้าต่างรับของชั่วคราว
+            const receiveModal = document.getElementById('simulateReceiveModal');
+            if (receiveModal) receiveModal.classList.add('hidden');
+
+            openAddModal();
+
+            // เติมข้อมูลชื่อสินค้าที่ตัดคำส่วนเกิน (เป้าหมาย, วันที่, จำนวน) ออกแล้วให้อัตโนมัติ
+            const nameInput = document.getElementById('modalProductName');
+            if (nameInput) nameInput.value = cleanName;
+
+            // สต๊อกเริ่มต้นตั้งเป็น 0 เพื่อรอให้การยืนยันรับเข้าจาก PO บวกยอดเข้าไปตามขั้นตอนตรวจรับ
+            const qtyInput = document.getElementById('modalQuantity');
+            if (qtyInput) qtyInput.value = 0;
+
+            // โฟกัสไปที่ช่องรหัสสินค้าทันที
+            setTimeout(() => {
+                const codeInput = document.getElementById('modalProductCode');
+                if (codeInput) {
+                    codeInput.focus();
+                    codeInput.select();
+                }
+            }, 100);
         }
 
         // ส่งข้อมูลบันทึกสินค้าใหม่ไปยัง Backend
@@ -967,15 +1129,40 @@
                 const data = await resp.json();
 
                 if (data.success) {
+                    const wasFromReceive = isCreatedFromReceive;
                     closeAddModal();
-                    await Swal.fire({
-                        icon: 'success',
-                        title: 'บันทึกสำเร็จ!',
-                        text: data.message || 'เพิ่มสินค้าใหม่เรียบร้อยแล้ว',
-                        timer: 1500,
-                        showConfirmButton: false
-                    });
-                    window.location.reload();
+
+                    if (wasFromReceive) {
+                        if (typeof Swal !== 'undefined') {
+                            const Toast = Swal.mixin({
+                                toast: true,
+                                position: 'top-end',
+                                showConfirmButton: false,
+                                timer: 2000,
+                                timerProgressBar: true
+                            });
+                            Toast.fire({
+                                icon: 'success',
+                                title: `สร้างสินค้า ${code} สำเร็จแล้ว`
+                            });
+                        }
+
+                        // เปิดหน้าต่างตรวจรับของกลับมา
+                        const receiveModal = document.getElementById('simulateReceiveModal');
+                        if (receiveModal) receiveModal.classList.remove('hidden');
+
+                        // รัน AI Matching ซ้ำทันที สินค้าที่เพิ่งสร้างจะจับคู่ได้ 100% Match ทันที!
+                        await runSimulateAnalysis();
+                    } else {
+                        await Swal.fire({
+                            icon: 'success',
+                            title: 'บันทึกสำเร็จ!',
+                            text: data.message || 'เพิ่มสินค้าใหม่เรียบร้อยแล้ว',
+                            timer: 1500,
+                            showConfirmButton: false
+                        });
+                        window.location.reload();
+                    }
                 } else {
                     Swal.fire({
                         icon: 'error',
@@ -1099,6 +1286,252 @@
             }
         }
 
+        async function confirmDeleteStockItem() {
+            const id = parseInt(document.getElementById('editItemId').value) || 0;
+            const code = document.getElementById('editProductCode').value.trim();
+            const name = document.getElementById('editProductName').value.trim();
+
+            if (!id) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'ไม่พบรหัสสินค้า',
+                    text: 'กรุณาลองใหม่อีกครั้ง'
+                });
+                return;
+            }
+
+            const result = await Swal.fire({
+                title: 'ยืนยันการลบสินค้า?',
+                html: `ต้องการลบ <b>${name || code}</b> (${code}) ออกจากระบบสต๊อกหรือไม่?<br><span class="text-xs text-red-500">การกระทำนี้จะลบรายการออกจากระบบและไม่สามารถกู้คืนได้</span>`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#64748b',
+                confirmButtonText: 'ใช่, ลบสินค้านี้',
+                cancelButtonText: 'ยกเลิก',
+                reverseButtons: true
+            });
+
+            if (!result.isConfirmed) return;
+
+            try {
+                const resp = await fetch('/Stock/DeleteItem', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: id })
+                });
+
+                const data = await resp.json();
+
+                if (data.success) {
+                    closeEditModal();
+                    await Swal.fire({
+                        icon: 'success',
+                        title: 'ลบสำเร็จ!',
+                        text: data.message || 'ลบสินค้าออกจากระบบแล้ว',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                    window.location.reload();
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'ไม่สามารถลบได้',
+                        text: data.message || 'เกิดข้อผิดพลาดในการลบสินค้า'
+                    });
+                }
+            } catch (err) {
+                console.error('confirmDeleteStockItem error:', err);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'เกิดข้อผิดพลาด',
+                    text: 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้'
+                });
+            }
+        }
+
+        // ==========================================
+        // ระบบปรับยอดสต๊อกด่วนบนการ์ดสินค้า (Inline Quantity Edit) สำหรับ Staff
+        // ==========================================
+        function startInlineQuantityEdit(btn) {
+            const card = btn.closest('.stock-card');
+            if (!card) return;
+
+            const normalView = card.querySelector('.stock-card-normal-view');
+            const editView = card.querySelector('.stock-card-inline-edit-view');
+            const input = card.querySelector('.stock-inline-qty-input');
+
+            if (normalView) normalView.classList.add('hidden');
+            if (editView) editView.classList.remove('hidden');
+
+            if (input) {
+                const curQty = card.dataset.quantity || '0';
+                input.value = parseFloat(curQty);
+                input.dataset.original = input.value;
+                input.focus();
+                input.select();
+            }
+
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+        }
+
+        function cancelInlineQuantityEdit(btn) {
+            const card = btn.closest('.stock-card');
+            if (!card) return;
+
+            const normalView = card.querySelector('.stock-card-normal-view');
+            const editView = card.querySelector('.stock-card-inline-edit-view');
+            const input = card.querySelector('.stock-inline-qty-input');
+
+            if (input && input.dataset.original !== undefined) {
+                input.value = input.dataset.original;
+            }
+
+            if (editView) editView.classList.add('hidden');
+            if (normalView) normalView.classList.remove('hidden');
+        }
+
+        async function submitInlineQuantityEdit(btn) {
+            const card = btn.closest('.stock-card');
+            if (!card) return;
+
+            const input = card.querySelector('.stock-inline-qty-input');
+            const saveBtn = card.querySelector('.btn-save-inline-qty');
+            if (!input) return;
+
+            const rawVal = input.value.trim();
+            if (rawVal === '' || isNaN(rawVal)) {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'กรุณากรอกตัวเลข',
+                        text: 'ระบุจำนวนสต๊อกที่ถูกต้อง'
+                    });
+                }
+                input.focus();
+                return;
+            }
+
+            const newQty = parseFloat(rawVal);
+            if (newQty < 0) {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'จำนวนไม่ถูกต้อง',
+                        text: 'จำนวนสต๊อกต้องไม่ติดลบ'
+                    });
+                }
+                input.focus();
+                return;
+            }
+
+            const itemId = parseInt(card.dataset.id) || 0;
+            if (itemId <= 0) {
+                console.error('Missing item id on stock-card');
+                return;
+            }
+
+            if (saveBtn) {
+                saveBtn.disabled = true;
+                saveBtn.innerHTML = '<span class="animate-spin text-xs">⏳</span>';
+            }
+
+            try {
+                const resp = await fetch('/Stock/QuickUpdateQuantity', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: itemId,
+                        quantity: newQty
+                    })
+                });
+
+                const result = await resp.json();
+
+                if (result.success) {
+                    const minStock = parseFloat(card.dataset.min) || 0;
+
+                    // 1. อัปเดต data attribute บนการ์ด
+                    card.dataset.quantity = newQty;
+                    input.dataset.original = newQty;
+
+                    // 2. อัปเดตตัวเลขคงเหลือบนการ์ด
+                    const qtyValEl = card.querySelector('.stock-card-qty-val');
+                    if (qtyValEl) {
+                        qtyValEl.textContent = Number(newQty).toLocaleString();
+                        if (newQty <= minStock) {
+                            qtyValEl.classList.remove('text-emerald-600');
+                            qtyValEl.classList.add('text-red-600');
+                        } else {
+                            qtyValEl.classList.remove('text-red-600');
+                            qtyValEl.classList.add('text-emerald-600');
+                        }
+                    }
+
+                    // 3. อัปเดตป้ายสถานะบนรูปภาพ
+                    const badgeEl = card.querySelector('.stock-status-badge');
+                    if (badgeEl) {
+                        if (newQty <= 0) {
+                            badgeEl.textContent = 'สต๊อกหมด';
+                            badgeEl.className = 'stock-status-badge inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-600/95 text-white shadow-2xs';
+                        } else if (newQty <= minStock) {
+                            badgeEl.textContent = 'สต๊อกใกล้หมด';
+                            badgeEl.className = 'stock-status-badge inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/95 text-white shadow-2xs';
+                        } else {
+                            badgeEl.textContent = 'สต๊อกเพียงพอ';
+                            badgeEl.className = 'stock-status-badge inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-600/95 text-white shadow-2xs';
+                        }
+                    }
+
+                    // 4. สลับกลับหน้าแสดงผลปกติ
+                    const normalView = card.querySelector('.stock-card-normal-view');
+                    const editView = card.querySelector('.stock-card-inline-edit-view');
+                    if (editView) editView.classList.add('hidden');
+                    if (normalView) normalView.classList.remove('hidden');
+
+                    // 5. แสดง Toast บันทึกสำเร็จ
+                    if (typeof Swal !== 'undefined') {
+                        const Toast = Swal.mixin({
+                            toast: true,
+                            position: 'top-end',
+                            showConfirmButton: false,
+                            timer: 1800,
+                            timerProgressBar: true
+                        });
+                        Toast.fire({
+                            icon: 'success',
+                            title: `ปรับยอดเป็น ${Number(newQty).toLocaleString()} ชิ้น เรียบร้อย`
+                        });
+                    }
+                } else {
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'ไม่สามารถปรับยอดได้',
+                            text: result.message || 'เกิดข้อผิดพลาดในการบันทึก'
+                        });
+                    }
+                }
+            } catch (err) {
+                console.error('submitInlineQuantityEdit error:', err);
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'เกิดข้อผิดพลาด',
+                        text: 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้'
+                    });
+                }
+            } finally {
+                if (saveBtn) {
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = '<i data-lucide="check" class="w-3.5 h-3.5"></i>';
+                    if (typeof lucide !== 'undefined') lucide.createIcons();
+                }
+            }
+        }
+
         async function openHistoryModal(code, name) {
             const modal = document.getElementById('historyStockModal');
             if (!modal) return;
@@ -1107,7 +1540,8 @@
             document.getElementById('historyProductCodeBadge').textContent = code || '-';
             document.getElementById('historyProductNameSubtitle').textContent = name || '-';
             document.getElementById('historyCategoryText').textContent = '-';
-            document.getElementById('historyMinMaxText').textContent = '-';
+            document.getElementById('historyMinStockText').textContent = '-';
+            document.getElementById('historyMaxStockText').textContent = '-';
             document.getElementById('historyCurrentQtyText').textContent = '-';
 
             // ตั้งสถานะเริ่มต้น (แสดง Loading, ซ่อน Empty & List)
@@ -1132,7 +1566,8 @@
                 if (data.success) {
                     if (data.item) {
                         document.getElementById('historyCategoryText').textContent = data.item.category || 'ทั่วไป';
-                        document.getElementById('historyMinMaxText').textContent = `${Number(data.item.minStock).toLocaleString()} / ${Number(data.item.maxStock).toLocaleString()}`;
+                        document.getElementById('historyMinStockText').textContent = `${Number(data.item.minStock || 0).toLocaleString()} ชิ้น`;
+                        document.getElementById('historyMaxStockText').textContent = `${Number(data.item.maxStock || 0).toLocaleString()} ชิ้น`;
                         document.getElementById('historyCurrentQtyText').textContent = `${Number(data.item.quantity).toLocaleString()} ชิ้น`;
                     }
 
@@ -1143,19 +1578,15 @@
                         emptyEl.classList.add('flex');
                     } else {
                         listEl.innerHTML = logs.map(l => {
-                            let actionBadge = '';
-                            if (l.action === 'IN_WO') {
-                                actionBadge = '<span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/70">รับเข้าคลัง (WO)</span>';
+                            let refBadge = '';
+                            if (l.referenceId && l.referenceId !== '-') {
+                                refBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-bold bg-blue-50 text-blue-700 border border-blue-200/80">${l.referenceId}</span>`;
                             } else if (l.action === 'INITIAL_IMPORT') {
-                                actionBadge = '<span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 text-slate-700 border border-slate-200">นำเข้าเริ่มต้น</span>';
-                            } else if (l.action === 'MANUAL_ADD') {
-                                actionBadge = '<span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200/70">เพิ่มสินค้าใหม่</span>';
+                                refBadge = '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">นำเข้าเริ่มต้น</span>';
                             } else if (l.action === 'MANUAL_EDIT') {
-                                actionBadge = '<span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200/70">ปรับปรุงสต๊อก</span>';
-                            } else if (l.action === 'DISPENSE' || l.action === 'OUT_MANUAL') {
-                                actionBadge = '<span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold bg-purple-50 text-purple-700 border border-purple-200/70">เบิกจ่ายสินค้า</span>';
+                                refBadge = '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">ปรับยอดสต๊อก</span>';
                             } else {
-                                actionBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 text-slate-600 border border-slate-200">${l.action || '-'}</span>`;
+                                refBadge = '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-500 border border-slate-200">-</span>';
                             }
 
                             const qty = Number(l.quantityChanged) || 0;
@@ -1169,31 +1600,15 @@
                                 qtyText = qty.toLocaleString();
                             }
 
-                            const refHtml = (l.referenceId && l.referenceId !== '-')
-                                ? `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-slate-100 text-slate-700 border border-slate-200">${l.referenceId}</span>`
-                                : '';
-
-                            const remarksHtml = (l.remarks && l.remarks !== '-')
-                                ? `<p class="text-xs text-slate-600 break-words leading-relaxed">${l.remarks}</p>`
-                                : '';
-
                             return `
-                                <div class="px-6 py-3.5 hover:bg-slate-50/70 transition-colors flex items-start justify-between gap-3">
-                                    <div class="min-w-0 flex-1 space-y-1">
-                                        <div class="flex items-center gap-2 flex-wrap">
-                                            ${actionBadge}
-                                            <span class="text-xs text-slate-400 font-mono">${l.timestamp || '-'}</span>
-                                            ${refHtml}
-                                        </div>
-                                        ${remarksHtml}
-                                        <div class="text-[11px] text-slate-400 flex items-center gap-1">
-                                            <span>โดย</span>
-                                            <span class="text-slate-600 font-medium">${l.user || 'System'}</span>
-                                        </div>
+                                <div class="px-4 sm:px-5 py-2 sm:py-2.5 hover:bg-slate-50/70 transition-colors flex items-center justify-between gap-2.5" title="${l.remarks || ''}">
+                                    <div class="flex items-center gap-2.5 min-w-0">
+                                        ${refBadge}
+                                        <span class="text-xs text-slate-500 font-mono">${l.timestamp || '-'}</span>
                                     </div>
-                                    <div class="text-right shrink-0 pt-0.5">
-                                        <div class="text-sm font-mono ${qtyColor}">${qtyText}</div>
-                                        <div class="text-[10px] text-slate-400">ชิ้น</div>
+                                    <div class="text-right shrink-0">
+                                        <span class="text-sm font-mono ${qtyColor}">${qtyText}</span>
+                                        <span class="text-xs text-slate-400 ml-0.5">ชิ้น</span>
                                     </div>
                                 </div>
                             `;
@@ -1268,11 +1683,7 @@
                         ? data.pendingCount 
                         : (data.items ? data.items.filter(x => !x.isReconciled && !x.IsReconciled).length : 0);
                     bellBadge.textContent = count;
-                    if (count > 0) {
-                        bellBadge.classList.add('animate-pulse');
-                    } else {
-                        bellBadge.classList.remove('animate-pulse');
-                    }
+                    bellBadge.classList.remove('animate-pulse');
                 }
             } catch (err) {
                 console.error('refreshPendingBadgeCount error:', err);
@@ -1309,11 +1720,7 @@
                     if (countBadge) countBadge.textContent = `${pendingOnlyCount} รายการ`;
                     if (bellBadge) {
                         bellBadge.textContent = pendingOnlyCount;
-                        if (pendingOnlyCount > 0) {
-                            bellBadge.classList.add('animate-pulse');
-                        } else {
-                            bellBadge.classList.remove('animate-pulse');
-                        }
+                        bellBadge.classList.remove('animate-pulse');
                     }
 
                     // 1. อัปเดต native select เพื่อความเข้ากันได้
@@ -1545,6 +1952,28 @@
             loadOrderIntoModal(item);
         }
 
+        function skipToNextReceiveOrder() {
+            if (!pendingOrdersList || pendingOrdersList.length === 0) {
+                closeReceiveModal();
+                return;
+            }
+
+            if (pendingOrdersList.length === 1) {
+                return;
+            }
+
+            const currentSelectedId = document.getElementById('receiveOrderSelect')?.value;
+            const currentIndex = pendingOrdersList.findIndex(x => (x.orderId || x.OrderId) == currentSelectedId);
+
+            let nextIndex = currentIndex + 1;
+            if (nextIndex >= pendingOrdersList.length || currentIndex === -1) {
+                nextIndex = 0;
+            }
+
+            const nextItem = pendingOrdersList[nextIndex];
+            selectCustomReceiveOrder(nextItem);
+        }
+
         function filterReceiveOrderOptions(query) {
             const q = (query || '').toLowerCase().trim();
             const listEl = document.getElementById('receiveOrderOptionsList');
@@ -1742,10 +2171,17 @@
                     // แสดง Candidates List ด้วย Clean-Craft row style
                     if (matches.length === 0) {
                         candidatesContainer.innerHTML = `
-                            <div class="p-6 text-center text-slate-400 text-xs">
-                                ไม่พบรายการที่มีความใกล้เคียงในระบบสต๊อกสินค้า
+                            <div class="p-6 text-center text-slate-400 text-xs flex flex-col items-center gap-2.5">
+                                <span>ไม่พบรายการที่มีความใกล้เคียงในระบบสต๊อกสินค้า</span>
+                                ${isAdminUser ? `
+                                    <button type="button" onclick="openAddStockFromReceive()" class="px-3 py-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 rounded-md font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs">
+                                        <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+                                        <span>สร้างรายการนี้เป็นสินค้าใหม่ลงสต๊อก</span>
+                                    </button>
+                                ` : ''}
                             </div>
                         `;
+                        if (typeof lucide !== 'undefined') lucide.createIcons();
                     } else {
                         candidatesContainer.innerHTML = matches.map((m, idx) => {
                             const isExact = m.isExactNameMatch || m.isExactMapping || m.matchPercentage === 100;

@@ -1,0 +1,27 @@
+name: Keep Supabase Alive
+
+on:
+  schedule:
+    # รันอัตโนมัติทุกๆ 3 วัน เวลา 02:00 UTC (09:00 เช้าเวลาไทย)
+    - cron: '0 2 */3 * *'
+  workflow_dispatch: # เพิ่มปุ่มให้กดสั่ง Ping มือเองได้จากหน้าเว็บ GitHub Actions
+
+jobs:
+  ping-supabase:
+    name: Ping Supabase Database & REST API
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase REST API
+        run: |
+          echo "Sending keep-alive ping to Supabase..."
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X GET "${{ secrets.SUPABASE_URL }}/rest/v1/" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}")
+          
+          echo "Response HTTP Status: $HTTP_STATUS"
+          if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 400 ]; then
+            echo "Successfully pinged Supabase! Project is awake."
+          else
+            echo "Ping completed with status $HTTP_STATUS (Activity registered)."
+          fi

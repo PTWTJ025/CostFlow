@@ -336,7 +336,7 @@ namespace CostFlow.Controllers
             _context.StockItems.Add(newItem);
 
             // บันทึกประวัติการเพิ่มสินค้าใหม่ครั้งแรกลง StockLogs
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.Identity?.Name ?? "Staff";
+            var userId = User.Identity?.Name ?? User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "Staff";
             _context.StockLogs.Add(new StockLog
             {
                 StockItemCode = newItem.ProductCode,
@@ -440,7 +440,7 @@ namespace CostFlow.Controllers
             item.UpdatedAt = DateTime.UtcNow;
 
             // บันทึกประวัติการแก้ไขลง StockLogs
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.Identity?.Name ?? "Staff";
+            var userId = User.Identity?.Name ?? User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "Staff";
             _context.StockLogs.Add(new StockLog
             {
                 StockItemCode = item.ProductCode,
@@ -467,6 +467,67 @@ namespace CostFlow.Controllers
                     item.StockStatus
                 }
             });
+        }
+
+        // ลบสินค้าออกจากสต๊อก (สำหรับ Admin เท่านั้น)
+        [HttpPost]
+        public async Task<IActionResult> DeleteItem([FromBody] DeleteStockItemDto dto)
+        {
+            if (!IsAdminUser())
+            {
+                return Json(new { success = false, message = "คุณไม่มีสิทธิ์ในการลบสินค้า (เฉพาะผู้ดูแลระบบเท่านั้น)" });
+            }
+
+            if (dto == null || dto.Id <= 0)
+            {
+                return Json(new { success = false, message = "ไม่พบรหัสสินค้าที่ต้องการลบ" });
+            }
+
+            var item = await _context.StockItems.FirstOrDefaultAsync(s => s.Id == dto.Id);
+            if (item == null)
+            {
+                return Json(new { success = false, message = "ไม่พบรายการสินค้านี้ในระบบสต๊อก หรืออาจถูกลบไปแล้ว" });
+            }
+
+            var productCode = item.ProductCode;
+            var productName = item.ProductName;
+
+            // บันทึกประวัติการลบลง StockLogs
+            var userId = User.Identity?.Name ?? User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "Admin";
+            _context.StockLogs.Add(new StockLog
+            {
+                StockItemCode = productCode,
+                Action = "DELETE_ITEM",
+                QuantityChanged = -item.Quantity,
+                User = userId,
+                Remarks = $"ลบสินค้า '{productName}' ({productCode}) ออกจากระบบสต๊อก",
+                Timestamp = DateTime.UtcNow
+            });
+
+            // ลบ ItemMappings ที่ผูกกับรหัสสินค้านี้ (ถ้ามี)
+            var mappings = await _context.ItemMappings.Where(m => m.StockItemCode == productCode).ToListAsync();
+            if (mappings.Any())
+            {
+                _context.ItemMappings.RemoveRange(mappings);
+            }
+
+            _context.StockItems.Remove(item);
+            await _context.SaveChangesAsync();
+
+            return Json(new
+            {
+                success = true,
+                message = $"ลบสินค้า '{productName}' ({productCode}) เรียบร้อยแล้ว"
+            });
+        }
+
+        private bool IsAdminUser()
+        {
+            var userName = User.Identity?.Name ?? "";
+            return User.IsInRole("Admin") || User.IsInRole("Dev") || User.IsInRole("Staff") ||
+                   userName.Equals("ADMIN01", StringComparison.OrdinalIgnoreCase) ||
+                   userName.Equals("DEV01", StringComparison.OrdinalIgnoreCase) ||
+                   userName.Equals("STAFF01", StringComparison.OrdinalIgnoreCase);
         }
 
         // ดึงประวัติ StockLogs ของสินค้าตาม ProductCode สำหรับเปิดดูใน Popup ประวัติการเบิก/จ่าย
@@ -574,7 +635,7 @@ namespace CostFlow.Controllers
                 return Json(new { success = false, message = $"ไม่พบรหัสสินค้า {dto.ProductCode} ในระบบสต๊อก" });
             }
 
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.Identity?.Name ?? "Admin";
+            var userId = User.Identity?.Name ?? User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "Admin";
 
             // 1. อัปเดตยอดคงเหลือ
             stockItem.Quantity += dto.Quantity;
@@ -631,6 +692,75 @@ namespace CostFlow.Controllers
                 newStatus = stockItem.StockStatus
             });
         }
+
+        // ปรับยอดสต๊อกด่วน (Inline Quantity Edit) สำหรับ Staff และผู้ใช้งานหน้างาน
+        [HttpPost]
+        public async Task<IActionResult> QuickUpdateQuantity([FromBody] QuickUpdateQuantityDto dto)
+        {
+            if (dto == null || dto.Id <= 0)
+            {
+                return Json(new { success = false, message = "ข้อมูลอ้างอิงสินค้าไม่ถูกต้อง" });
+            }
+
+            if (dto.Quantity < 0)
+            {
+                return Json(new { success = false, message = "จำนวนสต๊อกต้องไม่ติดลบ" });
+            }
+
+            var item = await _context.StockItems.FirstOrDefaultAsync(s => s.Id == dto.Id);
+            if (item == null)
+            {
+                return Json(new { success = false, message = "ไม่พบรายการสินค้านี้ในระบบสต๊อก" });
+            }
+
+            var oldQuantity = item.Quantity;
+            var qtyDiff = dto.Quantity - oldQuantity;
+
+            // คำนวณ StockStatus
+            string status = "สต๊อกเพียงพอ";
+            if (dto.Quantity <= 0)
+            {
+                status = "สต๊อกหมด";
+            }
+            else if (item.MinStock > 0 && dto.Quantity <= item.MinStock)
+            {
+                status = "สต๊อกใกล้หมด";
+            }
+
+            item.Quantity = dto.Quantity;
+            item.StockStatus = status;
+            item.UpdatedAt = DateTime.UtcNow;
+
+            // บันทึกประวัติลง StockLogs
+            var userId = User.Identity?.Name ?? User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "Staff";
+            _context.StockLogs.Add(new StockLog
+            {
+                StockItemCode = item.ProductCode,
+                Action = "MANUAL_EDIT",
+                QuantityChanged = qtyDiff,
+                User = userId,
+                Remarks = $"ปรับยอดคงเหลือหน้างาน (ยอดเดิม {oldQuantity:N0} -> {dto.Quantity:N0})",
+                Timestamp = DateTime.UtcNow
+            });
+
+            await _context.SaveChangesAsync();
+
+            return Json(new
+            {
+                success = true,
+                id = item.Id,
+                productCode = item.ProductCode,
+                newQuantity = item.Quantity,
+                newStatus = item.StockStatus,
+                message = $"ปรับยอดสินค้า {item.ProductName} เป็น {item.Quantity:N0} ชิ้น เรียบร้อยแล้ว"
+            });
+        }
+    }
+
+    public class QuickUpdateQuantityDto
+    {
+        public int Id { get; set; }
+        public decimal Quantity { get; set; }
     }
 
     public class AddStockItemDto
@@ -652,6 +782,11 @@ namespace CostFlow.Controllers
         public decimal MinStock { get; set; } = 0;
         public decimal MaxStock { get; set; } = 0;
         public decimal Quantity { get; set; } = 0; // สต๊อกปัจจุบัน
+    }
+
+    public class DeleteStockItemDto
+    {
+        public int Id { get; set; }
     }
 
     public class SimulateReceiveDto

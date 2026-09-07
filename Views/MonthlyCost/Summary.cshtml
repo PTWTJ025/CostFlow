@@ -260,6 +260,7 @@
 
                     @foreach (var group in sortedGroups)
                     {
+                        var isInitiallyCollapsed = group.MonthNumber == 99;
                         var groupName = group.MonthNumber == 99 
                             ? "ยังไม่กำหนดเดือนรับ/ชำระ" 
                             : (group.Items.FirstOrDefault()?.DisplayMonthDisplay ?? $"{thaiMonths[group.MonthNumber]} {selectedYear + 543}");
@@ -269,14 +270,14 @@
                         var groupId = "group-" + group.MonthNumber;
 
                         <!-- ── Group Header ── -->
-                        <tr class="bg-slate-100 hover:bg-slate-200 cursor-pointer transition-colors group-header-row select-none"
+                        <tr class="bg-slate-100 hover:bg-slate-200 cursor-pointer transition-colors group-header-row select-none @(isInitiallyCollapsed ? "is-collapsed" : "")"
                             onclick="toggleGroup('@groupId')"
                             data-group-id="@groupId">
                             <td colspan="9" class="py-2.5 px-3 border-y border-slate-200 shadow-sm">
                                 <div class="flex items-center justify-between">
                                     <div class="flex items-center gap-2">
                                         <div class="p-1 rounded-md text-slate-500">
-                                            <svg id="icon-@groupId" class="w-4 h-4 transform transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <svg id="icon-@groupId" class="w-4 h-4 transform transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="@(isInitiallyCollapsed ? "transform: rotate(-90deg);" : "")">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" />
                                             </svg>
                                         </div>
@@ -296,7 +297,7 @@
 
                         if (groupCount == 0)
                         {
-                            <tr class="order-row @groupId text-xs" data-group-class="@groupId" data-month-sort="@group.MonthNumber" data-empty="true">
+                            <tr class="order-row @groupId text-xs @(isInitiallyCollapsed ? "hidden hidden-by-group" : "")" style="@(isInitiallyCollapsed ? "display: none;" : "")" data-group-class="@groupId" data-month-sort="@group.MonthNumber" data-empty="true">
                                 <td colspan="9" class="text-center py-6 text-slate-400 bg-slate-50/50">
                                     <p class="font-medium text-slate-500">ยังไม่มีรายการรับสินค้า/ชำระเงินในเดือนนี้</p>
                                     <p class="text-[11px] mt-0.5 text-slate-400">เมื่อมีรายการใหม่ จะแสดงผลที่นี่</p>
@@ -317,7 +318,8 @@
                             }
                             bool hasTooltip = shortName != item.FullOrderName && !string.IsNullOrEmpty(item.FullOrderName);
 
-                            <tr class="order-row hover:bg-slate-50/80 transition-colors text-xs @groupId"
+                            <tr class="order-row hover:bg-slate-50/80 transition-colors text-xs @groupId @(isInitiallyCollapsed ? "hidden hidden-by-group" : "")"
+                                style="@(isInitiallyCollapsed ? "display: none;" : "")"
                                 data-group-class="@groupId"
                                 data-po="@item.PoNumber"
                                 data-name="@item.OrderName"
