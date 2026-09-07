@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace CostFlow.Models
 {
@@ -20,8 +21,9 @@ namespace CostFlow.Models
         [MaxLength(100)]
         public string? Category { get; set; }
 
+        [NotMapped]
         [MaxLength(500)]
-        public string? FilePath { get; set; } // ไฟล์เอกสาร / รูปภาพ / ลิงก์
+        public string? FilePath { get; set; } // ไฟล์เอกสาร / รูปภาพ / ลิงก์ (Mock/Client-Side)
 
         public decimal InitialStock { get; set; } = 0; // สต๊อกเริ่มต้น
 

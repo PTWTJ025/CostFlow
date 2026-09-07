@@ -254,7 +254,7 @@
                 @foreach (var item in Model)
                 {
                     int imgIndex = Math.Abs((item.ProductCode ?? "").GetHashCode()) % mockImages.Length;
-                    string imageUrl = !string.IsNullOrWhiteSpace(item.FilePath) && (item.FilePath.StartsWith("http") || item.FilePath.EndsWith(".jpg") || item.FilePath.EndsWith(".png"))
+                    string imageUrl = !string.IsNullOrWhiteSpace(item.FilePath)
                         ? item.FilePath
                         : mockImages[imgIndex];
 
@@ -263,6 +263,7 @@
                          data-code="@item.ProductCode"
                          data-name="@item.ProductName"
                          data-category="@(item.Category ?? "")"
+                         data-image="@(item.FilePath ?? "")"
                          data-min="@item.MinStock"
                          data-max="@item.MaxStock"
                          data-quantity="@item.Quantity">
@@ -342,6 +343,7 @@
                                                     data-code="@item.ProductCode"
                                                     data-name="@item.ProductName"
                                                     data-category="@(item.Category ?? "")"
+                                                    data-image="@(item.FilePath ?? "")"
                                                     data-min="@item.MinStock"
                                                     data-max="@item.MaxStock"
                                                     data-quantity="@item.Quantity"
@@ -453,6 +455,63 @@
                     </select>
                 </div>
 
+                <!-- รูปภาพสินค้า (เพิ่มจากคลังภาพ หรือ ถ่ายรูปจากกล้อง) -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5 flex items-center justify-between">
+                        <span>รูปภาพสินค้า <span class="text-slate-400 font-normal">(ไม่บังคับ)</span></span>
+                        <span id="addStockImgStatus" class="text-[11px] text-slate-400 font-normal">ยังไม่ได้เลือกรูป</span>
+                    </label>
+
+                    <!-- กล่องพรีวิวรูปภาพเมื่อเลือกหรือถ่ายภาพแล้ว -->
+                    <div id="addStockImagePreviewWrapper" class="hidden relative rounded-xl border border-slate-200 bg-slate-100/70 overflow-hidden w-full h-36 flex items-center justify-center shadow-xs">
+                        <img id="addStockImagePreview" src="" alt="พรีวิวรูปสินค้า" class="w-full h-full object-contain p-1.5" />
+                        <!-- ปุ่มกากบาทลบรูปขวาบน สไตล์ UX/UI ชัดเจน โดดเด่น มองเห็นง่าย กดง่าย -->
+                        <button type="button" 
+                                onclick="clearStockImage('add')" 
+                                class="absolute top-2.5 right-2.5 z-20 w-8 h-8 rounded-full bg-rose-500 hover:bg-rose-600 active:scale-90 text-white flex items-center justify-center shadow-md border-2 border-white transition-all cursor-pointer" 
+                                title="ลบรูปภาพนี้">
+                            <svg class="w-4 h-4 stroke-[2.5]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- กล่อง Empty State: การ์ดเลือกภาพแบบ Dual Interactive Tiles สไตล์แอปชั้นนำ (Shopify / Airbnb / Linear) -->
+                    <div id="addStockEmptyDropzone" class="grid grid-cols-2 gap-3 w-full">
+                        <!-- การ์ด 1: เลือกจากคลังภาพ -->
+                        <button type="button" 
+                                onclick="triggerPickStockImage('add')" 
+                                class="group relative p-3.5 sm:p-4 rounded-xl border border-slate-200/90 hover:border-primary/50 bg-slate-50/60 hover:bg-blue-50/20 transition-all flex flex-col items-center justify-center text-center shadow-2xs hover:shadow-sm cursor-pointer h-36">
+                            <div class="w-10 h-10 rounded-xl bg-white group-hover:bg-primary group-hover:text-white text-slate-600 border border-slate-200/80 group-hover:border-primary flex items-center justify-center mb-2 transition-all shadow-2xs">
+                                <svg class="w-5 h-5 transition-transform group-hover:scale-110 duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+                                </svg>
+                            </div>
+                            <span class="text-xs font-bold text-slate-700 group-hover:text-primary transition-colors">เลือกจากคลังภาพ</span>
+                            <span class="text-[11px] text-slate-400 mt-0.5 font-normal">ไฟล์รูปภาพในเครื่อง</span>
+                        </button>
+
+                        <!-- การ์ด 2: ถ่ายรูปจากกล้อง -->
+                        <button type="button" 
+                                onclick="triggerCameraDirect('add')" 
+                                class="group relative p-3.5 sm:p-4 rounded-xl border border-slate-200/90 hover:border-primary/50 bg-slate-50/60 hover:bg-blue-50/20 transition-all flex flex-col items-center justify-center text-center shadow-2xs hover:shadow-sm cursor-pointer h-36">
+                            <div class="w-10 h-10 rounded-xl bg-white group-hover:bg-primary group-hover:text-white text-slate-600 border border-slate-200/80 group-hover:border-primary flex items-center justify-center mb-2 transition-all shadow-2xs">
+                                <svg class="w-5 h-5 transition-transform group-hover:scale-110 duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" />
+                                </svg>
+                            </div>
+                            <span class="text-xs font-bold text-slate-700 group-hover:text-primary transition-colors">ถ่ายรูปจากกล้อง</span>
+                            <span class="text-[11px] text-slate-400 mt-0.5 font-normal">เปิดกล้องถ่ายทันที</span>
+                        </button>
+                    </div>
+
+                    <!-- Hidden inputs สำหรับจัดการไฟล์และ URL -->
+                    <input type="file" id="addStockFileInput" accept="image/*" class="hidden" onchange="handleStockFileSelected(this, 'add')" />
+                    <input type="file" id="addStockCameraInput" accept="image/*" capture="environment" class="hidden" onchange="handleStockFileSelected(this, 'add')" />
+                    <input type="hidden" id="modalStockImageUrl" />
+                </div>
+
                 <!-- ตัวเลขสต๊อก 3 คอลัมน์ (เรียง: สต๊อกขั้นต่ำ, สต๊อกสูงสุด, สต๊อกปัจจุบัน ขวาสุดโดดเด่น) -->
                 <div class="grid grid-cols-3 gap-3" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem;">
                     <div>
@@ -524,6 +583,59 @@
                         <option value="อะไหล่">อะไหล่ (b7392108)</option>
                         <option value="อะไหล่เวียน">อะไหล่เวียน (b453465a)</option>
                     </select>
+                </div>
+
+                <!-- รูปภาพสินค้า (เพิ่มจากคลังภาพ หรือ ถ่ายรูปจากกล้อง) -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5 flex items-center justify-between">
+                        <span>รูปภาพสินค้า</span>
+                        <span id="editStockImgStatus" class="text-[11px] text-slate-400 font-normal">ยังไม่ได้เลือกรูป</span>
+                    </label>
+
+                    <!-- กล่องพรีวิวรูปภาพ -->
+                    <div id="editStockImagePreviewWrapper" class="hidden relative rounded-xl border border-slate-200 bg-slate-100/70 overflow-hidden w-full h-44 flex items-center justify-center shadow-xs">
+                        <img id="editStockImagePreview" src="" alt="พรีวิวรูปสินค้า" class="w-full h-full object-contain p-1.5" />
+                        <!-- ปุ่มกากบาทลบรูปขวาบน สไตล์ UX/UI ชัดเจน โดดเด่น มองเห็นง่าย กดง่าย -->
+                        <button type="button" 
+                                onclick="clearStockImage('edit')" 
+                                class="absolute top-2.5 right-2.5 z-20 w-8 h-8 rounded-full bg-rose-500 hover:bg-rose-600 active:scale-90 text-white flex items-center justify-center shadow-md border-2 border-white transition-all cursor-pointer" 
+                                title="ลบรูปภาพนี้">
+                            <svg class="w-4 h-4 stroke-[2.5]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- กล่อง Empty State Dropzone พื้นที่อัปโหลดรูปภาพ (ไม่หด ไม่อึดอัด สูงพอดีกับพรีวิว) -->
+                    <div id="editStockEmptyDropzone" class="rounded-xl border-2 border-dashed border-slate-200 hover:border-primary/40 bg-slate-50/75 p-4 flex flex-col items-center justify-center text-center transition-all h-44 w-full shadow-2xs">
+                        <div class="w-11 h-11 rounded-full bg-blue-50/80 text-primary flex items-center justify-center mb-1.5 shadow-2xs border border-blue-100/70">
+                            <svg class="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+                            </svg>
+                        </div>
+                        <div class="text-xs font-semibold text-slate-700 mb-0.5">เพิ่มรูปภาพสินค้า</div>
+                        <p class="text-[11px] text-slate-400 mb-3">แตะเพื่อเลือกภาพจากคลัง หรือถ่ายรูปสินค้า</p>
+                        <div class="grid grid-cols-2 gap-2 w-full max-w-xs">
+                            <button type="button" onclick="triggerPickStockImage('edit')" class="h-9 px-3 bg-white hover:bg-slate-100 active:bg-slate-200 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs">
+                                <svg class="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+                                </svg>
+                                <span>เลือกจากคลังภาพ</span>
+                            </button>
+                            <button type="button" onclick="triggerCameraDirect('edit')" class="h-9 px-3 bg-primary hover:bg-primary/90 active:bg-primary/80 text-white rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-xs">
+                                <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" />
+                                </svg>
+                                <span>ถ่ายรูปจากกล้อง</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Hidden inputs สำหรับจัดการไฟล์และ URL -->
+                    <input type="file" id="editStockFileInput" accept="image/*" class="hidden" onchange="handleStockFileSelected(this, 'edit')" />
+                    <input type="file" id="editStockCameraInput" accept="image/*" capture="environment" class="hidden" onchange="handleStockFileSelected(this, 'edit')" />
+                    <input type="hidden" id="editStockImageUrl" />
                 </div>
 
                 <!-- สต๊อก 3 ช่อง (สต๊อกขั้นต่ำ, สต๊อกสูงสุด, VS_สต๊อกปัจจุบัน) -->
@@ -623,8 +735,7 @@
             <!-- Modal Header -->
             <div class="px-6 py-3.5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 shrink-0">
                 <div class="flex items-center gap-2">
-                    <h3 class="text-base font-bold text-slate-800">ตรวจรับสินค้าเข้าสต๊อก (Goods Receipt Check-in)</h3>
-                    <span class="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200/70">AI Matching</span>
+                    <h3 class="text-base font-bold text-slate-800">ตรวจรับสินค้าเข้าสต๊อก</h3>
                 </div>
                 <button type="button" onclick="closeReceiveModal()" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-md hover:bg-slate-100 transition-colors shrink-0" title="ปิด">
                     <i data-lucide="x" class="w-5 h-5"></i>
@@ -820,6 +931,8 @@
         </div>
     </div>
 
+
+
 @section Scripts {
     <script>
         const isAdminUser = @(isAdmin ? "true" : "false");
@@ -829,6 +942,9 @@
             if (typeof lucide !== 'undefined') {
                 lucide.createIcons();
             }
+
+            // นำรูปภาพที่เลือกหรือถ่ายไว้แบบ Mock ใน LocalStorage มาแสดงผลบนการ์ดสินค้า
+            applyLocalMockStockImages();
 
             // โหลดจำนวนรายการรอรับจริงทันทีตอนเปิดหน้า
             refreshPendingBadgeCount();
@@ -1029,11 +1145,148 @@
             }
         });
 
+        // ==========================================
+        // ระบบอัปโหลดรูปภาพสินค้า & ถ่ายภาพจากกล้อง (Image Upload & Camera Capture)
+        // ==========================================
+        let cameraStream = null;
+        let activeCameraMode = 'add'; // 'add' หรือ 'edit'
+        let currentFacingMode = 'environment'; // 'environment' (หลัง) หรือ 'user' (หน้า)
+        let capturedBlob = null;
+
+        function triggerPickStockImage(mode) {
+            const inputId = mode === 'edit' ? 'editStockFileInput' : 'addStockFileInput';
+            const input = document.getElementById(inputId);
+            if (input) {
+                input.value = '';
+                input.click();
+            }
+        }
+
+        async function handleStockFileSelected(input, mode) {
+            if (!input.files || input.files.length === 0) return;
+            const file = input.files[0];
+            await uploadStockImageFileOrBlob(file, mode);
+        }
+
+        async function uploadStockImageFileOrBlob(fileOrBlob, mode) {
+            const statusEl = document.getElementById(mode === 'edit' ? 'editStockImgStatus' : 'addStockImgStatus');
+            const previewWrapper = document.getElementById(mode === 'edit' ? 'editStockImagePreviewWrapper' : 'addStockImagePreviewWrapper');
+            const emptyDropzone = document.getElementById(mode === 'edit' ? 'editStockEmptyDropzone' : 'addStockEmptyDropzone');
+            const previewImg = document.getElementById(mode === 'edit' ? 'editStockImagePreview' : 'addStockImagePreview');
+            const hiddenUrlInput = document.getElementById(mode === 'edit' ? 'editStockImageUrl' : 'modalStockImageUrl');
+
+            // 1. อ่านรูปด้วย FileReader ทันที (Mock/Client-Side Preview รวดเร็ว ไม่ต้องรอ Server)
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const dataUrl = e.target.result;
+                if (previewImg) previewImg.src = dataUrl;
+                if (hiddenUrlInput) hiddenUrlInput.value = dataUrl;
+                if (previewWrapper) previewWrapper.classList.remove('hidden');
+                if (emptyDropzone) emptyDropzone.classList.add('hidden');
+                if (statusEl) {
+                    statusEl.innerHTML = '<span class="text-emerald-600 font-semibold flex items-center gap-1"><i data-lucide="check" class="w-3 h-3"></i> เลือกรูปเรียบร้อย</span>';
+                    if (typeof lucide !== 'undefined') lucide.createIcons();
+                }
+            };
+            reader.readAsDataURL(fileOrBlob);
+
+            // 2. ลองส่งอัปโหลดไปยัง Backend (หากมีเซิร์ฟเวอร์รองรับ) หากไม่สำเร็จจะยังคงใช้ Data URL พรีวิวแบบ Mock ได้ปกติ
+            try {
+                const formData = new FormData();
+                const fileName = fileOrBlob.name || `capture_${Date.now()}.jpg`;
+                formData.append('file', fileOrBlob, fileName);
+
+                const resp = await fetch('/Stock/UploadStockImage', {
+                    method: 'POST',
+                    body: formData
+                });
+                if (resp.ok) {
+                    const data = await resp.json();
+                    if (data.success && data.imageUrl) {
+                        if (hiddenUrlInput) hiddenUrlInput.value = data.imageUrl;
+                        if (previewImg) previewImg.src = data.imageUrl;
+                    }
+                }
+            } catch (err) {
+                console.log('Stock image mock upload mode active:', err);
+            }
+        }
+
+        function clearStockImage(mode) {
+            const statusEl = document.getElementById(mode === 'edit' ? 'editStockImgStatus' : 'addStockImgStatus');
+            const previewWrapper = document.getElementById(mode === 'edit' ? 'editStockImagePreviewWrapper' : 'addStockImagePreviewWrapper');
+            const emptyDropzone = document.getElementById(mode === 'edit' ? 'editStockEmptyDropzone' : 'addStockEmptyDropzone');
+            const previewImg = document.getElementById(mode === 'edit' ? 'editStockImagePreview' : 'addStockImagePreview');
+            const hiddenUrlInput = document.getElementById(mode === 'edit' ? 'editStockImageUrl' : 'modalStockImageUrl');
+            const fileInput = document.getElementById(mode === 'edit' ? 'editStockFileInput' : 'addStockFileInput');
+            const cameraInput = document.getElementById(mode === 'edit' ? 'editStockCameraInput' : 'addStockCameraInput');
+
+            if (previewWrapper) previewWrapper.classList.add('hidden');
+            if (emptyDropzone) emptyDropzone.classList.remove('hidden');
+            if (previewImg) previewImg.src = '';
+            if (hiddenUrlInput) hiddenUrlInput.value = '';
+            if (fileInput) fileInput.value = '';
+            if (cameraInput) cameraInput.value = '';
+            if (statusEl) statusEl.textContent = 'ยังไม่ได้เลือกรูป';
+        }
+
+        function setEditStockImage(imageUrl) {
+            const statusEl = document.getElementById('editStockImgStatus');
+            const previewWrapper = document.getElementById('editStockImagePreviewWrapper');
+            const emptyDropzone = document.getElementById('editStockEmptyDropzone');
+            const previewImg = document.getElementById('editStockImagePreview');
+            const hiddenUrlInput = document.getElementById('editStockImageUrl');
+
+            if (imageUrl && imageUrl.trim()) {
+                if (previewImg) previewImg.src = imageUrl;
+                if (hiddenUrlInput) hiddenUrlInput.value = imageUrl;
+                if (previewWrapper) previewWrapper.classList.remove('hidden');
+                if (emptyDropzone) emptyDropzone.classList.add('hidden');
+                if (statusEl) statusEl.innerHTML = '<span class="text-slate-600 font-medium">รูปภาพปัจจุบัน</span>';
+            } else {
+                clearStockImage('edit');
+            }
+        }
+
+        function applyLocalMockStockImages() {
+            try {
+                document.querySelectorAll('.stock-card').forEach(card => {
+                    const code = card.dataset.code;
+                    if (!code) return;
+                    const localImg = localStorage.getItem('stock_img_' + code);
+                    if (localImg) {
+                        const imgEl = card.querySelector('.stock-card-img-wrapper img');
+                        if (imgEl) imgEl.src = localImg;
+                        card.dataset.image = localImg;
+                        const editBtn = card.querySelector('button[onclick*="openEditModal"]');
+                        if (editBtn) editBtn.dataset.image = localImg;
+                    }
+                });
+            } catch (e) {
+                console.warn('applyLocalMockStockImages error:', e);
+            }
+        }
+
+        // --- ถ่ายรูปจากกล้อง (เปิดกล้องมือถือ/อุปกรณ์โดยตรง Native Camera) ---
+        function triggerCameraDirect(mode) {
+            const inputId = mode === 'edit' ? 'editStockCameraInput' : 'addStockCameraInput';
+            const camInput = document.getElementById(inputId);
+            if (camInput) {
+                camInput.value = '';
+                camInput.click();
+            }
+        }
+
+        function openCameraModal(mode) {
+            triggerCameraDirect(mode);
+        }
+
         // Modal Functions (เพิ่มสินค้า)
         function openAddModal() {
             const modal = document.getElementById('addStockModal');
             const form = document.getElementById('addStockForm');
             if (form) form.reset();
+            clearStockImage('add');
 
             if (modal) {
                 modal.classList.remove('hidden');
@@ -1099,6 +1352,7 @@
             const qty = parseFloat(document.getElementById('modalQuantity').value) || 0;
             const min = parseFloat(document.getElementById('modalMinStock').value) || 0;
             const max = parseFloat(document.getElementById('modalMaxStock').value) || 0;
+            const imagePath = document.getElementById('modalStockImageUrl')?.value.trim() || null;
 
             if (!code || !name) {
                 Swal.fire({
@@ -1120,6 +1374,7 @@
                         productCode: code,
                         productName: name,
                         category: category,
+                        filePath: imagePath,
                         quantity: qty,
                         minStock: min,
                         maxStock: max
@@ -1129,6 +1384,13 @@
                 const data = await resp.json();
 
                 if (data.success) {
+                    if (code) {
+                        if (imagePath) {
+                            localStorage.setItem('stock_img_' + code, imagePath);
+                        } else {
+                            localStorage.removeItem('stock_img_' + code);
+                        }
+                    }
                     const wasFromReceive = isCreatedFromReceive;
                     closeAddModal();
 
@@ -1186,13 +1448,17 @@
         // Modal Functions (แก้ไขสินค้า)
         function openEditModal(btn) {
             const dataset = btn.dataset;
+            const code = dataset.code || '';
+            const localImg = localStorage.getItem('stock_img_' + code);
+
             document.getElementById('editItemId').value = dataset.id || '';
-            document.getElementById('editProductCode').value = dataset.code || '';
+            document.getElementById('editProductCode').value = code;
             document.getElementById('editProductName').value = dataset.name || '';
             document.getElementById('editCategory').value = dataset.category || 'อะไหล่';
             document.getElementById('editMinStock').value = dataset.min && dataset.min !== '0' ? parseFloat(dataset.min) : '';
             document.getElementById('editMaxStock').value = dataset.max && dataset.max !== '0' ? parseFloat(dataset.max) : '';
             document.getElementById('editQuantity').value = dataset.quantity !== undefined ? parseFloat(dataset.quantity) : '';
+            setEditStockImage(localImg || dataset.image || '');
 
             const modal = document.getElementById('editStockModal');
             if (modal) {
@@ -1226,6 +1492,7 @@
             const min = parseFloat(document.getElementById('editMinStock').value) || 0;
             const max = parseFloat(document.getElementById('editMaxStock').value) || 0;
             const qty = parseFloat(document.getElementById('editQuantity').value) || 0;
+            const imagePath = document.getElementById('editStockImageUrl')?.value.trim() || '';
 
             if (!code || !name) {
                 Swal.fire({
@@ -1248,6 +1515,7 @@
                         productCode: code,
                         productName: name,
                         category: category,
+                        filePath: imagePath,
                         minStock: min,
                         maxStock: max,
                         quantity: qty
@@ -1257,6 +1525,13 @@
                 const data = await resp.json();
 
                 if (data.success) {
+                    if (code) {
+                        if (imagePath) {
+                            localStorage.setItem('stock_img_' + code, imagePath);
+                        } else {
+                            localStorage.removeItem('stock_img_' + code);
+                        }
+                    }
                     closeEditModal();
                     await Swal.fire({
                         icon: 'success',

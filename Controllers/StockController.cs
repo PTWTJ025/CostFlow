@@ -325,6 +325,7 @@ namespace CostFlow.Controllers
                 ProductCode = trimmedCode,
                 ProductName = trimmedName,
                 Category = category,
+                FilePath = !string.IsNullOrWhiteSpace(dto.FilePath) ? dto.FilePath.Trim() : null,
                 Quantity = dto.Quantity >= 0 ? dto.Quantity : 0,
                 MinStock = dto.MinStock >= 0 ? dto.MinStock : 0,
                 MaxStock = dto.MaxStock >= 0 ? dto.MaxStock : 0,
@@ -433,6 +434,10 @@ namespace CostFlow.Controllers
             item.ProductCode = trimmedCode;
             item.ProductName = trimmedName;
             item.Category = category;
+            if (dto.FilePath != null)
+            {
+                item.FilePath = string.IsNullOrWhiteSpace(dto.FilePath) ? null : dto.FilePath.Trim();
+            }
             item.MinStock = minStock;
             item.MaxStock = maxStock;
             item.Quantity = newQuantity;
@@ -519,6 +524,59 @@ namespace CostFlow.Controllers
                 success = true,
                 message = $"ลบสินค้า '{productName}' ({productCode}) เรียบร้อยแล้ว"
             });
+        }
+
+        // อัปโหลดรูปภาพสินค้าสต๊อก (ทั้งจากคลังภาพ และภาพถ่ายจากกล้อง)
+        [HttpPost]
+        public async Task<IActionResult> UploadStockImage(IFormFile? file)
+        {
+            if (file == null || file.Length == 0)
+            {
+                return Json(new { success = false, message = "ไม่พบไฟล์รูปภาพที่ต้องการอัปโหลด" });
+            }
+
+            var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp", ".gif" };
+            var extension = Path.GetExtension(file.FileName)?.ToLowerInvariant();
+            if (string.IsNullOrEmpty(extension) || !allowedExtensions.Contains(extension))
+            {
+                extension = ".jpg";
+            }
+
+            if (file.Length > 10 * 1024 * 1024)
+            {
+                return Json(new { success = false, message = "ขนาดไฟล์รูปภาพต้องไม่เกิน 10 MB" });
+            }
+
+            try
+            {
+                var webRoot = _env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+                var uploadsFolder = Path.Combine(webRoot, "uploads", "stock");
+                if (!Directory.Exists(uploadsFolder))
+                {
+                    Directory.CreateDirectory(uploadsFolder);
+                }
+
+                var fileName = $"stock_{DateTime.UtcNow:yyyyMMdd_HHmmss}_{Guid.NewGuid().ToString("N").Substring(0, 8)}{extension}";
+                var fullPath = Path.Combine(uploadsFolder, fileName);
+
+                using (var stream = new FileStream(fullPath, FileMode.Create))
+                {
+                    await file.CopyToAsync(stream);
+                }
+
+                var relativeUrl = $"/uploads/stock/{fileName}";
+
+                return Json(new
+                {
+                    success = true,
+                    imageUrl = relativeUrl,
+                    message = "อัปโหลดรูปภาพเรียบร้อยแล้ว"
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"เกิดข้อผิดพลาดในการบันทึกรูปภาพ: {ex.Message}" });
+            }
         }
 
         private bool IsAdminUser()
@@ -768,6 +826,7 @@ namespace CostFlow.Controllers
         public string ProductCode { get; set; } = string.Empty;
         public string ProductName { get; set; } = string.Empty;
         public string? Category { get; set; }
+        public string? FilePath { get; set; }
         public decimal Quantity { get; set; } = 0;
         public decimal MinStock { get; set; } = 0;
         public decimal MaxStock { get; set; } = 0;
@@ -779,6 +838,7 @@ namespace CostFlow.Controllers
         public string ProductCode { get; set; } = string.Empty;
         public string ProductName { get; set; } = string.Empty;
         public string? Category { get; set; }
+        public string? FilePath { get; set; }
         public decimal MinStock { get; set; } = 0;
         public decimal MaxStock { get; set; } = 0;
         public decimal Quantity { get; set; } = 0; // สต๊อกปัจจุบัน
