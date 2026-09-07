@@ -67,7 +67,7 @@ builder.Services.AddScoped<MonthlyOrderSyncService>();
 builder.Services.AddScoped<CostFlow.Services.StockMatchingService>();
 builder.Services.AddHttpClient<CostFlow.Services.ISupabaseStorageService, CostFlow.Services.SupabaseStorageService>();
 
-// ⭐ Background Service สำหรับ Keep-Alive ป้องกัน Supabase หลับ (รันอัตโนมัติทุกๆ 12 ชม.)
+// ⭐ Background Service สำหรับ Keep-Alive ป้องกัน Supabase หลับ (รันทุกๆ 12 ชม.)
 builder.Services.AddHostedService<CostFlow.Services.SupabaseKeepAliveBackgroundService>();
 
 // ⭐ Background Service สำหรับ Auto-Skip อัตโนมัติทุกวัน 00:00 (เฉพาะ Production)

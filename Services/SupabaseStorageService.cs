@@ -109,6 +109,18 @@ namespace CostFlow.Services
             }
         }
 
+        private static readonly string[] CheekyMessages = new[]
+        {
+            "ตื่นยัง? CostFlow แวะมากดกริ่งแล้ววิ่งหนี 🔔🏃",
+            "เหงาไหม Supabase? แวะมาทักทายเฉยๆ อย่าเพิ่งหลับนะ ☕",
+            "ตรวจเวรยาม: ยาม Supabase ยังอยู่ดีไหม? 👮",
+            "ยังไม่ถึง 7 วันหรอก แค่คิดถึงเลยแวะมาปลุก 💖",
+            "ตื่นมารับแคลเซียมก่อน ห้ามจำศีลเด็ดขาด! 🥛",
+            "Wakey Wakey Eggs and Bakey! Don't sleep bro! 🍳",
+            "กาแฟสักแก้วไหมครับ? อย่าเพิ่งหลับนะ CostFlow กำลังดูอยู่ 👀",
+            "อย่าเพิ่งนอน! เจ้านายกำลังตรวจงานอยู่ 💼"
+        };
+
         public async Task<bool> PingKeepAliveAsync()
         {
             if (string.IsNullOrWhiteSpace(_supabaseUrl) || string.IsNullOrWhiteSpace(_secretKey))
@@ -118,15 +130,42 @@ namespace CostFlow.Services
 
             try
             {
-                var bucketUrl = $"{_supabaseUrl}/storage/v1/bucket";
+                // สุ่มข้อความกวนๆ สำหรับรอบนี้
+                var cheekyMsg = CheekyMessages[Random.Shared.Next(CheekyMessages.Length)];
+                var urlSafeMsg = Uri.EscapeDataString(cheekyMsg);
+
+                // 1. ยิง GET Bucket พร้อมแนบ Query String และ User-Agent กวนๆ ให้เห็นใน Log
+                var bucketUrl = $"{_supabaseUrl}/storage/v1/bucket?knock_knock=whos_there&wake_up=true&note={urlSafeMsg}";
                 using var request = new HttpRequestMessage(HttpMethod.Get, bucketUrl);
                 request.Headers.Add("apikey", _secretKey);
                 request.Headers.Add("Authorization", $"Bearer {_secretKey}");
+                request.Headers.TryAddWithoutValidation("User-Agent", "Supabase-Sleep-Police/1.0 (Wakey-Wakey-Dont-Sleep)");
+                request.Headers.TryAddWithoutValidation("X-Wake-Up-Call", urlSafeMsg);
 
                 var response = await _httpClient.SendAsync(request);
+
+                // 2. แอบหยอดจดหมายปลุกน่ารักๆ ทับไว้ใน Bucket 'stock image/wake_up_call.txt'
+                try
+                {
+                    var encodedBucket = Uri.EscapeDataString(_bucket);
+                    var wakeFileUrl = $"{_supabaseUrl}/storage/v1/object/{encodedBucket}/wake_up_call.txt";
+                    using var fileReq = new HttpRequestMessage(HttpMethod.Post, wakeFileUrl);
+                    fileReq.Headers.Add("apikey", _secretKey);
+                    fileReq.Headers.Add("Authorization", $"Bearer {_secretKey}");
+                    fileReq.Headers.Add("x-upsert", "true");
+
+                    var noteContent = $"🔔 [CostFlow Wake-Up Call]\nข้อความ: {cheekyMsg}\nเวลาปลุกล่าสุด: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC (เวลาไทย: {DateTime.UtcNow.AddHours(7):yyyy-MM-dd HH:mm:ss})\nสถานะ: ตื่นอยู่ตลอดเวลา ห้ามหลับนะ Supabase!";
+                    fileReq.Content = new StringContent(noteContent, Encoding.UTF8, "text/plain");
+                    await _httpClient.SendAsync(fileReq);
+                }
+                catch (Exception fileEx)
+                {
+                    _logger.LogDebug(fileEx, "Wake note write skipped: {Message}", fileEx.Message);
+                }
+
                 if (response.IsSuccessStatusCode)
                 {
-                    _logger.LogInformation("🟢 [Supabase Keep-Alive] Pinged Supabase Storage successfully. Project is active.");
+                    _logger.LogInformation("🟢 [Supabase Keep-Alive] แกล้งทักสำเร็จ: \"{Message}\" (Supabase ตื่นอยู่ 100%)", cheekyMsg);
                     return true;
                 }
                 else

@@ -612,6 +612,7 @@ namespace CostFlow.Controllers
         }
 
         // ตรวจสอบและส่งสัญญาณ Ping Keep-Alive ไปยัง Supabase (ป้องกันโปรเจกต์ Free Tier หลับ)
+        [AllowAnonymous]
         [HttpGet]
         public async Task<IActionResult> PingSupabase()
         {
