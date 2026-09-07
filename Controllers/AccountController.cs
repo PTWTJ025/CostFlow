@@ -72,11 +72,13 @@ namespace CostFlow.Controllers
                 return Json(new { success = false, error = "บัญชีนี้ถูกระงับการใช้งานชั่วคราว" });
             }
 
-            // ตรวจสอบรหัสผ่าน + set cookie อัตโนมัติ (ใช้ persistent cookie เมื่อ rememberMe เป็นจริง)
+            // ตรวจสอบรหัสผ่าน + set cookie เป็น Session Cookie (isPersistent = false)
+            // ตามมาตรฐานความปลอดภัย Production: เมื่อปิดเบราว์เซอร์แล้วเปิดใหม่ จะต้องล็อกอินใหม่เสมอ
+            // และระหว่างเปิดใช้งาน จะอยู่ได้ 8 ชม. ต่อเวลาอัตโนมัติ และไม่ออกเมื่อรีสตาร์ตเซิร์ฟเวอร์
             var result = await _signInManager.PasswordSignInAsync(
                 user,
                 password,
-                isPersistent: rememberMe,  // Persistent cookie — ปิดเบราว์เซอร์แล้วยังอยู่ตามที่ผู้ใช้เลือก
+                isPersistent: false,
                 lockoutOnFailure: false
             );
 

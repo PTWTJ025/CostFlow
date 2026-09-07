@@ -1,7 +1,7 @@
 @model IEnumerable<CostFlow.Controllers.TrackingItemViewModel>
 @{
-    ViewData["Title"] = "รายละเอียดแผ่นงาน - ติดตามสินค้า";
-    var batchName = ViewData["BatchName"] as string ?? "ไม่ระบุแผ่นงาน";
+    ViewData["Title"] = "รายละเอียดชุดสั่งซื้อ - ติดตามสินค้า";
+    var batchName = ViewData["BatchName"] as string ?? "ไม่ระบุชุดสั่งซื้อ";
 }
 
 <div class="flex-1 py-md md:py-lg flex flex-col gap-md w-full h-full min-h-0 overflow-hidden bg-background" style="padding-left: clamp(1.5rem, 6vw, 6rem); padding-right: clamp(1.5rem, 6vw, 6rem);">
@@ -170,7 +170,7 @@
                     const { value: dateStr, isConfirmed } = await Swal.fire({
                         title: 'ระบุวันที่รับสินค้า',
                         html: `
-                                    <p class="text-[13px] text-slate-600 mb-2">แผ่นงาน: <strong class="block truncate max-w-[280px] mx-auto text-center" title="${batchName}">${batchName}</strong></p>
+                                    <p class="text-[13px] text-slate-600 mb-2">ชุดสั่งซื้อ: <strong class="block truncate max-w-[280px] mx-auto text-center" title="${batchName}">${batchName}</strong></p>
                                     <p class="text-[13px] text-primary font-semibold mb-3">รายการที่เลือก: ${productCodes.length} รายการ</p>
                                     <input type="hidden" id="receive-date" value="${today}">
                                     <div id="adp-inline-container" style="display:flex;justify-content:center;"></div>

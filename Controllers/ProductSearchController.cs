@@ -158,7 +158,7 @@ namespace CostFlow.Controllers
         public async Task<IActionResult> DeleteBatch(string batchName)
         {
             if (string.IsNullOrWhiteSpace(batchName))
-                return Json(new { success = false, error = "ไม่ระบุชื่อแผ่นงานที่จะลบ" });
+                return Json(new { success = false, error = "ไม่ระบุชื่อชุดสั่งซื้อที่จะลบ" });
 
             try
             {
@@ -477,12 +477,6 @@ namespace CostFlow.Controllers
                 return Json(new { success = false, error = "จำนวนต้องมากกว่า 0" });
             }
 
-            string? appScriptUrl = _configuration["GoogleSheets:OrderHistoryAppScriptUrl"];
-            if (string.IsNullOrWhiteSpace(appScriptUrl) || appScriptUrl.Contains("_placeholder"))
-            {
-                return Json(new { success = false, error = "ยังไม่ได้ตั้งค่า Google Sheets API URL" });
-            }
-
             try
             {
                 // ดึงข้อมูล Batch และ Items ทั้งหมดจาก TiDB
@@ -492,7 +486,7 @@ namespace CostFlow.Controllers
 
                 if (dbBatch == null)
                 {
-                    return Json(new { success = false, error = "ไม่พบแผ่นงานนี้ในฐานข้อมูลระบบ" });
+                    return Json(new { success = false, error = "ไม่พบชุดสั่งซื้อนี้ในฐานข้อมูลระบบ" });
                 }
 
                 var itemToUpdate = dbBatch.Items.FirstOrDefault(i => i.ProductCode == request.ProductCode);
@@ -539,12 +533,6 @@ namespace CostFlow.Controllers
                 return Json(new { success = false, error = "ข้อมูลไม่ถูกต้อง" });
             }
 
-            string? appScriptUrl = _configuration["GoogleSheets:OrderHistoryAppScriptUrl"];
-            if (string.IsNullOrWhiteSpace(appScriptUrl) || appScriptUrl.Contains("_placeholder"))
-            {
-                return Json(new { success = false, error = "ยังไม่ได้ตั้งค่า Google Sheets API URL" });
-            }
-
             try
             {
                 // ดึงข้อมูล Batch จาก TiDB
@@ -554,7 +542,7 @@ namespace CostFlow.Controllers
 
                 if (dbBatch == null)
                 {
-                    return Json(new { success = false, error = "ไม่พบแผ่นงานนี้ในฐานข้อมูลระบบ" });
+                    return Json(new { success = false, error = "ไม่พบชุดสั่งซื้อนี้ในฐานข้อมูลระบบ" });
                 }
 
                 var itemToDelete = dbBatch.Items.FirstOrDefault(i => i.ProductCode == request.ProductCode);

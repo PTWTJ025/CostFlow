@@ -73,9 +73,10 @@
             </div>
 
             <!-- Search: right side -->
-            <div class="w-64 sm:w-72">
+            <div class="w-64 sm:w-72 relative">
                 <input type="text" id="search-input" placeholder="ค้นหาชื่อสินค้า, รหัสสินค้า..."
-                       class="w-full px-3 py-1.5 h-[32px] text-xs bg-white border border-slate-200 rounded-md text-slate-700 placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-2xs transition-all"/>
+                       class="w-full px-3 py-1.5 h-[32px] text-xs bg-white border border-slate-200 rounded-md text-slate-700 placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-2xs transition-all" autocomplete="off"/>
+                <div id="tracking-suggestions-dropdown" class="hidden absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-md shadow-lg z-50 max-h-[240px] overflow-y-auto divide-y divide-slate-100"></div>
             </div>
         </div>
 
@@ -296,7 +297,78 @@
                 updateSelectionUI();
             }
 
-            if (searchInput) searchInput.addEventListener('input', applyFilters);
+            const trackingDropdown = document.getElementById('tracking-suggestions-dropdown');
+            const trackingProductsMap = new Map();
+            rows.forEach(r => {
+                const code = (r.dataset.code || '').trim();
+                const name = (r.dataset.name || '').trim();
+                if (code && !trackingProductsMap.has(code)) {
+                    trackingProductsMap.set(code, { code, name });
+                }
+            });
+            const trackingProducts = Array.from(trackingProductsMap.values());
+
+            if (searchInput) {
+                searchInput.addEventListener('input', () => {
+                    applyFilters();
+
+                    if (trackingDropdown) {
+                        const query = (searchInput.value || '').trim().toLowerCase();
+                        if (query.length < 1) {
+                            trackingDropdown.classList.add('hidden');
+                            trackingDropdown.innerHTML = '';
+                            return;
+                        }
+
+                        const matches = trackingProducts.filter(item =>
+                            (item.code || '').toLowerCase().includes(query) ||
+                            (item.name || '').toLowerCase().includes(query)
+                        ).slice(0, 8);
+
+                        if (matches.length > 0) {
+                            trackingDropdown.innerHTML = matches.map(item => `
+                                <div class="tracking-suggest-item px-3 py-2 hover:bg-slate-50 cursor-pointer transition-colors text-left flex flex-col gap-0.5" data-code="${item.code}" data-name="${item.name.replace(/"/g, '&quot;')}">
+                                    <span class="font-mono text-primary font-bold text-xs">${item.code}</span>
+                                    <span class="text-slate-700 text-xs truncate">${item.name}</span>
+                                </div>
+                            `).join('');
+                            trackingDropdown.classList.remove('hidden');
+
+                            trackingDropdown.querySelectorAll('.tracking-suggest-item').forEach(el => {
+                                el.addEventListener('click', function() {
+                                    searchInput.value = this.dataset.name || this.dataset.code;
+                                    trackingDropdown.classList.add('hidden');
+                                    applyFilters();
+                                });
+                            });
+                        } else {
+                            trackingDropdown.classList.add('hidden');
+                            trackingDropdown.innerHTML = '';
+                        }
+                    }
+                });
+
+                searchInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') {
+                        if (trackingDropdown) trackingDropdown.classList.add('hidden');
+                    } else if (e.key === 'Enter') {
+                        const firstOpt = trackingDropdown?.querySelector('.tracking-suggest-item');
+                        if (firstOpt && !trackingDropdown.classList.contains('hidden')) {
+                            e.preventDefault();
+                            firstOpt.click();
+                        } else {
+                            if (trackingDropdown) trackingDropdown.classList.add('hidden');
+                        }
+                    }
+                });
+
+                document.addEventListener('click', (e) => {
+                    if (trackingDropdown && !searchInput.contains(e.target) && !trackingDropdown.contains(e.target)) {
+                        trackingDropdown.classList.add('hidden');
+                    }
+                });
+            }
+
             if (statusFilter) statusFilter.addEventListener('change', applyFilters);
             if (monthFilter) monthFilter.addEventListener('change', applyFilters);
             if (yearFilter) yearFilter.addEventListener('change', applyFilters);

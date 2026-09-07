@@ -1,8 +1,8 @@
 @{
     bool isEdit = ViewData["EditBatchName"] != null;
-    ViewData["Title"] = isEdit ? "แก้ไขแผ่นงานสั่งซื้ออะไหล่" : "คีย์ใบสั่งซื้ออะไหล่";
+    ViewData["Title"] = isEdit ? "แก้ไขชุดสั่งซื้ออะไหล่" : "คีย์ใบสั่งซื้ออะไหล่";
     ViewData["HeaderTitle"] = isEdit
-        ? $"แก้ไขแผ่นงานสั่งซื้ออะไหล่ (Edit Spare Part Order)"
+        ? $"แก้ไขชุดสั่งซื้ออะไหล่ (Edit Spare Part Order)"
         : "คีย์ใบสั่งซื้ออะไหล่ (Spare Part Order Entry)";
 }
 
@@ -12,7 +12,7 @@
         <div class="bg-blue-50 border border-blue-200 rounded p-md flex flex-col md:flex-row justify-between items-start md:items-center gap-sm shadow-sm animate-fade-in">
             <div class="flex items-center gap-2.5">
                 <p class="text-xs text-blue-800 font-semibold flex items-center gap-1.5 flex-wrap">
-                    กำลังอยู่ในโหมดแก้ไขแผ่นงานสั่งซื้อ: <span class="font-bold text-blue-900 font-mono">@ViewData["EditBatchName"]</span> <span class="text-[10px] text-blue-600/90 font-medium">(ระบบจะบันทึกเขียนทับแผ่นงานเดิมนี้)</span>
+                    กำลังอยู่ในโหมดแก้ไขชุดสั่งซื้อ: <span class="font-bold text-blue-900 font-mono">@ViewData["EditBatchName"]</span> <span class="text-[10px] text-blue-600/90 font-medium">(ระบบจะบันทึกเขียนทับชุดสั่งซื้อเดิมนี้)</span>
                 </p>
             </div>
             <a href="/ProductSearch" class="text-[11px] font-bold text-blue-600 hover:text-blue-800 transition-colors border border-blue-200 hover:border-blue-400 px-2.5 py-1 bg-white rounded shadow-sm">
@@ -111,8 +111,8 @@
         <div class="md:col-span-7 xl:col-span-8 bg-white rounded border border-outline-variant shadow-sm p-4 md:p-5 xl:p-6 flex flex-col gap-4">
             <div class="flex justify-between items-center">
                 <div>
-                    <h3 class="font-headline-sm text-headline-sm text-on-surface mb-xs">@(isEdit ? "รายการสั่งซื้อในแผ่นงาน" : "แบบร่างรายการสั่งซื้อ")</h3>
-                    <p class="text-xs text-secondary">@(isEdit ? "แก้ไขรายการสั่งซื้ออะไหล่ในแผ่นงานนี้" : "สะสมรายการสั่งซื้ออะไหล่ก่อนยืนยันบันทึกลงระบบ")</p>
+                    <h3 class="font-headline-sm text-headline-sm text-on-surface mb-xs">@(isEdit ? "รายการสั่งซื้อในชุดนี้" : "แบบร่างรายการสั่งซื้อ")</h3>
+                    <p class="text-xs text-secondary">@(isEdit ? "แก้ไขรายการสั่งซื้ออะไหล่ในชุดนี้" : "สะสมรายการสั่งซื้ออะไหล่ก่อนยืนยันบันทึกลงระบบ")</p>
                 </div>
                 <div class="text-right">
                     <span class="text-xs text-secondary block">ยอดรวมทั้งสิ้น</span>
@@ -140,7 +140,7 @@
                     <tbody class="bg-white divide-y divide-slate-200 text-xs font-medium text-slate-800" id="cart-body">
                     <!-- Items populated via JS -->
                     <tr id="empty-cart-row">
-                        <td colspan="9" class="py-lg text-slate-400 text-xs italic bg-slate-50/50">@(isEdit ? "ไม่มีรายการสั่งซื้อในแผ่นงานนี้" : "ยังไม่มีรายการสั่งซื้อในระบบแบบร่าง")</td>
+                        <td colspan="9" class="py-lg text-slate-400 text-xs italic bg-slate-50/50">@(isEdit ? "ไม่มีรายการสั่งซื้อในชุดนี้" : "ยังไม่มีรายการสั่งซื้อในระบบแบบร่าง")</td>
                     </tr>
                     </tbody>
                     <tfoot class="bg-slate-100/95 backdrop-blur sticky bottom-0 z-10 border-t-2 border-slate-200 font-bold text-slate-800">
@@ -164,7 +164,7 @@
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    <span>@(isEdit ? "บันทึกการแก้ไขแผ่นงาน" : "ลงข้อมูลสั่งซื้อเข้าระบบ")</span>
+                    <span>@(isEdit ? "บันทึกการแก้ไขชุดสั่งซื้อ" : "ลงข้อมูลสั่งซื้อเข้าระบบ")</span>
                 </button>
             </div>
         </div>
@@ -749,11 +749,11 @@
             const now = new Date();
             const dateStr = now.toLocaleDateString('th-TH', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '-');
             const timeStr = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false }).replace(/:/g, '.');
-            const defaultName = (typeof editBatchName !== 'undefined') ? editBatchName : `แผ่นงานสั่งซื้ออะไหล่_${dateStr}_${timeStr}`;
+            const defaultName = (typeof editBatchName !== 'undefined') ? editBatchName : `ชุดสั่งซื้ออะไหล่_${dateStr}_${timeStr}`;
 
             showCustomModal({
-                title: isEditMode ? "ยืนยันการบันทึกแก้ไขแผ่นงาน" : "บันทึกข้อมูลเข้าระบบ",
-                desc: isEditMode ? "กรุณาตรวจสอบชื่อแผ่นงานสั่งซื้ออะไหล่ที่ต้องการแก้ไขบันทึก:" : "กรุณาระบุชื่อแผ่นงานและวันที่ เพื่อเก็บบันทึกประวัติ:",
+                title: isEditMode ? "ยืนยันการบันทึกแก้ไขชุดสั่งซื้อ" : "บันทึกข้อมูลเข้าระบบ",
+                desc: isEditMode ? "กรุณาตรวจสอบชื่อชุดสั่งซื้ออะไหล่ที่ต้องการแก้ไขบันทึก:" : "กรุณาระบุชื่อชุดสั่งซื้อและวันที่ เพื่อเก็บบันทึกประวัติ:",
                 showInput: true,
                 showDatePicker: true,
                 defaultValue: defaultName,
@@ -814,7 +814,7 @@
                                 Swal.fire({
                                     icon: 'success',
                                     title: 'บันทึกข้อมูลสำเร็จ!',
-                                    text: 'บันทึกข้อมูลสั่งซื้อเข้าระบบและ Google Sheets สำเร็จเรียบร้อยแล้ว',
+                                    text: 'บันทึกข้อมูลสั่งซื้อลงฐานข้อมูลเรียบร้อยแล้ว',
                                     confirmButtonText: 'ตกลง',
                                     confirmButtonColor: '#00288e'
                                 }).then(() => {
@@ -981,7 +981,7 @@
         </div>
 
         <div class="px-lg pb-md hidden" id="modal-input-container">
-            <label class="block text-xs text-slate-500 mb-1 font-sans">ชื่อแผ่นงาน:</label>
+            <label class="block text-xs text-slate-500 mb-1 font-sans">ชื่อชุดสั่งซื้อ:</label>
             <input type="text" id="modal-input-field" class="w-full px-3 py-2 border border-slate-200 rounded text-xs focus:ring-1 focus:ring-primary focus:border-primary outline-none"/>
         </div>
 

@@ -103,7 +103,9 @@
                     type="text"
                     placeholder="ค้นหาเลขที่อนุมัติ, หมายเหตุ หรือชื่อไฟล์..."
                     class="block w-full pl-3 pr-3 py-1.5 text-xs border border-slate-200 rounded-md focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all bg-white text-slate-700 shadow-2xs"
-                    style="height: 32px;">
+                    style="height: 32px;"
+                    autocomplete="off">
+                <div id="allorders-suggestions-dropdown" class="hidden absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-md shadow-lg z-50 max-h-[240px] overflow-y-auto divide-y divide-slate-100"></div>
             </div>
 
             <!-- 2. กลุ่ม Select (Align Right, width fix พอดีเนื้อหา + tooltip กันข้อความยาวโดน truncate) -->
@@ -493,9 +495,76 @@
         document.getElementById('btn-close-detail').addEventListener('click', () => { detailModal.classList.add('hidden'); });
         detailModal.addEventListener('click', (e) => { if (e.target === detailModal) detailModal.classList.add('hidden'); });
 
-        document.getElementById('system-orders-search').addEventListener('input', function () {
+        const allOrdersSearchInput = document.getElementById('system-orders-search');
+        const allOrdersDropdown = document.getElementById('allorders-suggestions-dropdown');
+
+        allOrdersSearchInput.addEventListener('input', function () {
             systemOrdersSearchQuery = this.value;
             applyClientSideFilters();
+
+            // Autocomplete Guide List
+            if (allOrdersDropdown) {
+                const query = systemOrdersSearchQuery.toLowerCase().trim();
+                if (query.length < 1) {
+                    allOrdersDropdown.classList.add('hidden');
+                    allOrdersDropdown.innerHTML = '';
+                    return;
+                }
+
+                const seenPo = new Set();
+                const matches = [];
+                for (const item of allFetchedItems) {
+                    const po = (item.poNumber || '').trim();
+                    const rem = (item.remarks || '').trim();
+                    if (po && !seenPo.has(po) && (po.toLowerCase().includes(query) || rem.toLowerCase().includes(query))) {
+                        seenPo.add(po);
+                        matches.push({ po, remarks: rem });
+                        if (matches.length >= 8) break;
+                    }
+                }
+
+                if (matches.length > 0) {
+                    allOrdersDropdown.innerHTML = matches.map(item => `
+                        <div class="allorders-suggest-item px-3 py-2 hover:bg-slate-50 cursor-pointer transition-colors text-left flex flex-col gap-0.5" data-po="${item.po.replace(/"/g, '&quot;')}">
+                            <span class="font-mono text-primary font-bold text-xs">${item.po}</span>
+                            ${item.remarks ? `<span class="text-slate-700 text-xs truncate">${item.remarks}</span>` : ''}
+                        </div>
+                    `).join('');
+                    allOrdersDropdown.classList.remove('hidden');
+
+                    allOrdersDropdown.querySelectorAll('.allorders-suggest-item').forEach(el => {
+                        el.addEventListener('click', function () {
+                            allOrdersSearchInput.value = this.dataset.po;
+                            systemOrdersSearchQuery = this.dataset.po;
+                            allOrdersDropdown.classList.add('hidden');
+                            applyClientSideFilters();
+                        });
+                    });
+                } else {
+                    allOrdersDropdown.classList.add('hidden');
+                    allOrdersDropdown.innerHTML = '';
+                }
+            }
+        });
+
+        allOrdersSearchInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                if (allOrdersDropdown) allOrdersDropdown.classList.add('hidden');
+            } else if (e.key === 'Enter') {
+                const firstOpt = allOrdersDropdown?.querySelector('.allorders-suggest-item');
+                if (firstOpt && !allOrdersDropdown.classList.contains('hidden')) {
+                    e.preventDefault();
+                    firstOpt.click();
+                } else {
+                    if (allOrdersDropdown) allOrdersDropdown.classList.add('hidden');
+                }
+            }
+        });
+
+        document.addEventListener('click', function (e) {
+            if (allOrdersDropdown && !allOrdersSearchInput.contains(e.target) && !allOrdersDropdown.contains(e.target)) {
+                allOrdersDropdown.classList.add('hidden');
+            }
         });
 
         document.getElementById('system-orders-status-filter').addEventListener('change', function () {

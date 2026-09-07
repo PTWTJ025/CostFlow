@@ -19,6 +19,10 @@ namespace CostFlow.Data
         public DbSet<WeeklyPlanDetail> WeeklyPlanDetails { get; set; }
         public DbSet<MonthlyOrderAction> MonthlyOrderActions { get; set; }
 
+        // Stock system tables
+        public DbSet<StockItem> StockItems { get; set; }
+        public DbSet<ItemMapping> ItemMappings { get; set; }
+        public DbSet<StockLog> StockLogs { get; set; }
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder); // Identity tables
@@ -67,6 +71,15 @@ namespace CostFlow.Data
                 .WithMany()
                 .HasForeignKey(m => m.OrderTrackingMasterId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // Stock System Indexes
+            builder.Entity<StockItem>()
+                .HasIndex(s => s.ProductCode)
+                .IsUnique();
+
+            builder.Entity<ItemMapping>()
+                .HasIndex(m => m.OrderName)
+                .IsUnique();
         }
     }
 }

@@ -55,6 +55,28 @@ namespace CostFlow.Data
 
             // 7. Sanitize MonthlyOrderActions data
             await SanitizeMonthlyOrderActionsAsync(db);
+
+            // 8. Seed Stock Items from Excel if empty
+            await SeedStockItemsFromExcelAsync(db, env);
+
+            // 9. Fix existing Category Codes
+            await FixCategoryCodesAsync(db);
+        }
+
+        private static async Task FixCategoryCodesAsync(AppDbContext db)
+        {
+            var needsFix = await db.StockItems.AnyAsync(s => s.Category == "b7392108" || s.Category == "b453465a");
+            if (needsFix)
+            {
+                Console.WriteLine("[DB Init] Fixing Category Codes to Thai names...");
+                var items = await db.StockItems.Where(s => s.Category == "b7392108" || s.Category == "b453465a").ToListAsync();
+                foreach (var item in items)
+                {
+                    if (item.Category == "b7392108") item.Category = "อะไหล่";
+                    if (item.Category == "b453465a") item.Category = "อะไหล่เวียน";
+                }
+                await db.SaveChangesAsync();
+            }
         }
 
         public static async Task EnsureMySqlTablesExistAsync(AppDbContext db, TiDbContext tiDb)
@@ -234,6 +256,45 @@ namespace CostFlow.Data
                     `UpdatedAt` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
                     PRIMARY KEY (`Id`),
                     KEY `IX_MonthlyOrderActions_OrderTrackingMasterId` (`OrderTrackingMasterId`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+
+                // Stock System Tables
+                @"CREATE TABLE IF NOT EXISTS `StockItems` (
+                    `Id` int NOT NULL AUTO_INCREMENT,
+                    `ProductCode` varchar(100) NOT NULL,
+                    `ProductName` varchar(255) NOT NULL,
+                    `Category` varchar(100) DEFAULT NULL,
+                    `FilePath` varchar(500) DEFAULT NULL,
+                    `InitialStock` decimal(18,4) NOT NULL DEFAULT 0.0000,
+                    `Quantity` decimal(18,4) NOT NULL DEFAULT 0.0000,
+                    `MinStock` decimal(18,4) NOT NULL DEFAULT 0.0000,
+                    `MaxStock` decimal(18,4) NOT NULL DEFAULT 0.0000,
+                    `StockStatus` varchar(50) DEFAULT NULL,
+                    `CreatedAt` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+                    `UpdatedAt` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+                    PRIMARY KEY (`Id`),
+                    UNIQUE KEY `IX_StockItems_ProductCode` (`ProductCode`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+
+                @"CREATE TABLE IF NOT EXISTS `ItemMappings` (
+                    `Id` int NOT NULL AUTO_INCREMENT,
+                    `OrderName` varchar(500) NOT NULL,
+                    `StockItemCode` varchar(100) NOT NULL,
+                    `CreatedAt` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+                    PRIMARY KEY (`Id`),
+                    UNIQUE KEY `IX_ItemMappings_OrderName` (`OrderName`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+
+                @"CREATE TABLE IF NOT EXISTS `StockLogs` (
+                    `Id` int NOT NULL AUTO_INCREMENT,
+                    `StockItemCode` varchar(100) NOT NULL,
+                    `Action` varchar(50) NOT NULL,
+                    `QuantityChanged` decimal(18,4) NOT NULL DEFAULT 0.0000,
+                    `ReferenceId` varchar(255) DEFAULT NULL,
+                    `Remarks` varchar(500) DEFAULT NULL,
+                    `Timestamp` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+                    `User` varchar(255) DEFAULT NULL,
+                    PRIMARY KEY (`Id`)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;"
             };
 
@@ -326,6 +387,18 @@ namespace CostFlow.Data
             try
             {
                 await db.Database.ExecuteSqlRawAsync("ALTER TABLE WeeklyPlans ADD COLUMN UploadedBy TEXT NULL;");
+            }
+            catch { /* Column already exists */ }
+
+            try
+            {
+                await db.Database.ExecuteSqlRawAsync("ALTER TABLE StockItems ADD COLUMN FilePath varchar(500) NULL;");
+            }
+            catch { /* Column already exists */ }
+
+            try
+            {
+                await db.Database.ExecuteSqlRawAsync("ALTER TABLE StockItems ADD COLUMN InitialStock decimal(18,4) NOT NULL DEFAULT 0.0000;");
             }
             catch { /* Column already exists */ }
         }
@@ -612,6 +685,116 @@ namespace CostFlow.Data
                 {
                     Console.WriteLine($"[DB Init] Warning checking DEV01 roles: {ex.Message}");
                 }
+            }
+        }
+
+        private static async Task SeedStockItemsFromExcelAsync(AppDbContext db, IWebHostEnvironment env)
+        {
+            if (await db.StockItems.AnyAsync())
+                return; // Already seeded
+
+            var excelPath = Path.Combine(env.ContentRootPath, "Data", "Product.xlsx");
+            if (!File.Exists(excelPath))
+            {
+                Console.WriteLine($"[DB Init] Warning: Product.xlsx not found at {excelPath}");
+                return;
+            }
+
+            Console.WriteLine("[DB Init] Seeding StockItems from Product.xlsx...");
+            
+            try
+            {
+                using var stream = new FileStream(excelPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                using var workbook = new ClosedXML.Excel.XLWorkbook(stream);
+                var worksheet = workbook.Worksheets.FirstOrDefault();
+                
+                if (worksheet == null) return;
+
+                var rowCount = worksheet.LastRowUsed()?.RowNumber() ?? 0;
+                var itemsToInsert = new List<StockItem>();
+
+                // Assuming headers are on row 1, data starts at row 2
+                for (int row = 2; row <= rowCount; row++)
+                {
+                    var productCode = worksheet.Cell(row, 1).GetString().Trim();
+                    if (string.IsNullOrEmpty(productCode)) continue;
+
+                    var productName = worksheet.Cell(row, 2).GetString().Trim();
+                    var categoryRaw = worksheet.Cell(row, 3).GetString().Trim();
+                    
+                    var category = categoryRaw switch
+                    {
+                        "b7392108" => "อะไหล่",
+                        "b453465a" => "อะไหล่เวียน",
+                        _ => categoryRaw
+                    };
+                    
+                    // FilePath is in column 4
+                    var filePath = worksheet.Cell(row, 4).GetString().Trim();
+                    if (string.IsNullOrWhiteSpace(filePath)) filePath = null;
+
+                    // InitialStock is in column 5
+                    var initStr = worksheet.Cell(row, 5).GetString().Trim();
+                    if (!decimal.TryParse(initStr, out decimal initialStock)) initialStock = 0;
+
+                    // MinStock is in column 6
+                    var minStr = worksheet.Cell(row, 6).GetString().Trim();
+                    if (!decimal.TryParse(minStr, out decimal minStock)) minStock = 0;
+
+                    // MaxStock is in column 7
+                    var maxStr = worksheet.Cell(row, 7).GetString().Trim();
+                    if (!decimal.TryParse(maxStr, out decimal maxStock)) maxStock = 0;
+                    
+                    // VS_สต๊อกปัจจุบัน is in column 8
+                    var qtyStr = worksheet.Cell(row, 8).GetString().Trim();
+                    if (!decimal.TryParse(qtyStr, out decimal quantity))
+                    {
+                        quantity = 0; // Default to 0 if NaN or empty
+                    }
+
+                    // VS_สถานะสต๊อก is in column 9
+                    var status = worksheet.Cell(row, 9).GetString().Trim();
+
+                    var stockItem = new StockItem
+                    {
+                        ProductCode = productCode,
+                        ProductName = productName,
+                        Category = category,
+                        FilePath = filePath,
+                        InitialStock = initialStock,
+                        Quantity = quantity,
+                        MinStock = minStock,
+                        MaxStock = maxStock,
+                        StockStatus = status,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+                    
+                    itemsToInsert.Add(stockItem);
+                }
+
+                if (itemsToInsert.Any())
+                {
+                    // Create an initial log for the seed
+                    var logs = itemsToInsert.Select(i => new StockLog
+                    {
+                        StockItemCode = i.ProductCode,
+                        Action = "INITIAL_IMPORT",
+                        QuantityChanged = i.Quantity,
+                        Remarks = "Imported from Product.xlsx",
+                        Timestamp = DateTime.UtcNow,
+                        User = "System"
+                    }).ToList();
+
+                    await db.StockItems.AddRangeAsync(itemsToInsert);
+                    await db.StockLogs.AddRangeAsync(logs);
+                    await db.SaveChangesAsync();
+                    Console.WriteLine($"[DB Init] Successfully seeded {itemsToInsert.Count} StockItems.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[DB Init] Failed to seed StockItems: {ex.Message}");
             }
         }
 

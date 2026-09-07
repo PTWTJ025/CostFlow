@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.DataProtection;
+using System.IO;
 using CostFlow.Data;
 using CostFlow.Models;
 using System.Text.Json;
@@ -62,6 +64,7 @@ builder.Services.AddScoped<IDateTimeProvider, DateTimeProvider>();
 
 // ⭐ Service สำหรับ Sync ข้อมูลไป Google Sheets (แชร์ระหว่าง Controller และ Background Service)
 builder.Services.AddScoped<MonthlyOrderSyncService>();
+builder.Services.AddScoped<CostFlow.Services.StockMatchingService>();
 
 // ⭐ Background Service สำหรับ Auto-Skip อัตโนมัติทุกวัน 00:00 (เฉพาะ Production ไม่รันตอนทดสอบ Dev)
 if (!builder.Environment.IsDevelopment())
@@ -93,12 +96,23 @@ builder.Services.Configure<PasswordHasherOptions>(options =>
     options.IterationCount = 10000;
 });
 
-// Cookie Authentication Settings
+// Data Protection Key Persistence (ป้องกัน Session หลุดเมื่อเซิร์ฟเวอร์รีสตาร์ตหรืออัปเดตโค้ด)
+var keysFolder = Path.Combine(builder.Environment.ContentRootPath, "App_Data", "DataProtectionKeys");
+if (!Directory.Exists(keysFolder))
+{
+    Directory.CreateDirectory(keysFolder);
+}
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(keysFolder))
+    .SetApplicationName("CostFlow");
+
+// Cookie Authentication Settings (มาตรฐาน Production สำหรับระบบภายใน)
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.Cookie.HttpOnly = true;
-    options.ExpireTimeSpan = TimeSpan.FromHours(8); // หมดอายุ 8 ชม.
-    options.SlidingExpiration = true; // ต่ออายุอัตโนมัติถ้ายังใช้งานอยู่
+    options.Cookie.Name = ".CostFlow.Auth";
+    options.ExpireTimeSpan = TimeSpan.FromHours(8); // หมดอายุ 8 ชม. (จบ 1 กะทำงาน)
+    options.SlidingExpiration = true; // ต่ออายุอัตโนมัติถ้ายังใช้งานต่อเนื่อง
     options.Cookie.IsEssential = true;
     options.LoginPath = "/Account/Login";
     options.AccessDeniedPath = "/Account/Login";

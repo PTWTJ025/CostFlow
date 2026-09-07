@@ -1027,7 +1027,7 @@ namespace CostFlow.Controllers
                     if (m >= 1 && m <= 12)
                     {
                         var gregYear = y > 2400 ? y - 543 : y;
-                        return $"{gregYear:0000}-{m:02}";
+                        return $"{gregYear:0000}-{m:00}";
                     }
                 }
             }
@@ -1388,7 +1388,14 @@ namespace CostFlow.Controllers
                 // ==========================================
 
                 await _hubContext.Clients.All.SendAsync("ReceiveMonthlyCostUpdate");
-                return Ok(new { success = true });
+                
+                // คัดเฉพาะรายการที่เพิ่งรับของใน Request นี้
+                var receivedOrderIds = request.Actions
+                    .Where(a => a.Action == "ReceivedFull" || a.Action == "Received")
+                    .Select(a => a.OrderId)
+                    .ToList();
+
+                return Ok(new { success = true, reconcileIds = receivedOrderIds });
             }
             catch (Exception ex)
             {
@@ -1887,7 +1894,10 @@ namespace CostFlow.Controllers
                 var parts = my.Split('-');
                 if (parts.Length >= 2 && int.TryParse(parts[0], out var y) && int.TryParse(parts[1], out var m))
                 {
-                    return new DateTime(y, Math.Clamp(m, 1, 12), 1);
+                    if (m >= 1 && m <= 12)
+                    {
+                        return new DateTime(y, m, 1);
+                    }
                 }
                 return DateTime.MinValue;
             };
@@ -2675,7 +2685,10 @@ namespace CostFlow.Controllers
                 var parts = my.Split('-');
                 if (parts.Length >= 2 && int.TryParse(parts[0], out var y) && int.TryParse(parts[1], out var m))
                 {
-                    return new DateTime(y, Math.Clamp(m, 1, 12), 1);
+                    if (m >= 1 && m <= 12)
+                    {
+                        return new DateTime(y, m, 1);
+                    }
                 }
                 return DateTime.MinValue;
             };
@@ -3156,7 +3169,7 @@ namespace CostFlow.Controllers
                 int fromYear = int.Parse(parts[0]);
                 int fromMonth = int.Parse(parts[1]);
                 var nextDate = new DateTime(fromYear, fromMonth, 1).AddMonths(1);
-                string toMonthKey = $"{nextDate.Year:0000}-{nextDate.Month:02}";
+                string toMonthKey = $"{nextDate.Year:0000}-{nextDate.Month:00}";
 
                 Console.WriteLine("\n╔══════════════════════════════════════════════════════════════════╗");
                 Console.WriteLine($"║ 🏁 [MONTH-END TRANSITION] เริ่มต้นการตัดรอบสิ้นเดือนอัตโนมัติ       ║");
@@ -3271,11 +3284,12 @@ namespace CostFlow.Controllers
         {
             try
             {
-                // ทำความสะอาด MonthYear ที่ผิดปกติใน DB อัตโนมัติ (เช่น 2025-122 -> 2025-12)
+                // ทำความสะอาด MonthYear ที่ผิดปกติใน DB อัตโนมัติ (เช่น 2025-122 -> 2025-12 หรือ 2026-82)
                 try
                 {
                     await _context.Database.ExecuteSqlRawAsync("UPDATE MonthlyOrderActions SET MonthYear = SUBSTR(MonthYear, 1, 7) WHERE LENGTH(MonthYear) > 7;");
                     await _context.Database.ExecuteSqlRawAsync("UPDATE MonthlyOrderActions SET DeferredFromMonth = SUBSTR(DeferredFromMonth, 1, 7) WHERE DeferredFromMonth IS NOT NULL AND LENGTH(DeferredFromMonth) > 7;");
+                    await _context.Database.ExecuteSqlRawAsync("DELETE FROM MonthlyOrderActions WHERE MonthYear IN ('2026-22','2026-32','2026-42','2026-52','2026-62','2026-72','2026-82');");
                 }
                 catch { }
 
@@ -3309,7 +3323,7 @@ namespace CostFlow.Controllers
                     var approvedDt = ParseThaiDate(order.ApprovedDate);
                     if (!approvedDt.HasValue) continue;
 
-                    string approvedMonthKey = $"{approvedDt.Value.Year:0000}-{approvedDt.Value.Month:02}";
+                    string approvedMonthKey = $"{approvedDt.Value.Year:0000}-{approvedDt.Value.Month:00}";
 
                     DateTime loopDate = new DateTime(approvedDt.Value.Year, approvedDt.Value.Month, 1);
                     DateTime currentDate = new DateTime(now.Year, now.Month, 1);
@@ -3317,7 +3331,7 @@ namespace CostFlow.Controllers
                     // วนลูปสร้าง Skipped ให้ทุกเดือนที่ขาดหายไป จนกว่าจะถึงเดือนก่อนหน้าเดือนปัจจุบัน
                     while (loopDate < currentDate)
                     {
-                        string loopMonthKey = $"{loopDate.Year:0000}-{loopDate.Month:02}";
+                        string loopMonthKey = $"{loopDate.Year:0000}-{loopDate.Month:00}";
 
                         if (!actionByOrderAndMonth.ContainsKey((order.Id, loopMonthKey)))
                         {

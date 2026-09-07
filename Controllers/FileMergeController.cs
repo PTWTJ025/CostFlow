@@ -935,7 +935,7 @@ namespace CostFlow.Controllers
                 {
                     int year = dtExact.Year > 2500 ? dtExact.Year - 543 : dtExact.Year;
                     if (year >= 1990 && year <= 2200 && dtExact.Month >= 1 && dtExact.Month <= 12)
-                        return $"{year:0000}-{dtExact.Month:02}";
+                        return $"{year:0000}-{dtExact.Month:00}";
                 }
 
                 // fallback: en-GB ใช้ dd/MM/yyyy เหมือนไทย จะ parse ได้ถูกต้องกว่า InvariantCulture
@@ -943,7 +943,7 @@ namespace CostFlow.Controllers
                 {
                     int year = dtGB.Year > 2500 ? dtGB.Year - 543 : dtGB.Year;
                     if (year >= 1990 && year <= 2200 && dtGB.Month >= 1 && dtGB.Month <= 12)
-                        return $"{year:0000}-{dtGB.Month:02}";
+                        return $"{year:0000}-{dtGB.Month:00}";
                 }
             }
 
@@ -959,7 +959,7 @@ namespace CostFlow.Controllers
                     {
                         int fullYear = y2 > 50 ? (y2 + 2500 - 543) : (y2 + 2000);
                         if (fullYear >= 1990 && fullYear <= 2200)
-                            return $"{fullYear:0000}-{m:02}";
+                            return $"{fullYear:0000}-{m:00}";
                     }
                 }
             }

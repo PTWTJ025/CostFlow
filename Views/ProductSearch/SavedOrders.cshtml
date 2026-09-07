@@ -2,7 +2,7 @@
 @model List<CostFlow.Controllers.SavedOrderItemViewModel>
 @{
     ViewData["Title"] = "ประวัติรายการสินค้าที่บันทึก";
-    ViewData["HeaderTitle"] = "ประวัติรายการสินค้าที่บันทึก (Google Sheets)";
+    ViewData["HeaderTitle"] = "ประวัติรายการสินค้าที่บันทึก";
     bool isAdmin = User.IsInRole("Admin");
 }
 
@@ -21,19 +21,19 @@
         <svg class="w-3 h-3 text-outline opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="m9 18 6-6-6-6"/>
         </svg>
-        <a href="/ProductSearch" class="hover:text-primary transition-colors">คีย์ใบสั่งซื้อ</a>
+        <a href="/ProductSearch" class="hover:text-primary transition-colors">คีย์ข้อมูลจัดซื้อ</a>
         <!-- Lucide: chevron-right -->
         <svg class="w-3 h-3 text-outline opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="m9 18 6-6-6-6"/>
         </svg>
-        <span class="font-semibold text-on-surface">ประวัติรายการสินค้า</span>
+        <span class="font-semibold text-on-surface">ประวัติรายการสินค้าที่บันทึก</span>
     </div>
 
     <!-- Page Title -->
     <div class="shrink-0 flex items-center justify-between flex-wrap gap-4">
         <div>
             <h1 class="text-xl font-bold text-on-surface leading-tight">ประวัติรายการสินค้าที่บันทึก</h1>
-            <p class="text-sm text-on-surface-variant mt-0.5">รายการสินค้าทั้งหมดจากใบสั่งซื้อที่บันทึกลงฐานข้อมูล (เรียงตามวันที่คีย์ข้อมูล)</p>
+            <p class="text-sm text-on-surface-variant mt-0.5">รายการสินค้าทั้งหมดจากใบสั่งซื้อที่บันทึกลงฐานข้อมูล (เรียงตามวันที่บันทึกข้อมูล)</p>
         </div>
     </div>
 
@@ -142,7 +142,8 @@
             <div class="relative flex-1 min-w-[240px] ml-auto" style="max-width: 380px;">
                 <input type="text" id="search-input" placeholder="ค้นหาชื่อสินค้า..."
                        class="block w-full pl-3 pr-3 py-1.5 text-xs border border-slate-200 rounded-md focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all bg-white text-slate-700 shadow-2xs"
-                       style="height: 32px;"/>
+                       style="height: 32px;" autocomplete="off"/>
+                <div id="saved-suggestions-dropdown" class="hidden absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-md shadow-lg z-50 max-h-[240px] overflow-y-auto divide-y divide-slate-100"></div>
             </div>
         </div>
 
@@ -151,7 +152,8 @@
             <table class="w-full text-[13px]">
                 <thead>
                 <tr class="text-[11px] font-semibold text-on-surface-variant border-b border-outline-variant">
-                    <th class="sticky top-0 bg-surface-container z-20 py-2.5 px-4 text-left">วันที่คีย์</th>
+                    <th class="sticky top-0 bg-surface-container z-20 py-2.5 px-4 text-left">วันที่บันทึก</th>
+                    <th class="sticky top-0 bg-surface-container z-20 py-2.5 px-4 text-left">ชุดสั่งซื้อ</th>
                     <th class="sticky top-0 bg-surface-container z-20 py-2.5 px-4 text-left">รหัสสินค้า</th>
                     <th class="sticky top-0 bg-surface-container z-20 py-2.5 px-4 text-left">ชื่อสินค้า</th>
                     <th class="sticky top-0 bg-surface-container z-20 py-2.5 px-4 text-right">จำนวน</th>
@@ -170,6 +172,8 @@
                         <tr class="border-b border-outline-variant hover:bg-surface-container-low transition-colors item-row"
                             data-search="@searchText"
                             data-name="@item.ProductName.ToLower()"
+                            data-display-name="@item.ProductName"
+                            data-code="@item.ProductCode"
                             data-qty="@item.Quantity"
                             data-amount="@item.TotalAmount">
                             <td class="py-3 px-4 text-on-surface-variant font-mono text-xs whitespace-nowrap">
@@ -234,7 +238,7 @@
                 else
                 {
                     <tr>
-                        <td colspan="8" class="py-14 text-center">
+                        <td colspan="9" class="py-14 text-center">
                             <div class="flex flex-col items-center gap-3">
                                 <!-- Lucide: inbox -->
                                 <svg class="w-10 h-10 text-outline opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
@@ -249,7 +253,7 @@
                     </tr>
                 }
                 <tr id="no-search-results" class="hidden">
-                    <td colspan="8" class="py-10 text-center text-xs text-on-surface-variant">
+                    <td colspan="9" class="py-10 text-center text-xs text-on-surface-variant">
                         <div class="flex flex-col items-center gap-2">
                             <!-- Lucide: search-x -->
                             <svg class="w-8 h-8 text-outline opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
@@ -278,6 +282,7 @@
                 html += `
                 <tr class="animate-pulse border-b border-outline-variant">
                     <td class="py-3.5 px-4"><div class="h-3.5 bg-slate-200 rounded w-24"></div></td>
+                    <td class="py-3.5 px-4"><div class="h-3.5 bg-slate-200 rounded w-28"></div></td>
                     <td class="py-3.5 px-4"><div class="h-3.5 bg-slate-200 rounded w-20"></div></td>
                     <td class="py-3.5 px-4"><div class="h-3.5 bg-slate-200 rounded w-40"></div></td>
                     <td class="py-3.5 px-4"><div class="h-3.5 bg-slate-200 rounded w-16 ml-auto"></div></td>
@@ -325,7 +330,7 @@
                 if (!data.items || data.items.length === 0) {
                     tbody.innerHTML = `
                     <tr>
-                        <td colspan="8" class="py-14 text-center">
+                        <td colspan="9" class="py-14 text-center">
                             <div class="flex flex-col items-center gap-3">
                                 <!-- Lucide: inbox -->
                                 <svg class="w-10 h-10 text-outline opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
@@ -351,9 +356,14 @@
                     <tr class="border-b border-outline-variant hover:bg-surface-container-low transition-colors item-row"
                         data-search="${searchText}"
                         data-name="${pNameLower}"
+                        data-display-name="${item.productName}"
+                        data-code="${item.productCode}"
                         data-qty="${item.quantity}"
                         data-amount="${item.totalAmount}">
                         <td class="py-3 px-4 text-on-surface-variant font-mono text-xs whitespace-nowrap">${item.createdAtStr}</td>
+                        <td class="py-3 px-4 font-medium text-primary hover:underline max-w-[180px] truncate" title="${item.batchName}">
+                            <a href="/OrderTracking/Detail?batchName=${encodeURIComponent(item.batchName)}">${item.batchName}</a>
+                        </td>
                         <td class="py-3 px-4 font-mono font-semibold text-on-surface whitespace-nowrap">${item.productCode}</td>
                         <td class="py-3 px-4 font-medium text-on-surface max-w-[220px] truncate" title="${item.productName}">${item.productName}</td>
                         <td class="py-3 px-4 text-right font-semibold text-on-surface">
@@ -371,7 +381,8 @@
                                         data-name="${item.productName}"
                                         data-qty="${qtyCleanStr}"
                                         data-unit="${item.unit}"
-                                        title="แก้ไขเฉพาะจำนวนสินค้า">
+                                        data-price="${item.unitPrice}"
+                                        title="แก้ไขจำนวนและราคา">
                                     <!-- Lucide: square-pen -->
                                     <svg class="w-4 h-4 text-amber-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
                                         <path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4Z"/>
@@ -411,9 +422,10 @@
             }
         };
 
-        // Real-time Search Filter (Product Name)
+        // Real-time Search Filter (Product Name) + Autocomplete Guide List
         function initSearchFilter() {
             const searchInput = document.getElementById('search-input');
+            const savedDropdown = document.getElementById('saved-suggestions-dropdown');
             if (!searchInput) return;
 
             searchInput.addEventListener('input', () => {
@@ -454,6 +466,68 @@
                 if (statCount) statCount.textContent = visibleCount.toLocaleString('en-US');
                 if (statQty) statQty.textContent = formatQuantity(visibleQty);
                 if (statAmount) statAmount.textContent = '฿' + (visibleAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+                // Autocomplete Guide List
+                if (savedDropdown) {
+                    if (query.length < 1) {
+                        savedDropdown.classList.add('hidden');
+                        savedDropdown.innerHTML = '';
+                        return;
+                    }
+
+                    const uniqueNames = new Set();
+                    const matches = [];
+                    rows.forEach(row => {
+                        const name = (row.dataset.displayName || row.dataset.name || '').trim();
+                        const code = (row.dataset.code || '').trim();
+                        if (name && !uniqueNames.has(name) && (name.toLowerCase().includes(query) || code.toLowerCase().includes(query))) {
+                            uniqueNames.add(name);
+                            matches.push({ name, code });
+                        }
+                    });
+
+                    const topMatches = matches.slice(0, 8);
+                    if (topMatches.length > 0) {
+                        savedDropdown.innerHTML = topMatches.map(item => `
+                            <div class="saved-suggest-item px-3 py-2 hover:bg-slate-50 cursor-pointer transition-colors text-left flex flex-col gap-0.5" data-name="${item.name.replace(/"/g, '&quot;')}">
+                                ${item.code ? `<span class="font-mono text-primary font-bold text-xs">${item.code}</span>` : ''}
+                                <span class="text-slate-700 text-xs truncate">${item.name}</span>
+                            </div>
+                        `).join('');
+                        savedDropdown.classList.remove('hidden');
+
+                        savedDropdown.querySelectorAll('.saved-suggest-item').forEach(el => {
+                            el.addEventListener('click', function() {
+                                searchInput.value = this.dataset.name;
+                                savedDropdown.classList.add('hidden');
+                                searchInput.dispatchEvent(new Event('input'));
+                            });
+                        });
+                    } else {
+                        savedDropdown.classList.add('hidden');
+                        savedDropdown.innerHTML = '';
+                    }
+                }
+            });
+
+            searchInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    if (savedDropdown) savedDropdown.classList.add('hidden');
+                } else if (e.key === 'Enter') {
+                    const firstOpt = savedDropdown?.querySelector('.saved-suggest-item');
+                    if (firstOpt && !savedDropdown.classList.contains('hidden')) {
+                        e.preventDefault();
+                        firstOpt.click();
+                    } else {
+                        if (savedDropdown) savedDropdown.classList.add('hidden');
+                    }
+                }
+            });
+
+            document.addEventListener('click', (e) => {
+                if (savedDropdown && !searchInput.contains(e.target) && !savedDropdown.contains(e.target)) {
+                    savedDropdown.classList.add('hidden');
+                }
             });
         }
 
@@ -485,7 +559,7 @@
                 html: `
                     <div style="text-align:left; font-size:13px; color:#444653; margin-top:8px;">
                         <p style="margin-bottom:4px;"><strong>สินค้า:</strong> ${productName}</p>
-                        <p style="margin-bottom:12px;"><strong>รหัส:</strong> ${productCode} | <strong>แผ่นงาน:</strong> ${batchName}</p>
+                        <p style="margin-bottom:12px;"><strong>รหัส:</strong> ${productCode} | <strong>ชุดสั่งซื้อ:</strong> ${batchName}</p>
                         
                         <label style="display:block; font-weight:600; margin-bottom:6px; color:#1a1b22;">ระบุจำนวนใหม่ (${unit}):</label>
                         <input id="swal-input-qty" type="number" step="any" min="0.01" value="${currentQty}" 
@@ -617,7 +691,7 @@
                         </div>
                         <div>
                             <p style="font-size:16px;font-weight:700;color:#1a1b22;margin:0 0 6px;">ยืนยันการลบรายการสินค้า?</p>
-                            <p style="font-size:13px;color:#444653;margin:0;line-height:1.5;">ลบ <strong style="color:#1a1b22;">"${productName}"</strong> (${productCode})<br>จากแผ่นงาน "${batchName}"</p>
+                            <p style="font-size:13px;color:#444653;margin:0;line-height:1.5;">ลบ <strong style="color:#1a1b22;">"${productName}"</strong> (${productCode})<br>จากชุดสั่งซื้อ "${batchName}"</p>
                         </div>
                     </div>`,
                 showCancelButton: true,

@@ -1,18 +1,1857 @@
+@model IEnumerable<CostFlow.Models.StockItem>
 @{
-    ViewData["Title"] = "จัดการสต๊อกสินค้า";
-    ViewData["HeaderTitle"] = "ระบบจัดการสต๊อกสินค้า";
+    ViewData["Title"] = "ระบบสต๊อกสินค้า (Stock System)";
+    var pendingCount = (int)(ViewBag.PendingReceiveCount ?? 0);
 }
 
-<div class="flex-1 p-md md:p-lg flex flex-col gap-md max-w-container-max mx-auto w-full">
-    <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-8 text-center">
-        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-50 text-blue-500 mb-4">
-            <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" />
-            </svg>
+<style>
+    /* Desktop View: แสดงตารางแบบเดิม 100% บนหน้าจอคอมพิวเตอร์ / จอใหญ่ (>= 768px) */
+    .stock-desktop-view {
+        display: block !important;
+    }
+
+    .stock-mobile-view {
+        display: none !important;
+    }
+
+    /* Mobile View */
+    @@media (max-width: 767px) {
+        .stock-desktop-view {
+            display: none !important;
+        }
+
+        .stock-mobile-view {
+            display: flex !important;
+        }
+
+        .stock-header-bar {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 0.75rem !important;
+        }
+
+        .stock-header-search,
+        .stock-search-container {
+            width: 100% !important;
+        }
+    }
+
+  /* ซ่อนปุ่มลูกศรเพิ่มลดเลขสำหรับ Chrome, Safari, Edge และ Opera */
+  input::-webkit-outer-spin-button,
+  input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  /* ซ่อนปุ่มลูกศรสำหรับ Firefox */
+  input[type=number] {
+    -moz-appearance: textfield;
+  }
+
+</style>
+
+<div class="flex-1 p-md md:p-lg lg:p-xl flex flex-col gap-lg max-w-container-max mx-auto w-full">
+    
+    <!-- Page Header -->
+    <div class="flex justify-between items-end mb-xs">
+        <div>
+            <h3 class="font-headline-sm text-headline-sm text-on-surface mb-xs">ระบบสต๊อกสินค้า (Stock System)</h3>
+            <p class="text-secondary text-sm">จัดการรายการสินค้าในสต๊อก, ดูยอดคงเหลือ และประวัติการเบิกจ่าย</p>
         </div>
-        <h2 class="text-xl font-bold text-slate-800 mb-2">ระบบจัดการสต๊อก (กำลังพัฒนา)</h2>
-        <p class="text-slate-500 max-w-md mx-auto">
-            หน้านี้เตรียมไว้สำหรับระบบจัดการสต๊อกสินค้าและการกระทบยอด (Reconciliation) ซึ่งจะเปิดให้ใช้งานในเร็วๆ นี้
-        </p>
     </div>
-</div>
+
+    <!-- Data Table -->
+    <div class="bg-white rounded border border-outline-variant shadow-sm overflow-hidden">
+        <div class="stock-header-bar px-md py-4 border-b border-outline-variant flex justify-between items-center bg-surface-container-low/50">
+            <h3 class="text-body-md font-bold text-on-surface">รายการสินค้าในสต๊อกทั้งหมด (@Model.Count() รายการ)</h3>
+            <div class="flex items-center gap-2">
+                <div class="relative w-48 md:w-60 stock-search-container">
+                    <input type="text" id="stockCustomSearch" placeholder="ค้นหารหัส หรือชื่อสินค้า..." class="stock-header-search px-3 py-2 bg-white border border-outline-variant rounded text-sm text-on-surface placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary w-full transition-all shadow-sm" style="height: 38px;" autocomplete="off" />
+                    <div id="stock-suggestions-dropdown" class="hidden absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-md shadow-lg z-50 max-h-[240px] overflow-y-auto divide-y divide-slate-100"></div>
+                </div>
+                <button type="button"
+        onclick="openReceiveModal()"
+        id="btnPendingReceiveBell"
+        class="px-3 py-2 bg-blue-50/70 border border-primary/30 rounded text-sm font-semibold text-primary hover:bg-blue-100/80 transition-colors flex items-center gap-1.5 shadow-sm whitespace-nowrap"
+        style="height: 38px;"
+        title="ตรวจรับสินค้าเข้าคลังจาก Monthly Cost / PO">
+
+    <i data-lucide="bell" class="w-4 h-4"></i>
+
+    <span>รายการรอรับ</span>
+
+    <span id="pendingReceiveBadge" 
+          class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-primary text-white text-[10px] font-bold shrink-0 leading-none @(pendingCount > 0 ? "animate-pulse" : "")" 
+          aria-label="จำนวนรายการรอรับเข้าคลัง">@pendingCount</span>
+
+
+</button>
+                <button onclick="openAddModal()" class="px-4 py-2 bg-white border border-outline-variant rounded text-sm font-medium text-secondary hover:text-primary hover:border-primary/50 transition-colors flex items-center gap-2 shadow-sm whitespace-nowrap" style="height: 38px;">
+                    <i data-lucide="plus" class="w-4 h-4"></i>
+                    เพิ่มสินค้าใหม่
+                </button>
+            </div>
+        </div>
+
+        <!-- Desktop View (ตารางเดิม 100% สำหรับหน้าจอ PC / Desktop >= 768px) -->
+        <div class="stock-desktop-view overflow-x-auto">
+            <table id="stockTable" class="min-w-full divide-y divide-slate-200">
+                <thead>
+                    <tr>
+                        <th scope="col" class="px-3 py-3 text-center text-xs font-bold text-secondary uppercase tracking-wider">รหัสสินค้า</th>
+                        <th scope="col" class="px-3 py-3 text-left text-xs font-bold text-secondary uppercase tracking-wider">ชื่อสินค้า</th>
+                        <th scope="col" class="px-3 py-3 text-center text-xs font-bold text-secondary uppercase tracking-wider">หมวดหมู่</th>
+                        <th scope="col" class="px-3 py-3 text-center text-xs font-bold text-secondary uppercase tracking-wider">คงเหลือ</th>
+                        <th scope="col" class="px-3 py-3 text-center text-xs font-bold text-secondary uppercase tracking-wider">สถานะ</th>
+                        <th scope="col" class="px-3 py-3 text-center text-xs font-bold text-secondary uppercase tracking-wider">จัดการ</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-slate-100">
+                    @foreach (var item in Model)
+                    {
+                        <tr class="hover:bg-slate-50 transition-colors group">
+                            <td class="px-3 py-3 whitespace-nowrap text-sm font-bold text-primary text-center">
+                                @item.ProductCode
+                            </td>
+                            <td class="px-3 py-3 whitespace-nowrap text-sm font-medium text-slate-800">
+                                @item.ProductName
+                            </td>
+                            <td class="px-3 py-3 whitespace-nowrap text-sm text-secondary text-center">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-600 border border-slate-200" title="รหัสหมวดหมู่จาก Excel">
+                                    @(string.IsNullOrEmpty(item.Category) ? "ไม่มีหมวดหมู่" : item.Category)
+                                </span>
+                            </td>
+                            <td class="px-3 py-3 whitespace-nowrap text-sm text-center font-bold @(item.Quantity <= item.MinStock ? "text-red-600" : "text-emerald-600") cursor-help" title="ขั้นต่ำ: @item.MinStock.ToString("N0") | สูงสุด: @item.MaxStock.ToString("N0")">
+                                @item.Quantity.ToString("N0")
+                            </td>
+                            <td class="px-3 py-3 whitespace-nowrap text-sm text-center cursor-help" title="ขั้นต่ำ: @item.MinStock.ToString("N0") | สูงสุด: @item.MaxStock.ToString("N0")">
+                                @if (item.Quantity <= 0)
+                                {
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-red-50 text-red-700 border border-red-200/60">
+                                        สต๊อกหมด
+                                    </span>
+                                }
+                                else if (item.Quantity <= item.MinStock)
+                                {
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200/60">
+                                        สต๊อกใกล้หมด
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-200/60">
+                                        สต๊อกเพียงพอ
+                                    </span>
+                                }
+                            </td>
+                            <td class="px-3 py-3 whitespace-nowrap text-center text-sm font-medium transition-opacity">
+                                <div class="flex justify-center gap-2">
+                                    <button type="button" 
+                                            onclick="openEditModal(this)"
+                                            data-id="@item.Id"
+                                            data-code="@item.ProductCode"
+                                            data-name="@item.ProductName"
+                                            data-category="@(item.Category ?? "")"
+                                            data-min="@item.MinStock"
+                                            data-max="@item.MaxStock"
+                                            data-quantity="@item.Quantity"
+                                            class="p-1 text-primary hover:bg-primary-container/10 rounded transition-colors" 
+                                            title="แก้ไข">
+                                        <i data-lucide="edit" class="w-4 h-4"></i>
+                                    </button>
+                                    <button onclick="openHistoryModal('@item.ProductCode', '@item.ProductName')" class="p-1 text-secondary hover:bg-slate-100 rounded transition-colors" title="ประวัติ">
+                                        <i data-lucide="history" class="w-4 h-4"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Mobile View (การ์ดรายการสำหรับมือถือ < 768px) -->
+        <div id="stockMobileList" class="stock-mobile-view p-3 flex-col gap-2.5 bg-slate-50/40">
+            @foreach (var item in Model)
+            {
+                <div class="stock-card bg-white border border-slate-200 rounded-lg p-3 shadow-xs space-y-2 transition-shadow hover:shadow-sm">
+                    <!-- บรรทัดที่ 1: รหัสสินค้า + หมวดหมู่ + ป้ายสถานะ -->
+                    <div class="flex justify-between items-center gap-2">
+                        <div class="flex items-center gap-1.5 flex-wrap min-w-0">
+                            <span class="text-sm font-bold text-primary tracking-tight">@item.ProductCode</span>
+                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200 truncate max-w-[120px]">
+                                @(string.IsNullOrEmpty(item.Category) ? "ไม่มีหมวดหมู่" : item.Category)
+                            </span>
+                        </div>
+                        <div class="shrink-0">
+                            @if (item.Quantity <= 0)
+                            {
+                                <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-red-50 text-red-700 border border-red-200/60">
+                                    สต๊อกหมด
+                                </span>
+                            }
+                            else if (item.Quantity <= item.MinStock)
+                            {
+                                <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200/60">
+                                    สต๊อกใกล้หมด
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-200/60">
+                                    สต๊อกเพียงพอ
+                                </span>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- บรรทัดที่ 2: ชื่อสินค้า -->
+                    <div class="text-sm font-medium text-slate-800 leading-snug">
+                        @item.ProductName
+                    </div>
+
+                    <!-- บรรทัดที่ 3: ยอดสต๊อกคงเหลือ + ปุ่มจัดการ -->
+                    <div class="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
+                        <div class="flex flex-col">
+                            <span class="text-[10px] text-slate-400">สต๊อกคงเหลือ</span>
+                            <div class="flex items-baseline gap-1.5">
+                                <span class="text-base font-bold @(item.Quantity <= item.MinStock ? "text-red-600" : "text-emerald-600")">
+                                    @item.Quantity.ToString("N0")
+                                </span>
+                                <span class="text-[11px] text-slate-400">
+                                    (Min: @item.MinStock.ToString("N0") / Max: @item.MaxStock.ToString("N0"))
+                                </span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-1.5 shrink-0">
+                            <button type="button" 
+                                    onclick="openEditModal(this)"
+                                    data-id="@item.Id"
+                                    data-code="@item.ProductCode"
+                                    data-name="@item.ProductName"
+                                    data-category="@(item.Category ?? "")"
+                                    data-min="@item.MinStock"
+                                    data-max="@item.MaxStock"
+                                    data-quantity="@item.Quantity"
+                                    class="px-2.5 py-1.5 text-xs font-medium text-primary bg-blue-50/60 hover:bg-blue-100/70 border border-primary/20 rounded-md transition-colors flex items-center gap-1" 
+                                    title="แก้ไข">
+                                <i data-lucide="edit" class="w-3.5 h-3.5"></i>
+                                <span>แก้ไข</span>
+                            </button>
+                            <button type="button" 
+                                    onclick="openHistoryModal('@item.ProductCode', '@item.ProductName')" 
+                                    class="p-1.5 text-secondary hover:bg-slate-100 border border-slate-200 rounded-md transition-colors" 
+                                    title="ประวัติ">
+                                <i data-lucide="history" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+    <!-- Modal เพิ่มสินค้าใหม่ -->
+    <div id="addStockModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 hidden">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-lg border border-slate-200 overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150">
+            <!-- Modal Header -->
+            <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <div>
+                    <h3 class="text-base font-bold text-slate-800">เพิ่มสินค้าใหม่</h3>
+                    <p class="text-xs text-slate-500 mt-0.5">ระบุข้อมูลสินค้าเพื่อนำเข้าสต๊อกสินค้าหลัก</p>
+                </div>
+                <button type="button" onclick="closeAddModal()" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-md hover:bg-slate-100 transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <!-- Modal Form -->
+            <form id="addStockForm" onsubmit="submitAddStock(event)" class="p-6 flex flex-col gap-4">
+                <!-- รหัสสินค้า -->
+                <div>
+                    <label for="modalProductCode" class="block text-xs font-semibold text-slate-700 mb-1">
+                        รหัสสินค้า <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" id="modalProductCode" required placeholder="เช่น P-001 หรือ รหัสสินค้าในระบบ" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors" />
+                </div>
+
+                <!-- ชื่อสินค้า -->
+                <div>
+                    <label for="modalProductName" class="block text-xs font-semibold text-slate-700 mb-1">
+                        ชื่อสินค้า <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" id="modalProductName" required placeholder="ระบุชื่อสินค้า / อะไหล่" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors" />
+                </div>
+
+                <!-- หมวดหมู่ (ดึงเฉพาะ 2 หมวดหมู่ของระบบ) -->
+                <div>
+                    <label for="modalCategory" class="block text-xs font-semibold text-slate-700 mb-1">
+                        หมวดหมู่ <span class="text-red-500">*</span>
+                    </label>
+                    <select id="modalCategory" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors cursor-pointer">
+                        <option value="อะไหล่">อะไหล่ (b7392108)</option>
+                        <option value="อะไหล่เวียน">อะไหล่เวียน (b453465a)</option>
+                    </select>
+                </div>
+
+                <!-- ตัวเลขสต๊อก 3 คอลัมน์ (เรียง: สต๊อกขั้นต่ำ, สต๊อกสูงสุด, สต๊อกปัจจุบัน ขวาสุดโดดเด่น) -->
+                <div class="grid grid-cols-3 gap-3" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem;">
+                    <div>
+                        <label for="modalMinStock" class="block text-xs font-semibold text-slate-700 mb-1">สต๊อกขั้นต่ำ</label>
+                        <input type="number" id="modalMinStock" min="0" step="1" placeholder="0" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors text-center" />
+                    </div>
+                    <div>
+                        <label for="modalMaxStock" class="block text-xs font-semibold text-slate-700 mb-1">สต๊อกสูงสุด</label>
+                        <input type="number" id="modalMaxStock" min="0" step="1" placeholder="0" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors text-center" />
+                    </div>
+                    <div>
+                        <label for="modalQuantity" class="block text-xs font-semibold text-primary mb-1">สต๊อกปัจจุบัน</label>
+                        <input type="number" id="modalQuantity" min="0" step="1" placeholder="0" class="w-full px-3 py-2 bg-blue-50/60 border border-primary/40 rounded-md text-sm font-semibold text-primary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors text-center shadow-xs" />
+                    </div>
+                </div>
+
+                <!-- Footer Buttons -->
+                <div class="pt-3 border-t border-slate-100 flex justify-end gap-2 mt-2">
+                    <button type="button" onclick="closeAddModal()" class="px-4 py-2 bg-white border border-slate-300 rounded-md text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
+                        ยกเลิก
+                    </button>
+                    <button type="submit" id="btnSubmitAddStock" class="px-5 py-2 bg-primary text-white rounded-md text-sm font-medium hover:bg-primary/90 transition-colors flex items-center gap-1.5 shadow-sm">
+                        บันทึกสินค้า
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <!-- Modal แก้ไขข้อมูลสินค้า -->
+    <div id="editStockModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 hidden">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-lg border border-slate-200 overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150">
+            <!-- Modal Header -->
+            <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <div>
+                    <h3 class="text-base font-bold text-slate-800">แก้ไขข้อมูลสินค้า</h3>
+                    <p class="text-xs text-slate-500 mt-0.5">แก้ไขรายละเอียดสินค้า หมวดหมู่ และจำนวนสต๊อก</p>
+                </div>
+                <button type="button" onclick="closeEditModal()" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-md hover:bg-slate-100 transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <!-- Modal Form -->
+            <form id="editStockForm" onsubmit="submitEditStock(event)" class="p-6 flex flex-col gap-4">
+                <input type="hidden" id="editItemId" />
+
+                <!-- รหัสสินค้า -->
+                <div>
+                    <label for="editProductCode" class="block text-xs font-semibold text-slate-700 mb-1">
+                        รหัสสินค้า <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" id="editProductCode" required placeholder="เช่น P-001" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors" />
+                </div>
+
+                <!-- ชื่อสินค้า -->
+                <div>
+                    <label for="editProductName" class="block text-xs font-semibold text-slate-700 mb-1">
+                        ชื่อสินค้า <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" id="editProductName" required placeholder="ระบุชื่อสินค้า / อะไหล่" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors" />
+                </div>
+
+                <!-- หมวดหมู่ -->
+                <div>
+                    <label for="editCategory" class="block text-xs font-semibold text-slate-700 mb-1">
+                        หมวดหมู่ <span class="text-red-500">*</span>
+                    </label>
+                    <select id="editCategory" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors cursor-pointer">
+                        <option value="อะไหล่">อะไหล่ (b7392108)</option>
+                        <option value="อะไหล่เวียน">อะไหล่เวียน (b453465a)</option>
+                    </select>
+                </div>
+
+                <!-- สต๊อก 3 ช่อง (สต๊อกขั้นต่ำ, สต๊อกสูงสุด, VS_สต๊อกปัจจุบัน) -->
+                <div class="grid grid-cols-3 gap-3" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem;">
+                    <div>
+                        <label for="editMinStock" class="block text-xs font-semibold text-slate-700 mb-1">สต๊อกขั้นต่ำ</label>
+                        <input type="number" id="editMinStock" min="0" step="1" placeholder="0" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors text-center" />
+                    </div>
+                    <div>
+                        <label for="editMaxStock" class="block text-xs font-semibold text-slate-700 mb-1">สต๊อกสูงสุด</label>
+                        <input type="number" id="editMaxStock" min="0" step="1" placeholder="0" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors text-center" />
+                    </div>
+                    <div>
+                        <label for="editQuantity" class="block text-xs font-semibold text-primary mb-1">สต๊อกปัจจุบัน</label>
+                        <input type="number" id="editQuantity" min="0" step="1" placeholder="0" class="w-full px-3 py-2 bg-blue-50/60 border border-primary/40 rounded-md text-sm font-semibold text-primary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors text-center shadow-xs" />
+                    </div>
+                </div>
+
+                <!-- Footer Buttons -->
+                <div class="pt-3 border-t border-slate-100 flex justify-end gap-2 mt-2">
+                    <button type="button" onclick="closeEditModal()" class="px-4 py-2 bg-white border border-slate-300 rounded-md text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
+                        ยกเลิก
+                    </button>
+                    <button type="submit" id="btnSubmitEditStock" class="px-5 py-2 bg-primary text-white rounded-md text-sm font-medium hover:bg-primary/90 transition-colors flex items-center gap-1.5 shadow-sm">
+                        บันทึกการแก้ไข
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal ประวัติการเบิก/จ่าย (Stock Logs) -->
+    <div id="historyStockModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 hidden">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-lg border border-slate-200 overflow-hidden flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 duration-150">
+            <!-- Modal Header -->
+            <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 shrink-0">
+                <div class="min-w-0 pr-2">
+                    <div class="flex items-center gap-2">
+                        <h3 class="text-base font-bold text-slate-800">ประวัติการเบิก/จ่าย</h3>
+                        <span id="historyProductCodeBadge" class="text-xs font-bold font-mono px-2 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/20"></span>
+                    </div>
+                    <p id="historyProductNameSubtitle" class="text-xs text-slate-500 mt-0.5 truncate"></p>
+                </div>
+                <button type="button" onclick="closeHistoryModal()" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-md hover:bg-slate-100 transition-colors shrink-0" title="ปิด">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <!-- Stats Bar (รหัส, หมวดหมู่, สต๊อกปัจจุบัน) -->
+            <div id="historyStatsBar" class="px-6 py-2.5 bg-slate-50/40 border-b border-slate-100 flex items-center justify-between gap-3 text-xs shrink-0">
+                <div class="flex items-center gap-3 text-slate-500 min-w-0">
+                    <span class="truncate"><span class="text-slate-400">หมวด:</span> <span id="historyCategoryText" class="font-medium text-slate-700">-</span></span>
+                    <span class="text-slate-300">|</span>
+                    <span class="truncate"><span class="text-slate-400">เกณฑ์:</span> <span id="historyMinMaxText" class="font-medium text-slate-700">-</span></span>
+                </div>
+                <div class="shrink-0 text-slate-600">
+                    คงเหลือ: <span id="historyCurrentQtyText" class="font-bold text-sm text-primary">-</span>
+                </div>
+            </div>
+
+            <!-- Modal Content (Scrollable activity list, divide-y, no nested box) -->
+            <div class="overflow-y-auto flex-1 max-h-[55vh]">
+                <!-- Loading State -->
+                <div id="historyLoadingState" class="flex flex-col items-center justify-center py-12 text-slate-400 gap-2">
+                    <div class="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                    <span class="text-xs text-slate-500">กำลังโหลดประวัติ StockLogs...</span>
+                </div>
+
+                <!-- Empty State -->
+                <div id="historyEmptyState" class="hidden flex-col items-center justify-center py-12 text-center text-slate-400 gap-2 px-6">
+                    <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-1">
+                        <i data-lucide="inbox" class="w-5 h-5"></i>
+                    </div>
+                    <p class="text-sm font-medium text-slate-700">ยังไม่มีประวัติการเบิก/จ่ายของสินค้านี้</p>
+                    <p class="text-xs text-slate-400">เมื่อมีการรับเข้า เบิกจ่าย หรือแก้ไขสต๊อก ข้อมูลจะบันทึกที่นี่</p>
+                </div>
+
+                <!-- List Container (Clean-Craft: divide-y divide-slate-100, no nested box) -->
+                <div id="historyLogsList" class="divide-y divide-slate-100 hidden">
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="px-6 py-3 border-t border-slate-100 flex justify-end bg-slate-50/50 shrink-0">
+                <button type="button" onclick="closeHistoryModal()" class="px-4 py-2 bg-white border border-slate-300 rounded-md text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
+                    ปิดหน้าต่าง
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal จำลองรับของเข้าสต๊อก (Goods Receipt & Smart Matching) -->
+    <!-- Modal: ตรวจรับสินค้าเข้าคลังและจับคู่สต๊อก (Goods Receipt Check-in with AI Matching) -->
+    <div id="simulateReceiveModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-3 sm:p-4 hidden">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-150">
+            <!-- Modal Header -->
+            <div class="px-6 py-3.5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 shrink-0">
+                <div class="flex items-center gap-2">
+                    <h3 class="text-base font-bold text-slate-800">ตรวจรับสินค้าเข้าสต๊อก (Goods Receipt Check-in)</h3>
+                    <span class="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200/70">AI Matching</span>
+                </div>
+                <button type="button" onclick="closeReceiveModal()" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-md hover:bg-slate-100 transition-colors shrink-0" title="ปิด">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <!-- Pending Order Selector Bar -->
+            <div class="px-6 py-2.5 bg-slate-50/70 border-b border-slate-100 flex items-center justify-between gap-3 shrink-0">
+                <div class="flex items-center gap-2 flex-1 min-w-0">
+                    <span class="text-xs font-semibold text-slate-700 whitespace-nowrap shrink-0 flex items-center gap-1.5">
+                        <span>รายการที่รอรับ:</span>
+                    </span>
+                    <div class="relative flex-1 min-w-0" id="receiveOrderDropdownContainer">
+                        <!-- Hidden native select for form/value compatibility -->
+                        <select id="receiveOrderSelect" onchange="onSelectReceiveOrder(this.value)" class="hidden">
+                            <option value="">-- กำลังโหลดรายการรอรับ... --</option>
+                        </select>
+
+                        <!-- Custom Select Trigger Button -->
+                        <button type="button" 
+                                id="receiveOrderTriggerBtn" 
+                                onclick="toggleReceiveOrderDropdown()" 
+                                class="w-full h-8 px-2.5 bg-white border border-slate-300 hover:border-primary/60 rounded-md text-xs text-slate-800 flex items-center justify-between gap-2 shadow-2xs transition-colors focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-left">
+                            <div class="min-w-0 flex-1 truncate">
+                                <span id="receiveOrderSelectedText" class="truncate text-slate-800 font-medium block" title="กำลังโหลดรายการรอรับ...">กำลังโหลดรายการรอรับ...</span>
+                            </div>
+                            <div class="flex items-center gap-1.5 shrink-0">
+                                <span id="receiveOrderSelectedQtyBadge" class="hidden text-[11px] font-medium text-slate-500 font-sans"></span>
+                                <i data-lucide="chevron-down" id="receiveOrderChevron" class="w-3.5 h-3.5 text-slate-400 shrink-0 transition-transform duration-200"></i>
+                            </div>
+                        </button>
+
+                        <!-- Custom Dropdown Menu Panel (Constrained strictly inside modal) -->
+                        <div id="receiveOrderDropdownMenu" 
+                             class="hidden absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl z-50 overflow-hidden flex flex-col"
+                             style="max-height: 280px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);">
+                            
+                            <!-- Search filter inside dropdown -->
+                            <div class="p-2 border-b border-slate-100 bg-slate-50/80 shrink-0">
+                                <div class="relative flex items-center">
+                                    <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute pointer-events-none" style="left: 10px;"></i>
+                                    <input type="text" 
+                                           id="receiveOrderSearchInput" 
+                                           placeholder="ค้นหาเลข PO หรือชื่อรายการ..." 
+                                           class="w-full pr-3 py-1.5 bg-white border border-slate-200 rounded text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-2xs"
+                                           style="padding-left: 32px;"
+                                           autocomplete="off" />
+                                </div>
+                            </div>
+
+                            <!-- Scrollable Options List -->
+                            <div id="receiveOrderOptionsList" class="overflow-y-auto divide-y divide-slate-100 flex-1">
+                                <!-- Populated dynamically by JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-1.5 shrink-0">
+                    <span id="receiveOrderCountBadge" class="inline-flex items-center px-2.5 h-8 text-[11px] font-semibold text-slate-600 bg-white border border-slate-200 rounded-md shadow-2xs whitespace-nowrap"></span>
+                    <button type="button" onclick="loadPendingOrders()" class="inline-flex items-center justify-center w-8 h-8 text-slate-400 hover:text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 rounded-md transition-colors shadow-2xs shrink-0" title="รีเฟรชรายการ">
+                        <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Modal Body (Clean-Craft Human UX Flow) -->
+            <div class="px-6 pb-6 pt-4 overflow-y-auto flex-1 space-y-4">
+                <!-- Loading Spinner -->
+                <div id="simulateLoadingState" class="hidden flex-col items-center justify-center py-8 text-slate-400 gap-2">
+                    <div class="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                    <span class="text-xs text-slate-500">กำลังวิเคราะห์ข้อความและจับคู่กับฐานสต๊อก...</span>
+                </div>
+
+                <!-- 1. ส่วนบน: ข้อความรายการรับของ (จากใบสั่งซื้อ / PO / Monthly Cost) -->
+                <div class="space-y-1.5">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                            
+                            <span>ข้อความรายการจากใบสั่งซื้อ (PO)</span>
+                        </span>
+                    </div>
+                    <!-- กล่องแสดงข้อความของคำนั้น (ไม่ใช่กล่องกรอก) -->
+                    <div id="simulateRawTextDisplay" class="w-full px-4 py-3 bg-slate-50/90 border border-slate-200/90 rounded-lg text-xs font-medium text-slate-700 break-words leading-relaxed whitespace-pre-line min-h-[44px] shadow-2xs">
+                        -
+                    </div>
+                    <!-- Hidden elements for JS compatibility and permanently hidden badges -->
+                    <div class="hidden" style="display:none !important">
+                        <textarea id="simulateRawText" class="hidden"></textarea>
+                        <span id="receivePoBadge" class="hidden" style="display:none !important"></span>
+                        <span id="receiveMonthBadge" class="hidden" style="display:none !important"></span>
+                        <button type="button" id="btnRunSimulate" class="hidden"></button>
+                        <div id="simulateAnalysisPanel" class="hidden">
+                            <span id="sanitizationBadge" class="hidden"></span>
+                            <div id="simulateCleanName" class="hidden"></div>
+                            <div id="simulateNoiseTags" class="hidden"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. ส่วนผลการจับคู่ในระบบสต๊อกสินค้า -->
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold text-slate-800">เลือกสินค้าในคลังที่ตรงกับรายการนี้</span>
+                        <span id="simulateMatchCount" class="text-[11px] font-medium text-slate-500 px-2 py-0.5">พบ 0 รายการ</span>
+                    </div>
+
+                    <!-- Initial Placeholder (ก่อนกดวิเคราะห์) -->
+                    <div id="simulateInitialPlaceholder" class="p-6 border border-dashed border-slate-200 rounded-lg text-center text-slate-400 text-xs">
+                        เลือกรายการด้านบนเพื่อดูผลการจับคู่สต๊อก
+                    </div>
+
+                    <!-- Exact Match Banner (กรณี 100%) -->
+                    <div id="simulateExactMatchBanner" class="hidden p-3.5 bg-emerald-50/90 border border-emerald-200 rounded-lg shadow-2xs">
+                        <div class="space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-600 text-white shadow-xs">
+                                    ตรงกัน 100% (Exact Match)
+                                </span>
+                                <span id="exactMatchProductCode" class="text-xs font-mono font-bold text-emerald-800"></span>
+                            </div>
+                            <div id="exactMatchProductName" class="text-xs font-bold text-slate-900 break-words leading-snug"></div>
+                            <div class="flex items-center justify-between text-xs pt-1.5 border-t border-emerald-200/60">
+                                <span class="text-slate-600">คงเหลือในโกดัง: <strong id="exactMatchStockQty" class="text-slate-800 font-bold"></strong> ชิ้น</span>
+                                <button type="button" onclick="confirmExactMatch()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-xs font-bold transition-colors shadow-xs flex items-center gap-1 cursor-pointer">
+                                    <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                                    <span>บันทึกสต๊อกทันที</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Candidates Section (Clean-Craft: Unified container with divide-y) -->
+                    <div id="simulateCandidatesSection" class="hidden space-y-2">
+                        <!-- Chevron Toggle Bar (ใช้เมื่อต้องการย่อ/ขยายในกรณี Exact Match) -->
+                        <button type="button" onclick="toggleCandidatesAccordion()" id="btnToggleCandidates" class="hidden w-full py-2 px-3 items-center justify-between text-xs font-medium text-slate-600 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 rounded-md border border-slate-200 transition-colors cursor-pointer select-none">
+                            <span id="candidatesAccordionTitle">ดูตัวเลือกที่ใกล้เคียงอื่นๆ</span>
+                            <div class="flex items-center gap-1.5">
+                                <span id="candidatesAccordionBadge" class="text-[10px] font-semibold px-1.5 py-0.2 bg-slate-200 text-slate-700 rounded-full"></span>
+                                <i data-lucide="chevron-down" id="candidatesChevronIcon" class="w-4 h-4 text-slate-400 transition-transform duration-200"></i>
+                            </div>
+                        </button>
+
+                        <!-- Collapsible Container (List of Candidates with divide-y) -->
+                            <div id="simulateCandidatesContainer" class="border border-slate-200 rounded-lg divide-y divide-slate-100 overflow-hidden max-h-56 overflow-y-auto bg-white shadow-2xs">    
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. จำนวนรับเข้าคลัง -->
+                <div class="flex items-center justify-between p-3 bg-slate-50/70 border border-slate-200/80 rounded-lg !mt-0">
+                    <div>
+                        <label for="simulateQuantityInput" class="block text-xs font-bold text-slate-800">จำนวนรับเข้าคลัง</label>
+                        <span class="text-[11px] text-slate-500">ตรวจสอบความถูกต้อง (แก้ไขได้หากคิดว่าจำนวนไม่ตรง)</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <input type="number" id="simulateQuantityInput" min="1" step="1" class="w-20 h-[32px] text-center bg-white border border-slate-300 rounded-md text-xs font-bold text-primary focus:outline-none focus:ring-1 focus:ring-primary shadow-2xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" value="1" />
+
+                        <span id="simulateUnitText" class="text-xs font-semibold text-slate-600">ชิ้น</span>
+                    </div>
+                </div>
+
+                <!-- 4. Option: หากสินค้าไม่มีในโกดังเดิม สามารถกดข้ามได้ -->
+                <div id="simulateSkipOption" class="flex items-center justify-between text-xs text-slate-500 px-1 pt-0.5">
+                    <span>หากสินค้าไม่มีในระบบสต๊อกเดิม หรือไม่ต้องการรับเข้า</span>
+                    <button type="button" onclick="closeSimulateModal()" class="text-xs text-slate-600 hover:text-slate-900 font-medium underline cursor-pointer">
+                        ข้ามรายการนี้
+                    </button>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="px-6 py-3.5 border-t border-slate-100 flex justify-between items-center bg-slate-50/50 shrink-0 gap-3">
+                <span class="text-[11px] text-slate-400 truncate min-w-0">ระบบจะจำประวัติคำศัพท์ลง ItemMappings หลังยืนยัน</span>
+                <div class="flex items-center gap-2 shrink-0">
+                    <button type="button" onclick="closeSimulateModal()" class="px-4 py-2 bg-white border border-slate-300 rounded-md text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer whitespace-nowrap shrink-0">
+                        ปิด
+                    </button>
+                    <button type="button" id="btnSubmitSelectedCandidate" onclick="submitSelectedCandidate()" class="px-4 py-2 bg-primary text-white rounded-md text-xs font-semibold hover:bg-primary/90 transition-colors flex items-center gap-1.5 shadow-xs disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer whitespace-nowrap shrink-0" disabled>
+                        <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                        <span>ยืนยัน</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+
+            // โหลดจำนวนรายการรอรับจริงทันทีตอนเปิดหน้า
+            refreshPendingBadgeCount();
+
+            // ตรวจสอบ query param autoOpenReceive เพื่อเปิด Modal ตรวจรับของทันทีเมื่อสลับมาจาก Monthly Cost
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('autoOpenReceive') === 'true') {
+                const orderId = urlParams.get('orderId');
+                openReceiveModal(orderId);
+                // ล้าง query params จาก URL โดยไม่รีโหลดหน้า
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+
+            // ระบบค้นหาสินค้า Real-time + Autocomplete Guide List (ทั้ง Desktop Table และ Mobile Cards)
+            const searchInput = document.getElementById('stockCustomSearch');
+            const stockDropdown = document.getElementById('stock-suggestions-dropdown');
+            const stockItemsData = @Html.Raw(Json.Serialize(Model.Select(m => new { code = m.ProductCode, name = m.ProductName })));
+
+            if (searchInput) {
+                searchInput.addEventListener('input', function() {
+                    const query = this.value.toLowerCase().trim();
+                    // 1. ตาราง Desktop
+                    const rows = document.querySelectorAll('#stockTable tbody tr');
+                    rows.forEach(function(row) {
+                        const text = row.textContent.toLowerCase();
+                        row.style.display = text.includes(query) ? '' : 'none';
+                    });
+                    // 2. การ์ด Mobile
+                    const cards = document.querySelectorAll('#stockMobileList .stock-card');
+                    cards.forEach(function(card) {
+                        const text = card.textContent.toLowerCase();
+                        card.style.display = text.includes(query) ? '' : 'none';
+                    });
+
+                    // 3. Autocomplete Guide List
+                    if (stockDropdown) {
+                        if (query.length < 1) {
+                            stockDropdown.classList.add('hidden');
+                            stockDropdown.innerHTML = '';
+                            return;
+                        }
+
+                        const matches = stockItemsData.filter(item => 
+                            (item.code || '').toLowerCase().includes(query) || 
+                            (item.name || '').toLowerCase().includes(query)
+                        ).slice(0, 8);
+
+                        if (matches.length > 0) {
+                            stockDropdown.innerHTML = matches.map(item => `
+                                <div class="stock-suggest-item px-3 py-2 hover:bg-slate-50 cursor-pointer transition-colors text-left flex flex-col gap-0.5" data-code="${item.code}" data-name="${item.name.replace(/"/g, '&quot;')}">
+                                    <span class="font-mono text-primary font-bold text-xs">${item.code}</span>
+                                    <span class="text-slate-700 text-xs truncate">${item.name}</span>
+                                </div>
+                            `).join('');
+                            stockDropdown.classList.remove('hidden');
+
+                            stockDropdown.querySelectorAll('.stock-suggest-item').forEach(el => {
+                                el.addEventListener('click', function() {
+                                    searchInput.value = this.dataset.name || this.dataset.code;
+                                    stockDropdown.classList.add('hidden');
+                                    searchInput.dispatchEvent(new Event('input'));
+                                });
+                            });
+                        } else {
+                            stockDropdown.classList.add('hidden');
+                            stockDropdown.innerHTML = '';
+                        }
+                    }
+                });
+
+                searchInput.addEventListener('keydown', function(e) {
+                    if (e.key === 'Escape') {
+                        if (stockDropdown) stockDropdown.classList.add('hidden');
+                    } else if (e.key === 'Enter') {
+                        const firstOpt = stockDropdown?.querySelector('.stock-suggest-item');
+                        if (firstOpt && !stockDropdown.classList.contains('hidden')) {
+                            e.preventDefault();
+                            firstOpt.click();
+                        } else {
+                            if (stockDropdown) stockDropdown.classList.add('hidden');
+                        }
+                    }
+                });
+
+                document.addEventListener('click', function(e) {
+                    if (stockDropdown && !searchInput.contains(e.target) && !stockDropdown.contains(e.target)) {
+                        stockDropdown.classList.add('hidden');
+                    }
+                });
+            }
+
+            // Custom Receive Order Dropdown Event Listeners
+            const receiveSearchInput = document.getElementById('receiveOrderSearchInput');
+            if (receiveSearchInput) {
+                receiveSearchInput.addEventListener('input', function() {
+                    filterReceiveOrderOptions(this.value);
+                });
+            }
+
+            document.addEventListener('click', function(e) {
+                const dropdownContainer = document.getElementById('receiveOrderDropdownContainer');
+                if (dropdownContainer && !dropdownContainer.contains(e.target)) {
+                    closeReceiveOrderDropdown();
+                }
+            });
+
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    closeReceiveOrderDropdown();
+                }
+            });
+
+            // ปิด Modal เมื่อกดคลิกพื้นที่นอกกล่อง
+            const modalEl = document.getElementById('addStockModal');
+            if (modalEl) {
+                modalEl.addEventListener('click', function(e) {
+                    if (e.target === this) {
+                        closeAddModal();
+                    }
+                });
+            }
+
+            const editModalEl = document.getElementById('editStockModal');
+            if (editModalEl) {
+                editModalEl.addEventListener('click', function(e) {
+                    if (e.target === this) {
+                        closeEditModal();
+                    }
+                });
+            }
+
+            const historyModalEl = document.getElementById('historyStockModal');
+            if (historyModalEl) {
+                historyModalEl.addEventListener('click', function(e) {
+                    if (e.target === this) {
+                        closeHistoryModal();
+                    }
+                });
+            }
+
+            // การกดปุ่ม Enter ในฟอร์มเพิ่มสินค้า ให้เลื่อนไปช่องถัดไป
+            const form = document.getElementById('addStockForm');
+            if (form) {
+                const inputs = Array.from(form.querySelectorAll('input:not([type="hidden"]), select'));
+                inputs.forEach((input, index) => {
+                    input.addEventListener('keydown', function(e) {
+                        if (e.key === 'Enter') {
+                            e.preventDefault(); // ป้องกันการ Submit ก่อนกรอกครบ
+                            if (index < inputs.length - 1) {
+                                inputs[index + 1].focus();
+                                if (typeof inputs[index + 1].select === 'function') {
+                                    inputs[index + 1].select();
+                                }
+                            } else {
+                                // ถ้าอยู่ช่องสุดท้าย (สต๊อกปัจจุบัน) แล้วกด Enter ค่อยส่งข้อมูล
+                                submitAddStock(e);
+                            }
+                        }
+                    });
+                });
+            }
+
+            // การกดปุ่ม Enter ในฟอร์มแก้ไข ให้เลื่อนไปช่องถัดไป
+            const editForm = document.getElementById('editStockForm');
+            if (editForm) {
+                const editInputs = Array.from(editForm.querySelectorAll('input:not([type="hidden"]):not([type="file"]), select'));
+                editInputs.forEach((input, index) => {
+                    input.addEventListener('keydown', function(e) {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            if (index < editInputs.length - 1) {
+                                editInputs[index + 1].focus();
+                                if (typeof editInputs[index + 1].select === 'function') {
+                                    editInputs[index + 1].select();
+                                }
+                            } else {
+                                submitEditStock(e);
+                            }
+                        }
+                    });
+                });
+            }
+        });
+
+        // Modal Functions (เพิ่มสินค้า)
+        function openAddModal() {
+            const modal = document.getElementById('addStockModal');
+            const form = document.getElementById('addStockForm');
+            if (form) form.reset();
+            if (modal) {
+                modal.classList.remove('hidden');
+                if (typeof lucide !== 'undefined') {
+                    lucide.createIcons();
+                }
+                setTimeout(() => {
+                    document.getElementById('modalProductCode')?.focus();
+                }, 50);
+            }
+        }
+
+        function closeAddModal() {
+            const modal = document.getElementById('addStockModal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        // ส่งข้อมูลบันทึกสินค้าใหม่ไปยัง Backend
+        async function submitAddStock(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btnSubmitAddStock');
+            const code = document.getElementById('modalProductCode').value.trim();
+            const name = document.getElementById('modalProductName').value.trim();
+            const category = document.getElementById('modalCategory').value.trim();
+            const qty = parseFloat(document.getElementById('modalQuantity').value) || 0;
+            const min = parseFloat(document.getElementById('modalMinStock').value) || 0;
+            const max = parseFloat(document.getElementById('modalMaxStock').value) || 0;
+
+            if (!code || !name) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'ข้อมูลไม่ครบถ้วน',
+                    text: 'กรุณากรอกรหัสสินค้าและชื่อสินค้า'
+                });
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'กำลังบันทึก...';
+
+            try {
+                const resp = await fetch('/Stock/AddItem', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        productCode: code,
+                        productName: name,
+                        category: category,
+                        quantity: qty,
+                        minStock: min,
+                        maxStock: max
+                    })
+                });
+
+                const data = await resp.json();
+
+                if (data.success) {
+                    closeAddModal();
+                    await Swal.fire({
+                        icon: 'success',
+                        title: 'บันทึกสำเร็จ!',
+                        text: data.message || 'เพิ่มสินค้าใหม่เรียบร้อยแล้ว',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                    window.location.reload();
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'ไม่สามารถบันทึกได้',
+                        text: data.message || 'เกิดข้อผิดพลาดในการบันทึกสินค้า'
+                    });
+                }
+            } catch (err) {
+                console.error('submitAddStock error:', err);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'เกิดข้อผิดพลาด',
+                    text: 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้'
+                });
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'บันทึกสินค้า';
+            }
+        }
+
+        // Modal Functions (แก้ไขสินค้า)
+        function openEditModal(btn) {
+            const dataset = btn.dataset;
+            document.getElementById('editItemId').value = dataset.id || '';
+            document.getElementById('editProductCode').value = dataset.code || '';
+            document.getElementById('editProductName').value = dataset.name || '';
+            document.getElementById('editCategory').value = dataset.category || 'อะไหล่';
+            document.getElementById('editMinStock').value = dataset.min && dataset.min !== '0' ? parseFloat(dataset.min) : '';
+            document.getElementById('editMaxStock').value = dataset.max && dataset.max !== '0' ? parseFloat(dataset.max) : '';
+            document.getElementById('editQuantity').value = dataset.quantity !== undefined ? parseFloat(dataset.quantity) : '';
+
+            const modal = document.getElementById('editStockModal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                if (typeof lucide !== 'undefined') {
+                    lucide.createIcons();
+                }
+                setTimeout(() => {
+                    const firstInput = document.getElementById('editProductCode');
+                    if (firstInput) {
+                        firstInput.focus();
+                        firstInput.select();
+                    }
+                }, 50);
+            }
+        }
+
+        function closeEditModal() {
+            const modal = document.getElementById('editStockModal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        async function submitEditStock(e) {
+            if (e) e.preventDefault();
+
+            const btn = document.getElementById('btnSubmitEditStock');
+            const id = parseInt(document.getElementById('editItemId').value) || 0;
+            const code = document.getElementById('editProductCode').value.trim();
+            const name = document.getElementById('editProductName').value.trim();
+            const category = document.getElementById('editCategory').value;
+            const min = parseFloat(document.getElementById('editMinStock').value) || 0;
+            const max = parseFloat(document.getElementById('editMaxStock').value) || 0;
+            const qty = parseFloat(document.getElementById('editQuantity').value) || 0;
+
+            if (!code || !name) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'ข้อมูลไม่ครบถ้วน',
+                    text: 'กรุณากรอกรหัสสินค้าและชื่อสินค้า'
+                });
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'กำลังบันทึก...';
+
+            try {
+                const resp = await fetch('/Stock/UpdateItem', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: id,
+                        productCode: code,
+                        productName: name,
+                        category: category,
+                        minStock: min,
+                        maxStock: max,
+                        quantity: qty
+                    })
+                });
+
+                const data = await resp.json();
+
+                if (data.success) {
+                    closeEditModal();
+                    await Swal.fire({
+                        icon: 'success',
+                        title: 'บันทึกสำเร็จ!',
+                        text: data.message || 'แก้ไขข้อมูลสินค้าเรียบร้อยแล้ว',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                    window.location.reload();
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'ไม่สามารถบันทึกได้',
+                        text: data.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล'
+                    });
+                }
+            } catch (err) {
+                console.error('submitEditStock error:', err);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'เกิดข้อผิดพลาด',
+                    text: 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้'
+                });
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'บันทึกการแก้ไข';
+            }
+        }
+
+        async function openHistoryModal(code, name) {
+            const modal = document.getElementById('historyStockModal');
+            if (!modal) return;
+
+            // ตั้งค่าหัวข้อ Modal ทันที
+            document.getElementById('historyProductCodeBadge').textContent = code || '-';
+            document.getElementById('historyProductNameSubtitle').textContent = name || '-';
+            document.getElementById('historyCategoryText').textContent = '-';
+            document.getElementById('historyMinMaxText').textContent = '-';
+            document.getElementById('historyCurrentQtyText').textContent = '-';
+
+            // ตั้งสถานะเริ่มต้น (แสดง Loading, ซ่อน Empty & List)
+            document.getElementById('historyLoadingState').classList.remove('hidden');
+            document.getElementById('historyEmptyState').classList.add('hidden');
+            document.getElementById('historyEmptyState').classList.remove('flex');
+            const listEl = document.getElementById('historyLogsList');
+            listEl.classList.add('hidden');
+            listEl.innerHTML = '';
+
+            modal.classList.remove('hidden');
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+
+            try {
+                const resp = await fetch(`/Stock/GetItemLogs?productCode=${encodeURIComponent(code)}`);
+                const data = await resp.json();
+
+                document.getElementById('historyLoadingState').classList.add('hidden');
+
+                if (data.success) {
+                    if (data.item) {
+                        document.getElementById('historyCategoryText').textContent = data.item.category || 'ทั่วไป';
+                        document.getElementById('historyMinMaxText').textContent = `${Number(data.item.minStock).toLocaleString()} / ${Number(data.item.maxStock).toLocaleString()}`;
+                        document.getElementById('historyCurrentQtyText').textContent = `${Number(data.item.quantity).toLocaleString()} ชิ้น`;
+                    }
+
+                    const logs = data.logs || [];
+                    if (logs.length === 0) {
+                        const emptyEl = document.getElementById('historyEmptyState');
+                        emptyEl.classList.remove('hidden');
+                        emptyEl.classList.add('flex');
+                    } else {
+                        listEl.innerHTML = logs.map(l => {
+                            let actionBadge = '';
+                            if (l.action === 'IN_WO') {
+                                actionBadge = '<span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/70">รับเข้าคลัง (WO)</span>';
+                            } else if (l.action === 'INITIAL_IMPORT') {
+                                actionBadge = '<span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 text-slate-700 border border-slate-200">นำเข้าเริ่มต้น</span>';
+                            } else if (l.action === 'MANUAL_ADD') {
+                                actionBadge = '<span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200/70">เพิ่มสินค้าใหม่</span>';
+                            } else if (l.action === 'MANUAL_EDIT') {
+                                actionBadge = '<span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200/70">ปรับปรุงสต๊อก</span>';
+                            } else if (l.action === 'DISPENSE' || l.action === 'OUT_MANUAL') {
+                                actionBadge = '<span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold bg-purple-50 text-purple-700 border border-purple-200/70">เบิกจ่ายสินค้า</span>';
+                            } else {
+                                actionBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 text-slate-600 border border-slate-200">${l.action || '-'}</span>`;
+                            }
+
+                            const qty = Number(l.quantityChanged) || 0;
+                            let qtyColor = 'text-slate-400';
+                            let qtyText = '0';
+                            if (qty > 0) {
+                                qtyColor = 'text-emerald-600 font-bold';
+                                qtyText = `+${qty.toLocaleString()}`;
+                            } else if (qty < 0) {
+                                qtyColor = 'text-red-600 font-bold';
+                                qtyText = qty.toLocaleString();
+                            }
+
+                            const refHtml = (l.referenceId && l.referenceId !== '-')
+                                ? `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-slate-100 text-slate-700 border border-slate-200">${l.referenceId}</span>`
+                                : '';
+
+                            const remarksHtml = (l.remarks && l.remarks !== '-')
+                                ? `<p class="text-xs text-slate-600 break-words leading-relaxed">${l.remarks}</p>`
+                                : '';
+
+                            return `
+                                <div class="px-6 py-3.5 hover:bg-slate-50/70 transition-colors flex items-start justify-between gap-3">
+                                    <div class="min-w-0 flex-1 space-y-1">
+                                        <div class="flex items-center gap-2 flex-wrap">
+                                            ${actionBadge}
+                                            <span class="text-xs text-slate-400 font-mono">${l.timestamp || '-'}</span>
+                                            ${refHtml}
+                                        </div>
+                                        ${remarksHtml}
+                                        <div class="text-[11px] text-slate-400 flex items-center gap-1">
+                                            <span>โดย</span>
+                                            <span class="text-slate-600 font-medium">${l.user || 'System'}</span>
+                                        </div>
+                                    </div>
+                                    <div class="text-right shrink-0 pt-0.5">
+                                        <div class="text-sm font-mono ${qtyColor}">${qtyText}</div>
+                                        <div class="text-[10px] text-slate-400">ชิ้น</div>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('');
+
+                        listEl.classList.remove('hidden');
+                    }
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'ไม่สามารถโหลดข้อมูลได้',
+                        text: data.message || 'เกิดข้อผิดพลาดในการโหลดประวัติ'
+                    });
+                }
+            } catch (err) {
+                console.error('openHistoryModal error:', err);
+                document.getElementById('historyLoadingState').classList.add('hidden');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'ข้อผิดพลาด',
+                    text: 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์เพื่อดึงประวัติได้'
+                });
+            }
+
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+        }
+
+        function closeHistoryModal() {
+            const modal = document.getElementById('historyStockModal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        // ==========================================
+        // ระบบตรวจรับของเข้าคลัง (Goods Receipt Check-in with AI Matching)
+        // ==========================================
+        let pendingOrdersList = [];
+        let currentLoadedOrder = null;
+        let currentLoadedPoNumber = null;
+        let currentSimulateData = null;
+        let selectedCandidateCode = null;
+
+        async function openReceiveModal(targetOrderId = null) {
+            const modal = document.getElementById('simulateReceiveModal');
+            if (modal) {
+                modal.classList.remove('hidden');
+            }
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+            await loadPendingOrders(targetOrderId);
+        }
+
+        function closeReceiveModal() {
+            closeReceiveOrderDropdown();
+            const modal = document.getElementById('simulateReceiveModal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        // Aliases for compatibility
+        const openSimulateModal = openReceiveModal;
+        const closeSimulateModal = closeReceiveModal;
+
+        async function refreshPendingBadgeCount() {
+            try {
+                const resp = await fetch('/Stock/GetPendingReceiveOrders');
+                const data = await resp.json();
+                const bellBadge = document.getElementById('pendingReceiveBadge');
+                if (bellBadge && data.success) {
+                    const count = data.pendingCount !== undefined 
+                        ? data.pendingCount 
+                        : (data.items ? data.items.filter(x => !x.isReconciled && !x.IsReconciled).length : 0);
+                    bellBadge.textContent = count;
+                    if (count > 0) {
+                        bellBadge.classList.add('animate-pulse');
+                    } else {
+                        bellBadge.classList.remove('animate-pulse');
+                    }
+                }
+            } catch (err) {
+                console.error('refreshPendingBadgeCount error:', err);
+            }
+        }
+
+        async function loadPendingOrders(targetOrderId = null) {
+            const select = document.getElementById('receiveOrderSelect');
+            const countBadge = document.getElementById('receiveOrderCountBadge');
+            const bellBadge = document.getElementById('pendingReceiveBadge');
+            const triggerText = document.getElementById('receiveOrderSelectedText');
+            const triggerQty = document.getElementById('receiveOrderSelectedQtyBadge');
+            if (!select) return;
+
+            select.innerHTML = '<option value="">-- กำลังโหลดรายการรอรับจาก Monthly Cost... --</option>';
+            if (triggerText) {
+                triggerText.textContent = 'กำลังโหลดรายการรอรับ...';
+                triggerText.title = 'กำลังโหลดรายการรอรับ...';
+            }
+            if (triggerQty) triggerQty.classList.add('hidden');
+
+            try {
+                let url = '/Stock/GetPendingReceiveOrders';
+                if (targetOrderId) {
+                    url += `?specificOrderId=${encodeURIComponent(targetOrderId)}`;
+                }
+                const resp = await fetch(url);
+                const data = await resp.json();
+
+                if (data.success && data.items && data.items.length > 0) {
+                    pendingOrdersList = data.items;
+                    const pendingOnlyCount = data.pendingCount !== undefined ? data.pendingCount : data.items.filter(x => !x.isReconciled && !x.IsReconciled).length;
+
+                    if (countBadge) countBadge.textContent = `${pendingOnlyCount} รายการ`;
+                    if (bellBadge) {
+                        bellBadge.textContent = pendingOnlyCount;
+                        if (pendingOnlyCount > 0) {
+                            bellBadge.classList.add('animate-pulse');
+                        } else {
+                            bellBadge.classList.remove('animate-pulse');
+                        }
+                    }
+
+                    // 1. อัปเดต native select เพื่อความเข้ากันได้
+                    select.innerHTML = data.items.map(it => {
+                        const po = it.poNumber || it.PoNumber || '-';
+                        const name = it.orderName || it.OrderName || '';
+                        const qty = it.quantity || it.Quantity || 1;
+                        const unit = it.unit || it.Unit || 'ชิ้น';
+                        const isRecon = it.isReconciled || it.IsReconciled;
+                        const statusTag = isRecon ? ' (รับเข้าสต๊อกแล้ว)' : '';
+                        return `<option value="${it.orderId || it.OrderId}">[PO: ${po}] ${name} (${qty} ${unit})${statusTag}</option>`;
+                    }).join('');
+
+                    // 2. เรนเดอร์ Custom Dropdown Options List
+                    renderCustomReceiveOrderOptions(pendingOrdersList);
+
+                    // 3. เลือกรายการเป้าหมาย หรือรายการแรก
+                    let selectedItem = null;
+                    if (targetOrderId) {
+                        selectedItem = pendingOrdersList.find(x => (x.orderId || x.OrderId) == targetOrderId);
+                    }
+                    if (!selectedItem) {
+                        selectedItem = pendingOrdersList[0];
+                    }
+
+                    if (selectedItem) {
+                        selectCustomReceiveOrder(selectedItem);
+                    }
+                } else {
+                    pendingOrdersList = [];
+                    if (countBadge) countBadge.textContent = 'ไม่มีรายการค้างรับ';
+                    if (bellBadge) {
+                        bellBadge.textContent = '0';
+                        bellBadge.classList.remove('animate-pulse');
+                    }
+                    select.innerHTML = '<option value="">-- ไม่มีรายการรอรับของในขณะนี้ --</option>';
+                    if (triggerText) {
+                        triggerText.textContent = 'ไม่มีรายการรอรับของในขณะนี้';
+                        triggerText.title = 'ไม่มีรายการรอรับของในขณะนี้';
+                    }
+                    if (triggerQty) triggerQty.classList.add('hidden');
+                    renderCustomReceiveOrderOptions([]);
+
+                    const rawDisplay = document.getElementById('simulateRawTextDisplay');
+                    if (rawDisplay) rawDisplay.textContent = '-';
+                    const poBadge = document.getElementById('receivePoBadge');
+                    const monthBadge = document.getElementById('receiveMonthBadge');
+                    if (poBadge) poBadge.classList.add('hidden');
+                    if (monthBadge) monthBadge.classList.add('hidden');
+                }
+            } catch (err) {
+                console.error('loadPendingOrders error:', err);
+                select.innerHTML = '<option value="">-- ไม่สามารถโหลดรายการได้ --</option>';
+                if (triggerText) triggerText.textContent = 'ไม่สามารถโหลดรายการได้';
+            }
+        }
+
+        function onSelectReceiveOrder(orderId) {
+            if (!orderId) return;
+            const item = pendingOrdersList.find(x => (x.orderId || x.OrderId) == orderId);
+            if (item) {
+                selectCustomReceiveOrder(item);
+            }
+        }
+
+        function toggleReceiveOrderDropdown() {
+            const menu = document.getElementById('receiveOrderDropdownMenu');
+            const chevron = document.getElementById('receiveOrderChevron');
+            if (!menu) return;
+
+            const isClosed = menu.classList.contains('hidden');
+            if (isClosed) {
+                menu.classList.remove('hidden');
+                if (chevron) chevron.classList.add('rotate-180');
+                const searchInput = document.getElementById('receiveOrderSearchInput');
+                if (searchInput) {
+                    searchInput.value = '';
+                    filterReceiveOrderOptions('');
+                    setTimeout(() => searchInput.focus(), 50);
+                }
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            } else {
+                closeReceiveOrderDropdown();
+            }
+        }
+
+        function closeReceiveOrderDropdown() {
+            const menu = document.getElementById('receiveOrderDropdownMenu');
+            const chevron = document.getElementById('receiveOrderChevron');
+            if (menu) menu.classList.add('hidden');
+            if (chevron) chevron.classList.remove('rotate-180');
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function parseOrderInfo(rawText) {
+            if (!rawText) return { cleanName: '-', meta: '' };
+            
+            // จัดการบรรทัดและการตัดคำ metadata (จำนวน, เป้าหมาย, หมายเหตุ)
+            const normalized = rawText.replace(/\r\n/g, '\n').trim();
+            const lines = normalized.split('\n').map(l => l.trim()).filter(Boolean);
+            
+            let cleanParts = [];
+            let metaParts = [];
+            
+            for (const line of lines) {
+                if (/^(?:จำนวน|เป้าหมาย|แก้ไขใหม่|มีชิ้นงาน|ด่วน|หมายเหตุ)/i.test(line)) {
+                    const filtered = line.replace(/แก้ไขใหม่กรณีไม่อนุมัติ.*$/gi, '').trim();
+                    if (filtered) metaParts.push(filtered);
+                } else {
+                    const match = line.match(/^(.*?)(?:\s+(?:จำนวน\s*\d+|เป้าหมาย\s*[\d\/]+|แก้ไขใหม่).*)$/i);
+                    if (match && match[1] && match[1].trim().length > 1) {
+                        cleanParts.push(match[1].trim());
+                        const remaining = line.substring(match[1].length).trim();
+                        const filtered = remaining.replace(/แก้ไขใหม่กรณีไม่อนุมัติ.*$/gi, '').trim();
+                        if (filtered) metaParts.push(filtered);
+                    } else {
+                        const cleanLine = line.replace(/แก้ไขใหม่กรณีไม่อนุมัติ.*$/gi, '').trim();
+                        if (cleanLine) cleanParts.push(cleanLine);
+                    }
+                }
+            }
+            
+            let cleanName = cleanParts.join(' ').trim();
+            if (!cleanName) cleanName = lines[0] || normalized;
+            
+            const meta = metaParts.join(' • ').trim();
+            return { cleanName, meta };
+        }
+
+        function renderCustomReceiveOrderOptions(items) {
+            const listEl = document.getElementById('receiveOrderOptionsList');
+            if (!listEl) return;
+
+            if (!items || items.length === 0) {
+                listEl.innerHTML = '<div class="p-4 text-center text-xs text-slate-400 italic">ไม่มีรายการรอรับของ</div>';
+                return;
+            }
+
+            const currentSelectedId = document.getElementById('receiveOrderSelect')?.value;
+
+            listEl.innerHTML = items.map(it => {
+                const id = it.orderId || it.OrderId;
+                const po = it.poNumber || it.PoNumber || '';
+                const name = it.orderName || it.OrderName || '';
+                const qty = it.quantity || it.Quantity || 1;
+                const unit = it.unit || it.Unit || 'ชิ้น';
+                const isRecon = it.isReconciled || it.IsReconciled;
+                const isSelected = currentSelectedId && currentSelectedId == id;
+                const info = parseOrderInfo(name);
+
+                const safeTitle = `[PO: ${po || '-'}] ${name}`.replace(/"/g, '&quot;');
+                const displayText = (po && po !== '-') ? `${po} ${info.cleanName}` : info.cleanName;
+
+                return `
+                    <div class="receive-order-option-item px-3 py-2 hover:bg-slate-50 cursor-pointer transition-colors text-left border-l-2 ${isSelected ? 'bg-blue-50/60 border-primary' : 'border-transparent'}" 
+                         data-order-id="${id}"
+                         onclick="onCustomReceiveOrderClick('${id}')"
+                         title="${safeTitle}">
+                        <div class="flex items-center justify-between gap-2 text-xs font-semibold text-slate-800 leading-snug">
+                            <span class="truncate flex-1 min-w-0">${escapeHtml(displayText)}</span>
+                            <div class="flex items-center gap-1.5 shrink-0 font-normal">
+                                ${isRecon ? '<span class="text-[9px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1 py-0.5 rounded leading-none">รับแล้ว</span>' : ''}
+                                <span class="text-[11px] text-slate-500 font-sans">(${Number(qty).toLocaleString()} ${escapeHtml(unit)})</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function onCustomReceiveOrderClick(orderId) {
+            const item = pendingOrdersList.find(x => (x.orderId || x.OrderId) == orderId);
+            if (item) {
+                selectCustomReceiveOrder(item);
+                closeReceiveOrderDropdown();
+            }
+        }
+
+        function selectCustomReceiveOrder(item) {
+            const select = document.getElementById('receiveOrderSelect');
+            const triggerText = document.getElementById('receiveOrderSelectedText');
+            const triggerQty = document.getElementById('receiveOrderSelectedQtyBadge');
+            const orderId = item.orderId || item.OrderId;
+            const po = item.poNumber || item.PoNumber || '';
+            const name = item.orderName || item.OrderName || '';
+            const qty = item.quantity || item.Quantity || 1;
+            const unit = item.unit || item.Unit || 'ชิ้น';
+
+            if (select) {
+                select.value = orderId;
+            }
+
+            const info = parseOrderInfo(name);
+            const displayText = (po && po !== '-') ? `${po} ${info.cleanName}` : info.cleanName;
+
+            if (triggerText) {
+                triggerText.textContent = displayText;
+                triggerText.title = `[PO: ${po || '-'}] ${name}`;
+            }
+
+            if (triggerQty) {
+                triggerQty.textContent = `(${Number(qty).toLocaleString()} ${unit})`;
+                triggerQty.classList.remove('hidden');
+            }
+
+            // ไฮไลต์รายการที่ถูกเลือกในเมนู
+            const listEl = document.getElementById('receiveOrderOptionsList');
+            if (listEl) {
+                listEl.querySelectorAll('.receive-order-option-item').forEach(el => {
+                    if (el.dataset.orderId == orderId) {
+                        el.classList.add('bg-blue-50/60', 'border-primary');
+                        el.classList.remove('border-transparent');
+                    } else {
+                        el.classList.remove('bg-blue-50/60', 'border-primary');
+                        el.classList.add('border-transparent');
+                    }
+                });
+            }
+
+            loadOrderIntoModal(item);
+        }
+
+        function filterReceiveOrderOptions(query) {
+            const q = (query || '').toLowerCase().trim();
+            const listEl = document.getElementById('receiveOrderOptionsList');
+            if (!listEl) return;
+
+            const items = listEl.querySelectorAll('.receive-order-option-item');
+            let visibleCount = 0;
+            items.forEach(el => {
+                const text = el.textContent.toLowerCase();
+                if (!q || text.includes(q)) {
+                    el.style.display = '';
+                    visibleCount++;
+                } else {
+                    el.style.display = 'none';
+                }
+            });
+
+            let noResultsEl = document.getElementById('receiveOrderNoResultsNotice');
+            if (visibleCount === 0) {
+                if (!noResultsEl) {
+                    noResultsEl = document.createElement('div');
+                    noResultsEl.id = 'receiveOrderNoResultsNotice';
+                    noResultsEl.className = 'p-4 text-center text-xs text-slate-400 italic';
+                    noResultsEl.textContent = 'ไม่พบรายการที่ตรงกับคำค้นหา';
+                    listEl.appendChild(noResultsEl);
+                }
+                noResultsEl.style.display = '';
+            } else if (noResultsEl) {
+                noResultsEl.style.display = 'none';
+            }
+        }
+
+        function loadOrderIntoModal(item) {
+            currentLoadedOrder = item;
+            currentLoadedPoNumber = item.poNumber || item.PoNumber || null;
+
+            const orderName = item.orderName || item.OrderName || '';
+            const rawInput = document.getElementById('simulateRawText');
+            if (rawInput) {
+                rawInput.value = orderName;
+            }
+
+            const rawDisplay = document.getElementById('simulateRawTextDisplay');
+            if (rawDisplay) {
+                rawDisplay.textContent = orderName || '-';
+            }
+
+            // Always ensure PO badge and Month badge remain hidden as requested
+            const poBadge = document.getElementById('receivePoBadge');
+            if (poBadge) {
+                poBadge.classList.add('hidden');
+            }
+
+            const monthBadge = document.getElementById('receiveMonthBadge');
+            if (monthBadge) {
+                monthBadge.classList.add('hidden');
+            }
+
+            // เซ็ตจำนวนจริงจาก Monthly Cost / PO ทันที
+            const qtyInput = document.getElementById('simulateQuantityInput');
+            if (qtyInput) {
+                qtyInput.value = item.quantity || item.Quantity || 1;
+            }
+
+            const unitText = document.getElementById('simulateUnitText');
+            if (unitText) {
+                unitText.textContent = item.unit || item.Unit || 'ชิ้น';
+            }
+
+            // รันการวิเคราะห์จับคู่โดยอัตโนมัติทันที
+            runSimulateAnalysis();
+        }
+
+        function toggleCandidatesAccordion() {
+            const container = document.getElementById('simulateCandidatesContainer');
+            const icon = document.getElementById('candidatesChevronIcon');
+            if (!container) return;
+
+            const isHidden = container.classList.contains('hidden');
+            if (isHidden) {
+                container.classList.remove('hidden');
+                if (icon) icon.classList.add('rotate-180');
+            } else {
+                container.classList.add('hidden');
+                if (icon) icon.classList.remove('rotate-180');
+            }
+        }
+
+        async function runSimulateAnalysis() {
+            const rawText = document.getElementById('simulateRawText').value.trim();
+            if (!rawText) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'กรุณาระบุข้อความ',
+                    text: 'พิมพ์หรือเลือกข้อความเพื่อวิเคราะห์'
+                });
+                return;
+            }
+
+            const loading = document.getElementById('simulateLoadingState');
+            const panel = document.getElementById('simulateAnalysisPanel');
+            const placeholder = document.getElementById('simulateInitialPlaceholder');
+            const btn = document.getElementById('btnRunSimulate');
+
+            loading.classList.remove('hidden');
+            loading.classList.add('flex');
+            if (panel) panel.classList.add('hidden');
+            if (placeholder) placeholder.classList.add('hidden');
+            if (btn) btn.disabled = true;
+
+            try {
+                const resp = await fetch('/Stock/SimulateReceiveItem', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ rawText: rawText })
+                });
+
+                const data = await resp.json();
+                loading.classList.add('hidden');
+                loading.classList.remove('flex');
+                if (btn) btn.disabled = false;
+
+                if (data.success) {
+                    currentSimulateData = data;
+                    if (panel) panel.classList.remove('hidden');
+
+                    // 1. แสดงผลการสกัดข้อความ (Sanitization)
+                    const cleanNameEl = document.getElementById('simulateCleanName');
+                    if (cleanNameEl) cleanNameEl.textContent = data.cleanName || rawText;
+
+                    // กำหนดจำนวนรับเข้าคลัง: หากมาจากรายการ PO ให้ใช้จำนวนจริงจาก PO เป็นหลัก
+                    const actualQty = (currentLoadedOrder && (currentLoadedOrder.quantity || currentLoadedOrder.Quantity))
+                        ? (currentLoadedOrder.quantity || currentLoadedOrder.Quantity)
+                        : (data.detectedQuantity || 1);
+                    document.getElementById('simulateQuantityInput').value = actualQty;
+                    document.getElementById('simulateUnitText').textContent = data.detectedUnit || (currentLoadedOrder?.unit || currentLoadedOrder?.Unit || 'ชิ้น');
+
+                    // สรุป Noise
+                    const noiseEl = document.getElementById('simulateNoiseTags');
+                    if (noiseEl) {
+                        const noiseParts = [];
+                        if (data.extractedTargetDate) noiseParts.push(`เป้าหมาย: ${data.extractedTargetDate}`);
+                        if (data.extractedRemarks) noiseParts.push(`หมายเหตุ: ${data.extractedRemarks}`);
+                        if (data.detectedQuantity > 1 || data.detectedUnit) noiseParts.push(`สกัดจำนวน: ${data.detectedQuantity} ${data.detectedUnit || 'ชิ้น'}`);
+                        noiseEl.textContent = noiseParts.length > 0 ? noiseParts.join(' | ') : 'ไม่มี Noise ส่วนเกิน';
+                    }
+
+                    // 2. แสดงผล Exact Match vs Fuzzy Candidates
+                    const exactBanner = document.getElementById('simulateExactMatchBanner');
+                    const candidatesSection = document.getElementById('simulateCandidatesSection');
+                    const candidatesContainer = document.getElementById('simulateCandidatesContainer');
+                    const btnToggle = document.getElementById('btnToggleCandidates');
+                    const chevronIcon = document.getElementById('candidatesChevronIcon');
+                    const accordionTitle = document.getElementById('candidatesAccordionTitle');
+                    const accordionBadge = document.getElementById('candidatesAccordionBadge');
+                    const submitBtn = document.getElementById('btnSubmitSelectedCandidate');
+                    const skipOption = document.getElementById('simulateSkipOption');
+
+                    submitBtn.disabled = true;
+                    selectedCandidateCode = null;
+
+                    const matches = data.matches || [];
+                    const exactMatch = matches.find(m => m.isExactNameMatch || m.isExactMapping || m.matchPercentage === 100);
+
+                    if (exactMatch) {
+                        exactBanner.classList.remove('hidden');
+                        document.getElementById('exactMatchProductCode').textContent = exactMatch.productCode;
+                        document.getElementById('exactMatchProductName').textContent = exactMatch.productName;
+                        document.getElementById('exactMatchStockQty').textContent = Number(exactMatch.quantity).toLocaleString();
+
+                        // หากพบ Exact 100% ให้แสดงปุ่มดูตัวเลือกอื่นแบบย่อ
+                        if (candidatesSection) candidatesSection.classList.remove('hidden');
+                        if (candidatesContainer) candidatesContainer.classList.add('hidden');
+                        if (btnToggle) {
+                            btnToggle.classList.remove('hidden');
+                            btnToggle.classList.add('flex');
+                        }
+                        if (chevronIcon) chevronIcon.classList.remove('rotate-180');
+                        if (accordionTitle) accordionTitle.textContent = 'ดูตัวเลือกที่ใกล้เคียงอื่นๆ';
+                        if (accordionBadge) accordionBadge.textContent = `${matches.length} รายการ`;
+                    } else {
+                        exactBanner.classList.add('hidden');
+
+                        // หากเป็น Fuzzy Match ให้แสดงรายชื่อให้เลือกทันทีโดยไม่ต้องผ่านปุ่ม Toggle ซ้ำซ้อน
+                        if (candidatesSection) candidatesSection.classList.remove('hidden');
+                        if (candidatesContainer) candidatesContainer.classList.remove('hidden');
+                        if (btnToggle) {
+                            btnToggle.classList.add('hidden');
+                            btnToggle.classList.remove('flex');
+                        }
+                    }
+
+                    if (skipOption) skipOption.classList.remove('hidden');
+
+                    // แสดง Candidates List ด้วย Clean-Craft row style
+                    if (matches.length === 0) {
+                        candidatesContainer.innerHTML = `
+                            <div class="p-6 text-center text-slate-400 text-xs">
+                                ไม่พบรายการที่มีความใกล้เคียงในระบบสต๊อกสินค้า
+                            </div>
+                        `;
+                    } else {
+                        candidatesContainer.innerHTML = matches.map((m, idx) => {
+                            const isExact = m.isExactNameMatch || m.isExactMapping || m.matchPercentage === 100;
+                            let scoreBadge = '';
+                            if (isExact) {
+                                // ระดับ 1: ตรงกัน 100% (Exact Match) - เขียวมรกต
+                                scoreBadge = '<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/80">100% Match</span>';
+                            } else if (m.matchPercentage >= 80) {
+                                // ระดับ 2: ใกล้เคียงสูงมาก 80% - 99% - น้ำเงินสด
+                                scoreBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200/80">${m.matchPercentage}% Match</span>`;
+                            } else if (m.matchPercentage >= 60) {
+                                // ระดับ 3: ใกล้เคียงปานกลาง 60% - 79% - ฟ้าสว่าง
+                                scoreBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-sky-50 text-sky-600 border border-sky-200/80">${m.matchPercentage}% Match</span>`;
+                            } else if (m.matchPercentage >= 40) {
+                                // ระดับ 4: ใกล้เคียงบางคำ 40% - 59% - ส้มเหลืองอำพัน
+                                scoreBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-amber-50 text-amber-700 border border-amber-200/80">${m.matchPercentage}% Match</span>`;
+                            } else {
+                                // ระดับ 5: ตรงน้อย < 40% - เทาสุภาพ
+                                scoreBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200/70">${m.matchPercentage}% Match</span>`;
+                            }
+
+                            return `
+                                <label class="p-3 hover:bg-slate-50/80 transition-colors flex items-start gap-3 cursor-pointer select-none bg-white">
+                                    <input type="radio" name="simulateSelectedStock" value="${m.productCode}" onchange="onCandidateSelected('${m.productCode}')" class="mt-1 h-4 w-4 text-primary border-slate-300 focus:ring-0 focus:outline-none cursor-pointer shrink-0" />
+                                    <div class="min-w-0 flex-1">
+                                        <div class="flex items-center justify-between gap-2">
+                                            <div class="flex items-center gap-2 min-w-0">
+                                                <span class="font-mono font-bold text-xs text-primary shrink-0">${m.productCode}</span>
+                                                <span class="text-xs font-semibold text-slate-800 truncate">${m.productName}</span>
+                                            </div>
+                                            <div class="shrink-0">
+                                                ${scoreBadge}
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center gap-3 mt-1 text-[11px] text-slate-500">
+                                            <span>หมวด: <span class="text-slate-700 font-medium">${m.category || 'ทั่วไป'}</span></span>
+                                            <span class="text-slate-300">•</span>
+                                            <span>สต๊อกปัจจุบัน: <strong class="text-slate-800 font-semibold">${Number(m.quantity).toLocaleString()}</strong> ชิ้น</span>
+                                        </div>
+                                    </div>
+                                </label>
+                            `;
+                        }).join('');
+                    }
+
+                    document.getElementById('simulateMatchCount').textContent = `พบ ${matches.length} รายการ`;
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'เกิดข้อผิดพลาด',
+                        text: data.message || 'ไม่สามารถวิเคราะห์ข้อความได้'
+                    });
+                }
+            } catch (err) {
+                console.error('runSimulateAnalysis error:', err);
+                loading.classList.add('hidden');
+                loading.classList.remove('flex');
+                if (btn) btn.disabled = false;
+                Swal.fire({
+                    icon: 'error',
+                    title: 'การเชื่อมต่อผิดพลาด',
+                    text: 'ไม่สามารถติดต่อเซิร์ฟเวอร์ได้'
+                });
+            }
+
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+        }
+
+        function onCandidateSelected(productCode) {
+            selectedCandidateCode = productCode;
+            const submitBtn = document.getElementById('btnSubmitSelectedCandidate');
+            if (submitBtn) submitBtn.disabled = !productCode;
+
+            // เปลี่ยนเฉพาะสีพื้นหลังเมื่อเลือก (ไม่มีแถบสีขอบซ้าย)
+            const labels = document.querySelectorAll('#simulateCandidatesContainer label');
+            labels.forEach(lbl => {
+                const input = lbl.querySelector('input[type="radio"]');
+                if (input && input.value === productCode) {
+                    lbl.classList.add('bg-blue-50/60');
+                    lbl.classList.remove('bg-white');
+                } else {
+                    lbl.classList.remove('bg-blue-50/60');
+                    lbl.classList.add('bg-white');
+                }
+            });
+        }
+
+        async function confirmExactMatch() {
+            if (!currentSimulateData) return;
+            const matches = currentSimulateData.matches || [];
+            const exact = matches.find(m => m.isExactNameMatch || m.isExactMapping || m.matchPercentage === 100);
+            if (!exact) return;
+
+            const qty = parseFloat(document.getElementById('simulateQuantityInput').value) || (currentLoadedOrder?.quantity || 1);
+            const orderName = currentLoadedOrder?.orderName || currentSimulateData.cleanName;
+            const refId = currentLoadedPoNumber || 'RECEIVE-PO';
+            await executeQuickReceive(exact.productCode, qty, orderName, `รับเข้าคลังอัตโนมัติ (100% Match จาก: ${orderName})`, refId);
+        }
+
+        async function submitSelectedCandidate() {
+            if (!selectedCandidateCode || !currentSimulateData) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'ยังไม่ได้เลือกสินค้า',
+                    text: 'กรุณาคลิกเลือกสินค้าในรายการที่ต้องการรับเข้า'
+                });
+                return;
+            }
+
+            const qty = parseFloat(document.getElementById('simulateQuantityInput').value) || (currentLoadedOrder?.quantity || 1);
+            const orderName = currentLoadedOrder?.orderName || currentSimulateData.cleanName;
+            const refId = currentLoadedPoNumber || 'RECEIVE-PO';
+            await executeQuickReceive(selectedCandidateCode, qty, orderName, `รับเข้าคลังผ่าน AI Matching (จับคู่จาก: ${orderName})`, refId);
+        }
+
+        async function executeQuickReceive(productCode, quantity, orderName, remarks, referenceId) {
+            try {
+                Swal.fire({
+                    title: 'กำลังบันทึกสต๊อก...',
+                    text: 'ระบบกำลังอัปเดตยอดคงเหลือและบันทึกความจำลง ItemMappings',
+                    allowOutsideClick: false,
+                    didOpen: () => { Swal.showLoading(); }
+                });
+
+                const resp = await fetch('/Stock/QuickConfirmReceive', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        productCode: productCode,
+                        quantity: quantity,
+                        orderName: orderName,
+                        remarks: remarks,
+                        referenceId: referenceId
+                    })
+                });
+
+                const result = await resp.json();
+                if (result.success) {
+                    await Swal.fire({
+                        icon: 'success',
+                        title: 'รับสินค้าเข้าสต๊อกสำเร็จ!',
+                        html: `
+                            <p class="text-sm text-slate-600">${result.message}</p>
+                            <p class="text-xs text-slate-400 mt-2 font-mono">รหัส: <strong>${result.productCode}</strong> | ยอดใหม่: <strong class="text-emerald-600">${Number(result.newQuantity).toLocaleString()}</strong> ชิ้น (${result.newStatus})</p>
+                        `,
+                        confirmButtonText: 'ตกลง'
+                    });
+
+                    // อัปเดตรายการที่ค้างรับ
+                    if (pendingOrdersList && pendingOrdersList.length > 1) {
+                        await loadPendingOrders();
+                    } else {
+                        closeReceiveModal();
+                        window.location.reload();
+                    }
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'ไม่สามารถบันทึกได้',
+                        text: result.message || 'เกิดข้อผิดพลาดในการบันทึกสต๊อก'
+                    });
+                }
+            } catch (err) {
+                console.error('executeQuickReceive error:', err);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'เกิดข้อผิดพลาด',
+                    text: 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้'
+                });
+            }
+        }
+    </script>
+}

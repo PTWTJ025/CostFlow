@@ -374,6 +374,9 @@
         foreach (var order in Model.PendingOrders)
         {
             var fwdBadge = "";
+            var qtyColor = order.ForwardedStatus == "Deferred" ? "text-amber-600"
+                : order.ForwardedStatus == "Skipped" ? "text-purple-600"
+                : "text-blue-600";
 
             // สร้าง tooltip ที่แสดงทั้งเดือนต้นทางและเดือนที่กด action ล่าสุด
             if (order.ForwardedStatus == "Deferred")
@@ -459,18 +462,26 @@
                             </div>
                         }
 
-                        <div class="flex items-center gap-1.5">
-                            <svg class="w-3 h-3 text-slate-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"/>
-                            </svg>
-                            @if (order.DeliveryTarget != "-" && !string.IsNullOrEmpty(order.DeliveryTarget))
-                            {
-                                <span class="text-[11px] text-slate-400">เป้าหมายส่งมอบ: <span class="font-medium text-indigo-600">@order.DeliveryTarget</span> </span>
-                            }
-                            else
-                            {
-                                <span class="text-[11px] text-red-600 italic">ยังไม่มีแผนผลิตที่จับคู่</span>
-                            }
+                        <div class="flex items-center flex-wrap gap-x-2.5 gap-y-1 mt-1.5 text-[11px] leading-none">
+                            <span class="inline-flex items-center gap-1 font-medium @qtyColor leading-none">
+                                <span>จำนวน:</span>
+                                <span class="font-bold leading-none">@order.Quantity.ToString("N0")</span>
+                                <span>ชิ้น</span>
+                            </span>
+                            <span class="text-slate-300 leading-none select-none inline-flex items-center ml-3 gap-3"></span>
+                            <div class="inline-flex items-center gap-1 leading-none">
+                                <svg class="w-3.5 h-3.5 text-slate-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"/>
+                                </svg>
+                                @if (order.DeliveryTarget != "-" && !string.IsNullOrEmpty(order.DeliveryTarget))
+                                {
+                                    <span class="text-slate-400 leading-none">เป้าหมายส่งมอบ: <span class="font-medium text-indigo-600">@order.DeliveryTarget</span> </span>
+                                }
+                                else
+                                {
+                                    <span class="text-[11px] text-red-600 italic leading-none">ยังไม่มีแผนผลิตที่จับคู่</span>
+                                }
+                            </div>
                         </div>
                     </div>
                     <!-- Price + Add btn -->
@@ -506,6 +517,9 @@
             var actionBg = saved.Action == "ReceivedFull" ? "bg-emerald-50 border-emerald-200 text-emerald-700"
                 : saved.Action == "Deferred" ? "bg-amber-50 border-amber-200 text-amber-700"
                 : "bg-purple-50 border-purple-200 text-purple-700";
+            var actionColor = saved.Action == "ReceivedFull" ? "text-emerald-600"
+                : saved.Action == "Deferred" ? "text-amber-600"
+                : "text-purple-600";
             var actionLabel = saved.Action == "ReceivedFull" ? "รับสินค้าแล้ว"
                 : saved.Action == "Deferred" ? "ผ่อน → เดือนหน้า"
                 : "ยังไม่รับสินค้า";
@@ -588,11 +602,19 @@
                                 <span>@infoText</span>
                             </div>
                         }
-                        <div class="flex items-center gap-1.5 mt-1.5">
-                            <svg class="w-3 h-3 text-slate-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"/>
-                            </svg>
-                            <span class="text-[11px] text-slate-400">@(saved.DeliveryTarget != "-" ? saved.DeliveryTarget : "ไม่ระบุ")</span>
+                        <div class="flex items-center flex-wrap gap-x-2.5 mt-1.5 text-[11px] leading-none">
+                            <span class="inline-flex items-center gap-1 font-medium @actionColor leading-none">
+                                <span>จำนวน:</span>
+                                <span class="font-bold leading-none">@saved.Quantity.ToString("N0")</span>
+                                <span>ชิ้น</span>
+                            </span>
+                            <span class="text-slate-300 leading-none select-none inline-flex items-center">•</span>
+                            <div class="inline-flex items-center gap-1.5 leading-none ml-3">
+                                <svg class="w-3.5 h-3.5 text-slate-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"/>
+                                </svg>
+                                <span class="text-slate-400 leading-none">เป้าหมายส่งมอบ: <span class="font-medium text-indigo-600">@(saved.DeliveryTarget != "-" ? saved.DeliveryTarget : "ไม่ระบุ")</span></span>
+                            </div>
                         </div>
                     </div>
                     <div class="shrink-0 flex flex-col items-end gap-1.5">
@@ -834,6 +856,9 @@
                     const item = parsed[orderId];
                     const card = document.querySelector(`.order-card[data-order-id="${orderId}"]`);
                     if (card && card.style.display !== 'none' && !card.classList.contains('in-cart')) {
+                        if (!item.quantity && card.dataset.quantity) {
+                            item.quantity = parseInt(card.dataset.quantity) || 1;
+                        }
                         cart[orderId] = item;
                         card.classList.add('in-cart');
                         const btn = card.querySelector('.add-btn');
@@ -1008,6 +1033,7 @@
 
             renderCartItem(orderId);
             document.getElementById('cart-empty').style.display = 'none';
+            setAction(orderId, 'ReceivedFull');
             updateSummary();
         }
 
@@ -1048,8 +1074,8 @@
             const deferNoteClass = isDef ? 'deferred-note open mt-2 items-center gap-2 bg-amber-50 border border-amber-200 rounded-md px-3 py-2' : 'deferred-note mt-2 items-center gap-2 bg-amber-50 border border-amber-200 rounded-md px-3 py-2';
 
             const deferPillHtml = isDeferredCarryOver ? '' : `
-                        <label class="${deferClass}" id="pill-defer-${orderId}">
-                            <input type="radio" name="act_${orderId}" value="Deferred" ${isDef ? 'checked' : ''} onchange="setAction('${orderId}','Deferred')">
+                        <label class="${deferClass}" id="pill-defer-${orderId}" onclick="setAction('${orderId}','Deferred')">
+                            <input type="radio" name="act_${orderId}" value="Deferred" ${isDef ? 'checked' : ''} onclick="event.stopPropagation()" onchange="setAction('${orderId}','Deferred')">
                             <span>ผ่อนชำระ</span>
                             <span class="font-bold ml-1">${fmt(item.price)}</span>
                         </label>
@@ -1073,6 +1099,13 @@
                                         ${fwdBadgeHtml}
                                     </div>
                                     <p class="text-xs text-slate-500 leading-snug line-clamp-2 mt-0.5">${item.orderName}</p>
+                                    <div class="flex items-center gap-1.5 mt-2 mb-0.5 text-[11px] leading-none">
+                                        <span class="inline-flex items-center gap-1 font-medium text-blue-600 leading-none">
+                                            <span>จำนวน:</span>
+                                            <span class="font-bold leading-none">${(item.quantity || 1).toLocaleString()}</span>
+                                            <span>ชิ้น</span>
+                                        </span>
+                                    </div>
                                 </div>
                                 <div class="shrink-0 flex flex-col items-end gap-1.5">
                                     <span class="font-bold text-sm text-slate-700">${fmt(item.price)}</span>
@@ -1088,14 +1121,14 @@
         
                             <!-- Action pills -->
                             <div class="flex flex-wrap gap-1.5" id="pills-${orderId}">
-                                <label class="${receiveClass}" id="pill-receive-${orderId}">
-                                    <input type="radio" name="act_${orderId}" value="ReceivedFull" ${isRec ? 'checked' : ''} onchange="setAction('${orderId}','ReceivedFull')">
+                                <label class="${receiveClass}" id="pill-receive-${orderId}" onclick="setAction('${orderId}','ReceivedFull')">
+                                    <input type="radio" name="act_${orderId}" value="ReceivedFull" ${isRec ? 'checked' : ''} onclick="event.stopPropagation()" onchange="setAction('${orderId}','ReceivedFull')">
                                     <span>${receiveLabel}</span>
                                     <span class="font-bold ml-1">${fmt(item.price)}</span>
                                 </label>
                                 ${deferPillHtml}
-                                <label class="${skipClass}" id="pill-skip-${orderId}">
-                                    <input type="radio" name="act_${orderId}" value="Skipped" ${isSkip ? 'checked' : ''} onchange="setAction('${orderId}','Skipped')">
+                                <label class="${skipClass}" id="pill-skip-${orderId}" onclick="setAction('${orderId}','Skipped')">
+                                    <input type="radio" name="act_${orderId}" value="Skipped" ${isSkip ? 'checked' : ''} onclick="event.stopPropagation()" onchange="setAction('${orderId}','Skipped')">
                                     <span>ยังไม่รับสินค้า</span>
                                 </label>
                             </div>
@@ -1135,9 +1168,21 @@
         // ─── Set action ───────────────────────────────────────────────────────────────
         function setAction(orderId, action) {
             if (!cart[orderId]) return;
+
+            // ถ้าเป็นรายการที่ผ่อนยกยอดมาจากเดือนก่อน ไม่อนุญาตให้เลือก Deferred ซ้ำ ให้บังคับเป็น ReceivedFull
+            if (cart[orderId].forwardedStatus === 'Deferred' && action === 'Deferred') {
+                action = 'ReceivedFull';
+            }
+
             cart[orderId].action = action;
 
             const item = cart[orderId];
+
+            // ซิงค์สถานะ checked ของ radio element ใน DOM ให้ตรงกันเสมอ
+            const radio = document.querySelector(`input[name="act_${orderId}"][value="${action}"]`);
+            if (radio) {
+                radio.checked = true;
+            }
 
             // Update pill active classes
             document.getElementById('pill-receive-' + orderId)?.classList.toggle('active-receive', action === 'ReceivedFull');
@@ -1496,9 +1541,8 @@
             renderCartItem(orderId);
             document.getElementById('cart-empty').style.display = 'none';
 
-            if (specifiedAction && specifiedAction !== 'ReceivedFull') {
-                setAction(orderId, specifiedAction);
-            }
+            // ใช้ finalAction เสมอ เพื่อซิงค์ UI และปุ่มให้พร้อมทำงานทันที
+            setAction(orderId, finalAction);
 
             updateSummary();
         }
@@ -1585,7 +1629,12 @@
                         timer: 1500,
                         showConfirmButton: false
                     });
-                    window.location.replace('/MonthlyCost');
+                    if (data.reconcileIds && data.reconcileIds.length > 0) {
+                        // สลับมาที่หน้าสต๊อกสินค้า พร้อมเปิด Popup ตรวจรับของของรายการนี้ทันที
+                        window.location.href = `/Stock?autoOpenReceive=true&orderId=${data.reconcileIds[0]}`;
+                    } else {
+                        window.location.replace('/MonthlyCost');
+                    }
                 } else {
                     await Swal.fire({
                         icon: 'error',

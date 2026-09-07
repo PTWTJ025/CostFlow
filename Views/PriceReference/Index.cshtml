@@ -14,39 +14,44 @@
 <div class="flex-1 p-md md:p-lg lg:p-xl flex flex-col gap-lg max-w-container-max mx-auto w-full">
     <!-- Search & Summary Card -->
     <div class="bg-white rounded border border-outline-variant shadow-sm p-md md:p-lg lg:p-xl fade-in-up">
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-md mb-lg">
-            <div>
-                <h3 class="font-headline-sm text-headline-sm text-on-surface mb-xs">ฐานข้อมูลราคากลางอ้างอิง</h3>
-                <p class="text-xs text-secondary">ตรวจสอบราคาเฉลี่ยต่อหน่วยและประวัตินำเข้าจากแหล่งจัดซื้อต่าง ๆ</p>
+        <!-- Header Section -->
+        <div class="mb-md">
+            <h3 class="font-headline-sm text-headline-sm text-on-surface mb-xs">ฐานข้อมูลราคากลางอ้างอิง</h3>
+            <p class="text-xs text-secondary">ตรวจสอบราคาเฉลี่ยต่อหน่วยและประวัตินำเข้าจากแหล่งจัดซื้อต่าง ๆ</p>
+        </div>
+
+        <!-- Toolbar Section: Split Left & Right (Search on Left, Actions on Right) -->
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-lg">
+            <!-- Left: Search Box (Strict Medium Size: 320px) -->
+            <div class="flex items-center gap-2 shrink-0" style="width: 340px; max-width: 100%;">
+                <div class="relative flex-1">
+                    <input id="search-input" value="" class="w-full pl-3 pr-3 py-2 border border-outline-variant rounded text-xs focus:ring-1 focus:ring-primary focus:border-primary outline-none font-semibold text-slate-700 shadow-2xs" style="height: 36px;" placeholder="พิมพ์เพื่อค้นหารหัส หรือชื่อสินค้า..." type="text" autocomplete="off" />
+                    <div id="price-suggestions-dropdown" class="hidden absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-md shadow-lg z-50 max-h-[240px] overflow-y-auto divide-y divide-slate-100"></div>
+                </div>
+                <button id="clear-search-btn" class="px-2.5 py-1.5 border border-slate-200 rounded text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors flex items-center hidden whitespace-nowrap" style="height: 36px;">
+                    ล้างค่า
+                </button>
             </div>
-            <div class="flex items-center gap-sm">
+
+            <!-- Right: Action Buttons & Count Badge (Single Row, Never Wraps) -->
+            <div class="flex items-center gap-2 shrink-0 flex-nowrap">
                 @if (isAdmin)
                 {
-                    <button onclick="openAddModal()" class="bg-primary hover:bg-primary/95 text-on-primary text-xs font-bold px-md py-2 rounded flex items-center gap-2 transition-colors shadow-sm btn-interactive">
+                    <button onclick="openAddModal()" class="bg-primary hover:bg-primary/95 text-on-primary text-xs font-bold px-3 py-2 rounded flex items-center gap-2 transition-colors shadow-sm btn-interactive whitespace-nowrap" style="height: 36px;">
                         <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                         </svg>
-                        เพิ่มราคากลางใหม่
+                        <span>เพิ่มราคากลางใหม่</span>
                     </button>
-                    <button id="sync-btn" onclick="syncFromGoogleSheets()" title="ซิงค์ราคากลางจาก Google Sheets" class="text-xs font-bold px-3 py-2 rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                    <button id="sync-btn" onclick="syncFromGoogleSheets()" title="ซิงค์ราคากลางจาก Google Sheets" class="text-xs font-bold px-3 py-2 rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-slate-200 hover:bg-slate-50 whitespace-nowrap text-slate-700" style="height: 36px;">
                         <svg viewBox="0 0 32 32" id="sync-icon" class="w-4 h-4 text-current flex-shrink-0" width="32" height="32"><title>refresh 01</title><g fill="currentColor"><path fill="currentColor" d="M28.882,18.026c-0.54-0.121-1.077,0.206-1.203,0.744C26.395,24.204,21.593,28,16,28C9.383,28,4,22.617,4,16 C4,9.383,9.383,4,16,4c2.377,0,4.657,0.696,6.603,1.983l-3.724,3.724l10.3,1.472l-1.472-10.3l-3.672,3.672 C21.693,2.903,18.911,2,16,2C8.28,2,2,8.28,2,16s6.28,14,14,14c6.525,0,12.127-4.429,13.625-10.771 C29.752,18.692,29.419,18.153,28.882,18.026z"></path></g></svg>
                         <span id="sync-label">Reload</span>
                     </button>
                 }
-                <div class="bg-slate-50 border border-slate-200/60 rounded px-3 py-2 text-xs font-semibold text-slate-700">
-                    อะไหล่ทั้งหมดในระบบ: <span id="total-count-badge">@totalCount.ToString("N0")</span> รายการ
+                <div class="bg-slate-50 border border-slate-200/60 rounded px-3 py-2 text-xs font-semibold text-slate-700 whitespace-nowrap flex items-center" style="height: 36px;">
+                    อะไหล่ทั้งหมดในระบบ: <span id="total-count-badge" class="ml-1 font-bold text-slate-800">@totalCount.ToString("N0")</span> รายการ
                 </div>
             </div>
-        </div>
-
-        <!-- Search Form -->
-        <div class="flex gap-sm max-w-xl mb-lg">
-            <div class="relative flex-1">
-                <input id="search-input" value="" class="w-full pl-3 pr-3 py-2 border border-outline-variant rounded text-xs focus:ring-1 focus:ring-primary focus:border-primary outline-none font-semibold text-slate-700" placeholder="พิมพ์เพื่อค้นหาด้วยรหัสสินค้า หรือ ชื่อภาษาไทย/อังกฤษ ทันที..." type="text" autocomplete="off" />
-            </div>
-            <button id="clear-search-btn" class="px-md py-2 border border-slate-200 rounded text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors flex items-center hidden">
-                ล้างค่า
-            </button>
         </div>
 
         <!-- High-density Data Table -->
@@ -543,7 +548,9 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
-    // Dynamic autocomplete instant search
+    const priceDropdown = document.getElementById("price-suggestions-dropdown");
+
+    // Dynamic autocomplete instant search + Guide List
     searchInput.addEventListener("input", function() {
         currentSearch = this.value;
         currentPageNum = 1;
@@ -555,6 +562,68 @@ document.addEventListener("DOMContentLoaded", function() {
         }
 
         filterAndPaginate();
+
+        // Autocomplete Guide List
+        if (priceDropdown) {
+            const query = currentSearch.trim().toLowerCase();
+            if (query.length < 1) {
+                priceDropdown.classList.add("hidden");
+                priceDropdown.innerHTML = "";
+                return;
+            }
+
+            const matches = allProducts.filter(item => 
+                (item.productCode || "").toLowerCase().includes(query) || 
+                (item.productName || "").toLowerCase().includes(query)
+            ).slice(0, 8);
+
+            if (matches.length > 0) {
+                priceDropdown.innerHTML = matches.map(item => `
+                    <div class="price-suggest-item px-3 py-2 hover:bg-slate-50 cursor-pointer transition-colors text-left flex justify-between items-center gap-2" data-code="${item.productCode || ''}" data-name="${(item.productName || '').replace(/"/g, '&quot;')}">
+                        <div class="min-w-0 flex-1">
+                            <span class="font-mono text-primary font-bold text-xs">${item.productCode || ''}</span>
+                            <span class="text-slate-700 text-xs truncate block mt-0.5">${item.productName || ''}</span>
+                        </div>
+                        <span class="text-slate-400 text-xs font-mono shrink-0">${item.unit || ''} ฿${(item.pricePerUnit || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                    </div>
+                `).join('');
+                priceDropdown.classList.remove("hidden");
+
+                priceDropdown.querySelectorAll('.price-suggest-item').forEach(el => {
+                    el.addEventListener('click', function() {
+                        searchInput.value = this.dataset.name || this.dataset.code;
+                        currentSearch = searchInput.value;
+                        currentPageNum = 1;
+                        clearSearchBtn.classList.remove("hidden");
+                        priceDropdown.classList.add("hidden");
+                        filterAndPaginate();
+                    });
+                });
+            } else {
+                priceDropdown.classList.add("hidden");
+                priceDropdown.innerHTML = "";
+            }
+        }
+    });
+
+    searchInput.addEventListener("keydown", function(e) {
+        if (e.key === "Escape") {
+            if (priceDropdown) priceDropdown.classList.add("hidden");
+        } else if (e.key === "Enter") {
+            const firstOpt = priceDropdown?.querySelector('.price-suggest-item');
+            if (firstOpt && !priceDropdown.classList.contains("hidden")) {
+                e.preventDefault();
+                firstOpt.click();
+            } else {
+                if (priceDropdown) priceDropdown.classList.add("hidden");
+            }
+        }
+    });
+
+    document.addEventListener("click", function(e) {
+        if (priceDropdown && !searchInput.contains(e.target) && !priceDropdown.contains(e.target)) {
+            priceDropdown.classList.add("hidden");
+        }
     });
 
     // Clear search event
@@ -563,6 +632,10 @@ document.addEventListener("DOMContentLoaded", function() {
         currentSearch = "";
         currentPageNum = 1;
         this.classList.add("hidden");
+        if (priceDropdown) {
+            priceDropdown.classList.add("hidden");
+            priceDropdown.innerHTML = "";
+        }
         filterAndPaginate();
     });
 

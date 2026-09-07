@@ -114,7 +114,7 @@ namespace CostFlow.Services
                 // วนลูปสร้าง Skipped ให้ทุกเดือนที่ขาดหายไป
                 while (loopDate < currentDate)
                 {
-                    string loopMonthKey = $"{loopDate.Year:0000}-{loopDate.Month:02}";
+                    string loopMonthKey = $"{loopDate.Year:0000}-{loopDate.Month:00}";
 
                     if (!actionByOrderAndMonth.ContainsKey((order.Id, loopMonthKey)))
                     {
