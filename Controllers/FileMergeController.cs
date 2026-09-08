@@ -796,7 +796,7 @@ namespace CostFlow.Controllers
         {
             try
             {
-                string? appScriptUrl = _configuration["GoogleSheets:MonthlyCostAppScriptUrl"];
+                string? appScriptUrl = _configuration["GoogleSheets:PrimarySyncAppScriptUrl"] ?? _configuration["GoogleSheets:MonthlyCostAppScriptUrl"];
                 if (string.IsNullOrWhiteSpace(appScriptUrl) || appScriptUrl.Contains("_placeholder"))
                 {
                     appScriptUrl = _configuration["GoogleSheets:ArchiveAppScriptUrl"];

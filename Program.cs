@@ -227,3 +227,4 @@ public class TempProductJsonItem
     public double ราคาต่อชิ้น { get; set; }
     public List<string> แหล่งข้อมูล { get; set; } = new();
 }
+// Auto-reload trigger

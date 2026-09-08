@@ -18,6 +18,9 @@ appsettings.*.json
 *.db-wal
 *.db.bak
 
+# เอกสาร
+docs
+
 # ----- 🏗️ Build Output (ผลลัพธ์ที่ระบบ Build สร้างขึ้นมาเอง) -----
 [Bb]in/
 [Oo]bj/

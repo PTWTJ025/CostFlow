@@ -304,7 +304,7 @@ namespace CostFlow.Controllers
                 .AsNoTracking()
                 .ToDictionaryAsync(p => p.ProductCode, p => (decimal)p.PricePerUnit, StringComparer.OrdinalIgnoreCase);
 
-            string? appScriptUrl = _configuration["GoogleSheets:OrderHistoryAppScriptUrl"];
+            string? appScriptUrl = _configuration["GoogleSheets:PrimarySyncAppScriptUrl"] ?? _configuration["GoogleSheets:OrderHistoryAppScriptUrl"];
             if (string.IsNullOrWhiteSpace(appScriptUrl) || appScriptUrl.Contains("_placeholder"))
             {
                 return Json(new { success = false, error = "ยังไม่ได้ตั้งค่า Google Sheets API URL" });

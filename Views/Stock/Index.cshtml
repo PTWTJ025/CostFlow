@@ -488,7 +488,6 @@
                                 </svg>
                             </div>
                             <span class="text-xs font-semibold text-slate-700">เลือกจากคลังภาพ</span>
-                            <span class="text-[10px] text-slate-400 mt-0.5">ไฟล์รูปภาพในเครื่อง</span>
                         </button>
 
                         <!-- การ์ด 2: ถ่ายรูปจากกล้อง -->
@@ -502,7 +501,6 @@
                                 </svg>
                             </div>
                             <span class="text-xs font-semibold text-slate-700">ถ่ายรูปจากกล้อง</span>
-                            <span class="text-[10px] text-slate-400 mt-0.5">เปิดกล้องถ่ายทันที</span>
                         </button>
                     </div>
 
@@ -1077,25 +1075,7 @@
                 }
             });
 
-            // ปิด Modal เมื่อกดคลิกพื้นที่นอกกล่อง
-            const modalEl = document.getElementById('addStockModal');
-            if (modalEl) {
-                modalEl.addEventListener('click', function(e) {
-                    if (e.target === this) {
-                        closeAddModal();
-                    }
-                });
-            }
-
-            const editModalEl = document.getElementById('editStockModal');
-            if (editModalEl) {
-                editModalEl.addEventListener('click', function(e) {
-                    if (e.target === this) {
-                        closeEditModal();
-                    }
-                });
-            }
-
+            // ปิด Modal เมื่อกดคลิกพื้นที่นอกกล่อง (ใช้เฉพาะประวัติ ส่วนฟอร์มเพิ่ม/แก้ไขใช้ Static Backdrop เพื่อป้องกันเมาส์ลากหลุดแล้วปิดฟอร์ม)
             const historyModalEl = document.getElementById('historyStockModal');
             if (historyModalEl) {
                 historyModalEl.addEventListener('click', function(e) {
