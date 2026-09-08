@@ -316,7 +316,7 @@
             <div class="category-ribbon flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth">
                 <button type="button" 
                         onclick="filterStockByGroup('ALL', this)" 
-                        class="category-chip active-chip inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer bg-slate-900 text-white border-slate-900 shadow-sm"
+                        class="category-chip active-chip inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold whitespace-nowrap transition-all cursor-pointer bg-slate-900 text-white border-slate-900 shadow-sm"
                         data-group="ALL"
                         data-idle-class="text-slate-700 bg-slate-100/90 hover:bg-slate-200/90 border-slate-300/80"
                         data-active-class="bg-slate-900 text-white border-slate-900 shadow-sm">
@@ -329,7 +329,7 @@
                     var theme = GetCategoryTheme(grp);
                     <button type="button" 
                             onclick="filterStockByGroup('@grp', this)" 
-                            class="category-chip inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium @theme.chipIdle whitespace-nowrap transition-all cursor-pointer"
+                            class="category-chip inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium @theme.chipIdle whitespace-nowrap transition-all cursor-pointer"
                             data-group="@grp"
                             data-idle-class="@theme.chipIdle"
                             data-active-class="@theme.chipActive">
