@@ -61,6 +61,9 @@ namespace CostFlow.Data
 
             // 9. Fix existing Category Codes
             await FixCategoryCodesAsync(db);
+
+            // 10. Auto-classify Stock Groups (วงแหวน, ตัวครอบ, ตุ๊กตา, แกนเฟือง, เฟืองขับ/ท้าย, ซุปเปอร์ลีน, พูลเลย์/สายพาน, เบ็ดเตล็ด)
+            await ClassifyStockGroupsAsync(db);
         }
 
         private static async Task FixCategoryCodesAsync(AppDbContext db)
@@ -76,6 +79,75 @@ namespace CostFlow.Data
                     if (item.Category == "b453465a") item.Category = "อะไหล่เวียน";
                 }
                 await db.SaveChangesAsync();
+            }
+        }
+
+        private static async Task ClassifyStockGroupsAsync(AppDbContext db)
+        {
+            try
+            {
+                var items = await db.StockItems.ToListAsync();
+                if (!items.Any()) return;
+
+                bool hasChanges = false;
+                foreach (var item in items)
+                {
+                    // 1. Ensure Category defaults to 'อะไหล่' if empty
+                    if (string.IsNullOrWhiteSpace(item.Category))
+                    {
+                        item.Category = "อะไหล่";
+                        hasChanges = true;
+                    }
+
+                    // 2. Classify StockGroup if empty or null
+                    if (string.IsNullOrWhiteSpace(item.StockGroup))
+                    {
+                        var name = (item.ProductName ?? "").Trim();
+                        if (name.Contains("ตัวครอบ") || name.Contains("ต้วครอบ"))
+                        {
+                            item.StockGroup = "ตัวครอบ";
+                        }
+                        else if (name.Contains("ตุ๊กตา") || name.Contains("ตุ๊กเพลา"))
+                        {
+                            item.StockGroup = "ตุ๊กตา";
+                        }
+                        else if (name.Contains("วงแหวน"))
+                        {
+                            item.StockGroup = "วงแหวน";
+                        }
+                        else if (name.Contains("แกนเฟือง"))
+                        {
+                            item.StockGroup = "แกนเฟือง";
+                        }
+                        else if (name.Contains("ซุปเปอร์ลีน") || name.Contains("ชุบเปอร์ลีน") || name.Contains("ชุเปอร์ลีน"))
+                        {
+                            item.StockGroup = "ซุปเปอร์ลีน";
+                        }
+                        else if (System.Text.RegularExpressions.Regex.IsMatch(name, @"เฟ[ืี]อง"))
+                        {
+                            item.StockGroup = "เฟืองขับ/ท้าย";
+                        }
+                        else if (name.Contains("พูลเลย์") || name.Contains("พลูเล่ย์") || name.Contains("สายพาน") || name.Contains("ล้อดึงสายพาน") || name.Contains("ล้อตึงสายพาน"))
+                        {
+                            item.StockGroup = "พูลเลย์/สายพาน";
+                        }
+                        else
+                        {
+                            item.StockGroup = "เบ็ดเตล็ด";
+                        }
+                        hasChanges = true;
+                    }
+                }
+
+                if (hasChanges)
+                {
+                    Console.WriteLine("[DB Init] Auto-classified stock items into standard 8 mechanical groups...");
+                    await db.SaveChangesAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[DB Init ClassifyStockGroups Warning] {ex.Message}");
             }
         }
 
@@ -264,6 +336,7 @@ namespace CostFlow.Data
                     `ProductCode` varchar(100) NOT NULL,
                     `ProductName` varchar(255) NOT NULL,
                     `Category` varchar(100) DEFAULT NULL,
+                    `StockGroup` varchar(100) DEFAULT NULL,
                     `FilePath` varchar(500) DEFAULT NULL,
                     `InitialStock` decimal(18,4) NOT NULL DEFAULT 0.0000,
                     `Quantity` decimal(18,4) NOT NULL DEFAULT 0.0000,
@@ -399,6 +472,12 @@ namespace CostFlow.Data
             try
             {
                 await db.Database.ExecuteSqlRawAsync("ALTER TABLE StockItems ADD COLUMN InitialStock decimal(18,4) NOT NULL DEFAULT 0.0000;");
+            }
+            catch { /* Column already exists */ }
+
+            try
+            {
+                await db.Database.ExecuteSqlRawAsync("ALTER TABLE StockItems ADD COLUMN StockGroup varchar(100) NULL;");
             }
             catch { /* Column already exists */ }
         }

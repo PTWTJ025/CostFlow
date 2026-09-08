@@ -7,6 +7,64 @@
                    userName.Equals("ADMIN01", StringComparison.OrdinalIgnoreCase) ||
                    userName.Equals("DEV01", StringComparison.OrdinalIgnoreCase) ||
                    userName.Equals("STAFF01", StringComparison.OrdinalIgnoreCase);
+
+    (string badgeBg, string chipIdle, string chipActive, string chipDot) GetCategoryTheme(string? group) => (group ?? "").Trim() switch
+    {
+        "วงแหวน" => (
+            "bg-blue-600/95 text-white border border-blue-400/30",
+            "text-blue-700 bg-blue-50/80 hover:bg-blue-100/90 border-blue-200/80",
+            "bg-blue-600 text-white border-blue-600 shadow-sm",
+            "bg-blue-500"
+        ),
+        "ตัวครอบ" => (
+            "bg-teal-600/95 text-white border border-teal-400/30",
+            "text-teal-700 bg-teal-50/80 hover:bg-teal-100/90 border-teal-200/80",
+            "bg-teal-600 text-white border-teal-600 shadow-sm",
+            "bg-teal-500"
+        ),
+        "ตุ๊กตา" => (
+            "bg-amber-600/95 text-white border border-amber-400/30",
+            "text-amber-800 bg-amber-50/80 hover:bg-amber-100/90 border-amber-200/80",
+            "bg-amber-600 text-white border-amber-600 shadow-sm",
+            "bg-amber-500"
+        ),
+        "แกนเฟือง" => (
+            "bg-indigo-600/95 text-white border border-indigo-400/30",
+            "text-indigo-700 bg-indigo-50/80 hover:bg-indigo-100/90 border-indigo-200/80",
+            "bg-indigo-600 text-white border-indigo-600 shadow-sm",
+            "bg-indigo-500"
+        ),
+        "เฟืองขับ/ท้าย" => (
+            "bg-purple-600/95 text-white border border-purple-400/30",
+            "text-purple-700 bg-purple-50/80 hover:bg-purple-100/90 border-purple-200/80",
+            "bg-purple-600 text-white border-purple-600 shadow-sm",
+            "bg-purple-500"
+        ),
+        "ซุปเปอร์ลีน" => (
+            "bg-emerald-600/95 text-white border border-emerald-400/30",
+            "text-emerald-700 bg-emerald-50/80 hover:bg-emerald-100/90 border-emerald-200/80",
+            "bg-emerald-600 text-white border-emerald-600 shadow-sm",
+            "bg-emerald-500"
+        ),
+        "พูลเลย์/สายพาน" => (
+            "bg-rose-600/95 text-white border border-rose-400/30",
+            "text-rose-700 bg-rose-50/80 hover:bg-rose-100/90 border-rose-200/80",
+            "bg-rose-600 text-white border-rose-600 shadow-sm",
+            "bg-rose-500"
+        ),
+        "เบ็ดเตล็ด" => (
+            "bg-slate-700/95 text-white border border-slate-500/30",
+            "text-slate-700 bg-slate-100/90 hover:bg-slate-200/90 border-slate-300/80",
+            "bg-slate-700 text-white border-slate-700 shadow-sm",
+            "bg-slate-500"
+        ),
+        _ => (
+            "bg-slate-800/90 text-white border border-white/15",
+            "text-slate-600 bg-slate-100/80 hover:bg-slate-200/70 border-slate-200",
+            "bg-slate-800 text-white border-slate-800 shadow-sm",
+            "bg-slate-400"
+        )
+    };
 }
 
 <style>
@@ -21,10 +79,6 @@
         .stock-header-search,
         .stock-search-container {
             width: 100% !important;
-        }
-
-        .stock-label-remaining {
-            display: none !important;
         }
     }
 
@@ -184,6 +238,29 @@
             display: inline !important;
         }
     }
+
+    /* Horizontal Category Chips Ribbon */
+    .no-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+    .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+    .category-chip {
+        border: 1px solid #e2e8f0;
+        user-select: none;
+        flex-shrink: 0;
+        -webkit-tap-highlight-color: transparent;
+        transition: all 0.15s ease;
+    }
+    .category-chip:hover {
+        transform: translateY(-1px);
+    }
+    .category-chip.active-chip {
+        transform: translateY(-1px);
+        font-weight: 600 !important;
+    }
 </style>
 
 <div class="flex-1 p-md md:p-lg lg:p-xl flex flex-col gap-lg max-w-container-max mx-auto w-full">
@@ -199,7 +276,7 @@
     <!-- Data Table -->
     <div class="bg-white rounded border border-outline-variant shadow-sm overflow-hidden">
         <div class="stock-header-bar px-md py-3.5 sm:py-4 border-b border-outline-variant flex justify-between items-center bg-surface-container-low/50">
-            <h3 class="text-body-md font-bold text-on-surface">รายการสินค้าในสต๊อกทั้งหมด (@Model.Count() รายการ)</h3>
+            <h3 id="stockHeaderTitle" class="text-body-md font-bold text-on-surface">รายการสินค้าในสต๊อกทั้งหมด (@Model.Count() รายการ)</h3>
             <div class="stock-header-toolbar flex items-center gap-2">
                 <div class="relative w-48 md:w-60 stock-search-container">
                     <input type="text" id="stockCustomSearch" placeholder="ค้นหารหัส หรือชื่อสินค้า..." class="stock-header-search px-3 py-2 bg-white border border-outline-variant rounded text-sm text-on-surface placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary w-full transition-all shadow-sm" style="height: 38px;" autocomplete="off" />
@@ -225,6 +302,40 @@
                             title="เพิ่มสินค้าใหม่เข้าสต๊อก">
                         <i data-lucide="plus" class="w-4 h-4 shrink-0"></i>
                         <span class="btn-text-desktop">เพิ่มสินค้าใหม่</span>
+                    </button>
+                }
+            </div>
+        </div>
+
+        <!-- Horizontal Category Filter Ribbon (One-touch Instant Filter for Mobile & Desktop) -->
+        @{
+            var standardGroupList = new[] { "วงแหวน", "ตัวครอบ", "ตุ๊กตา", "แกนเฟือง", "เฟืองขับ/ท้าย", "ซุปเปอร์ลีน", "พูลเลย์/สายพาน", "เบ็ดเตล็ด" };
+            var totalAllStockCount = Model.Count();
+        }
+        <div class="category-ribbon-wrapper bg-white border-b border-slate-200/80 px-3 md:px-4 py-2.5">
+            <div class="category-ribbon flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth">
+                <button type="button" 
+                        onclick="filterStockByGroup('ALL', this)" 
+                        class="category-chip active-chip inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer bg-slate-900 text-white border-slate-900 shadow-sm"
+                        data-group="ALL"
+                        data-idle-class="text-slate-700 bg-slate-100/90 hover:bg-slate-200/90 border-slate-300/80"
+                        data-active-class="bg-slate-900 text-white border-slate-900 shadow-sm">
+                    <span>ทั้งหมด</span>
+                    <span class="chip-count px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-white/25 text-white">@totalAllStockCount</span>
+                </button>
+                @foreach (var grp in standardGroupList)
+                {
+                    var count = Model.Count(i => (i.StockGroup ?? "เบ็ดเตล็ด") == grp);
+                    var theme = GetCategoryTheme(grp);
+                    <button type="button" 
+                            onclick="filterStockByGroup('@grp', this)" 
+                            class="category-chip inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium @theme.chipIdle whitespace-nowrap transition-all cursor-pointer"
+                            data-group="@grp"
+                            data-idle-class="@theme.chipIdle"
+                            data-active-class="@theme.chipActive">
+                        <span class="w-1.5 h-1.5 rounded-full @theme.chipDot shrink-0"></span>
+                        <span>@grp</span>
+                        <span class="chip-count px-1.5 py-0.2 rounded-full text-[10px] font-semibold bg-black/5 text-inherit">@count</span>
                     </button>
                 }
             </div>
@@ -262,7 +373,8 @@
                          data-id="@item.Id"
                          data-code="@item.ProductCode"
                          data-name="@item.ProductName"
-                         data-category="@(item.Category ?? "")"
+                         data-category="@(item.Category ?? "อะไหล่")"
+                         data-group="@(item.StockGroup ?? "เบ็ดเตล็ด")"
                          data-image="@(item.FilePath ?? "")"
                          data-min="@item.MinStock"
                          data-max="@item.MaxStock"
@@ -299,10 +411,14 @@
                                 }
                             </div>
 
-                            <!-- Category Badge overlaid bottom-left -->
+                            <!-- Category Group Badge overlaid bottom-left (Color-coded to match category) -->
+                            @{
+                                var cardGroup = string.IsNullOrEmpty(item.StockGroup) ? "เบ็ดเตล็ด" : item.StockGroup;
+                                var cardTheme = GetCategoryTheme(cardGroup);
+                            }
                             <div class="stock-badge-bottom-left" style="position: absolute; bottom: 8px; left: 8px; z-index: 5;">
-                                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-900/60 text-white backdrop-blur-xs">
-                                    @(string.IsNullOrEmpty(item.Category) ? "ทั่วไป" : item.Category)
+                                <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold @cardTheme.badgeBg backdrop-blur-xs shadow-2xs">
+                                    @cardGroup
                                 </span>
                             </div>
                         </div>
@@ -323,7 +439,7 @@
                             <!-- Card Footer: Quantity + Edit / Inline Adjust Button -->
                             <div class="stock-card-footer pt-2 border-t border-slate-100">
                                 <!-- Normal View -->
-                                <div class="stock-card-normal-view flex items-end justify-between gap-1.5">
+                                <div class="stock-card-normal-view flex items-center justify-between gap-1.5">
                                     <div class="flex flex-col min-w-0" title="ขั้นต่ำ: @item.MinStock.ToString("N0") | สูงสุด: @item.MaxStock.ToString("N0")">
                                         <span class="stock-label-remaining text-[10px] text-slate-400 leading-none">คงเหลือ</span>
                                         <div class="flex items-baseline gap-1 mt-0.5">
@@ -342,7 +458,8 @@
                                                     data-id="@item.Id"
                                                     data-code="@item.ProductCode"
                                                     data-name="@item.ProductName"
-                                                    data-category="@(item.Category ?? "")"
+                                                    data-category="@(item.Category ?? "อะไหล่")"
+                                                    data-group="@(item.StockGroup ?? "เบ็ดเตล็ด")"
                                                     data-image="@(item.FilePath ?? "")"
                                                     data-min="@item.MinStock"
                                                     data-max="@item.MaxStock"
@@ -444,15 +561,29 @@
                     <input type="text" id="modalProductName" required placeholder="ระบุชื่อสินค้า / อะไหล่" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors" />
                 </div>
 
-                <!-- หมวดหมู่ (ดึงเฉพาะ 2 หมวดหมู่ของระบบ) -->
-                <div>
-                    <label for="modalCategory" class="block text-xs font-semibold text-slate-700 mb-1">
-                        หมวดหมู่ <span class="text-red-500">*</span>
-                    </label>
-                    <select id="modalCategory" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors cursor-pointer">
-                        <option value="อะไหล่">อะไหล่ (b7392108)</option>
-                        <option value="อะไหล่เวียน">อะไหล่เวียน (b453465a)</option>
-                    </select>
+                <!-- กลุ่มอะไหล่ (8 กลุ่มมาตรฐาน) และ หมวดหมู่ (ค่าเริ่มต้น: อะไหล่ ไม่บังคับกรอก) -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem;">
+                    <div>
+                        <label for="modalStockGroup" class="block text-xs font-semibold text-slate-700 mb-1">
+                            กลุ่มอะไหล่ <span class="text-red-500">*</span>
+                        </label>
+                        <select id="modalStockGroup" required class="w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors cursor-pointer">
+                            <option value="วงแหวน">วงแหวน</option>
+                            <option value="ตัวครอบ">ตัวครอบ</option>
+                            <option value="ตุ๊กตา">ตุ๊กตา</option>
+                            <option value="แกนเฟือง">แกนเฟือง</option>
+                            <option value="เฟืองขับ/ท้าย">เฟืองขับ/ท้าย</option>
+                            <option value="ซุปเปอร์ลีน">ซุปเปอร์ลีน</option>
+                            <option value="พูลเลย์/สายพาน">พูลเลย์/สายพาน</option>
+                            <option value="เบ็ดเตล็ด" selected>เบ็ดเตล็ด</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="modalCategory" class="block text-xs font-semibold text-slate-700 mb-1">
+                            หมวดหมู่ <span class="text-slate-400 font-normal">(ค่าเริ่มต้น: อะไหล่)</span>
+                        </label>
+                        <input type="text" id="modalCategory" value="อะไหล่" placeholder="อะไหล่" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors" />
+                    </div>
                 </div>
 
                 <!-- รูปภาพสินค้า (เพิ่มจากคลังภาพ หรือ ถ่ายรูปจากกล้อง) -->
@@ -572,15 +703,29 @@
                     <input type="text" id="editProductName" required placeholder="ระบุชื่อสินค้า / อะไหล่" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors" />
                 </div>
 
-                <!-- หมวดหมู่ -->
-                <div>
-                    <label for="editCategory" class="block text-xs font-semibold text-slate-700 mb-1">
-                        หมวดหมู่ <span class="text-red-500">*</span>
-                    </label>
-                    <select id="editCategory" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors cursor-pointer">
-                        <option value="อะไหล่">อะไหล่ (b7392108)</option>
-                        <option value="อะไหล่เวียน">อะไหล่เวียน (b453465a)</option>
-                    </select>
+                <!-- กลุ่มอะไหล่ (8 กลุ่มมาตรฐาน) และ หมวดหมู่ (ค่าเริ่มต้น: อะไหล่ ไม่บังคับกรอก) -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem;">
+                    <div>
+                        <label for="editStockGroup" class="block text-xs font-semibold text-slate-700 mb-1">
+                            กลุ่มอะไหล่ <span class="text-red-500">*</span>
+                        </label>
+                        <select id="editStockGroup" required class="w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors cursor-pointer">
+                            <option value="วงแหวน">วงแหวน</option>
+                            <option value="ตัวครอบ">ตัวครอบ</option>
+                            <option value="ตุ๊กตา">ตุ๊กตา</option>
+                            <option value="แกนเฟือง">แกนเฟือง</option>
+                            <option value="เฟืองขับ/ท้าย">เฟืองขับ/ท้าย</option>
+                            <option value="ซุปเปอร์ลีน">ซุปเปอร์ลีน</option>
+                            <option value="พูลเลย์/สายพาน">พูลเลย์/สายพาน</option>
+                            <option value="เบ็ดเตล็ด">เบ็ดเตล็ด</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="editCategory" class="block text-xs font-semibold text-slate-700 mb-1">
+                            หมวดหมู่ <span class="text-slate-400 font-normal">(ค่าเริ่มต้น: อะไหล่)</span>
+                        </label>
+                        <input type="text" id="editCategory" value="อะไหล่" placeholder="อะไหล่" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors" />
+                    </div>
                 </div>
 
                 <!-- รูปภาพสินค้า (เพิ่มจากคลังภาพ หรือ ถ่ายรูปจากกล้อง) -->
@@ -960,7 +1105,7 @@
                 window.history.replaceState({}, document.title, window.location.pathname);
             }
 
-            // ระบบค้นหาสินค้า Real-time + Autocomplete Guide List (ทั้ง Desktop Table และ Mobile Cards)
+            // ระบบค้นหาสินค้า Real-time + ตัวกรองกลุ่มอะไหล่ (Category Chips) + Autocomplete Guide List
             const searchInput = document.getElementById('stockCustomSearch');
             const stockDropdown = document.getElementById('stock-suggestions-dropdown');
             const stockItemsData = @Html.Raw(Json.Serialize(Model.Select(m => new { code = m.ProductCode, name = m.ProductName })));
@@ -968,23 +1113,9 @@
             if (searchInput) {
                 searchInput.addEventListener('input', function() {
                     const query = this.value.toLowerCase().trim();
-                    // ค้นหาในการ์ดสินค้า Catalog Cards
-                    const cards = document.querySelectorAll('#stockCardsGrid .stock-card');
-                    let visibleCount = 0;
-                    cards.forEach(function(card) {
-                        const text = card.textContent.toLowerCase();
-                        const match = text.includes(query);
-                        card.style.display = match ? '' : 'none';
-                        if (match) visibleCount++;
-                    });
+                    applyStockFilter();
 
-                    // แสดง Empty State หากไม่พบสินค้า
-                    const emptyState = document.getElementById('stockSearchEmptyState');
-                    if (emptyState) {
-                        emptyState.classList.toggle('hidden', visibleCount > 0 || query.length === 0);
-                    }
-
-                    // 3. Autocomplete Guide List
+                    // Autocomplete Guide List
                     if (stockDropdown) {
                         if (query.length < 1) {
                             stockDropdown.classList.add('hidden');
@@ -1010,7 +1141,7 @@
                                 el.addEventListener('click', function() {
                                     searchInput.value = this.dataset.name || this.dataset.code;
                                     stockDropdown.classList.add('hidden');
-                                    searchInput.dispatchEvent(new Event('input'));
+                                    applyStockFilter();
                                 });
                             });
                         } else {
@@ -1341,13 +1472,97 @@
             }, 100);
         }
 
+        // ตัวแปรและฟังก์ชันระบบกรองหมวดหมู่สินค้า
+        let currentSelectedGroup = 'ALL';
+
+        function applyStockFilter() {
+            const query = (document.getElementById('stockCustomSearch')?.value || '').toLowerCase().trim();
+            const cards = document.querySelectorAll('#stockCardsGrid .stock-card');
+            let visibleCount = 0;
+
+            cards.forEach(function(card) {
+                const cardGroup = (card.getAttribute('data-group') || 'เบ็ดเตล็ด').trim();
+                const text = card.textContent.toLowerCase();
+
+                const matchesGroup = (currentSelectedGroup === 'ALL') || (cardGroup === currentSelectedGroup);
+                const matchesQuery = !query || text.includes(query);
+
+                const isVisible = matchesGroup && matchesQuery;
+                card.style.display = isVisible ? '' : 'none';
+                if (isVisible) visibleCount++;
+            });
+
+            // แสดง Empty State หากไม่พบสินค้า
+            const emptyState = document.getElementById('stockSearchEmptyState');
+            if (emptyState) {
+                emptyState.classList.toggle('hidden', visibleCount > 0);
+            }
+
+            // อัปเดตตัวเลขผลการค้นหา/กรองบน Header
+            const headerTitle = document.getElementById('stockHeaderTitle');
+            if (headerTitle) {
+                if (currentSelectedGroup === 'ALL' && !query) {
+                    headerTitle.textContent = `รายการสินค้าในสต๊อกทั้งหมด (${cards.length} รายการ)`;
+                } else {
+                    headerTitle.textContent = `แสดง ${visibleCount} จาก ${cards.length} รายการ`;
+                }
+            }
+        }
+
+        function filterStockByGroup(groupName, btnElement) {
+            currentSelectedGroup = groupName;
+
+            // รีเซ็ตทุกปุ่มบน Chips Ribbon กลับสู่สถานะ Idle ตามชุดสีของตัวเอง
+            document.querySelectorAll('.category-chip').forEach(chip => {
+                const idleClass = (chip.getAttribute('data-idle-class') || '').trim();
+                const activeClass = (chip.getAttribute('data-active-class') || '').trim();
+
+                chip.classList.remove('active-chip');
+                if (activeClass) {
+                    activeClass.split(/\s+/).forEach(c => chip.classList.remove(c));
+                }
+                if (idleClass) {
+                    idleClass.split(/\s+/).forEach(c => chip.classList.add(c));
+                }
+
+                const countBadge = chip.querySelector('.chip-count');
+                if (countBadge) {
+                    countBadge.classList.remove('bg-white/25', 'text-white');
+                    countBadge.classList.add('bg-black/5', 'text-inherit');
+                }
+            });
+
+            // ใส่ Style Active ให้ปุ่มที่ถูกเลือก ตามชุดสีของหมวดนั้นๆ
+            if (btnElement) {
+                const idleClass = (btnElement.getAttribute('data-idle-class') || '').trim();
+                const activeClass = (btnElement.getAttribute('data-active-class') || '').trim();
+
+                btnElement.classList.add('active-chip');
+                if (idleClass) {
+                    idleClass.split(/\s+/).forEach(c => btnElement.classList.remove(c));
+                }
+                if (activeClass) {
+                    activeClass.split(/\s+/).forEach(c => btnElement.classList.add(c));
+                }
+
+                const countBadge = btnElement.querySelector('.chip-count');
+                if (countBadge) {
+                    countBadge.classList.remove('bg-black/5', 'text-inherit');
+                    countBadge.classList.add('bg-white/25', 'text-white');
+                }
+            }
+
+            applyStockFilter();
+        }
+
         // ส่งข้อมูลบันทึกสินค้าใหม่ไปยัง Backend
         async function submitAddStock(e) {
             e.preventDefault();
             const btn = document.getElementById('btnSubmitAddStock');
             const code = document.getElementById('modalProductCode').value.trim();
             const name = document.getElementById('modalProductName').value.trim();
-            const category = document.getElementById('modalCategory').value.trim();
+            const stockGroup = document.getElementById('modalStockGroup')?.value.trim() || 'เบ็ดเตล็ด';
+            const category = document.getElementById('modalCategory')?.value.trim() || 'อะไหล่';
             const qty = parseFloat(document.getElementById('modalQuantity').value) || 0;
             const min = parseFloat(document.getElementById('modalMinStock').value) || 0;
             const max = parseFloat(document.getElementById('modalMaxStock').value) || 0;
@@ -1373,6 +1588,7 @@
                         productCode: code,
                         productName: name,
                         category: category,
+                        stockGroup: stockGroup,
                         filePath: imagePath,
                         quantity: qty,
                         minStock: min,
@@ -1454,6 +1670,7 @@
             document.getElementById('editItemId').value = dataset.id || '';
             document.getElementById('editProductCode').value = code;
             document.getElementById('editProductName').value = dataset.name || '';
+            document.getElementById('editStockGroup').value = dataset.group || 'เบ็ดเตล็ด';
             document.getElementById('editCategory').value = dataset.category || 'อะไหล่';
             document.getElementById('editMinStock').value = dataset.min && dataset.min !== '0' ? parseFloat(dataset.min) : '';
             document.getElementById('editMaxStock').value = dataset.max && dataset.max !== '0' ? parseFloat(dataset.max) : '';
@@ -1488,7 +1705,8 @@
             const id = parseInt(document.getElementById('editItemId').value) || 0;
             const code = document.getElementById('editProductCode').value.trim();
             const name = document.getElementById('editProductName').value.trim();
-            const category = document.getElementById('editCategory').value;
+            const stockGroup = document.getElementById('editStockGroup')?.value.trim() || 'เบ็ดเตล็ด';
+            const category = document.getElementById('editCategory')?.value.trim() || 'อะไหล่';
             const min = parseFloat(document.getElementById('editMinStock').value) || 0;
             const max = parseFloat(document.getElementById('editMaxStock').value) || 0;
             const qty = parseFloat(document.getElementById('editQuantity').value) || 0;
@@ -1514,6 +1732,7 @@
                         id: id,
                         productCode: code,
                         productName: name,
+                        stockGroup: stockGroup,
                         category: category,
                         filePath: imagePath,
                         minStock: min,

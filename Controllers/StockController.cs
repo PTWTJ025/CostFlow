@@ -313,7 +313,8 @@ namespace CostFlow.Controllers
                 return Json(new { success = false, message = $"รหัสสินค้า '{trimmedCode}' มีอยู่ในระบบแล้ว กรุณาใช้รหัสอื่น" });
             }
 
-            var category = string.IsNullOrWhiteSpace(dto.Category) ? "ทั่วไป" : dto.Category.Trim();
+            var stockGroup = string.IsNullOrWhiteSpace(dto.StockGroup) ? "เบ็ดเตล็ด" : dto.StockGroup.Trim();
+            var category = string.IsNullOrWhiteSpace(dto.Category) ? "อะไหล่" : dto.Category.Trim();
 
             // คำนวณสถานะสต๊อก
             string status = "สต๊อกเพียงพอ";
@@ -331,6 +332,7 @@ namespace CostFlow.Controllers
                 ProductCode = trimmedCode,
                 ProductName = trimmedName,
                 Category = category,
+                StockGroup = stockGroup,
                 FilePath = !string.IsNullOrWhiteSpace(dto.FilePath) ? dto.FilePath.Trim() : null,
                 Quantity = dto.Quantity >= 0 ? dto.Quantity : 0,
                 MinStock = dto.MinStock >= 0 ? dto.MinStock : 0,
@@ -417,7 +419,8 @@ namespace CostFlow.Controllers
                 }
             }
 
-            var category = string.IsNullOrWhiteSpace(dto.Category) ? "ทั่วไป" : dto.Category.Trim();
+            var stockGroup = string.IsNullOrWhiteSpace(dto.StockGroup) ? (item.StockGroup ?? "เบ็ดเตล็ด") : dto.StockGroup.Trim();
+            var category = string.IsNullOrWhiteSpace(dto.Category) ? (item.Category ?? "อะไหล่") : dto.Category.Trim();
             var newQuantity = dto.Quantity >= 0 ? dto.Quantity : 0;
             var minStock = dto.MinStock >= 0 ? dto.MinStock : 0;
             var maxStock = dto.MaxStock >= 0 ? dto.MaxStock : 0;
@@ -440,6 +443,7 @@ namespace CostFlow.Controllers
             item.ProductCode = trimmedCode;
             item.ProductName = trimmedName;
             item.Category = category;
+            item.StockGroup = stockGroup;
             if (dto.FilePath != null)
             {
                 item.FilePath = string.IsNullOrWhiteSpace(dto.FilePath) ? null : dto.FilePath.Trim();
@@ -472,6 +476,7 @@ namespace CostFlow.Controllers
                     item.ProductCode,
                     item.ProductName,
                     item.Category,
+                    item.StockGroup,
                     item.MinStock,
                     item.MaxStock,
                     item.Quantity,
@@ -863,6 +868,7 @@ namespace CostFlow.Controllers
         public string ProductCode { get; set; } = string.Empty;
         public string ProductName { get; set; } = string.Empty;
         public string? Category { get; set; }
+        public string? StockGroup { get; set; }
         public string? FilePath { get; set; }
         public decimal Quantity { get; set; } = 0;
         public decimal MinStock { get; set; } = 0;
@@ -875,6 +881,7 @@ namespace CostFlow.Controllers
         public string ProductCode { get; set; } = string.Empty;
         public string ProductName { get; set; } = string.Empty;
         public string? Category { get; set; }
+        public string? StockGroup { get; set; }
         public string? FilePath { get; set; }
         public decimal MinStock { get; set; } = 0;
         public decimal MaxStock { get; set; } = 0;

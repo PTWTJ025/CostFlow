@@ -21,6 +21,9 @@ namespace CostFlow.Models
         [MaxLength(100)]
         public string? Category { get; set; }
 
+        [MaxLength(100)]
+        public string? StockGroup { get; set; } // กลุ่มอะไหล่ (เช่น วงแหวน, ตัวครอบ, ตุ๊กตา, แกนเฟือง, ฯลฯ)
+
         [MaxLength(500)]
         public string? FilePath { get; set; } // ไฟล์เอกสาร / รูปภาพ / ลิงก์ (Cloud Storage URL บน Supabase / TiDB)
 
