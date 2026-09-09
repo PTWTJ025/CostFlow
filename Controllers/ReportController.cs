@@ -261,7 +261,7 @@ namespace CostFlow.Controllers
             }
             return Json(new { success = false, error = "ไม่พบข้อมูลที่ต้องการลบ" });
         }
-        public async Task<IActionResult> ExportToExcel(string? fileName, string? customName, int? month, int? year, string? status = null, string? search = null, string? sortBy = null, string? sortOrder = null)
+        public async Task<IActionResult> ExportToExcel(string? fileName, string? customName, int? month, int? year, string? status = null, string? search = null, string? sortBy = null, string? sortOrder = null, string? viewScope = null)
         {
             List<OrderTrackingMaster> orders;
             string sheetTitle;
@@ -269,10 +269,14 @@ namespace CostFlow.Controllers
             var thaiMonths = new[] { "", "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
                                      "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม" };
 
+            bool isShowAll = string.Equals(viewScope, "show-all", StringComparison.OrdinalIgnoreCase);
+
             if (month.HasValue && year.HasValue)
             {
-                // Month/Year mode
-                sheetTitle = $"{thaiMonths[month.Value]} {year.Value + 543}";
+                // Month/Year mode (or accumulated year-wide when isShowAll is true)
+                sheetTitle = isShowAll
+                    ? $"รายการสะสมทั้งปี {year.Value + 543}"
+                    : $"{thaiMonths[month.Value]} {year.Value + 543}";
 
                 var allOrders = await _context.OrderTrackingMasters
                     .Include(o => o.MatchedInWeeklyPlans)
@@ -283,7 +287,12 @@ namespace CostFlow.Controllers
                 orders = allOrders
                     .Where(o => {
                         var parsed = ParseThaiDate(o.ApprovedDate);
-                        return parsed.HasValue && parsed.Value.Year == year.Value && parsed.Value.Month == month.Value;
+                        if (!parsed.HasValue) return false;
+                        if (isShowAll)
+                        {
+                            return parsed.Value.Year == year.Value;
+                        }
+                        return parsed.Value.Year == year.Value && parsed.Value.Month == month.Value;
                     })
                     .ToList();
             }
@@ -369,6 +378,25 @@ namespace CostFlow.Controllers
                 orders = orders.OrderBy(o => o.PoNumber).ToList();
             }
 
+            // Fetch MonthlyOrderActions to resolve "การจัดการรับสินค้า" (รับเต็มจำนวน / ผ่อนชำระ / ยังไม่รับสินค้า)
+            var allActions = await _context.MonthlyOrderActions.ToListAsync();
+            var actionsByOrder = allActions
+                .GroupBy(a => a.OrderTrackingMasterId)
+                .ToDictionary(g => g.Key, g => g.ToList());
+
+            Func<string, DateTime> parseMonthYear = (my) => {
+                if (string.IsNullOrWhiteSpace(my)) return DateTime.MinValue;
+                var parts = my.Split('-');
+                if (parts.Length >= 2 && int.TryParse(parts[0], out var y) && int.TryParse(parts[1], out var m))
+                {
+                    if (m >= 1 && m <= 12)
+                    {
+                        return new DateTime(y, m, 1);
+                    }
+                }
+                return DateTime.MinValue;
+            };
+
             // ClosedXML Graphic Engine
             ClosedXML.Excel.LoadOptions.DefaultGraphicEngine = new MockGraphicEngine();
             using var workbook = new XLWorkbook();
@@ -395,16 +423,16 @@ namespace CostFlow.Controllers
             titleCell.Style.Font.FontColor = XLColor.FromHtml("#0F172A");
             titleCell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
             titleCell.Style.Fill.BackgroundColor = XLColor.FromHtml("#F8FAFC");
-            ws.Range(1, 1, 1, 10).Merge();
-            ws.Range(1, 1, 1, 10).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
-            ws.Range(1, 1, 1, 10).Style.Border.OutsideBorderColor = colorBorder;
+            ws.Range(1, 1, 1, 11).Merge();
+            ws.Range(1, 1, 1, 11).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            ws.Range(1, 1, 1, 11).Style.Border.OutsideBorderColor = colorBorder;
 
             // ── 2. Filter Subtitle (Row 2) ──────────────────────────────────
             ws.Row(2).Height = 24;
             string statusDesc = status switch
             {
                 "matched" => "ได้แผนผลิตแล้ว",
-                "pending" => "ยังไม่มีแผนผลิต",
+                "pending" => "รอแผนผลิต",
                 _ => "ทุกสถานะ"
             };
             string searchDesc = !string.IsNullOrWhiteSpace(search) ? $"   |   ค้นหา: \"{search}\"" : "";
@@ -430,9 +458,9 @@ namespace CostFlow.Controllers
             subCell.Style.Font.FontColor = XLColor.FromHtml("#64748B");
             subCell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
             subCell.Style.Fill.BackgroundColor = XLColor.FromHtml("#F8FAFC");
-            ws.Range(2, 1, 2, 10).Merge();
-            ws.Range(2, 1, 2, 10).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
-            ws.Range(2, 1, 2, 10).Style.Border.OutsideBorderColor = colorBorder;
+            ws.Range(2, 1, 2, 11).Merge();
+            ws.Range(2, 1, 2, 11).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            ws.Range(2, 1, 2, 11).Style.Border.OutsideBorderColor = colorBorder;
 
             // ── Row 3: Blank Spacer ──────────────────────────────────────────
             ws.Row(3).Height = 10;
@@ -442,7 +470,7 @@ namespace CostFlow.Controllers
             ws.Row(headerRow).Height = 28;
             var headers = new[]
             {
-                "ลำดับ", "สถานะ", "เลขที่อนุมัติ (PO)", "วันที่สั่ง",
+                "ลำดับ", "สถานะแผนผลิต", "การจัดการรับสินค้า", "เลขที่อนุมัติ (PO)", "วันที่สั่ง",
                 "วันที่อนุมัติ", "ปภ.ความเร่งด่วน", "จำนวนเงิน (บาท)",
                 "รายละเอียด / หมายเหตุ", "จำนวน (ชิ้น)", "เป้าหมายส่งมอบ"
             };
@@ -455,8 +483,8 @@ namespace CostFlow.Controllers
                 cell.Style.Font.FontSize = 10.5;
                 cell.Style.Font.Bold = true;
                 cell.Style.Font.FontColor = XLColor.FromHtml("#1E293B");
-                cell.Style.Alignment.Horizontal = c == 7 ? XLAlignmentHorizontalValues.Left :
-                                                  c == 6 ? XLAlignmentHorizontalValues.Right :
+                cell.Style.Alignment.Horizontal = c == 8 ? XLAlignmentHorizontalValues.Left :
+                                                  c == 7 ? XLAlignmentHorizontalValues.Right :
                                                   XLAlignmentHorizontalValues.Center;
                 cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
                 cell.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
@@ -472,6 +500,28 @@ namespace CostFlow.Controllers
                 var order = orders[i];
                 int row = headerRow + 1 + i;
                 bool isMatched = order.Status == "Matched";
+
+                // Resolve Monthly Cost Action (รับเต็มจำนวน / ผ่อนชำระ / ยังไม่รับสินค้า)
+                string actionDisplay = "ยังไม่รับสินค้า";
+                string actionType = "Skipped";
+                if (actionsByOrder.TryGetValue(order.Id, out var orderActions) && orderActions.Count > 0)
+                {
+                    var latestAct = orderActions
+                        .OrderByDescending(a => parseMonthYear(a.MonthYear))
+                        .ThenByDescending(a => a.CreatedAt)
+                        .FirstOrDefault();
+                    if (latestAct != null)
+                    {
+                        actionType = latestAct.Action;
+                        actionDisplay = latestAct.Action switch
+                        {
+                            "ReceivedFull" => "รับเต็มจำนวน",
+                            "Deferred" => "ผ่อนชำระ",
+                            "Skipped" => "ยังไม่รับสินค้า",
+                            _ => latestAct.Action
+                        };
+                    }
+                }
 
                 var deliveryTarget = order.MatchedInWeeklyPlans.Any()
                     ? order.MatchedInWeeklyPlans
@@ -495,7 +545,8 @@ namespace CostFlow.Controllers
                 var values = new object?[]
                 {
                     i + 1,
-                    isMatched ? "ได้แผนผลิตแล้ว" : "ยังไม่มีแผนผลิต",
+                    isMatched ? "ได้แผนผลิตแล้ว" : "รอแผนผลิต",
+                    actionDisplay,
                     order.PoNumber,
                     order.RequestDate ?? "-",
                     order.ApprovedDate ?? "-",
@@ -525,7 +576,7 @@ namespace CostFlow.Controllers
                     cell.Style.Border.OutsideBorderColor = colorBorder;
                     cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
 
-                    // ปรับสไตล์ Pill สถานะ
+                    // ปรับสไตล์ Pill สถานะแผนผลิต (Col 2)
                     if (c == 1)
                     {
                         cell.Style.Font.Bold = true;
@@ -541,21 +592,42 @@ namespace CostFlow.Controllers
                             cell.Style.Font.FontColor = XLColor.FromHtml("#9F1239");
                         }
                     }
+                    // ปรับสไตล์ Pill การจัดการรับสินค้า (Col 3)
+                    else if (c == 2)
+                    {
+                        cell.Style.Font.Bold = true;
+                        cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                        if (actionType == "ReceivedFull")
+                        {
+                            cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#D1FAE5");
+                            cell.Style.Font.FontColor = XLColor.FromHtml("#065F46");
+                        }
+                        else if (actionType == "Deferred")
+                        {
+                            cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#FEF3C7");
+                            cell.Style.Font.FontColor = XLColor.FromHtml("#92400E");
+                        }
+                        else
+                        {
+                            cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#F1F5F9");
+                            cell.Style.Font.FontColor = XLColor.FromHtml("#475569");
+                        }
+                    }
                     // จัด center: ลำดับ, PO, วันที่, ปภ, จำนวน, เป้าหมาย
-                    else if (c == 0 || c == 2 || c == 3 || c == 4 || c == 5 || c == 8 || c == 9)
+                    else if (c == 0 || c == 3 || c == 4 || c == 5 || c == 6 || c == 9 || c == 10)
                     {
                         cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                        cell.Style.Font.FontColor = c == 2 ? XLColor.FromHtml("#0F172A") : XLColor.FromHtml("#475569");
-                        if (c == 2) cell.Style.Font.Bold = true;
+                        cell.Style.Font.FontColor = c == 3 ? XLColor.FromHtml("#0F172A") : XLColor.FromHtml("#475569");
+                        if (c == 3) cell.Style.Font.Bold = true;
                     }
                     // จัด left: รายละเอียด
-                    else if (c == 7)
+                    else if (c == 8)
                     {
                         cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
                         cell.Style.Font.FontColor = XLColor.FromHtml("#334155");
                     }
                     // จัด right: ราคา
-                    else if (c == 6)
+                    else if (c == 7)
                     {
                         cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
                         if (hasPriceVal)
@@ -572,39 +644,40 @@ namespace CostFlow.Controllers
             int sumRow = headerRow + 1 + orders.Count + 1;
             ws.Row(sumRow).Height = 24;
 
-            ws.Cell(sumRow, 6).Value = $"รวมทั้งสิ้น ({totalRows} รายการ)";
-            ws.Cell(sumRow, 6).Style.Font.FontName = fontName;
-            ws.Cell(sumRow, 6).Style.Font.Bold = true;
-            ws.Cell(sumRow, 6).Style.Font.FontSize = 11;
-            ws.Cell(sumRow, 6).Style.Font.FontColor = XLColor.FromHtml("#0F172A");
-            ws.Cell(sumRow, 6).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
-            ws.Cell(sumRow, 6).Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
-
-            ws.Cell(sumRow, 7).Value = totalAmount;
+            ws.Cell(sumRow, 7).Value = $"รวมทั้งสิ้น ({totalRows} รายการ)";
             ws.Cell(sumRow, 7).Style.Font.FontName = fontName;
             ws.Cell(sumRow, 7).Style.Font.Bold = true;
             ws.Cell(sumRow, 7).Style.Font.FontSize = 11;
             ws.Cell(sumRow, 7).Style.Font.FontColor = XLColor.FromHtml("#0F172A");
-            ws.Cell(sumRow, 7).Style.NumberFormat.Format = "#,##0.00";
             ws.Cell(sumRow, 7).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
             ws.Cell(sumRow, 7).Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
 
-            ws.Range(sumRow, 6, sumRow, 7).Style.Border.TopBorder = XLBorderStyleValues.Thin;
-            ws.Range(sumRow, 6, sumRow, 7).Style.Border.TopBorderColor = colorBorder;
-            ws.Range(sumRow, 6, sumRow, 7).Style.Border.BottomBorder = XLBorderStyleValues.Double;
-            ws.Range(sumRow, 6, sumRow, 7).Style.Border.BottomBorderColor = XLColor.Black;
+            ws.Cell(sumRow, 8).Value = totalAmount;
+            ws.Cell(sumRow, 8).Style.Font.FontName = fontName;
+            ws.Cell(sumRow, 8).Style.Font.Bold = true;
+            ws.Cell(sumRow, 8).Style.Font.FontSize = 11;
+            ws.Cell(sumRow, 8).Style.Font.FontColor = XLColor.FromHtml("#0F172A");
+            ws.Cell(sumRow, 8).Style.NumberFormat.Format = "#,##0.00";
+            ws.Cell(sumRow, 8).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+            ws.Cell(sumRow, 8).Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+
+            ws.Range(sumRow, 7, sumRow, 8).Style.Border.TopBorder = XLBorderStyleValues.Thin;
+            ws.Range(sumRow, 7, sumRow, 8).Style.Border.TopBorderColor = colorBorder;
+            ws.Range(sumRow, 7, sumRow, 8).Style.Border.BottomBorder = XLBorderStyleValues.Double;
+            ws.Range(sumRow, 7, sumRow, 8).Style.Border.BottomBorderColor = XLColor.Black;
 
             // ── Column widths ────────────────────────────────────────────────
             ws.Column(1).Width  = 7;   // ลำดับ
-            ws.Column(2).Width  = 20;  // สถานะ
-            ws.Column(3).Width  = 18;  // PO
-            ws.Column(4).Width  = 14;  // วันที่สั่ง
-            ws.Column(5).Width  = 14;  // วันที่อนุมัติ
-            ws.Column(6).Width  = 16;  // ปภ
-            ws.Column(7).Width  = 16;  // จำนวนเงิน
-            ws.Column(8).Width  = 42;  // รายละเอียด
-            ws.Column(9).Width  = 12;  // จำนวน
-            ws.Column(10).Width = 18;  // เป้าหมาย
+            ws.Column(2).Width  = 18;  // สถานะแผนผลิต
+            ws.Column(3).Width  = 18;  // การจัดการรับสินค้า
+            ws.Column(4).Width  = 18;  // PO
+            ws.Column(5).Width  = 14;  // วันที่สั่ง
+            ws.Column(6).Width  = 14;  // วันที่อนุมัติ
+            ws.Column(7).Width  = 16;  // ปภ
+            ws.Column(8).Width  = 18;  // จำนวนเงิน
+            ws.Column(9).Width  = 45;  // รายละเอียด
+            ws.Column(10).Width = 12;  // จำนวน
+            ws.Column(11).Width = 18;  // เป้าหมาย
 
             // ── Freeze panes ─────────────────────────────────────────────────
             ws.SheetView.FreezeRows(headerRow);
@@ -622,7 +695,7 @@ namespace CostFlow.Controllers
 
             string cleanTitle = sheetTitle.Trim().Replace(" ", "_");
             string downloadName = !string.IsNullOrWhiteSpace(customName)
-                ? $"{customName.Trim()}.xlsx"
+                ? (customName.Trim().EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase) ? customName.Trim() : $"{customName.Trim()}.xlsx")
                 : $"รายงานใบสั่งผลิต_{cleanTitle}.xlsx";
 
             return File(stream.ToArray(),

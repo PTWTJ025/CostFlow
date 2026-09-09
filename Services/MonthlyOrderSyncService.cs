@@ -15,17 +15,20 @@ public class MonthlyOrderSyncService
     private readonly TiDbContext _tiContext;
     private readonly IConfiguration _configuration;
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly IDateTimeProvider _dateTimeProvider;
 
     public MonthlyOrderSyncService(
         AppDbContext context,
         TiDbContext tiContext,
         IConfiguration configuration,
-        IHttpClientFactory httpClientFactory)
+        IHttpClientFactory httpClientFactory,
+        IDateTimeProvider dateTimeProvider)
     {
         _context = context;
         _tiContext = tiContext;
         _configuration = configuration;
         _httpClientFactory = httpClientFactory;
+        _dateTimeProvider = dateTimeProvider;
     }
 
     /// <summary>
@@ -72,7 +75,18 @@ public class MonthlyOrderSyncService
             // 📂 ก้อนที่ 1: เตรียมข้อมูลสำหรับ Google Sheet 1 (ข้อมูลหลัก / Core Operations)
             // =========================================================================
 
-            // 1.1 บันทึกการรับของประจำเดือน (MonthlyOrderActions)
+            // 1.1 บันทึกการรับของประจำเดือน (MonthlyOrderActions พร้อมระบบ Rolling Backlog เหมือนหน้า Summary)
+            var now = _dateTimeProvider.Now;
+            var currentMonthKey = $"{now.Year:0000}-{now.Month:00}";
+            var currentMonthDate = new DateTime(now.Year, now.Month, 1);
+
+            // ดึงคำสั่งซื้อและ Action ทั้งหมด
+            var allOrders = await _context.OrderTrackingMasters
+                .Include(o => o.MatchedInWeeklyPlans)
+                .ThenInclude(m => m.WeeklyPlan)
+                .Include(o => o.Report)
+                .ToListAsync();
+
             var rawActions = await _context.MonthlyOrderActions
                 .Include(a => a.OrderTrackingMaster)
                 .ThenInclude(o => o!.Report)
@@ -83,24 +97,37 @@ public class MonthlyOrderSyncService
                 .ThenBy(a => a.CreatedAt)
                 .ToListAsync();
 
-            var specificActions = rawActions
+            var actionsByOrder = rawActions
                 .Select(a => {
-                    var normKey = NormalizeMonthYearKey(a.MonthYear, a.CreatedAt);
-                    a.MonthYear = normKey;
+                    a.MonthYear = NormalizeMonthYearKey(a.MonthYear, a.CreatedAt);
                     return a;
                 })
-                .GroupBy(a => (a.OrderTrackingMasterId, a.MonthYear))
-                .Select(g => g.Last())
-                .OrderBy(a => a.MonthYear)
-                .ThenBy(a => a.CreatedAt)
-                .ToList();
+                .GroupBy(a => a.OrderTrackingMasterId)
+                .ToDictionary(g => g.Key, g => g.ToList());
 
-            var allPriorActions = specificActions;
+            static DateTime ParseMonthYearHelper(string my)
+            {
+                if (string.IsNullOrWhiteSpace(my)) return DateTime.MinValue;
+                var parts = my.Split('-');
+                if (parts.Length >= 2 && int.TryParse(parts[0], out var y) && int.TryParse(parts[1], out var m))
+                {
+                    if (m >= 1 && m <= 12) return new DateTime(y, m, 1);
+                }
+                return DateTime.MinValue;
+            }
+
             var formattedActionItems = new List<(string MonthYear, object?[] Row)>();
 
-            foreach (var act in specificActions)
+            // ── A. ข้อมูลประวัติเดือนที่ผ่านมา (Historical Months < currentMonthKey) ──
+            var historicalActions = rawActions
+                .Where(a => string.Compare(a.MonthYear, currentMonthKey, StringComparison.Ordinal) < 0)
+                .GroupBy(a => (a.OrderTrackingMasterId, a.MonthYear))
+                .Select(g => g.Last())
+                .ToList();
+
+            foreach (var act in historicalActions)
             {
-                var otm = act.OrderTrackingMaster;
+                var otm = act.OrderTrackingMaster ?? allOrders.FirstOrDefault(o => o.Id == act.OrderTrackingMasterId);
                 if (otm == null) continue;
 
                 var latestPlan = otm.MatchedInWeeklyPlans
@@ -130,23 +157,22 @@ public class MonthlyOrderSyncService
                     _ => act.Action
                 };
 
-                var actMonth = act.MonthYear;
-                var priorAct = allPriorActions
-                    .Where(x => x.OrderTrackingMasterId == otm.Id && string.Compare(x.MonthYear, actMonth) < 0)
-                    .OrderByDescending(x => x.MonthYear)
+                string carriedOverFromMonth = "-";
+                var orderActs = actionsByOrder.ContainsKey(otm.Id) ? actionsByOrder[otm.Id] : new List<MonthlyOrderAction>();
+                var priorAct = orderActs
+                    .Where(x => string.Compare(x.MonthYear, act.MonthYear, StringComparison.Ordinal) < 0)
+                    .OrderByDescending(x => ParseMonthYearHelper(x.MonthYear))
                     .ThenByDescending(x => x.CreatedAt)
                     .FirstOrDefault();
 
-                string carriedOverFromMonth = "-";
                 if (priorAct != null && (priorAct.Action == "Deferred" || priorAct.Action == "Skipped"))
                 {
-                    carriedOverFromMonth = ConvertKeyToThaiMonth(priorAct.MonthYear);
+                    carriedOverFromMonth = (priorAct.Action == "Deferred" ? "ผ่อนชำระมาจาก " : "ค้างรับมาจาก ") + ConvertKeyToThaiMonth(priorAct.MonthYear);
                 }
 
                 string qtyDisplay = FormatQuantityDisplay(otm.RemarksQuantity, otm.Remarks);
-                var normalizedMonthYear = act.MonthYear;
 
-                formattedActionItems.Add((normalizedMonthYear, new object?[]
+                formattedActionItems.Add((act.MonthYear, new object?[]
                 {
                     act.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm"),
                     approvedDateDisplay,
@@ -160,13 +186,179 @@ public class MonthlyOrderSyncService
                 }));
             }
 
+            // ── B. เดือนปัจจุบัน (Current Month Block) & Future Deferrals (Rolling Backlog แบบหน้า Summary) ──
+            var processedCurrentMonthOrderIds = new HashSet<Guid>();
+
+            foreach (var otm in allOrders)
+            {
+                var orderActs = actionsByOrder.ContainsKey(otm.Id) ? actionsByOrder[otm.Id] : new List<MonthlyOrderAction>();
+                var latestAct = orderActs
+                    .OrderByDescending(a => ParseMonthYearHelper(a.MonthYear))
+                    .ThenByDescending(a => a.CreatedAt)
+                    .FirstOrDefault();
+
+                var approvedDt = ParseThaiDate(otm.ApprovedDate);
+                var latestPlan = otm.MatchedInWeeklyPlans
+                    .OrderByDescending(w => w.WeeklyPlan?.UploadedAt)
+                    .FirstOrDefault();
+
+                string poNo = otm.PoNumber ?? "-";
+                string orderName = !string.IsNullOrWhiteSpace(otm.Remarks) ? otm.Remarks.Replace("สั่งทำ ", "").Replace("สั่งทำ", "").Trim() : "ไม่ระบุ";
+                string dept = latestPlan?.Department ?? otm.Urgency ?? "-";
+                string approvedDateDisplay = NormalizeApprovedDate(otm.ApprovedDate);
+                string qtyDisplay = FormatQuantityDisplay(otm.RemarksQuantity, otm.Remarks);
+
+                decimal itemTotalPrice = 0m;
+                if (!string.IsNullOrEmpty(otm.Amount) && decimal.TryParse(otm.Amount, out var parsedAmt))
+                {
+                    itemTotalPrice = parsedAmt;
+                }
+
+                var currentMonthAct = orderActs.FirstOrDefault(a => a.MonthYear == currentMonthKey);
+
+                if (currentMonthAct != null)
+                {
+                    decimal displayAmount = (currentMonthAct.Action == "Deferred" || currentMonthAct.Action == "ReceivedFull")
+                        ? (currentMonthAct.ActionPrice > 0 ? currentMonthAct.ActionPrice : itemTotalPrice)
+                        : itemTotalPrice;
+
+                    string statusLabel = currentMonthAct.Action switch
+                    {
+                        "ReceivedFull" => "รับสินค้าแล้ว",
+                        "Deferred" => "ผ่อนชำระ",
+                        "Skipped" => "ยังไม่รับสินค้า",
+                        _ => currentMonthAct.Action
+                    };
+
+                    string carriedOver = "-";
+                    var priorAct = orderActs
+                        .Where(x => string.Compare(x.MonthYear, currentMonthKey, StringComparison.Ordinal) < 0)
+                        .OrderByDescending(x => ParseMonthYearHelper(x.MonthYear))
+                        .ThenByDescending(x => x.CreatedAt)
+                        .FirstOrDefault();
+
+                    if (priorAct != null)
+                    {
+                        carriedOver = (priorAct.Action == "Deferred" ? "ผ่อนชำระมาจาก " : "ค้างรับมาจาก ") + ConvertKeyToThaiMonth(priorAct.MonthYear);
+                    }
+                    else if (approvedDt.HasValue && $"{approvedDt.Value.Year:0000}-{approvedDt.Value.Month:00}" != currentMonthKey)
+                    {
+                        carriedOver = "ค้างรับมาจาก " + ConvertKeyToThaiMonth($"{approvedDt.Value.Year:0000}-{approvedDt.Value.Month:00}");
+                    }
+
+                    formattedActionItems.Add((currentMonthKey, new object?[]
+                    {
+                        currentMonthAct.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm"),
+                        approvedDateDisplay,
+                        poNo,
+                        orderName,
+                        qtyDisplay,
+                        dept,
+                        displayAmount,
+                        statusLabel,
+                        carriedOver
+                    }));
+                    processedCurrentMonthOrderIds.Add(otm.Id);
+                }
+                else
+                {
+                    if (latestAct != null && latestAct.Action == "ReceivedFull")
+                    {
+                        continue;
+                    }
+
+                    if (latestAct != null && latestAct.Action == "Deferred")
+                    {
+                        var lKey = latestAct.MonthYear;
+                        var parts = lKey.Split('-');
+                        if (parts.Length >= 2 && int.TryParse(parts[0], out var dy) && int.TryParse(parts[1], out var dm))
+                        {
+                            var targetDate = new DateTime(dy, dm, 1).AddMonths(1);
+                            var targetKey = $"{targetDate.Year:0000}-{targetDate.Month:00}";
+
+                            if (targetDate == currentMonthDate)
+                            {
+                                decimal displayAmount = latestAct.ActionPrice > 0 ? latestAct.ActionPrice : itemTotalPrice;
+                                string carriedOver = "ผ่อนชำระมาจาก " + ConvertKeyToThaiMonth(lKey);
+
+                                formattedActionItems.Add((currentMonthKey, new object?[]
+                                {
+                                    latestAct.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm"),
+                                    approvedDateDisplay,
+                                    poNo,
+                                    orderName,
+                                    qtyDisplay,
+                                    dept,
+                                    displayAmount,
+                                    "ผ่อนชำระ",
+                                    carriedOver
+                                }));
+                                processedCurrentMonthOrderIds.Add(otm.Id);
+                                continue;
+                            }
+                            else if (targetDate > currentMonthDate)
+                            {
+                                decimal displayAmount = latestAct.ActionPrice > 0 ? latestAct.ActionPrice : itemTotalPrice;
+                                string carriedOver = "ผ่อนชำระมาจาก " + ConvertKeyToThaiMonth(lKey);
+
+                                formattedActionItems.Add((targetKey, new object?[]
+                                {
+                                    latestAct.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm"),
+                                    approvedDateDisplay,
+                                    poNo,
+                                    orderName,
+                                    qtyDisplay,
+                                    dept,
+                                    displayAmount,
+                                    "ผ่อนชำระ",
+                                    carriedOver
+                                }));
+                                continue;
+                            }
+                        }
+                    }
+
+                    decimal amount = (latestAct != null && latestAct.ActionPrice > 0) ? latestAct.ActionPrice : itemTotalPrice;
+                    string carriedOverMonth = "-";
+
+                    if (latestAct != null)
+                    {
+                        carriedOverMonth = (latestAct.Action == "Deferred" ? "ค้างรับ (ผ่อนชำระ) มาจาก " : "ค้างรับมาจาก ") + ConvertKeyToThaiMonth(latestAct.MonthYear);
+                    }
+                    else if (approvedDt.HasValue && $"{approvedDt.Value.Year:0000}-{approvedDt.Value.Month:00}" != currentMonthKey)
+                    {
+                        carriedOverMonth = "ค้างรับมาจาก " + ConvertKeyToThaiMonth($"{approvedDt.Value.Year:0000}-{approvedDt.Value.Month:00}");
+                    }
+
+                    var recordDate = latestAct?.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                        ?? (approvedDt.HasValue ? approvedDt.Value.ToString("dd/MM/yyyy 00:00") : now.ToString("dd/MM/yyyy HH:mm"));
+
+                    formattedActionItems.Add((currentMonthKey, new object?[]
+                    {
+                        recordDate,
+                        approvedDateDisplay,
+                        poNo,
+                        orderName,
+                        qtyDisplay,
+                        dept,
+                        amount,
+                        "ยังไม่รับสินค้า",
+                        carriedOverMonth
+                    }));
+                    processedCurrentMonthOrderIds.Add(otm.Id);
+                }
+            }
+
             var actionGroups = formattedActionItems
                 .GroupBy(item => item.MonthYear)
                 .OrderBy(g => g.Key)
                 .Select(g => new
                 {
                     MonthYear = g.Key,
-                    Rows = g.Select(x => x.Row).ToList()
+                    Rows = g.OrderBy(x => GetStatusSortOrder(x.Row[7]?.ToString()))
+                            .ThenByDescending(x => x.Row[1]?.ToString())
+                            .Select(x => x.Row)
+                            .ToList()
                 }).ToList();
 
             // 1.2 ประวัติการสั่งซื้อ & ติดตามการรับสินค้า (TiDB)
@@ -597,5 +789,63 @@ public class MonthlyOrderSyncService
             }
         }
         return fallbackDate.ToString("yyyy-MM");
+    }
+
+    private static int GetStatusSortOrder(string? status)
+    {
+        return status switch
+        {
+            "รับสินค้าแล้ว" => 1,
+            "ผ่อนชำระ" => 2,
+            "ยังไม่รับสินค้า" => 3,
+            _ => 4
+        };
+    }
+
+    private static DateTime? ParseThaiDate(string? thaiDateStr)
+    {
+        if (string.IsNullOrWhiteSpace(thaiDateStr) || thaiDateStr == "-") return null;
+
+        thaiDateStr = thaiDateStr.Trim();
+        if (thaiDateStr.Contains(' '))
+        {
+            thaiDateStr = thaiDateStr.Split(' ')[0];
+        }
+
+        thaiDateStr = thaiDateStr.Replace('-', '/');
+
+        var parts = thaiDateStr.Split('/');
+        if (parts.Length == 3 &&
+            int.TryParse(parts[0], out var p1) &&
+            int.TryParse(parts[1], out var p2) &&
+            int.TryParse(parts[2], out var p3))
+        {
+            int day = p1;
+            int month = p2;
+            int year = p3;
+
+            if (p1 > 1000)
+            {
+                year = p1;
+                month = p2;
+                day = p3;
+            }
+            else if (p2 > 12 && p1 <= 12)
+            {
+                day = p2;
+                month = p1;
+                year = p3;
+            }
+
+            if (year > 2500) year -= 543;
+
+            try
+            {
+                return new DateTime(year, month, day);
+            }
+            catch { }
+        }
+
+        return null;
     }
 }

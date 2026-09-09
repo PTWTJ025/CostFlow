@@ -11,36 +11,33 @@
             <span>/</span>
             <span class="text-slate-700 font-semibold">ตั้งค่า & สำรองข้อมูล</span>
         </div>
-        <button onclick="window.history.back();" class="text-xs text-slate-600 hover:text-slate-800 hover:bg-slate-100 px-md py-1.5 rounded transition-all flex items-center gap-xs border border-slate-200 cursor-pointer">
+        <button onclick="window.history.back();" class="text-xs text-slate-600 hover:text-slate-800 hover:bg-slate-100 px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5 border border-slate-200 cursor-pointer">
             <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
             </svg>
-            ย้อนกลับ
+            <span>ย้อนกลับ</span>
         </button>
     </div>
 
-    <!-- SQLite & TiDB Database Backup Section -->
-    <div class="bg-white rounded border border-outline-variant shadow-sm p-md md:p-lg lg:p-xl">
+    <!-- Section 1: Full Database Backup Section -->
+    <div class="bg-white rounded-lg border border-slate-200/80 shadow-sm p-md md:p-lg">
         <div class="border-b border-slate-100 pb-md mb-md flex flex-wrap justify-between items-center gap-sm">
             <div>
-                <h3 class="font-headline-sm text-headline-sm text-on-surface mb-xs flex items-center gap-2">
-                    <svg class="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                    </svg>
+                <h3 class="font-bold text-sm md:text-base text-slate-800 mb-0.5">
                     สำรองฐานข้อมูลฉบับเต็ม (Full Backup & Download)
                 </h3>
-                <p class="text-xs text-secondary">ดาวน์โหลดไฟล์ฐานข้อมูลครบทุกตาราง (คำสั่งผลิต, ค่าใช้จ่าย, คลังสินค้า, ประวัติรับ-เบิกของ, และบัญชีผู้ใช้) ในไฟล์ .ZIP เดียว</p>
+                <p class="text-xs text-slate-500">ดาวน์โหลดไฟล์ฐานข้อมูลครบทุกตาราง (คำสั่งผลิต, ค่าใช้จ่าย, คลังสินค้า, ประวัติรับ-เบิกของ และบัญชีผู้ใช้) ในไฟล์ .ZIP เดียว</p>
             </div>
-            <span class="text-[11px] font-bold text-blue-700 bg-blue-50 border border-blue-200 px-3 py-1 rounded">
+            <span class="text-[11px] font-bold text-blue-700 bg-blue-50 border border-blue-200 px-3 py-1 rounded-md">
                 ครอบคลุมฐานข้อมูล 100% (Full Schema)
             </span>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-md">
-            <div class="bg-slate-50 p-md rounded border border-slate-200/80 flex flex-col justify-between">
+            <div class="bg-slate-100/70 p-md rounded-md border border-slate-200 flex flex-col justify-between">
                 <div>
                     <span class="text-[10px] text-slate-500 font-semibold uppercase block mb-1">ตารางที่ครอบคลุมทั้งหมด</span>
-                    <span class="text-sm font-bold text-slate-800">TiDB Cloud (costflow_db & test)</span>
+                    <span class="text-xs font-bold text-slate-800">TiDB Cloud (costflow_db & test)</span>
                     <div class="text-[11px] text-slate-600 mt-2 space-y-0.5">
                         <div>• ระบบคลังสินค้า: <strong>StockItems, ItemMappings, StockLogs</strong></div>
                         <div>• ข้อมูลระบบ: <strong>Users, Roles, ProductPrices</strong></div>
@@ -50,7 +47,7 @@
                 <span class="text-[10px] text-slate-400 mt-2 block">กวาดทุกตารางในฐานข้อมูลครบถ้วน 100%</span>
             </div>
 
-            <div class="bg-slate-50 p-md rounded border border-slate-200/80 flex flex-col justify-between">
+            <div class="bg-slate-100/70 p-md rounded-md border border-slate-200 flex flex-col justify-between">
                 <div>
                     <span class="text-[10px] text-slate-500 font-semibold uppercase block mb-1">โครงสร้างไฟล์สำรองใน ZIP</span>
                     <span class="text-xs font-mono font-bold text-slate-700 break-all">CostFlow_FullBackup_*.zip</span>
@@ -63,52 +60,43 @@
                 <span class="text-[10px] text-slate-400 mt-2 block">บีบอัดฐานข้อมูลระบบทั้งหมดใน ZIP เดียว</span>
             </div>
 
-            <div class="bg-blue-50/60 p-md rounded border border-blue-200/80 flex flex-col justify-between">
+            <div class="bg-blue-50/60 p-md rounded-md border border-blue-200/80 flex flex-col justify-between">
                 <div>
                     <span class="text-[10px] text-blue-800 font-semibold uppercase block mb-1">คำสั่งสำรองข้อมูลฉบับเต็ม</span>
-                    <span class="text-xs text-blue-900 font-medium block">ดาวน์โหลดฐานข้อมูลทุกตารางมาเก็บในเครื่องทันที (.ZIP)</span>
-                    <p class="text-[11px] text-blue-700 mt-1">แนะนำให้ดาวน์โหลดเก็บไว้ทุกสัปดาห์หรือก่อนการล้างข้อมูลประจำปี</p>
+                    <span class="text-xs text-blue-950 font-bold block">ดาวน์โหลดฐานข้อมูลทุกตารางมาเก็บในเครื่องทันที (.ZIP)</span>
+                    <p class="text-[11px] text-blue-800 mt-1">แนะนำให้ดาวน์โหลดเก็บไว้ทุกสัปดาห์หรือก่อนการล้างข้อมูลประจำปี</p>
                 </div>
                 <form id="backup-form" method="post" action="/Home/BackupDatabase">
                     @Html.AntiForgeryToken()
                     <button type="button" onclick="executeBackup()" id="backup-btn"
-                        class="mt-3 font-bold text-xs px-4 py-2.5 rounded shadow-sm flex items-center justify-center gap-1.5 w-full cursor-pointer hover:opacity-90 border-none transition-all"
+                        class="mt-3 font-bold text-xs px-4 py-2.5 rounded-md shadow-sm flex items-center justify-center gap-1.5 w-full cursor-pointer hover:opacity-90 transition-opacity border-none"
                         style="background-color: #2563eb; color: #ffffff;">
-                        <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                        </svg>
-                        <span style="color: #ffffff; font-weight: 700;">ดาวน์โหลด Backup ทั้งหมด (.ZIP)</span>
+                        <span style="color: #ffffff !important; font-weight: 700;">ดาวน์โหลด Backup ทั้งหมด (.ZIP)</span>
                     </button>
                 </form>
             </div>
         </div>
     </div>
 
-    <!-- Restore Database Section (Mockup / Safety Guarded) -->
-    <div class="bg-white rounded border border-outline-variant shadow-sm p-md md:p-lg lg:p-xl">
+    <!-- Section 2: Restore Database Section (Safe-Guard Protected) -->
+    <div class="bg-white rounded-lg border border-slate-200/80 shadow-sm p-md md:p-lg">
         <div class="border-b border-slate-100 pb-md mb-md flex flex-wrap justify-between items-center gap-sm">
             <div>
-                <h3 class="font-headline-sm text-headline-sm text-on-surface mb-xs flex items-center gap-2">
-                    <svg class="w-5 h-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
-                    </svg>
+                <h3 class="font-bold text-sm md:text-base text-slate-800 mb-0.5">
                     กู้คืนฐานข้อมูล (Restore Database)
                 </h3>
-                <p class="text-xs text-secondary">นำเข้าไฟล์สำรองเพื่อตรวจสอบความสมบูรณ์และเตรียมกู้คืนฐานข้อมูล (มีระบบ Safe-Guard ล็อคการเขียนทับเพื่อความปลอดภัย)</p>
+                <p class="text-xs text-slate-500">นำเข้าไฟล์สำรองเพื่อตรวจสอบความสมบูรณ์และเตรียมกู้คืนฐานข้อมูล (มีระบบ Safe-Guard ล็อคการเขียนทับเพื่อความปลอดภัย)</p>
             </div>
-            <span class="text-[11px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-3 py-1 rounded flex items-center gap-1">
-                <svg class="w-3.5 h-3.5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
-                </svg>
+            <span class="text-[11px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-3 py-1 rounded-md">
                 ระบบความปลอดภัย Safe-Guard
             </span>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-md">
-            <div class="bg-slate-50 p-md rounded border border-slate-200/80 flex flex-col justify-between">
+            <div class="bg-slate-100/70 p-md rounded-md border border-slate-200 flex flex-col justify-between">
                 <div>
                     <span class="text-[10px] text-slate-500 font-semibold uppercase block mb-1">รูปแบบไฟล์ที่รองรับ</span>
-                    <span class="text-sm font-bold text-slate-800">.ZIP หรือ .JSON จาก CostFlow</span>
+                    <span class="text-xs font-bold text-slate-800">.ZIP หรือ .JSON จาก CostFlow</span>
                     <p class="text-[11px] text-slate-600 mt-2 leading-relaxed">
                         รองรับไฟล์ Backup ที่ดาวน์โหลดจากระบบ ซึ่งมีข้อมูลครบ 100% ทั้งตารางระบบหลัก, สต็อกสินค้า, และผู้ใช้งาน
                     </p>
@@ -116,131 +104,119 @@
                 <span class="text-[10px] text-slate-400 mt-2 block">ตรวจสอบความถูกต้องของ Schema อัตโนมัติ</span>
             </div>
 
-            <div class="bg-slate-50 p-md rounded border border-slate-200/80 flex flex-col justify-between">
+            <div class="bg-slate-100/70 p-md rounded-md border border-slate-200 flex flex-col justify-between">
                 <div>
                     <span class="text-[10px] text-slate-500 font-semibold uppercase block mb-1">เลือกไฟล์สำรองสำหรับกู้คืน</span>
                     <input type="file" id="restore-file-input" accept=".zip,.json" onchange="handleRestoreFileChosen(event)" class="hidden" />
                     <button type="button" onclick="document.getElementById('restore-file-input').click()" 
-                        class="w-full mt-1 border border-dashed border-slate-300 hover:border-indigo-400 hover:bg-indigo-50/30 rounded p-3 text-left transition-all cursor-pointer bg-white">
-                        <div class="flex items-center gap-2">
-                            <svg class="w-4 h-4 text-indigo-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-                            </svg>
-                            <div class="overflow-hidden">
-                                <span id="restore-file-name" class="text-xs font-semibold text-slate-700 block truncate">คลิกเลือกไฟล์ .ZIP หรือ .JSON</span>
-                                <span id="restore-file-size" class="text-[10px] text-slate-400 block">ยังไม่ได้เลือกไฟล์สำรอง</span>
-                            </div>
+                        class="w-full mt-1 border border-dashed border-slate-300 hover:border-indigo-400 hover:bg-indigo-50/20 rounded-md p-3 text-left transition-all cursor-pointer bg-white">
+                        <div class="overflow-hidden">
+                            <span id="restore-file-name" class="text-xs font-semibold text-slate-700 block truncate">คลิกเลือกไฟล์ .ZIP หรือ .JSON</span>
+                            <span id="restore-file-size" class="text-[10px] text-slate-400 block mt-0.5">ยังไม่ได้เลือกไฟล์สำรอง</span>
                         </div>
                     </button>
                 </div>
                 <span class="text-[10px] text-slate-400 mt-2 block">รองรับ CostFlow_FullBackup_*.zip</span>
             </div>
 
-            <div class="bg-indigo-50/50 p-md rounded border border-indigo-200/80 flex flex-col justify-between">
+            <div class="bg-indigo-50/50 p-md rounded-md border border-indigo-200/80 flex flex-col justify-between">
                 <div>
                     <span class="text-[10px] text-indigo-800 font-semibold uppercase block mb-1">คำสั่งกู้คืนข้อมูล</span>
-                    <span class="text-xs text-indigo-900 font-medium block">เริ่มตรวจสอบและเตรียมการกู้คืนข้อมูล</span>
-                    <p class="text-[11px] text-indigo-700 mt-1">ระบบจะแสดงรายละเอียดและล็อคการเขียนทับอัตโนมัติเพื่อความปลอดภัย</p>
+                    <span class="text-xs text-indigo-950 font-bold block">เริ่มตรวจสอบและเตรียมการกู้คืนข้อมูล</span>
+                    <p class="text-[11px] text-indigo-800 mt-1">ระบบจะแสดงรายละเอียดและล็อคการเขียนทับอัตโนมัติเพื่อความปลอดภัย</p>
                 </div>
                 <button type="button" onclick="triggerRestoreAction()" id="restore-btn"
-                    class="mt-3 font-bold text-xs px-4 py-2.5 rounded shadow-sm flex items-center justify-center gap-1.5 w-full cursor-pointer hover:opacity-90 border-none transition-all"
+                    class="mt-3 font-bold text-xs px-4 py-2.5 rounded-md shadow-sm flex items-center justify-center gap-1.5 w-full cursor-pointer hover:opacity-90 transition-opacity border-none"
                     style="background-color: #4338ca; color: #ffffff;">
-                    <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
-                    </svg>
-                    <span style="color: #ffffff; font-weight: 700;">เริ่มการกู้คืนข้อมูล (Restore)</span>
+                    <span style="color: #ffffff !important; font-weight: 700;">ตรวจสอบไฟล์สำรอง (Restore)</span>
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- Google Sheets Manual Sync & Backup Section (One-Click Dual-Sheet Sync) -->
-    <div class="bg-white rounded border border-outline-variant shadow-sm p-md md:p-lg lg:p-xl">
+    <!-- Section 3: Google Sheets Sync (Dual Sheet) -->
+    <div class="bg-white rounded-lg border border-slate-200/80 shadow-sm p-md md:p-lg">
         <div class="border-b border-slate-100 pb-md mb-md flex flex-wrap justify-between items-center gap-sm">
             <div>
-                <h3 class="font-headline-sm text-headline-sm text-on-surface mb-xs flex items-center gap-2">
-                    <svg class="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0 3 3m-3-3-3 3M6.75 19.5a4.5 4.5 0 0 1-1.41-8.775 a5.25 5.25 0 0 1 10.233-2.33 a3 3 0 0 1 3.758 3.848A3.752 3.752 0 0 1 18 19.5H6.75Z"/>
-                    </svg>
-                    ส่งออก & สำรองข้อมูลลง Google Sheet ทั้ง 2 ไฟล์ (One-Click Dual Sheet Sync)
+                <h3 class="font-bold text-sm md:text-base text-slate-800 mb-0.5">
+                    ส่งออก & สำรองข้อมูลลง Google Sheets ทั้ง 2 ไฟล์ (Dual Sheet Sync)
                 </h3>
-                <p class="text-xs text-secondary">ส่งข้อมูลทั้งหมดจากฐานข้อมูล TiDB & MySQL ไปยัง Google Sheets แยกเป็น 2 ไฟล์ (รวม 9 แท็บ) ทันทีในคลิกเดียว (ไม่ลบข้อมูลในระบบ)</p>
+                <p class="text-xs text-slate-500">ส่งข้อมูลทั้งหมดจากฐานข้อมูล TiDB & MySQL ไปยัง Google Sheets แยกเป็น 2 ไฟล์ (รวม 9 แท็บ) ทันทีในคลิกเดียว</p>
             </div>
-            <span class="text-[11px] font-bold text-emerald-700 px-3 py-1">
+            <span class="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-md">
                 สำหรับผู้ดูแลระบบ (Admin Only)
             </span>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-md">
-            <div class="bg-slate-50 p-md rounded border border-slate-200/80 flex flex-col justify-between">
+            <div class="bg-slate-100/70 p-md rounded-md border border-slate-200 flex flex-col justify-between">
                 <div>
                     <span class="text-[10px] text-slate-500 font-semibold uppercase block mb-1">ข้อมูลที่จะส่งออก (แยก 2 ไฟล์ รวม 9 แท็บ)</span>
-                    <div class="text-xs text-slate-800 space-y-1 mt-1">
-                        <div><strong class="text-emerald-800">📂 ชีทที่ 1 (ข้อมูลหลัก 5 แท็บ):</strong> บันทึกรับของ, ประวัติสั่งซื้อ, ติดตามรับของ, คลังสินค้า, ราคากลาง</div>
-                        <div><strong class="text-indigo-800">📁 ชีทที่ 2 (แผนผลิต & ประวัติ 4 แท็บ):</strong> แผนผลิตประจำสัปดาห์, ประวัติสต็อก, รายงานภาพรวม, AI Mapping</div>
+                    <div class="text-xs text-slate-800 space-y-1.5 mt-1">
+                        <div><span class="font-bold text-slate-900">ชีทที่ 1 (ข้อมูลหลัก 5 แท็บ):</span> บันทึกรับของ, ประวัติสั่งซื้อ, ติดตามรับของ, คลังสินค้า, ราคากลาง</div>
+                        <div><span class="font-bold text-slate-900">ชีทที่ 2 (แผนผลิต & ประวัติ 4 แท็บ):</span> แผนผลิตประจำสัปดาห์, ประวัติสต็อก, รายงานภาพรวม, AI Mapping</div>
                     </div>
                 </div>
                 <span class="text-[10px] text-slate-400 mt-2 block">ตัด Internal PK/FK ออกทั้งหมด เก็บเฉพาะ Business Columns & เวลาทำรายการ</span>
             </div>
 
-            <div class="bg-slate-50 p-md rounded border border-slate-200/80 flex flex-col justify-between">
+            <div class="bg-slate-100/70 p-md rounded-md border border-slate-200 flex flex-col justify-between">
                 <div>
-                    <span class="text-[10px] text-slate-500 font-semibold uppercase block mb-1">Google Sheet ปลายทาง</span>
-                    <a href="https://docs.google.com/spreadsheets/d/1RFXMLRLjidiH6z9C6-DFHZcf8pP_K4TskJJcMVzPS5w/edit?usp=sharing" target="_blank" class="text-xs font-bold text-emerald-600 hover:underline flex items-center gap-1 mb-1">
-                        📂 เปิดดู Google Sheet 1 (ข้อมูลหลัก)
-                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
-                        </svg>
-                    </a>
-                    <span class="text-[11px] text-slate-600 block">📁 Google Sheet 2 (แผนผลิต/ประวัติ): เชื่อมโยงผ่าน Apps Script แยกไฟล์</span>
+                    <span class="text-[10px] text-slate-500 font-semibold uppercase block mb-1">Google Sheets ปลายทาง</span>
+                    <div class="space-y-1 mt-1">
+                        <a href="https://docs.google.com/spreadsheets/d/1DJeeOYd1hGFAaRZ7emkdgLys7G88T13cylayh6Za1xc/edit?usp=sharing" target="_blank" class="text-xs font-bold text-emerald-700 hover:text-emerald-900 hover:underline block">
+                            เปิดดู Google Sheet 1 (ข้อมูลหลัก) &rarr;
+                        </a>
+                        <a href="https://docs.google.com/spreadsheets/d/1RFXMLRLjidiH6z9C6-DFHZcf8pP_K4TskJJcMVzPS5w/edit?usp=sharing" target="_blank" class="text-xs font-bold text-blue-700 hover:text-blue-900 hover:underline block">
+                            เปิดดู Google Sheet 2 (แผนผลิต & ประวัติ) &rarr;
+                        </a>
+                    </div>
                 </div>
                 <span class="text-[10px] text-slate-400 mt-2 block">อัปเดตพร้อมกันทั้ง 2 ไฟล์ชีทในการกดเพียงครั้งเดียว</span>
             </div>
 
-            <div class="bg-emerald-50/60 p-md rounded border border-emerald-200/80 flex flex-col justify-between">
+            <div class="bg-emerald-50/60 p-md rounded-md border border-emerald-200/80 flex flex-col justify-between">
                 <div>
                     <span class="text-[10px] text-emerald-800 font-semibold uppercase block mb-1">คำสั่งส่งข้อมูลลง 2 Sheets</span>
-                    <span class="text-xs text-emerald-900 font-medium block">ส่งข้อมูลล่าสุดจาก Database ไปบันทึกลงทั้ง 2 ชีท</span>
+                    <span class="text-xs text-emerald-950 font-bold block">ส่งข้อมูลล่าสุดจาก Database ไปบันทึกลงทั้ง 2 ชีท</span>
+                    <p class="text-[11px] text-emerald-800 mt-1">ไม่ลบหรือกระทบข้อมูลเดิมในฐานข้อมูลระบบ</p>
                 </div>
                 <button type="button" onclick="executeSyncToGoogleSheets()" id="sync-sheet-btn"
-                    class="mt-3 font-bold text-xs px-4 py-2.5 rounded shadow-sm flex items-center justify-center gap-1.5 w-full cursor-pointer hover:opacity-90 border-none transition-all"
+                    class="mt-3 font-bold text-xs px-4 py-2.5 rounded-md shadow-sm flex items-center justify-center gap-1.5 w-full cursor-pointer hover:opacity-90 transition-opacity border-none"
                     style="background-color: #059669; color: #ffffff;">
-                    <span id="sync-sheet-btn-text" style="color: #ffffff; font-weight: 700;">🚀 ส่งข้อมูลลง Google Sheet ทันที</span>
+                    <span id="sync-sheet-btn-text" style="color: #ffffff !important; font-weight: 700;">ส่งข้อมูลลง Google Sheets</span>
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- Admin Database Archival & Maintenance Section -->
-    <div class="bg-white rounded border border-outline-variant shadow-sm p-md md:p-lg lg:p-xl">
+    <!-- Section 4: Database Archival & Maintenance Section -->
+    <div class="bg-white rounded-lg border border-slate-200/80 shadow-sm p-md md:p-lg">
         <div class="border-b border-slate-100 pb-md mb-md flex flex-wrap justify-between items-center gap-sm">
             <div>
-                <h3 class="font-headline-sm text-headline-sm text-on-surface mb-xs flex items-center gap-2">
-                    <svg class="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125m16.5 5.625c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125m16.5 5.625c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" />
-                    </svg>
+                <h3 class="font-bold text-sm md:text-base text-slate-800 mb-0.5">
                     การจัดการฐานข้อมูลและการสำรองข้อมูล (Archive & Database Maintenance)
                 </h3>
-                <p class="text-xs text-secondary">ดาวน์โหลดไฟล์สำรองฐานข้อมูล (.ZIP แยกตามตาราง) เก็บไว้ในเครื่อง และลบข้อมูลเก่าเกิน 2 ปีออกจาก TiDB เพื่อรักษาความเร็วสูงสุดของระบบ</p>
+                <p class="text-xs text-slate-500">ดาวน์โหลดไฟล์สำรองฐานข้อมูล (.ZIP แยกตามตาราง) เก็บไว้ในเครื่อง และลบข้อมูลเก่าเกิน 2 ปีออกจาก TiDB เพื่อรักษาความเร็วสูงสุดของระบบ</p>
             </div>
-            <span class="text-[11px] font-bold text-amber-700 px-3 py-1">
+            <span class="text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1 rounded-md">
                 สำหรับผู้ดูแลระบบ (Admin Only)
             </span>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-md">
-            <div class="bg-slate-50 p-md rounded border border-slate-200/80 flex flex-col justify-between">
+            <div class="bg-slate-100/70 p-md rounded-md border border-slate-200 flex flex-col justify-between">
                 <div>
                     <span class="text-[10px] text-slate-500 font-semibold uppercase block mb-1">ระยะเวลาเก็บข้อมูลในระบบ</span>
-                    <span class="text-base font-bold text-slate-800">24 เดือน (2 ปี)</span>
+                    <span class="text-sm font-bold text-slate-800">24 เดือน (2 ปี)</span>
                 </div>
                 <span class="text-[10px] text-slate-400 mt-2 block">ข้อมูลที่เก่ากว่า 2 ปี จะถูกดาวน์โหลดเป็น .ZIP สำรองและลบออกจากระบบ</span>
             </div>
 
-            <div class="bg-slate-50 p-md rounded border border-slate-200/80 flex flex-col justify-between">
+            <div class="bg-slate-100/70 p-md rounded-md border border-slate-200 flex flex-col justify-between">
                 <div>
                     <span class="text-[10px] text-slate-500 font-semibold uppercase block mb-1">ไฟล์สำรองปลายทาง (.ZIP ในเครื่อง)</span>
-                    <span class="text-xs font-mono font-bold text-amber-900 break-all block">CostFlow_PurgedArchive_*.zip</span>
+                    <span class="text-xs font-mono font-bold text-slate-700 break-all block">CostFlow_PurgedArchive_*.zip</span>
                     <div class="text-[11px] text-slate-600 mt-2 space-y-0.5">
                         <div>• แยกตาราง JSON 5 ไฟล์ (StockLogs, Cost, Plans, Orders, Metadata)</div>
                         <div>• เก็บในเครื่องโดยตรง ไม่รบกวนชีท และไม่ติด Timeout</div>
@@ -249,36 +225,31 @@
                 <span class="text-[10px] text-slate-400 mt-2 block">ความปลอดภัยสูงสุด ข้อมูลอยู่ในความควบคุมของคุณ 100%</span>
             </div>
 
-            <div class="bg-amber-50/60 p-md rounded border border-amber-200/80 flex flex-col justify-between">
+            <div class="bg-amber-50/60 p-md rounded-md border border-amber-200/80 flex flex-col justify-between">
                 <div>
                     <span class="text-[10px] text-amber-800 font-semibold uppercase block mb-1">คำสั่งสำรองและล้างข้อมูล</span>
-                    <span class="text-xs text-amber-900 font-medium block">ดาวน์โหลดไฟล์สำรอง .ZIP และลบข้อมูลเก่า</span>
-                    <p class="text-[11px] text-amber-700 mt-1">มีระบบ Database Transaction ป้องกันข้อมูลสูญหาย</p>
+                    <span class="text-xs text-amber-950 font-bold block">ดาวน์โหลดไฟล์สำรอง .ZIP และลบข้อมูลเก่า</span>
+                    <p class="text-[11px] text-amber-800 mt-1">มีระบบ Database Transaction ป้องกันข้อมูลสูญหาย</p>
                 </div>
-                <button type="button" onclick="openArchiveModal()" style="background-color: #d97706; color: #ffffff !important;" class="mt-3 font-bold text-xs px-4 py-2.5 rounded shadow-sm flex items-center justify-center gap-1.5 w-full cursor-pointer hover:opacity-90 border-none transition-all">
-                    <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                    </svg>
-                    <span style="color: #ffffff !important; font-weight: 700;">สำรองและลบข้อมูลเก่า (.ZIP) ทันที</span>
+                <button type="button" onclick="openArchiveModal()" class="mt-3 font-bold text-xs px-4 py-2.5 rounded-md shadow-sm flex items-center justify-center gap-1.5 w-full cursor-pointer hover:opacity-90 transition-opacity border-none"
+                    style="background-color: #d97706; color: #ffffff;">
+                    <span style="color: #ffffff !important; font-weight: 700;">สำรองและลบข้อมูลเก่า (.ZIP)</span>
                 </button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Modal ยืนยันการสำรองและลบข้อมูล -->
+<!-- Modal ยืนยันการสำรองและลบข้อมูล (Clean Layout) -->
 <div id="archive-modal" class="fixed inset-0 z-50 hidden bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6 border border-slate-200 animate-in fade-in zoom-in duration-200">
-        <div class="flex items-center gap-3 text-amber-600 mb-3">
-            <div class="p-2 bg-amber-100 rounded-full">
-                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-            </div>
+    <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6 border border-slate-200 animate-in fade-in zoom-in duration-150">
+        <div class="mb-3">
             <h4 class="text-base font-bold text-slate-800">ยืนยันการสำรองและลบข้อมูลเก่า (.ZIP)</h4>
+            <p class="text-xs text-slate-500 mt-0.5">ระบบจะรวบรวมข้อมูลเก่าเกิน 24 เดือนมาจัดเก็บในเครื่องและทำความสะอาดระบบ</p>
         </div>
+
         <p class="text-xs text-slate-600 leading-relaxed mb-2">
-            ระบบจะทำการรวบรวมข้อมูลที่มีอายุเก่ากว่า <strong class="text-slate-900">2 ปี (24 เดือน)</strong> ได้แก่:
+            ข้อมูลที่มีอายุเก่ากว่า <strong class="text-slate-900">2 ปี (24 เดือน)</strong> ได้แก่:
         </p>
         <ul class="text-xs text-slate-600 mb-3 list-disc pl-5 space-y-1">
             <li>แผนผลิตและคำสั่งซื้อ (WeeklyPlans & OrderTrackingMasters)</li>
@@ -288,14 +259,15 @@
         <p class="text-xs text-slate-600 leading-relaxed mb-4">
             ข้อมูลจะถูกบีบอัดเป็นไฟล์สำรอง <b>.ZIP</b> (บรรจุ JSON แยกตาราง 5 ไฟล์) และดาวน์โหลดลงเครื่องคอมพิวเตอร์ของคุณโดยตรง จากนั้นจึงลบข้อมูลออกจากฐานข้อมูล TiDB เพื่อเพิ่มความเร็วระบบ
         </p>
-        <div class="bg-amber-50 border border-amber-200 rounded p-3 mb-5 text-[11px] text-amber-800 leading-relaxed">
-            <strong>🛡️ ปลอดภัยสูงสุด (Fail-Safe Database Transaction):</strong> ระบบจะสร้างไฟล์ .ZIP ให้เสร็จสมบูรณ์ก่อน และทำการลบข้อมูลภายใต้ Transaction หากเกิดข้อผิดพลาดใดๆ ระบบจะทำการ Rollback ทันที ข้อมูลใน TiDB จะไม่สูญหายแม้แต่รายการเดียว
+        <div class="bg-amber-50 border border-amber-200 rounded-md p-3 mb-5 text-[11px] text-amber-900 leading-relaxed">
+            <strong class="text-amber-950">ระบบความปลอดภัย (Fail-Safe Database Transaction):</strong> ระบบจะสร้างไฟล์ .ZIP ให้เสร็จสมบูรณ์ก่อน และทำการลบข้อมูลภายใต้ Transaction หากเกิดข้อผิดพลาดใดๆ ระบบจะทำการ Rollback ทันที ข้อมูลในฐานข้อมูลจะไม่สูญหาย
         </div>
         <div class="flex justify-end gap-2">
-            <button type="button" onclick="closeArchiveModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded border border-slate-200 transition-colors cursor-pointer">
+            <button type="button" onclick="closeArchiveModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-md border border-slate-200 transition-colors cursor-pointer">
                 ยกเลิก
             </button>
-            <button type="button" id="confirm-archive-btn" onclick="executeArchiveAndPurge()" style="background-color: #d97706; color: #ffffff !important;" class="px-4 py-2 text-xs font-bold rounded shadow-sm transition-all flex items-center gap-1.5 cursor-pointer hover:opacity-90 border-none">
+            <button type="button" id="confirm-archive-btn" onclick="executeArchiveAndPurge()" class="px-4 py-2 text-xs font-bold rounded-md shadow-sm transition-colors flex items-center gap-1.5 cursor-pointer hover:opacity-90 border-none"
+                style="background-color: #d97706; color: #ffffff;">
                 <span style="color: #ffffff !important; font-weight: 700;">ยืนยันการสำรองและลบข้อมูล</span>
             </button>
         </div>
@@ -304,39 +276,31 @@
 
 <!-- Modal ป้องกันความปลอดภัยการกู้คืนข้อมูล (Restore Safe-Guard Modal) -->
 <div id="restore-guard-modal" class="fixed inset-0 z-50 hidden bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6 border border-slate-200 animate-in fade-in zoom-in duration-200">
-        <div class="flex items-center gap-3 text-indigo-600 mb-3">
-            <div class="p-2.5 bg-indigo-100 rounded-full shrink-0">
-                <svg class="w-6 h-6 text-indigo-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" />
-                </svg>
-            </div>
-            <div>
-                <h4 class="text-base font-bold text-slate-800">ระบบความปลอดภัย: ล็อคการเขียนทับอัตโนมัติ</h4>
-                <span class="text-[11px] text-indigo-600 font-semibold">Safe-Guard Protection Active</span>
-            </div>
+    <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6 border border-slate-200 animate-in fade-in zoom-in duration-150">
+        <div class="mb-3">
+            <h4 class="text-base font-bold text-slate-800">ระบบความปลอดภัย: ล็อคการเขียนทับอัตโนมัติ</h4>
+            <span class="text-[11px] text-slate-500">Safe-Guard Protection Active</span>
         </div>
 
-        <div class="bg-indigo-50/70 border border-indigo-200 rounded p-3 mb-4 text-xs text-indigo-900 leading-relaxed">
-            <div class="font-bold flex items-center gap-1.5 mb-1 text-indigo-950">
-                <span>🛡️ ไฟล์สำรองสมบูรณ์ 100% (ข้อมูลปลอดภัย)</span>
-            </div>
-            ไฟล์สำรองที่คุณเลือก (<span id="modal-restore-filename" class="font-mono font-bold text-indigo-700">CostFlow_FullBackup.zip</span>) มีโครงสร้างข้อมูลครบถ้วน 100% ครอบคลุมทั้งระบบสต็อก, บัญชีผู้ใช้, คำสั่งผลิต และค่าใช้จ่าย
+        <div class="bg-indigo-50/70 border border-indigo-200 rounded-md p-3 mb-4 text-xs text-indigo-950 leading-relaxed">
+            <div class="font-bold text-indigo-950 mb-1">ไฟล์สำรองสมบูรณ์ (ข้อมูลปลอดภัย)</div>
+            ไฟล์สำรองที่คุณเลือก (<span id="modal-restore-filename" class="font-mono font-bold text-indigo-800">CostFlow_FullBackup.zip</span>) มีโครงสร้างข้อมูลครบถ้วน ครอบคลุมทั้งระบบสต็อก, บัญชีผู้ใช้, คำสั่งผลิต และค่าใช้จ่าย
         </div>
 
         <div class="text-xs text-slate-600 space-y-2 mb-5 leading-relaxed">
             <p>
-                เนื่องจากระบบทำงานบนฐานข้อมูล Cloud (TiDB) ซึ่งมีการใช้งานและเคลื่อนไหวของข้อมูลอยู่ตลอดเวลา <strong>เพื่อป้องกันการกู้คืนทับข้อมูลล่าสุดโดยไม่ตั้งใจ</strong> ระบบจึงเน้นให้ดาวน์โหลดไฟล์สำรองที่ครบถ้วนเก็บไว้ในเครื่องให้อุ่นใจก่อน
+                เนื่องจากระบบทำงานบนฐานข้อมูล Cloud (TiDB) ซึ่งมีการเคลื่อนไหวของข้อมูลอยู่ตลอดเวลา <strong>เพื่อป้องกันการกู้คืนทับข้อมูลล่าสุดโดยไม่ตั้งใจ</strong> ระบบจึงเน้นให้ดาวน์โหลดไฟล์สำรองที่ครบถ้วนเก็บไว้ในเครื่องก่อน
             </p>
-            <div class="bg-slate-50 border border-slate-200 rounded p-2.5 text-[11px] text-slate-700 space-y-1">
-                <div class="font-bold text-slate-900">💡 คำแนะนำสำหรับผู้ดูแลระบบ:</div>
-                <div>1. ไฟล์สำรอง .ZIP มีโครงสร้าง JSON ครบถ้วน สามารถนำเข้าผ่าน TiDB Cloud Console หรือส่งให้ทีม Dev/DBA ดำเนินการกู้คืนเฉพาะส่วนได้อย่างปลอดภัย</div>
+            <div class="bg-slate-50 border border-slate-200 rounded-md p-2.5 text-[11px] text-slate-700 space-y-1">
+                <div class="font-bold text-slate-900">คำแนะนำสำหรับผู้ดูแลระบบ:</div>
+                <div>1. ไฟล์สำรอง .ZIP มีโครงสร้าง JSON ครบถ้วน สามารถนำเข้าผ่าน TiDB Cloud Console หรือส่งให้ทีมผู้ดูแลฐานข้อมูลดำเนินการกู้คืนเฉพาะส่วนได้อย่างปลอดภัย</div>
                 <div>2. หากต้องการนำเข้าสต็อกสินค้า สามารถใช้ปุ่ม <b>"นำเข้าสต็อก Excel"</b> ที่หน้าคลังสินค้าได้โดยตรง</div>
             </div>
         </div>
 
         <div class="flex justify-end gap-2">
-            <button type="button" onclick="closeRestoreModal()" class="px-4 py-2 text-xs font-bold rounded shadow-sm transition-all cursor-pointer hover:opacity-90 border-none" style="background-color: #4338ca; color: #ffffff;">
+            <button type="button" onclick="closeRestoreModal()" class="px-4 py-2 text-xs font-bold rounded-md shadow-sm transition-colors cursor-pointer hover:opacity-90 border-none"
+                style="background-color: #4338ca; color: #ffffff;">
                 <span style="color: #ffffff !important; font-weight: 700;">รับทราบและเข้าใจแล้ว</span>
             </button>
         </div>
@@ -382,12 +346,12 @@ function executeBackup() {
         window.URL.revokeObjectURL(url);
 
         btn.disabled = false;
-        btn.innerHTML = `<svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg><span style="color:#ffffff;font-weight:700;">ดาวน์โหลด Backup ทั้งหมด (.ZIP)</span>`;
-        if (typeof showToast === 'function') showToast('ดาวน์โหลด Backup สำเร็จ! (' + filename + ')', 'success');
+        btn.innerHTML = `<span style="color:#ffffff;font-weight:700;">ดาวน์โหลด Backup ทั้งหมด (.ZIP)</span>`;
+        if (typeof showToast === 'function') showToast('ดาวน์โหลด Backup สำเร็จ (' + filename + ')', 'success');
     })
     .catch(err => {
         btn.disabled = false;
-        btn.innerHTML = `<svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg><span style="color:#ffffff;font-weight:700;">ดาวน์โหลด Backup ฐานข้อมูล</span>`;
+        btn.innerHTML = `<span style="color:#ffffff;font-weight:700;">ดาวน์โหลด Backup ทั้งหมด (.ZIP)</span>`;
         if (typeof showToast === 'function') showToast(err.message || 'เกิดข้อผิดพลาดในการ Backup', 'error');
         else alert(err.message || 'เกิดข้อผิดพลาดในการ Backup');
     });
@@ -395,24 +359,23 @@ function executeBackup() {
 
 function executeSyncToGoogleSheets() {
     const btn = document.getElementById("sync-sheet-btn");
-    const originalHtml = btn.innerHTML;
+    const originalText = document.getElementById("sync-sheet-btn-text").innerText;
 
     if (typeof Swal !== 'undefined') {
         Swal.fire({
             title: 'ส่งข้อมูลลง Google Sheets ทั้ง 2 ไฟล์?',
             html: `
                 <div class="text-left text-xs text-slate-600 space-y-2 mt-2 leading-relaxed">
-                    <p>ระบบจะกวาดข้อมูลทั้งหมดจาก Database ไปอัปเดตบน Google Sheets 2 ไฟล์ (รวม 9 แท็บ) พร้อมกันทันที:</p>
-                    <div class="p-2.5 bg-emerald-50 rounded border border-emerald-200 text-emerald-950 font-medium">
-                        <div>📂 <b>ชีทที่ 1 (ข้อมูลหลัก):</b> บันทึกรับของ, ประวัติสั่งซื้อ, ติดตามรับของ, คลังสินค้า, ราคากลาง</div>
-                        <div class="mt-1">📁 <b>ชีทที่ 2 (แผนผลิต/ประวัติ):</b> แผนผลิตประจำสัปดาห์, ประวัติสต็อก, รายงานภาพรวม, AI Mapping</div>
+                    <p>ระบบจะส่งข้อมูลทั้งหมดจากฐานข้อมูลไปอัปเดตบน Google Sheets 2 ไฟล์ (รวม 9 แท็บ) พร้อมกัน:</p>
+                    <div class="p-2.5 bg-slate-50 rounded-md border border-slate-200 text-slate-800 font-medium">
+                        <div><b>ชีทที่ 1 (ข้อมูลหลัก):</b> บันทึกรับของ, ประวัติสั่งซื้อ, ติดตามรับของ, คลังสินค้า, ราคากลาง</div>
+                        <div class="mt-1"><b>ชีทที่ 2 (แผนผลิต/ประวัติ):</b> แผนผลิตประจำสัปดาห์, ประวัติสต็อก, รายงานภาพรวม, AI Mapping</div>
                     </div>
-                    <p class="text-slate-500 italic text-[11px]">* หมายเหตุ: ระบบจะไม่ลบข้อมูลใดๆ ในฐานข้อมูล</p>
+                    <p class="text-slate-500 text-[11px]">* หมายเหตุ: ระบบจะไม่ลบหรือเปลี่ยนแปลงข้อมูลใดๆ ในฐานข้อมูล</p>
                 </div>
             `,
-            icon: 'question',
             showCancelButton: true,
-            confirmButtonText: '🚀 เริ่มส่งข้อมูลทั้ง 2 ชีท',
+            confirmButtonText: 'เริ่มส่งข้อมูลทั้ง 2 ชีท',
             cancelButtonText: 'ยกเลิก',
             confirmButtonColor: '#059669',
             cancelButtonColor: '#64748b'
@@ -440,7 +403,7 @@ function executeSyncToGoogleSheets() {
         .then(res => res.json())
         .then(data => {
             btn.disabled = false;
-            btn.innerHTML = originalHtml;
+            btn.innerHTML = `<span id="sync-sheet-btn-text" style="color:#ffffff;font-weight:700;">${originalText}</span>`;
 
             if (data.success) {
                 const s1 = data.details?.sheet1 || {};
@@ -449,14 +412,14 @@ function executeSyncToGoogleSheets() {
                 if (typeof Swal !== 'undefined') {
                     Swal.fire({
                         icon: 'success',
-                        title: 'ส่งข้อมูลลง Google Sheets สำเร็จครบทั้ง 2 ไฟล์!',
+                        title: 'ส่งข้อมูลลง Google Sheets สำเร็จครบทั้ง 2 ไฟล์',
                         html: `
                             <div class="text-left text-xs text-slate-700 space-y-3 mt-3">
-                                <div class="p-3 bg-emerald-50 rounded-lg border border-emerald-200">
-                                    <div class="font-bold text-emerald-900 text-sm mb-1.5 flex items-center gap-1.5">
-                                        <span>📂 ชีทที่ 1 (ข้อมูลหลัก - Core Operations)</span>
+                                <div class="p-3 bg-slate-50 rounded-md border border-slate-200">
+                                    <div class="font-bold text-slate-900 text-sm mb-1.5">
+                                        ชีทที่ 1 (ข้อมูลหลัก - Core Operations)
                                     </div>
-                                    <ul class="list-disc pl-5 space-y-0.5 text-emerald-800 text-[11px]">
+                                    <ul class="list-disc pl-5 space-y-0.5 text-slate-700 text-[11px]">
                                         <li>บันทึกการรับของประจำเดือน: <b>${s1.actions ?? 0}</b> รายการ</li>
                                         <li>ประวัติการสั่งซื้อ: <b>${s1.orderHistory ?? 0}</b> รายการ</li>
                                         <li>ติดตามการรับสินค้า: <b>${s1.receivedTracking ?? 0}</b> รายการ</li>
@@ -465,11 +428,11 @@ function executeSyncToGoogleSheets() {
                                     </ul>
                                 </div>
 
-                                <div class="p-3 bg-indigo-50 rounded-lg border border-indigo-200">
-                                    <div class="font-bold text-indigo-900 text-sm mb-1.5 flex items-center gap-1.5">
-                                        <span>📁 ชีทที่ 2 (แผนผลิตและประวัติ - Secondary & History)</span>
+                                <div class="p-3 bg-slate-50 rounded-md border border-slate-200">
+                                    <div class="font-bold text-slate-900 text-sm mb-1.5">
+                                        ชีทที่ 2 (แผนผลิตและประวัติ - Secondary & History)
                                     </div>
-                                    <ul class="list-disc pl-5 space-y-0.5 text-indigo-800 text-[11px]">
+                                    <ul class="list-disc pl-5 space-y-0.5 text-slate-700 text-[11px]">
                                         <li>แผนผลิตประจำสัปดาห์: <b>${s2.weeklyPlans ?? 0}</b> รายการ</li>
                                         <li>ประวัติการเคลื่อนไหวสต็อก: <b>${s2.stockLogs ?? 0}</b> รายการ</li>
                                         <li>รายงานสรุปภาพรวมคำสั่งซื้อ: <b>${s2.reports ?? 0}</b> รายการ</li>
@@ -478,7 +441,7 @@ function executeSyncToGoogleSheets() {
                                 </div>
 
                                 <div class="text-emerald-700 font-semibold text-center text-xs">
-                                    ✅ ข้อมูลทั้ง 9 แท็บใน 2 ไฟล์ชีทได้รับการอัปเดตเรียบร้อยแล้ว
+                                    ข้อมูลทั้ง 9 แท็บใน 2 ไฟล์ชีทได้รับการอัปเดตเรียบร้อยแล้ว
                                 </div>
                             </div>
                         `,
@@ -486,7 +449,7 @@ function executeSyncToGoogleSheets() {
                         confirmButtonText: 'ตกลง'
                     });
                 } else if (typeof showToast === 'function') {
-                    showToast(data.message || 'ส่งข้อมูลลง Google Sheets สำเร็จครบทั้ง 2 ไฟล์!', 'success');
+                    showToast(data.message || 'ส่งข้อมูลลง Google Sheets สำเร็จครบทั้ง 2 ไฟล์', 'success');
                 }
             } else {
                 if (typeof Swal !== 'undefined') {
@@ -502,7 +465,7 @@ function executeSyncToGoogleSheets() {
         })
         .catch(err => {
             btn.disabled = false;
-            btn.innerHTML = originalHtml;
+            btn.innerHTML = `<span id="sync-sheet-btn-text" style="color:#ffffff;font-weight:700;">${originalText}</span>`;
             if (typeof Swal !== 'undefined') {
                 Swal.fire({
                     icon: 'error',
@@ -536,11 +499,10 @@ function executeArchiveAndPurge() {
     .then(res => res.json())
     .then(data => {
         btn.disabled = false;
-        btn.innerHTML = `<span style="color: #ffffff !important; font-weight: 700;">ยืนยันการสำรองและลบข้อมูล</span>`;
+        btn.innerHTML = `<span style="color:#ffffff;font-weight:700;">ยืนยันการสำรองและลบข้อมูล</span>`;
         closeArchiveModal();
 
         if (data.success) {
-            // กรณีไม่มีข้อมูลที่เก่าเกิน 2 ปี (ไม่มีอะไรต้องลบ)
             if (data.purged === 0 && data.archived === 0) {
                 if (typeof Swal !== 'undefined') {
                     Swal.fire({
@@ -548,8 +510,8 @@ function executeArchiveAndPurge() {
                         title: 'ไม่พบข้อมูลที่เก่าเกิน 2 ปี',
                         html: `
                             <div class="text-left text-xs text-slate-600 space-y-2 mt-2 leading-relaxed">
-                                <p>ข้อมูลทั้งหมดในฐานข้อมูลของคุณอยู่ในช่วง <b>24 เดือนล่าสุด</b> ยังไม่มีรายการเก่าที่ต้องย้ายลง Google Sheet หรือลบออกจากระบบครับ</p>
-                                <p class="text-slate-400 text-[11px] mt-2">* หากต้องการดาวน์โหลดสำรองข้อมูลปัจจุบันทั้งหมด สามารถกดปุ่ม <b>"ดาวน์โหลด Backup ทั้งหมด (.ZIP)"</b> ด้านบนได้ทันทีครับ</p>
+                                <p>ข้อมูลทั้งหมดในฐานข้อมูลของคุณอยู่ในช่วง <b>24 เดือนล่าสุด</b> ยังไม่มีรายการเก่าที่ต้องย้ายลง Google Sheet หรือลบออกจากระบบ</p>
+                                <p class="text-slate-400 text-[11px] mt-2">* หากต้องการดาวน์โหลดสำรองข้อมูลปัจจุบันทั้งหมด สามารถกดปุ่ม <b>"ดาวน์โหลด Backup ทั้งหมด (.ZIP)"</b> ด้านบนได้ทันที</p>
                             </div>
                         `,
                         confirmButtonColor: '#2563eb'
@@ -562,7 +524,6 @@ function executeArchiveAndPurge() {
 
             let directDownloadLink = '';
 
-            // 💾 ดาวน์โหลดไฟล์สำรอง .ZIP อัตโนมัติลงเครื่องทันที (Purged Archive ZIP)
             if (data.zipBase64) {
                 const byteCharacters = atob(data.zipBase64);
                 const byteNumbers = new Array(byteCharacters.length);
@@ -587,7 +548,7 @@ function executeArchiveAndPurge() {
                     <div class="mt-3 pt-2.5 border-t border-slate-200 flex items-center justify-between">
                         <span class="text-[11px] text-slate-500">หากเบราว์เซอร์ไม่ดาวน์โหลดอัตโนมัติ:</span>
                         <a href="${url}" download="${dlName}" class="text-xs font-bold text-amber-700 hover:text-amber-900 underline flex items-center gap-1">
-                            📥 คลิกดาวน์โหลดไฟล์สำรอง (.ZIP)
+                            คลิกดาวน์โหลดไฟล์สำรอง (.ZIP)
                         </a>
                     </div>
                 `;
@@ -597,12 +558,12 @@ function executeArchiveAndPurge() {
                 const d = data.details || {};
                 Swal.fire({
                     icon: 'success',
-                    title: 'สำรองและล้างข้อมูลสำเร็จ!',
+                    title: 'สำรองและล้างข้อมูลสำเร็จ',
                     html: `
                         <div class="text-left text-xs text-slate-600 space-y-2 mt-2">
-                            <p><b>💾 ไฟล์สำรอง .ZIP:</b> <span class="text-amber-800 font-mono bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 font-bold">${data.zipFileName || 'CostFlow_PurgedArchive.zip'}</span> (ดาวน์โหลดลงเครื่องแล้ว)</p>
-                            <p><b>🗑️ รวมลบข้อมูลเก่าออกจาก TiDB:</b> <strong class="text-slate-900">${data.purged || 0} รายการ</strong></p>
-                            <div class="bg-slate-50 border border-slate-200 rounded p-2 text-[11px] text-slate-700 space-y-0.5">
+                            <p><b>ไฟล์สำรอง .ZIP:</b> <span class="text-slate-800 font-mono bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 font-bold">${data.zipFileName || 'CostFlow_PurgedArchive.zip'}</span> (ดาวน์โหลดลงเครื่องแล้ว)</p>
+                            <p><b>รวมลบข้อมูลเก่าออกจาก TiDB:</b> <strong class="text-slate-900">${data.purged || 0} รายการ</strong></p>
+                            <div class="bg-slate-50 border border-slate-200 rounded-md p-2 text-[11px] text-slate-700 space-y-0.5">
                                 <div>• แผนผลิต (Weekly Plans): <b>${d.weeklyPlanRows || 0}</b> แถว</div>
                                 <div>• ค่าใช้จ่ายรับของ (Monthly Actions): <b>${d.monthlyCostRows || 0}</b> แถว</div>
                                 <div>• ประวัติสต็อก (Stock Logs): <b>${d.stockLogRows || 0}</b> แถว</div>
@@ -615,7 +576,7 @@ function executeArchiveAndPurge() {
                     confirmButtonText: 'รับทราบ'
                 });
             } else if (typeof showToast === 'function') {
-                showToast(data.message || "สำรองข้อมูลลง .ZIP และลบรายการเก่าเรียบร้อยแล้ว!", "success");
+                showToast(data.message || "สำรองข้อมูลลง .ZIP และลบรายการเก่าเรียบร้อยแล้ว", "success");
             }
         } else {
             if (typeof Swal !== 'undefined') {
@@ -631,7 +592,7 @@ function executeArchiveAndPurge() {
     })
     .catch(err => {
         btn.disabled = false;
-        btn.innerHTML = `<span style="color: #ffffff !important; font-weight: 700;">ยืนยันการสำรองและลบข้อมูล</span>`;
+        btn.innerHTML = `<span style="color:#ffffff;font-weight:700;">ยืนยันการสำรองและลบข้อมูล</span>`;
         closeArchiveModal();
         if (typeof Swal !== 'undefined') {
             Swal.fire({
@@ -691,17 +652,13 @@ document.addEventListener("DOMContentLoaded", function() {
     function showToast(message, type = 'error') {
         const container = document.getElementById("toast-container");
         const toast = document.createElement("div");
-        toast.className = `px-4 py-3 rounded shadow-lg text-xs font-semibold flex items-center gap-2 transform translate-y-2 opacity-0 transition-all duration-300 pointer-events-auto max-w-sm ${
+        toast.className = `px-4 py-3 rounded-md shadow-lg text-xs font-semibold flex items-center gap-2 transform translate-y-2 opacity-0 transition-all duration-300 pointer-events-auto max-w-sm ${
             type === 'success' 
                 ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' 
                 : 'bg-rose-50 text-rose-800 border border-rose-200'
         }`;
         
-        const icon = type === 'success'
-            ? `<svg class="w-4 h-4 text-emerald-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`
-            : `<svg class="w-4 h-4 text-rose-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>`;
-
-        toast.innerHTML = `${icon}<span>${message}</span>`;
+        toast.innerHTML = `<span>${message}</span>`;
         container.appendChild(toast);
 
         setTimeout(() => {

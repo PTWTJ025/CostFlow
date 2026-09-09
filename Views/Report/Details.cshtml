@@ -750,9 +750,14 @@
             const reportName = "@Html.Raw(reportName)";
             const currentMonth = "@currentMonth";
             const currentYear = "@currentYear";
+            const sortVal = document.getElementById('sort-order')?.value || 'default';
             
             // สร้างชื่อไฟล์อัตโนมัติตามเงื่อนไขที่เลือก กรอง และ Sort อยู่
             let nameParts = [`รายงานใบสั่งผลิต_${reportName}`.replace(/[\s\-_]+/g, '_')];
+
+            if (sortVal === 'show-all') {
+                nameParts.push('รายการสะสมทั้งปี');
+            }
 
             if (activeFilter === 'matched') {
                 nameParts.push('ได้แผนแล้ว');
@@ -799,10 +804,10 @@
                     let exportUrl;
                     if (currentMonth && currentYear) {
                         // month/year mode
-                        exportUrl = `/Report/ExportToExcel?month=${encodeURIComponent(currentMonth)}&year=${encodeURIComponent(currentYear)}&customName=${encodeURIComponent(customName)}&status=${encodeURIComponent(statusVal)}&search=${encodeURIComponent(searchVal)}&sortBy=${encodeURIComponent(sortKeyVal)}&sortOrder=${encodeURIComponent(sortOrderVal)}`;
+                        exportUrl = `/Report/ExportToExcel?month=${encodeURIComponent(currentMonth)}&year=${encodeURIComponent(currentYear)}&customName=${encodeURIComponent(customName)}&status=${encodeURIComponent(statusVal)}&search=${encodeURIComponent(searchVal)}&sortBy=${encodeURIComponent(sortKeyVal)}&sortOrder=${encodeURIComponent(sortOrderVal)}&viewScope=${encodeURIComponent(sortVal)}`;
                     } else {
                         // legacy fileName mode
-                        exportUrl = `/Report/ExportToExcel?fileName=${encodeURIComponent(reportName)}&customName=${encodeURIComponent(customName)}&status=${encodeURIComponent(statusVal)}&search=${encodeURIComponent(searchVal)}&sortBy=${encodeURIComponent(sortKeyVal)}&sortOrder=${encodeURIComponent(sortOrderVal)}`;
+                        exportUrl = `/Report/ExportToExcel?fileName=${encodeURIComponent(reportName)}&customName=${encodeURIComponent(customName)}&status=${encodeURIComponent(statusVal)}&search=${encodeURIComponent(searchVal)}&sortBy=${encodeURIComponent(sortKeyVal)}&sortOrder=${encodeURIComponent(sortOrderVal)}&viewScope=${encodeURIComponent(sortVal)}`;
                     }
                     window.location.href = exportUrl;
                 }
