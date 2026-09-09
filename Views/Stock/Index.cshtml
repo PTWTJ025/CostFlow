@@ -8,61 +8,70 @@
                    userName.Equals("DEV01", StringComparison.OrdinalIgnoreCase) ||
                    userName.Equals("STAFF01", StringComparison.OrdinalIgnoreCase);
 
-    (string badgeBg, string chipIdle, string chipActive, string chipDot) GetCategoryTheme(string? group) => (group ?? "").Trim() switch
+    (string badgeBg, string chipIdle, string chipActive, string chipDot, string badgeActive) GetCategoryTheme(string? group) => (group ?? "").Trim() switch
     {
         "วงแหวน" => (
             "bg-blue-600/95 text-white border border-blue-400/30",
-            "text-blue-700 bg-blue-50/80 hover:bg-blue-100/90 border-blue-200/80",
-            "bg-blue-600 text-white border-blue-600 shadow-sm",
-            "bg-blue-500"
+            "text-slate-600 bg-white hover:bg-slate-50 border-slate-200 hover:border-slate-300 font-medium",
+            "text-blue-700 bg-white border-blue-600 font-semibold",
+            "bg-blue-500",
+            "bg-blue-50 text-blue-700 font-semibold"
         ),
         "ตัวครอบ" => (
             "bg-teal-600/95 text-white border border-teal-400/30",
-            "text-teal-700 bg-teal-50/80 hover:bg-teal-100/90 border-teal-200/80",
-            "bg-teal-600 text-white border-teal-600 shadow-sm",
-            "bg-teal-500"
+            "text-slate-600 bg-white hover:bg-slate-50 border-slate-200 hover:border-slate-300 font-medium",
+            "text-teal-700 bg-white border-teal-600 font-semibold",
+            "bg-teal-500",
+            "bg-teal-50 text-teal-700 font-semibold"
         ),
         "ตุ๊กตา" => (
             "bg-amber-600/95 text-white border border-amber-400/30",
-            "text-amber-800 bg-amber-50/80 hover:bg-amber-100/90 border-amber-200/80",
-            "bg-amber-600 text-white border-amber-600 shadow-sm",
-            "bg-amber-500"
+            "text-slate-600 bg-white hover:bg-slate-50 border-slate-200 hover:border-slate-300 font-medium",
+            "text-amber-800 bg-white border-amber-600 font-semibold",
+            "bg-amber-500",
+            "bg-amber-50 text-amber-800 font-semibold"
         ),
         "แกนเฟือง" => (
             "bg-indigo-600/95 text-white border border-indigo-400/30",
-            "text-indigo-700 bg-indigo-50/80 hover:bg-indigo-100/90 border-indigo-200/80",
-            "bg-indigo-600 text-white border-indigo-600 shadow-sm",
-            "bg-indigo-500"
+            "text-slate-600 bg-white hover:bg-slate-50 border-slate-200 hover:border-slate-300 font-medium",
+            "text-indigo-700 bg-white border-indigo-600 font-semibold",
+            "bg-indigo-500",
+            "bg-indigo-50 text-indigo-700 font-semibold"
         ),
         "เฟืองขับ/ท้าย" => (
             "bg-purple-600/95 text-white border border-purple-400/30",
-            "text-purple-700 bg-purple-50/80 hover:bg-purple-100/90 border-purple-200/80",
-            "bg-purple-600 text-white border-purple-600 shadow-sm",
-            "bg-purple-500"
+            "text-slate-600 bg-white hover:bg-slate-50 border-slate-200 hover:border-slate-300 font-medium",
+            "text-purple-700 bg-white border-purple-600 font-semibold",
+            "bg-purple-500",
+            "bg-purple-50 text-purple-700 font-semibold"
         ),
         "ซุปเปอร์ลีน" => (
             "bg-emerald-600/95 text-white border border-emerald-400/30",
-            "text-emerald-700 bg-emerald-50/80 hover:bg-emerald-100/90 border-emerald-200/80",
-            "bg-emerald-600 text-white border-emerald-600 shadow-sm",
-            "bg-emerald-500"
+            "text-slate-600 bg-white hover:bg-slate-50 border-slate-200 hover:border-slate-300 font-medium",
+            "text-emerald-700 bg-white border-emerald-600 font-semibold",
+            "bg-emerald-500",
+            "bg-emerald-50 text-emerald-700 font-semibold"
         ),
         "พูลเลย์/สายพาน" => (
             "bg-rose-600/95 text-white border border-rose-400/30",
-            "text-rose-700 bg-rose-50/80 hover:bg-rose-100/90 border-rose-200/80",
-            "bg-rose-600 text-white border-rose-600 shadow-sm",
-            "bg-rose-500"
+            "text-slate-600 bg-white hover:bg-slate-50 border-slate-200 hover:border-slate-300 font-medium",
+            "text-rose-700 bg-white border-rose-600 font-semibold",
+            "bg-rose-500",
+            "bg-rose-50 text-rose-700 font-semibold"
         ),
         "เบ็ดเตล็ด" => (
             "bg-slate-700/95 text-white border border-slate-500/30",
-            "text-slate-700 bg-slate-100/90 hover:bg-slate-200/90 border-slate-300/80",
-            "bg-slate-700 text-white border-slate-700 shadow-sm",
-            "bg-slate-500"
+            "text-slate-600 bg-white hover:bg-slate-50 border-slate-200 hover:border-slate-300 font-medium",
+            "text-slate-700 bg-white border-slate-600 font-semibold",
+            "bg-slate-500",
+            "bg-slate-100 text-slate-700 font-semibold"
         ),
         _ => (
             "bg-slate-800/90 text-white border border-white/15",
-            "text-slate-600 bg-slate-100/80 hover:bg-slate-200/70 border-slate-200",
-            "bg-slate-800 text-white border-slate-800 shadow-sm",
-            "bg-slate-400"
+            "text-slate-600 bg-white hover:bg-slate-50 border-slate-200 hover:border-slate-300 font-medium",
+            "text-slate-800 bg-white border-slate-800 font-semibold",
+            "bg-slate-400",
+            "bg-slate-100 text-slate-800 font-semibold"
         )
     };
 }
@@ -248,18 +257,15 @@
         scrollbar-width: none;
     }
     .category-chip {
-        border: 1px solid #e2e8f0;
+        border-width: 1px;
+        border-style: solid;
         user-select: none;
         flex-shrink: 0;
         -webkit-tap-highlight-color: transparent;
-        transition: all 0.15s ease;
+        transition: transform 0.08s ease;
     }
-    .category-chip:hover {
-        transform: translateY(-1px);
-    }
-    .category-chip.active-chip {
-        transform: translateY(-1px);
-        font-weight: 600 !important;
+    .category-chip:active {
+        transform: scale(0.97);
     }
 </style>
 
@@ -313,31 +319,75 @@
             var totalAllStockCount = Model.Count();
         }
         <div class="category-ribbon-wrapper bg-white border-b border-slate-200/80 px-3 md:px-4 py-2.5">
-            <div class="category-ribbon flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth">
-                <button type="button" 
-                        onclick="filterStockByGroup('ALL', this)" 
-                        class="category-chip active-chip inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold whitespace-nowrap transition-all cursor-pointer bg-slate-900 text-white border-slate-900 shadow-sm"
-                        data-group="ALL"
-                        data-idle-class="text-slate-700 bg-slate-100/90 hover:bg-slate-200/90 border-slate-300/80"
-                        data-active-class="bg-slate-900 text-white border-slate-900 shadow-sm">
-                    <span>ทั้งหมด</span>
-                    <span class="chip-count px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-white/25 text-white">@totalAllStockCount</span>
-                </button>
-                @foreach (var grp in standardGroupList)
-                {
-                    var count = Model.Count(i => (i.StockGroup ?? "เบ็ดเตล็ด") == grp);
-                    var theme = GetCategoryTheme(grp);
+            <div class="flex items-center justify-between gap-2.5">
+                <!-- Main Category Chips Ribbon -->
+                <div id="mainCategoryRibbon" class="category-ribbon flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth flex-1 min-w-0">
                     <button type="button" 
-                            onclick="filterStockByGroup('@grp', this)" 
-                            class="category-chip inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium @theme.chipIdle whitespace-nowrap transition-all cursor-pointer"
-                            data-group="@grp"
-                            data-idle-class="@theme.chipIdle"
-                            data-active-class="@theme.chipActive">
-                        <span class="w-1.5 h-1.5 rounded-full @theme.chipDot shrink-0"></span>
-                        <span>@grp</span>
-                        <span class="chip-count px-1.5 py-0.2 rounded-full text-[10px] font-semibold bg-black/5 text-inherit">@count</span>
+                            onclick="filterStockByGroup('ALL', this)" 
+                            class="category-chip active-chip inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold whitespace-nowrap cursor-pointer text-slate-900 bg-white border-slate-900"
+                            data-group="ALL"
+                            data-idle-class="text-slate-600 bg-white hover:bg-slate-50 border-slate-200 hover:border-slate-300 font-medium"
+                            data-active-class="text-slate-900 bg-white border-slate-900 font-semibold"
+                            data-badge-active="bg-slate-100 text-slate-900 font-semibold">
+                        <span>ทั้งหมด</span>
+                        <span class="chip-count px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-900 shrink-0">@totalAllStockCount</span>
                     </button>
-                }
+                    @foreach (var grp in standardGroupList)
+                    {
+                        var count = Model.Count(i => (i.StockGroup ?? "เบ็ดเตล็ด") == grp);
+                        var theme = GetCategoryTheme(grp);
+                        <button type="button" 
+                                onclick="filterStockByGroup('@grp', this)" 
+                                class="category-chip inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium @theme.chipIdle whitespace-nowrap cursor-pointer"
+                                data-group="@grp"
+                                data-idle-class="@theme.chipIdle"
+                                data-active-class="@theme.chipActive"
+                                data-badge-active="@theme.badgeActive">
+                            <span class="w-1.5 h-1.5 rounded-full @theme.chipDot shrink-0"></span>
+                            <span>@grp</span>
+                            <span class="chip-count px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-500 shrink-0">@count</span>
+                        </button>
+                    }
+                </div>
+
+                <!-- Mobile Focused Ribbon (Shown on mobile when a group is selected) -->
+                <div id="mobileFocusedRibbon" class="hidden w-full items-center justify-between gap-2 md:hidden">
+                    <!-- Left: Sub-filter dropdown -->
+                    <div class="flex-1 min-w-0">
+                        <select id="mobileSubGroupSelect" 
+                                onchange="onSubGroupChange(this.value)" 
+                                class="w-full h-8 px-2.5 py-1 bg-slate-50 border border-slate-300 rounded text-xs font-semibold text-slate-800 focus:outline-none focus:border-primary cursor-pointer truncate shadow-2xs">
+                            <option value="ALL">ทุกกลุ่มย่อย</option>
+                        </select>
+                    </div>
+                    <!-- Right: Active Group Chip with Clear/Back action -->
+                    <button type="button" 
+                            id="mobileActiveGroupChip" 
+                            onclick="resetGroupToAll()" 
+                            class="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-semibold bg-white border border-slate-800 text-slate-800 cursor-pointer shadow-2xs active:bg-slate-100"
+                            title="แตะเพื่อกลับไปเลือกหมวดหมู่อื่น">
+                        <span id="mobileActiveGroupDot" class="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></span>
+                        <span id="mobileActiveGroupName" class="max-w-[85px] truncate">กลุ่ม</span>
+                        <span id="mobileActiveGroupCount" class="chip-count px-1.5 py-0.2 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-700">0</span>
+                        <i data-lucide="x" class="w-3.5 h-3.5 text-slate-400 shrink-0 ml-0.5"></i>
+                    </button>
+                </div>
+
+                <!-- Desktop Sub-filter Dropdown (Right side of Desktop Ribbon) -->
+                <div id="desktopSubGroupContainer" class="hidden items-center gap-2 shrink-0 border-l border-slate-200 pl-3">
+                    <span class="text-xs text-slate-500 font-medium whitespace-nowrap">กลุ่มย่อย:</span>
+                    <select id="desktopSubGroupSelect" 
+                            onchange="onSubGroupChange(this.value)" 
+                            class="h-8 px-2.5 py-1 bg-slate-50 hover:bg-slate-100 border border-slate-300 rounded text-xs font-semibold text-slate-800 focus:outline-none focus:border-primary cursor-pointer min-w-[140px] max-w-[200px] truncate transition-colors shadow-2xs">
+                        <option value="ALL">ทุกกลุ่มย่อย</option>
+                    </select>
+                    <button type="button" 
+                            onclick="resetGroupToAll()" 
+                            class="h-8 w-8 flex items-center justify-center rounded border border-slate-200 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                            title="ล้างตัวกรอง กลับไปแสดงทั้งหมด">
+                        <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -580,9 +630,12 @@
                     </div>
                     <div>
                         <label for="modalCategory" class="block text-xs font-semibold text-slate-700 mb-1">
-                            หมวดหมู่ <span class="text-slate-400 font-normal">(ค่าเริ่มต้น: อะไหล่)</span>
+                            หมวดหมู่อะไหล่ <span class="text-slate-400 font-normal">(เลือกประเภท)</span>
                         </label>
-                        <input type="text" id="modalCategory" value="อะไหล่" placeholder="อะไหล่" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors" />
+                        <select id="modalCategory" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors cursor-pointer">
+                            <option value="อะไหล่" selected>อะไหล่</option>
+                            <option value="อะไหล่เวียน">อะไหล่เวียน</option>
+                        </select>
                     </div>
                 </div>
 
@@ -613,7 +666,7 @@
                         <button type="button" 
                                 onclick="triggerPickStockImage('add')" 
                                 class="p-2.5 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-slate-100/70 active:bg-slate-100 transition-colors flex flex-col items-center justify-center text-center shadow-2xs cursor-pointer h-24">
-                            <div class="w-8 h-8 rounded-lg bg-white border border-slate-200/80 text-slate-600 flex items-center justify-center mb-1 shadow-2xs">
+                            <div class="w-8 h-8 rounded-lg text-slate-600 flex items-center justify-center mb-1 shadow-2xs">
                                 <svg class="w-4 h-4 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
                                 </svg>
@@ -625,7 +678,7 @@
                         <button type="button" 
                                 onclick="triggerCameraDirect('add')" 
                                 class="p-2.5 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-slate-100/70 active:bg-slate-100 transition-colors flex flex-col items-center justify-center text-center shadow-2xs cursor-pointer h-24">
-                            <div class="w-8 h-8 rounded-lg bg-white border border-slate-200/80 text-slate-600 flex items-center justify-center mb-1 shadow-2xs">
+                            <div class="w-8 h-8 rounded-lg text-slate-600 flex items-center justify-center mb-1 shadow-2xs">
                                 <svg class="w-4 h-4 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" />
@@ -722,9 +775,12 @@
                     </div>
                     <div>
                         <label for="editCategory" class="block text-xs font-semibold text-slate-700 mb-1">
-                            หมวดหมู่ <span class="text-slate-400 font-normal">(ค่าเริ่มต้น: อะไหล่)</span>
+                            หมวดหมู่อะไหล่ <span class="text-slate-400 font-normal">(เลือกประเภท)</span>
                         </label>
-                        <input type="text" id="editCategory" value="อะไหล่" placeholder="อะไหล่" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors" />
+                        <select id="editCategory" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors cursor-pointer">
+                            <option value="อะไหล่" selected>อะไหล่</option>
+                            <option value="อะไหล่เวียน">อะไหล่เวียน</option>
+                        </select>
                     </div>
                 </div>
 
@@ -755,27 +811,27 @@
                         <button type="button" 
                                 onclick="triggerPickStockImage('edit')" 
                                 class="p-2.5 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-slate-100/70 active:bg-slate-100 transition-colors flex flex-col items-center justify-center text-center shadow-2xs cursor-pointer h-24">
-                            <div class="w-8 h-8 rounded-lg bg-white border border-slate-200/80 text-slate-600 flex items-center justify-center mb-1 shadow-2xs">
+                            <div class="w-8 h-8 rounded-lg text-slate-600 flex items-center justify-center mb-1 shadow-2xs">
                                 <svg class="w-4 h-4 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
                                 </svg>
                             </div>
                             <span class="text-xs font-semibold text-slate-700">เลือกจากคลังภาพ</span>
-                            <span class="text-[10px] text-slate-400 mt-0.5">ไฟล์รูปภาพในเครื่อง</span>
+                            
                         </button>
 
                         <!-- การ์ด 2: ถ่ายรูปจากกล้อง -->
                         <button type="button" 
                                 onclick="triggerCameraDirect('edit')" 
                                 class="p-2.5 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-slate-100/70 active:bg-slate-100 transition-colors flex flex-col items-center justify-center text-center shadow-2xs cursor-pointer h-24">
-                            <div class="w-8 h-8 rounded-lg bg-white border border-slate-200/80 text-slate-600 flex items-center justify-center mb-1 shadow-2xs">
+                            <div class="w-8 h-8 rounded-lg text-slate-600 flex items-center justify-center mb-1 shadow-2xs">
                                 <svg class="w-4 h-4 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" />
                                 </svg>
                             </div>
                             <span class="text-xs font-semibold text-slate-700">ถ่ายรูปจากกล้อง</span>
-                            <span class="text-[10px] text-slate-400 mt-0.5">เปิดกล้องถ่ายทันที</span>
+                            
                         </button>
                     </div>
 
@@ -1472,25 +1528,203 @@
             }, 100);
         }
 
-        // ตัวแปรและฟังก์ชันระบบกรองหมวดหมู่สินค้า
+        // ตัวแปรและฟังก์ชันระบบกรองหมวดหมู่สินค้า (Ultra-Fast 0ms Response)
+        // ตัวแปรและฟังก์ชันระบบกรองหมวดหมู่สินค้า & กลุ่มย่อย (Smart Keyword Pattern Matcher)
         let currentSelectedGroup = 'ALL';
+        let currentSelectedSubGroup = 'ALL';
+
+        const SUB_GROUP_DEFINITIONS = {
+            "วงแหวน": [
+                { label: "3.5 นิ้ว", pattern: /3(?:\.5|"\s*1\/2|\s*1\/2)/i },
+                { label: "4 นิ้ว", pattern: /(?:^|[^1-9.])4(?:"|\s*นิ้ว|\s*")(?!1\/2|\.5)/i },
+                { label: "4.5 นิ้ว", pattern: /4(?:\.5|"\s*1\/2|\s*1\/2)/i },
+                { label: "5 นิ้ว", pattern: /(?:^|[^1-9.])5(?:"|\s*นิ้ว|\s*")(?!1\/2|\.5)/i },
+                { label: "5.5 นิ้ว", pattern: /5(?:\.5|"\s*1\/2|\s*1\/2)/i },
+                { label: "6 นิ้ว", pattern: /(?:^|[^1-9.])6(?:"|\s*นิ้ว|\s*")(?!1\/2|\.5)/i },
+                { label: "6.5 นิ้ว", pattern: /6(?:\.5|"\s*1\/2|\s*1\/2)/i },
+                { label: "7 นิ้ว", pattern: /(?:^|[^1-9.])7(?:"|\s*นิ้ว|\s*")/i },
+                { label: "8 นิ้ว", pattern: /(?:^|[^1-9.])8(?:"|\s*นิ้ว|\s*")/i },
+                { label: "10 นิ้ว", pattern: /(?:^|[^1-9.])10(?:"|\s*นิ้ว|\s*")/i },
+                { label: "อุปกรณ์ประกอบ", pattern: /(?:สลัก|ล้อดึง|ฝาปิด)/i }
+            ],
+            "ตัวครอบ": [
+                { label: "3.5 นิ้ว", pattern: /3(?:\.5|"\s*1\/2|\s*1\/2)/i },
+                { label: "4 นิ้ว", pattern: /(?:^|[^1-9.])4(?:"|\s*นิ้ว|\s*")(?!1\/2|\.5)/i },
+                { label: "4.5 นิ้ว", pattern: /4(?:\.5|"\s*1\/2|\s*1\/2)/i },
+                { label: "5 นิ้ว", pattern: /(?:^|[^1-9.])5(?:"|\s*นิ้ว|\s*")(?!1\/2|\.5)/i },
+                { label: "5.5 นิ้ว", pattern: /5(?:\.5|"\s*1\/2|\s*1\/2)/i },
+                { label: "6 นิ้ว", pattern: /(?:^|[^1-9.])6(?:"|\s*นิ้ว|\s*")(?!1\/2|\.5)/i },
+                { label: "6.5 นิ้ว", pattern: /6(?:\.5|"\s*1\/2|\s*1\/2)/i },
+                { label: "7 นิ้ว", pattern: /(?:^|[^1-9.])7(?:"|\s*นิ้ว|\s*")/i },
+                { label: "8 นิ้ว", pattern: /(?:^|[^1-9.])8(?:"|\s*นิ้ว|\s*")/i },
+                { label: "10 นิ้ว", pattern: /(?:^|[^1-9.])10(?:"|\s*นิ้ว|\s*")/i }
+            ],
+            "ตุ๊กตา": [
+                { label: "ตุ๊กตาโยกเฟือง", pattern: /โยกเฟือง/i },
+                { label: "ตุ๊กตาเพลาขับด้าย (แบบผ่า)", pattern: /(?:เพลาขับด้าย|แบบผ่า)/i },
+                { label: "ตุ๊กตาเพลาล่าง", pattern: /เพลาล่าง/i },
+                { label: "ตุ๊กตาเฟืองเฉพาะแบบ", pattern: /(?:ตุ๊กตาเฟือง|เกลียว|70\s*ฟัน|เฟือง\s*[ax])/i },
+                { label: "ตุ๊กตาล้อตึงสายพาน", pattern: /ล้อตึงสายพาน/i }
+            ],
+            "แกนเฟือง": [
+                { label: "โมเดล A", pattern: /(?:แกนเฟือง\s*a|เฟือง\s*a)/i },
+                { label: "โมเดล B / BC", pattern: /(?:แกนเฟือง\s*bc|แกนเฟือง\s*b|เฟือง\s*bc|เฟือง\s*b)/i },
+                { label: "สเปกฟัน / เกลียว", pattern: /(?:90\s*ฟัน|120\s*ฟัน|เกลียวนอก|เกลียวใน)/i }
+            ],
+            "เฟืองขับ/ท้าย": [
+                { label: "เฟืองท้ายเพลาขับด้าย", pattern: /เฟืองท้าย/i },
+                { label: "เฟืองเพลาขับด้าย", pattern: /เฟืองเพลาขับด้าย/i },
+                { label: "เฟืองขับเพลาล่าง", pattern: /เพลาล่าง/i }
+            ],
+            "ซุปเปอร์ลีน": [
+                { label: "30 ฟัน (ขนาดเล็ก)", pattern: /30\s*ฟัน/i },
+                { label: "34 ฟัน (เพลา 25 mm)", pattern: /34\s*ฟัน.*25|25.*34\s*ฟัน/i },
+                { label: "34 ฟัน (เพลา 45 mm)", pattern: /34\s*ฟัน.*45|45.*34\s*ฟัน/i },
+                { label: "40 ฟัน", pattern: /40\s*ฟัน/i },
+                { label: "47 ฟัน", pattern: /47\s*ฟัน/i },
+                { label: "ขนาดใหญ่", pattern: /ขนาดใหญ่/i }
+            ],
+            "พูลเลย์/สายพาน": [
+                { label: "พลูเล่ย์สายพาน", pattern: /(?:พลูเล่ย์สายพาน|พูลเล่ย์สายพาน|พูลเลย์สายพาน)/i },
+                { label: "เพลาพูลเล่ย์", pattern: /(?:เพลาพูลเล่ย์|เพลาพูลเลย์)/i },
+                { label: "แกนพูลเลย์", pattern: /(?:แกนพูลเลย์|แกบพูลเลย์|แกนพลูเลย์)/i },
+                { label: "ล้อตึงสายพาน", pattern: /ล้อตึงสายพาน/i },
+                { label: "แกนล้อตึง / ดึงสายพาน", pattern: /(?:แกนล้อตึง|แกนล้อดึง)/i }
+            ],
+            "เบ็ดเตล็ด": [
+                { label: "ลูกกลิ้งทับใย", pattern: /ลูกกลิ้ง/i },
+                { label: "เหล็กประกบเพลา", pattern: /เหล็กประกบ/i },
+                { label: "ฝาปิดน้ำมัน", pattern: /ฝาปิดน้ำมัน/i }
+            ]
+        };
+
+        function populateSubGroupDropdowns(groupName, countText, dotClass) {
+            currentSelectedSubGroup = 'ALL';
+            const desktopContainer = document.getElementById('desktopSubGroupContainer');
+            const desktopSelect = document.getElementById('desktopSubGroupSelect');
+            const mobileFocusedRibbon = document.getElementById('mobileFocusedRibbon');
+            const mobileSelect = document.getElementById('mobileSubGroupSelect');
+            const mainRibbon = document.getElementById('mainCategoryRibbon');
+            const mobileName = document.getElementById('mobileActiveGroupName');
+            const mobileCount = document.getElementById('mobileActiveGroupCount');
+            const mobileDot = document.getElementById('mobileActiveGroupDot');
+
+            const subList = SUB_GROUP_DEFINITIONS[groupName] || null;
+
+            if (groupName === 'ALL' || !subList || subList.length === 0) {
+                // Hide Sub-filter UI
+                if (desktopContainer) {
+                    desktopContainer.classList.add('hidden');
+                    desktopContainer.classList.remove('md:flex');
+                }
+                if (mobileFocusedRibbon) {
+                    mobileFocusedRibbon.classList.add('hidden');
+                    mobileFocusedRibbon.classList.remove('flex');
+                }
+                if (mainRibbon) {
+                    mainRibbon.classList.remove('hidden');
+                }
+                return;
+            }
+
+            // Options HTML
+            let optionsHtml = '<option value="ALL">ทุกกลุ่มย่อย' + (countText ? ` (${countText})` : '') + '</option>';
+            subList.forEach(sub => {
+                optionsHtml += `<option value="${sub.label}">${sub.label}</option>`;
+            });
+
+            // Update Desktop Select
+            if (desktopSelect) {
+                desktopSelect.innerHTML = optionsHtml;
+                desktopSelect.value = 'ALL';
+            }
+            if (desktopContainer) {
+                desktopContainer.classList.remove('hidden');
+                desktopContainer.classList.add('md:flex');
+            }
+
+            // Update Mobile View
+            if (mobileSelect) {
+                mobileSelect.innerHTML = optionsHtml;
+                mobileSelect.value = 'ALL';
+            }
+            if (mobileName) mobileName.textContent = groupName;
+            if (mobileCount) mobileCount.textContent = countText || '';
+            if (mobileDot && dotClass) {
+                mobileDot.className = 'w-1.5 h-1.5 rounded-full shrink-0 ' + dotClass;
+            }
+
+            if (mobileFocusedRibbon) {
+                mobileFocusedRibbon.classList.remove('hidden');
+                mobileFocusedRibbon.classList.add('flex');
+            }
+            if (mainRibbon) {
+                mainRibbon.classList.add('hidden', 'md:flex');
+            }
+
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+        }
+
+        function onSubGroupChange(subName) {
+            currentSelectedSubGroup = subName;
+            const desktopSelect = document.getElementById('desktopSubGroupSelect');
+            const mobileSelect = document.getElementById('mobileSubGroupSelect');
+            if (desktopSelect && desktopSelect.value !== subName) desktopSelect.value = subName;
+            if (mobileSelect && mobileSelect.value !== subName) mobileSelect.value = subName;
+
+            applyStockFilter();
+        }
+
+        function resetGroupToAll() {
+            const allBtn = document.querySelector('.category-chip[data-group="ALL"]');
+            filterStockByGroup('ALL', allBtn);
+        }
 
         function applyStockFilter() {
-            const query = (document.getElementById('stockCustomSearch')?.value || '').toLowerCase().trim();
+            const searchInput = document.getElementById('stockCustomSearch');
+            const query = (searchInput ? searchInput.value : '').toLowerCase().trim();
             const cards = document.querySelectorAll('#stockCardsGrid .stock-card');
             let visibleCount = 0;
 
-            cards.forEach(function(card) {
+            const subGroupDef = (currentSelectedGroup !== 'ALL' && SUB_GROUP_DEFINITIONS[currentSelectedGroup]) || null;
+            let selectedSubPattern = null;
+            if (subGroupDef && currentSelectedSubGroup !== 'ALL') {
+                const found = subGroupDef.find(s => s.label === currentSelectedSubGroup);
+                if (found) selectedSubPattern = found.pattern;
+            }
+
+            for (let i = 0; i < cards.length; i++) {
+                const card = cards[i];
                 const cardGroup = (card.getAttribute('data-group') || 'เบ็ดเตล็ด').trim();
-                const text = card.textContent.toLowerCase();
+                const cardName = (card.querySelector('.stock-card-title')?.textContent || '').trim();
 
+                // 1. Group match
                 const matchesGroup = (currentSelectedGroup === 'ALL') || (cardGroup === currentSelectedGroup);
-                const matchesQuery = !query || text.includes(query);
 
-                const isVisible = matchesGroup && matchesQuery;
-                card.style.display = isVisible ? '' : 'none';
+                // 2. Sub-group match
+                let matchesSubGroup = true;
+                if (matchesGroup && selectedSubPattern) {
+                    matchesSubGroup = selectedSubPattern.test(cardName);
+                }
+
+                // 3. Search text match
+                let matchesQuery = true;
+                if (query) {
+                    if (!card.dataset.searchCache) {
+                        card.dataset.searchCache = (card.textContent || '').toLowerCase();
+                    }
+                    matchesQuery = card.dataset.searchCache.includes(query);
+                }
+
+                const isVisible = matchesGroup && matchesSubGroup && matchesQuery;
+                const newDisplay = isVisible ? '' : 'none';
+                if (card.style.display !== newDisplay) {
+                    card.style.display = newDisplay;
+                }
                 if (isVisible) visibleCount++;
-            });
+            }
 
             // แสดง Empty State หากไม่พบสินค้า
             const emptyState = document.getElementById('stockSearchEmptyState');
@@ -1504,53 +1738,67 @@
                 if (currentSelectedGroup === 'ALL' && !query) {
                     headerTitle.textContent = `รายการสินค้าในสต๊อกทั้งหมด (${cards.length} รายการ)`;
                 } else {
-                    headerTitle.textContent = `แสดง ${visibleCount} จาก ${cards.length} รายการ`;
+                    const subLabel = currentSelectedSubGroup !== 'ALL' ? ` [${currentSelectedSubGroup}]` : '';
+                    headerTitle.textContent = `แสดง ${visibleCount} จาก ${cards.length} รายการ${subLabel}`;
                 }
             }
         }
 
         function filterStockByGroup(groupName, btnElement) {
+            if (currentSelectedGroup === groupName) return;
             currentSelectedGroup = groupName;
 
-            // รีเซ็ตทุกปุ่มบน Chips Ribbon กลับสู่สถานะ Idle ตามชุดสีของตัวเอง
-            document.querySelectorAll('.category-chip').forEach(chip => {
-                const idleClass = (chip.getAttribute('data-idle-class') || '').trim();
-                const activeClass = (chip.getAttribute('data-active-class') || '').trim();
+            // รีเซ็ตทุกปุ่มบน Chips Ribbon กลับสู่สถานะ Idle
+            const chips = document.querySelectorAll('.category-chip');
+            for (let i = 0; i < chips.length; i++) {
+                const chip = chips[i];
+                if (chip === btnElement) continue;
 
                 chip.classList.remove('active-chip');
+                const idleClass = chip.getAttribute('data-idle-class');
+                const activeClass = chip.getAttribute('data-active-class');
                 if (activeClass) {
-                    activeClass.split(/\s+/).forEach(c => chip.classList.remove(c));
+                    const actArr = activeClass.split(' ');
+                    for (let j = 0; j < actArr.length; j++) if (actArr[j]) chip.classList.remove(actArr[j]);
                 }
                 if (idleClass) {
-                    idleClass.split(/\s+/).forEach(c => chip.classList.add(c));
+                    const idlArr = idleClass.split(' ');
+                    for (let j = 0; j < idlArr.length; j++) if (idlArr[j]) chip.classList.add(idlArr[j]);
                 }
 
                 const countBadge = chip.querySelector('.chip-count');
                 if (countBadge) {
-                    countBadge.classList.remove('bg-white/25', 'text-white');
-                    countBadge.classList.add('bg-black/5', 'text-inherit');
+                    countBadge.className = 'chip-count px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-500 shrink-0';
                 }
-            });
+            }
 
-            // ใส่ Style Active ให้ปุ่มที่ถูกเลือก ตามชุดสีของหมวดนั้นๆ
+            // ใส่ Style Active ให้ปุ่มที่ถูกเลือก (มีแค่กรอบเด่นชัด ไม่มีพื้นหลังทึบ)
             if (btnElement) {
-                const idleClass = (btnElement.getAttribute('data-idle-class') || '').trim();
-                const activeClass = (btnElement.getAttribute('data-active-class') || '').trim();
-
                 btnElement.classList.add('active-chip');
+                const idleClass = btnElement.getAttribute('data-idle-class');
+                const activeClass = btnElement.getAttribute('data-active-class');
                 if (idleClass) {
-                    idleClass.split(/\s+/).forEach(c => btnElement.classList.remove(c));
+                    const idlArr = idleClass.split(' ');
+                    for (let j = 0; j < idlArr.length; j++) if (idlArr[j]) btnElement.classList.remove(idlArr[j]);
                 }
                 if (activeClass) {
-                    activeClass.split(/\s+/).forEach(c => btnElement.classList.add(c));
+                    const actArr = activeClass.split(' ');
+                    for (let j = 0; j < actArr.length; j++) if (actArr[j]) btnElement.classList.add(actArr[j]);
                 }
 
                 const countBadge = btnElement.querySelector('.chip-count');
                 if (countBadge) {
-                    countBadge.classList.remove('bg-black/5', 'text-inherit');
-                    countBadge.classList.add('bg-white/25', 'text-white');
+                    const badgeActive = btnElement.getAttribute('data-badge-active') || 'bg-slate-100 text-slate-900 font-bold';
+                    countBadge.className = 'chip-count px-1.5 py-0.5 rounded-full text-[10px] shrink-0 ' + badgeActive;
                 }
             }
+
+            // อัปเดต Dropdown กลุ่มย่อยสำหรับ Desktop และ Mobile
+            const countText = btnElement ? (btnElement.querySelector('.chip-count')?.textContent || '').trim() : '';
+            const dotEl = btnElement ? btnElement.querySelector('.rounded-full') : null;
+            const dotClass = dotEl ? dotEl.className.replace('w-1.5', '').replace('h-1.5', '').replace('rounded-full', '').replace('shrink-0', '').trim() : '';
+
+            populateSubGroupDropdowns(groupName, countText, dotClass);
 
             applyStockFilter();
         }
