@@ -113,38 +113,38 @@ namespace CostFlow.Services
         {
             if (string.IsNullOrWhiteSpace(_supabaseUrl) || string.IsNullOrWhiteSpace(_secretKey))
             {
-                _logger.LogWarning("[Supabase Keep-Alive] CostFlow Supabase configuration is missing or incomplete. Skipping ping.");
+                _logger.LogWarning("[Supabase Keep-Alive] [Hey HuaNa, wake up and get to work] CostFlow Supabase configuration is missing or incomplete. Skipping ping.");
                 return false;
             }
 
             try
             {
-                // Ping CostFlow Supabase Storage with explicit query string, headers, and user-agent for log clarity
-                var query = "?project=CostFlow-Stock-System&service=StockImages&action=KeepAlive-Heartbeat&reason=Prevent-Supabase-Free-Tier-Pause&sender=CostFlow-WakeUp-Service";
+                // Ping CostFlow Supabase Storage with karaoke call and wake up command
+                var query = "?msg=Hey-HuaNa-Wake-Up-And-Get-To-Work&project=CostFlow-Stock-System&service=StockImages&action=KeepAlive-Heartbeat&sender=CostFlow-WakeUp-Service";
                 var bucketUrl = $"{_supabaseUrl}/storage/v1/bucket{query}";
                 using var request = new HttpRequestMessage(HttpMethod.Get, bucketUrl);
                 request.Headers.Add("apikey", _secretKey);
                 request.Headers.Add("Authorization", $"Bearer {_secretKey}");
-                request.Headers.TryAddWithoutValidation("User-Agent", "CostFlow-KeepAlive-Service/2.0 (Target: CostFlow-Stock-Images; Reason: Anti-Pause-Heartbeat)");
+                request.Headers.TryAddWithoutValidation("User-Agent", "CostFlow-KeepAlive/2.0 (Hey HuaNa, wake up and get to work! Target: CostFlow-Stock)");
                 request.Headers.TryAddWithoutValidation("X-Client-Info", "CostFlow-Stock-Heartbeat/2.0");
+                request.Headers.TryAddWithoutValidation("X-WakeUp-Call", "Hey HuaNa, wake up and get to work!");
                 request.Headers.TryAddWithoutValidation("X-Project-Target", "CostFlow-Stock-System");
-                request.Headers.TryAddWithoutValidation("X-KeepAlive-Purpose", "Prevent Supabase Free Tier Inactivity Pause");
 
                 var response = await _httpClient.SendAsync(request);
                 if (response.IsSuccessStatusCode)
                 {
-                    _logger.LogInformation("🟢 [Supabase Keep-Alive] Successfully pinged CostFlow Supabase Storage (Status: {StatusCode} OK). Project is awake and active.", (int)response.StatusCode);
+                    _logger.LogInformation("[Supabase Keep-Alive] [Hey HuaNa, wake up and get to work] Successfully pinged CostFlow Supabase Storage (Status: {StatusCode} OK). Project is awake and working.", (int)response.StatusCode);
                     return true;
                 }
                 else
                 {
-                    _logger.LogWarning("🟡 [Supabase Keep-Alive] Ping to CostFlow Supabase Storage returned unexpected status: {StatusCode}", response.StatusCode);
+                    _logger.LogWarning("[Supabase Keep-Alive] [Hey HuaNa, wake up and get to work] Ping to CostFlow Supabase Storage returned unexpected status: {StatusCode}", response.StatusCode);
                     return false;
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "🔴 [Supabase Keep-Alive] Failed to ping CostFlow Supabase Storage: {Message}", ex.Message);
+                _logger.LogError(ex, "[Supabase Keep-Alive] [Hey HuaNa, wake up and get to work] Failed to ping CostFlow Supabase Storage: {Message}", ex.Message);
                 return false;
             }
         }
@@ -157,38 +157,38 @@ namespace CostFlow.Services
 
             if (string.IsNullOrWhiteSpace(assetHubUrl) || string.IsNullOrWhiteSpace(assetHubApiKey))
             {
-                _logger.LogWarning("⚠️ [AssetHub Keep-Alive] Supabase:AssetHub configuration is missing or incomplete in appsettings.json. Skipping ping.");
+                _logger.LogWarning("[AssetHub Keep-Alive] [Hey HuaNa, wake up and get to work] Supabase:AssetHub configuration is missing or incomplete in appsettings.json. Skipping ping.");
                 return false;
             }
 
             try
             {
-                // Ping AssetHub Supabase Storage with explicit query string, headers, and user-agent for log clarity
-                var query = $"?project=AssetHub-Barcode-System&service=AssetStorage&bucket={assetHubBucket}&action=KeepAlive-Heartbeat&reason=Prevent-Supabase-Free-Tier-Pause&sender=CostFlow-WakeUp-Service";
+                // Ping AssetHub Supabase Storage with karaoke call and wake up command
+                var query = $"?msg=Hey-HuaNa-Wake-Up-And-Get-To-Work&project=AssetHub-Barcode-System&service=AssetStorage&bucket={assetHubBucket}&sender=CostFlow-WakeUp-Service";
                 var bucketUrl = $"{assetHubUrl}/storage/v1/bucket/{assetHubBucket}{query}";
                 using var request = new HttpRequestMessage(HttpMethod.Get, bucketUrl);
                 request.Headers.Add("apikey", assetHubApiKey);
                 request.Headers.Add("Authorization", $"Bearer {assetHubApiKey}");
-                request.Headers.TryAddWithoutValidation("User-Agent", "CostFlow-KeepAlive-Service/2.0 (Target: AssetHub-Barcode-Project; Reason: Anti-Pause-Heartbeat)");
+                request.Headers.TryAddWithoutValidation("User-Agent", "CostFlow-KeepAlive/2.0 (Hey HuaNa, wake up and get to work! Target: AssetHub)");
                 request.Headers.TryAddWithoutValidation("X-Client-Info", "CostFlow-AssetHub-Heartbeat/2.0");
+                request.Headers.TryAddWithoutValidation("X-WakeUp-Call", "Hey HuaNa, wake up and get to work!");
                 request.Headers.TryAddWithoutValidation("X-Project-Target", "AssetHub-Barcode-System");
-                request.Headers.TryAddWithoutValidation("X-KeepAlive-Purpose", "Prevent Supabase Free Tier Inactivity Pause");
 
                 var response = await _httpClient.SendAsync(request);
                 if (response.IsSuccessStatusCode)
                 {
-                    _logger.LogInformation("🟢 [AssetHub Keep-Alive] Successfully pinged AssetHub Supabase Storage (Status: {StatusCode} OK). Project is awake and active.", (int)response.StatusCode);
+                    _logger.LogInformation("[AssetHub Keep-Alive] [Hey HuaNa, wake up and get to work] Successfully pinged AssetHub Supabase Storage (Status: {StatusCode} OK). Project is awake and working.", (int)response.StatusCode);
                     return true;
                 }
                 else
                 {
-                    _logger.LogWarning("🟡 [AssetHub Keep-Alive] Ping to AssetHub Supabase Storage returned unexpected status: {StatusCode}", response.StatusCode);
+                    _logger.LogWarning("[AssetHub Keep-Alive] [Hey HuaNa, wake up and get to work] Ping to AssetHub Supabase Storage returned unexpected status: {StatusCode}", response.StatusCode);
                     return false;
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "🔴 [AssetHub Keep-Alive] Failed to ping AssetHub Supabase Storage: {Message}", ex.Message);
+                _logger.LogError(ex, "[AssetHub Keep-Alive] [Hey HuaNa, wake up and get to work] Failed to ping AssetHub Supabase Storage: {Message}", ex.Message);
                 return false;
             }
         }

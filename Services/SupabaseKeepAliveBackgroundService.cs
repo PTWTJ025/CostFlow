@@ -36,11 +36,11 @@ namespace CostFlow.Services
             var supabaseUrl = _configuration["Supabase:Url"];
             if (string.IsNullOrWhiteSpace(supabaseUrl))
             {
-                _logger.LogInformation("ℹ️ [Supabase Keep-Alive] Supabase configuration not found in appsettings.json. Skipping service execution.");
+                _logger.LogInformation("[Supabase Keep-Alive] Supabase configuration not found in appsettings.json. Skipping service execution.");
                 return;
             }
 
-            _logger.LogInformation("🚀 [Supabase Keep-Alive] Background Service started. Scheduled interval: every {Hours} hours.", PingInterval.TotalHours);
+            _logger.LogInformation("[Supabase Keep-Alive] Background Service started. Scheduled interval: every {Hours} hours.", PingInterval.TotalHours);
 
             // Wait 10 seconds after application startup to ensure application is fully initialized
             try
@@ -60,32 +60,32 @@ namespace CostFlow.Services
                     var storageService = scope.ServiceProvider.GetRequiredService<ISupabaseStorageService>();
 
                     // 1. Dispatch Heartbeat to CostFlow Supabase (Stock Images Storage)
-                    _logger.LogInformation("💓 [CostFlow Keep-Alive] Dispatching heartbeat to CostFlow Supabase (Target: Stock Images Bucket)...");
+                    _logger.LogInformation("[CostFlow Keep-Alive] [Hey HuaNa, wake up and get to work] Dispatching heartbeat to CostFlow Supabase (Target: Stock Images Bucket)...");
                     var success = await storageService.PingKeepAliveAsync();
                     if (success)
                     {
-                        _logger.LogInformation("✅ [CostFlow Keep-Alive] Heartbeat acknowledged: CostFlow Supabase is awake and active. Next scheduled ping in {Hours} hours.", PingInterval.TotalHours);
+                        _logger.LogInformation("[CostFlow Keep-Alive] [Hey HuaNa, wake up and get to work] Heartbeat acknowledged: CostFlow Supabase is awake and working. Next scheduled ping in {Hours} hours.", PingInterval.TotalHours);
                     }
                     else
                     {
-                        _logger.LogWarning("⚠️ [CostFlow Keep-Alive] Heartbeat was unacknowledged for CostFlow Supabase. Will retry in next scheduled cycle.");
+                        _logger.LogWarning("[CostFlow Keep-Alive] [Hey HuaNa, wake up and get to work] Heartbeat was unacknowledged for CostFlow Supabase. Will retry in next scheduled cycle.");
                     }
 
                     // 2. Dispatch Heartbeat to External Project Supabase: AssetHub (Barcode System)
-                    _logger.LogInformation("💓 [AssetHub Keep-Alive] Dispatching heartbeat to AssetHub Supabase (Target: Barcode Assets Bucket)...");
+                    _logger.LogInformation("[AssetHub Keep-Alive] [Hey HuaNa, wake up and get to work] Dispatching heartbeat to AssetHub Supabase (Target: Barcode Assets Bucket)...");
                     var successAssetHub = await storageService.PingAssetHubKeepAliveAsync();
                     if (successAssetHub)
                     {
-                        _logger.LogInformation("✅ [AssetHub Keep-Alive] Heartbeat acknowledged: AssetHub Supabase is awake and active. Next scheduled ping in {Hours} hours.", PingInterval.TotalHours);
+                        _logger.LogInformation("[AssetHub Keep-Alive] [Hey HuaNa, wake up and get to work] Heartbeat acknowledged: AssetHub Supabase is awake and working. Next scheduled ping in {Hours} hours.", PingInterval.TotalHours);
                     }
                     else
                     {
-                        _logger.LogWarning("⚠️ [AssetHub Keep-Alive] Heartbeat was unacknowledged for AssetHub Supabase. Will retry in next scheduled cycle.");
+                        _logger.LogWarning("[AssetHub Keep-Alive] [Hey HuaNa, wake up and get to work] Heartbeat was unacknowledged for AssetHub Supabase. Will retry in next scheduled cycle.");
                     }
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "⚠️ [Supabase Keep-Alive] Unexpected error occurred during heartbeat dispatch: {Message}", ex.Message);
+                    _logger.LogWarning(ex, "[Supabase Keep-Alive] Unexpected error occurred during heartbeat dispatch: {Message}", ex.Message);
                 }
 
                 try
