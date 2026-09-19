@@ -627,11 +627,21 @@ namespace CostFlow.Controllers
             return Json(new
             {
                 success = isCostFlowAlive && isAssetHubAlive,
-                costFlowSupabase = isCostFlowAlive ? "OK (Active)" : "Failed",
-                assetHubSupabase = isAssetHubAlive ? "OK (Active)" : "Failed / Not Configured",
-                message = isCostFlowAlive && isAssetHubAlive 
-                    ? "Supabase ทุกโปรเจกต์ (CostFlow + AssetHub) ตอบรับสัญญาณ Heartbeat เรียบร้อย ตื่นอยู่ตลอดเวลา" 
-                    : "ตรวจพบสัญญาณบางโปรเจกต์ไม่สมบูรณ์",
+                summary = isCostFlowAlive && isAssetHubAlive 
+                    ? "All Supabase projects (CostFlow & AssetHub) received keep-alive heartbeats successfully. Both projects are awake and active." 
+                    : "One or more Supabase keep-alive pings failed or were unacknowledged.",
+                costFlow = new
+                {
+                    status = isCostFlowAlive ? "OK (Active)" : "Failed",
+                    target = "CostFlow Stock Images Bucket",
+                    purpose = "Anti-Pause Keep-Alive Heartbeat"
+                },
+                assetHub = new
+                {
+                    status = isAssetHubAlive ? "OK (Active)" : "Failed / Not Configured",
+                    target = "AssetHub Barcode Management Bucket (assets)",
+                    purpose = "Anti-Pause Keep-Alive Heartbeat"
+                },
                 timestamp = DateTime.UtcNow.ToString("o")
             });
         }
