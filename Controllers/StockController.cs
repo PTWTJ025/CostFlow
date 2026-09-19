@@ -621,11 +621,17 @@ namespace CostFlow.Controllers
         [HttpGet]
         public async Task<IActionResult> PingSupabase()
         {
-            var isAlive = await _supabaseStorage.PingKeepAliveAsync();
+            var isCostFlowAlive = await _supabaseStorage.PingKeepAliveAsync();
+            var isAssetHubAlive = await _supabaseStorage.PingAssetHubKeepAliveAsync();
+
             return Json(new
             {
-                success = isAlive,
-                message = isAlive ? "Supabase ตอบรับสัญญาณ Heartbeat เรียบร้อย (โปรเจกต์ตื่นอยู่ตลอดเวลา)" : "ไม่สามารถส่งสัญญาณไปยัง Supabase ได้",
+                success = isCostFlowAlive && isAssetHubAlive,
+                costFlowSupabase = isCostFlowAlive ? "OK (Active)" : "Failed",
+                assetHubSupabase = isAssetHubAlive ? "OK (Active)" : "Failed / Not Configured",
+                message = isCostFlowAlive && isAssetHubAlive 
+                    ? "Supabase ทุกโปรเจกต์ (CostFlow + AssetHub) ตอบรับสัญญาณ Heartbeat เรียบร้อย ตื่นอยู่ตลอดเวลา" 
+                    : "ตรวจพบสัญญาณบางโปรเจกต์ไม่สมบูรณ์",
                 timestamp = DateTime.UtcNow.ToString("o")
             });
         }

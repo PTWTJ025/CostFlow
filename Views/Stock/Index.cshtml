@@ -617,17 +617,11 @@
                     <input type="text" id="modalProductCode" required placeholder="เช่น P-001 หรือ รหัสสินค้าในระบบ" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors" />
                 </div>
 
-                <!-- ชื่อสินค้า พร้อมระบบ Smart Auto-Detect & Quick Chips -->
+                <!-- ชื่อสินค้า พร้อมระบบ Dynamic Quick Chips -->
                 <div>
-                    <div class="flex items-center justify-between gap-2 mb-1">
-                        <label for="modalProductName" class="block text-xs font-semibold text-slate-700">
-                            ชื่อสินค้า <span class="text-red-500">*</span>
-                        </label>
-                        <!-- Live Sub-Group Detection Badge -->
-                        <span id="addStockSubGroupBadge" class="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full font-medium bg-slate-100 text-slate-500 transition-all shadow-2xs">
-                            <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> ยังไม่ระบุกลุ่มย่อย
-                        </span>
-                    </div>
+                    <label for="modalProductName" class="block text-xs font-semibold text-slate-700 mb-1">
+                        ชื่อสินค้า <span class="text-red-500">*</span>
+                    </label>
                     <input type="text" id="modalProductName" required placeholder="ระบุชื่อสินค้า / อะไหล่" 
                            oninput="detectSubGroupForAddModal()"
                            class="w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors" />
@@ -1699,7 +1693,6 @@
         function detectSubGroupForAddModal() {
             const group = document.getElementById('modalStockGroup')?.value || 'เบ็ดเตล็ด';
             const name = document.getElementById('modalProductName')?.value.trim() || '';
-            const badge = document.getElementById('addStockSubGroupBadge');
 
             // สกัดคำค้นหาย่อยสำหรับกรอง Quick Chips แบบ Real-time
             let query = name;
@@ -1715,30 +1708,6 @@
 
             // กรองปุ่มลัดทันที
             renderAddStockQuickChips(group, effectiveQuery);
-
-            if (!badge) return;
-
-            if (!name) {
-                badge.className = 'inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full font-medium bg-slate-100 text-slate-500 transition-all shadow-2xs';
-                badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> ยังไม่ระบุกลุ่มย่อย';
-                return;
-            }
-
-            const subList = SUB_GROUP_DEFINITIONS[group] || null;
-            if (!subList || subList.length === 0) {
-                badge.className = 'inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full font-medium bg-slate-100 text-slate-500 transition-all shadow-2xs';
-                badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> ไม่มีกลุ่มย่อย';
-                return;
-            }
-
-            const matched = subList.find(s => s.pattern.test(name));
-            if (matched) {
-                badge.className = 'inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 transition-all shadow-2xs';
-                badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> กลุ่มย่อย: ${matched.label}`;
-            } else {
-                badge.className = 'inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full font-medium bg-amber-50 text-amber-700 border border-amber-200 transition-all shadow-2xs';
-                badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> ยังไม่ตรงกลุ่มย่อย (จะแสดงใน "ทุกกลุ่มย่อย")';
-            }
         }
 
         function applyQuickChipToProductName(chipLabel) {

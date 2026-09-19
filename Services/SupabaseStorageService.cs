@@ -143,5 +143,43 @@ namespace CostFlow.Services
                 return false;
             }
         }
+
+        public async Task<bool> PingAssetHubKeepAliveAsync()
+        {
+            var assetHubUrl = _configuration["Supabase:AssetHub:Url"]?.Trim().TrimEnd('/');
+            var assetHubApiKey = _configuration["Supabase:AssetHub:ApiKey"]?.Trim();
+            var assetHubBucket = _configuration["Supabase:AssetHub:Bucket"]?.Trim() ?? "assets";
+
+            if (string.IsNullOrWhiteSpace(assetHubUrl) || string.IsNullOrWhiteSpace(assetHubApiKey))
+            {
+                return false;
+            }
+
+            try
+            {
+                var bucketUrl = $"{assetHubUrl}/storage/v1/bucket/{assetHubBucket}?source=costflow-keepalive";
+                using var request = new HttpRequestMessage(HttpMethod.Get, bucketUrl);
+                request.Headers.Add("apikey", assetHubApiKey);
+                request.Headers.Add("Authorization", $"Bearer {assetHubApiKey}");
+                request.Headers.TryAddWithoutValidation("User-Agent", "CostFlow-AssetHub-KeepAlive/1.0");
+
+                var response = await _httpClient.SendAsync(request);
+                if (response.IsSuccessStatusCode)
+                {
+                    _logger.LogInformation("🟢 [AssetHub Keep-Alive] Pinged AssetHub Supabase successfully. Status: {StatusCode} OK. Project is active.", (int)response.StatusCode);
+                    return true;
+                }
+                else
+                {
+                    _logger.LogWarning("🟡 [AssetHub Keep-Alive] Ping returned status code: {StatusCode}", response.StatusCode);
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "🔴 [AssetHub Keep-Alive] Failed to ping AssetHub Supabase: {Message}", ex.Message);
+                return false;
+            }
+        }
     }
 }

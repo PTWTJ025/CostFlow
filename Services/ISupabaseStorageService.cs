@@ -8,5 +8,6 @@ namespace CostFlow.Services
         Task<string> UploadFileAsync(Stream fileStream, string fileName, string contentType);
         Task<bool> DeleteFileAsync(string filePathOrUrl);
         Task<bool> PingKeepAliveAsync();
+        Task<bool> PingAssetHubKeepAliveAsync();
     }
 }

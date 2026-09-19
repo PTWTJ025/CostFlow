@@ -58,16 +58,28 @@ namespace CostFlow.Services
                 {
                     using var scope = _serviceProvider.CreateScope();
                     var storageService = scope.ServiceProvider.GetRequiredService<ISupabaseStorageService>();
-                    _logger.LogInformation("💓 [Supabase Keep-Alive] กำลังส่งสัญญาณ Heartbeat ไปยัง Supabase เพื่อป้องกันโปรเจกต์หลับ...");
-                    
+                    // 1. ส่ง Heartbeat ปลุก Supabase ของ CostFlow (คลังภาพสต๊อก)
+                    _logger.LogInformation("💓 [Supabase Keep-Alive] กำลังส่งสัญญาณ Heartbeat ไปยัง Supabase (CostFlow Stock)...");
                     var success = await storageService.PingKeepAliveAsync();
                     if (success)
                     {
-                        _logger.LogInformation("✅ [Supabase Keep-Alive] สัญญาณ Heartbeat สำเร็จ Supabase ตื่นอยู่ตลอดเวลา (รอบถัดไป: อีก {Hours} ชม.)", PingInterval.TotalHours);
+                        _logger.LogInformation("✅ [Supabase Keep-Alive] สัญญาณ Heartbeat สำเร็จ Supabase (CostFlow) ตื่นอยู่ตลอดเวลา (รอบถัดไป: อีก {Hours} ชม.)", PingInterval.TotalHours);
                     }
                     else
                     {
-                        _logger.LogWarning("⚠️ [Supabase Keep-Alive] สัญญาณ Heartbeat ไม่สำเร็จ แต่จะพยายามใหม่ในรอบถัดไป");
+                        _logger.LogWarning("⚠️ [Supabase Keep-Alive] สัญญาณ Heartbeat (CostFlow) ไม่สำเร็จ แต่จะพยายามใหม่ในรอบถัดไป");
+                    }
+
+                    // 2. ส่ง Heartbeat ปลุก Supabase ของโปรเจกต์ภายนอก: AssetHub
+                    _logger.LogInformation("💓 [AssetHub Keep-Alive] กำลังส่งสัญญาณ Heartbeat ไปยัง Supabase (AssetHub)...");
+                    var successAssetHub = await storageService.PingAssetHubKeepAliveAsync();
+                    if (successAssetHub)
+                    {
+                        _logger.LogInformation("✅ [AssetHub Keep-Alive] สัญญาณ Heartbeat สำเร็จ Supabase (AssetHub) ตื่นอยู่ตลอดเวลา");
+                    }
+                    else
+                    {
+                        _logger.LogWarning("⚠️ [AssetHub Keep-Alive] สัญญาณ Heartbeat (AssetHub) ไม่สำเร็จ แต่จะพยายามใหม่ในรอบถัดไป");
                     }
                 }
                 catch (Exception ex)
