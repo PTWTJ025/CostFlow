@@ -54,12 +54,12 @@ namespace CostFlow.Controllers
             {
                 var receivedActions = await _context.MonthlyOrderActions
                     .Include(moa => moa.OrderTrackingMaster)
-                    .Where(moa => moa.Action == "ReceivedFull" || moa.Action == "Received")
+                    .Where(moa => moa.Action == "ReceivedFull" || moa.Action == "Received" || (moa.Action == "Deferred" && moa.IsStockReceived))
                     .OrderByDescending(moa => moa.CreatedAt)
                     .ToListAsync();
 
                 var reconciledRefs = await _context.StockLogs
-                    .Where(l => l.Action == "IN_WO" && !string.IsNullOrEmpty(l.ReferenceId))
+                    .Where(l => (l.Action == "IN_WO" || l.Action == "SKIP_STOCK") && !string.IsNullOrEmpty(l.ReferenceId) && l.ReferenceId != "-")
                     .Select(l => l.ReferenceId!)
                     .Distinct()
                     .ToListAsync();
@@ -73,6 +73,7 @@ namespace CostFlow.Controllers
                     if (otm == null) continue;
 
                     decimal qty = 1;
+                    string unit = "ชิ้น";
                     if (!string.IsNullOrEmpty(otm.RemarksQuantity))
                     {
                         var digits = new string(otm.RemarksQuantity.Where(char.IsDigit).ToArray());
@@ -81,21 +82,36 @@ namespace CostFlow.Controllers
                             qty = parsedQty;
                         }
                     }
+                    else if (!string.IsNullOrEmpty(otm.Remarks))
+                    {
+                        var cleanInfo = _matchingService.CleanOrderDescription(otm.Remarks);
+                        if (cleanInfo.DetectedQuantity > 0)
+                        {
+                            qty = cleanInfo.DetectedQuantity;
+                        }
+                        if (!string.IsNullOrEmpty(cleanInfo.DetectedUnit))
+                        {
+                            unit = cleanInfo.DetectedUnit;
+                        }
+                    }
 
-                    var isReconciled = !string.IsNullOrEmpty(otm.PoNumber) && reconciledSet.Contains(otm.PoNumber);
+                    var po = otm.PoNumber ?? "-";
+                    var isReconciled = (!string.IsNullOrEmpty(otm.PoNumber) && otm.PoNumber != "-" && reconciledSet.Contains(otm.PoNumber))
+                                       || reconciledSet.Contains(otm.Id.ToString());
 
                     items.Add(new PendingReceiptItemDto
                     {
                         OrderId = otm.Id,
-                        PoNumber = otm.PoNumber ?? "-",
+                        PoNumber = po,
                         OrderName = !string.IsNullOrWhiteSpace(otm.Remarks) ? otm.Remarks.Trim() : "ไม่ระบุชื่อสินค้า",
                         Quantity = qty,
-                        Unit = "ชิ้น",
+                        Unit = unit,
                         MonthYear = act.MonthYear,
                         Amount = otm.Amount ?? "0.00",
                         ApprovedDate = otm.ApprovedDate,
                         IsReconciled = isReconciled,
-                        CreatedAt = act.CreatedAt
+                        CreatedAt = act.CreatedAt,
+                        SourceAction = act.Action
                     });
                 }
 
@@ -128,6 +144,48 @@ namespace CostFlow.Controllers
             catch (Exception ex)
             {
                 return Json(new { success = false, message = ex.Message, items = new List<PendingReceiptItemDto>() });
+            }
+        }
+
+        // ไม่ต้องการนำเข้าระบบสต๊อก (ข้ามการตัดสต๊อกถาวร)
+        [HttpPost]
+        public async Task<IActionResult> DismissReceiveOrder([FromBody] DismissReceiveOrderRequest request)
+        {
+            try
+            {
+                var order = await _context.OrderTrackingMasters.FindAsync(request.OrderId);
+                if (order == null)
+                {
+                    return BadRequest(new { success = false, message = "ไม่พบข้อมูลรายการสั่งซื้อ" });
+                }
+
+                var refId = !string.IsNullOrWhiteSpace(order.PoNumber) && order.PoNumber != "-" ? order.PoNumber : order.Id.ToString();
+
+                // ตรวจสอบว่าเคยบันทึกข้ามหรือรับแล้วหรือยัง
+                var existingLog = await _context.StockLogs
+                    .FirstOrDefaultAsync(l => (l.Action == "IN_WO" || l.Action == "SKIP_STOCK") && l.ReferenceId == refId);
+
+                if (existingLog == null)
+                {
+                    var log = new StockLog
+                    {
+                        StockItemCode = "NON-STOCK",
+                        Action = "SKIP_STOCK",
+                        QuantityChanged = 0,
+                        ReferenceId = refId,
+                        Remarks = $"ไม่ต้องการนำเข้าสต๊อก (ผู้ใช้กดยกเว้นการอัปเดตลงคลัง สำหรับ: {order.Remarks})",
+                        User = User.Identity?.Name ?? "Admin",
+                        Timestamp = DateTime.UtcNow
+                    };
+                    _context.StockLogs.Add(log);
+                    await _context.SaveChangesAsync();
+                }
+
+                return Ok(new { success = true, message = $"ยกเว้นการรับเข้าสต๊อกสำหรับรายการนี้เรียบร้อยแล้ว" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = $"เกิดข้อผิดพลาด: {ex.Message}" });
             }
         }
 
@@ -259,7 +317,7 @@ namespace CostFlow.Controllers
             try
             {
                 var reconciledRefs = await _context.StockLogs
-                    .Where(l => l.Action == "IN_WO" && !string.IsNullOrEmpty(l.ReferenceId))
+                    .Where(l => (l.Action == "IN_WO" || l.Action == "SKIP_STOCK") && !string.IsNullOrEmpty(l.ReferenceId) && l.ReferenceId != "-")
                     .Select(l => l.ReferenceId!)
                     .Distinct()
                     .ToListAsync();
@@ -267,9 +325,9 @@ namespace CostFlow.Controllers
 
                 var pendingCount = await _context.MonthlyOrderActions
                     .Include(moa => moa.OrderTrackingMaster)
-                    .Where(moa => (moa.Action == "ReceivedFull" || moa.Action == "Received") &&
+                    .Where(moa => (moa.Action == "ReceivedFull" || moa.Action == "Received" || (moa.Action == "Deferred" && moa.IsStockReceived)) &&
                                   moa.OrderTrackingMaster != null &&
-                                  !reconciledSet.Contains(moa.OrderTrackingMaster.PoNumber))
+                                  (!reconciledSet.Contains(moa.OrderTrackingMaster.PoNumber) && !reconciledSet.Contains(moa.OrderTrackingMaster.Id.ToString())))
                     .CountAsync();
 
                 ViewBag.PendingReceiveCount = pendingCount;
@@ -936,5 +994,11 @@ namespace CostFlow.Controllers
         public string? ApprovedDate { get; set; }
         public bool IsReconciled { get; set; }
         public DateTime CreatedAt { get; set; }
+        public string SourceAction { get; set; } = "ReceivedFull"; // "ReceivedFull", "Deferred"
+    }
+
+    public class DismissReceiveOrderRequest
+    {
+        public Guid OrderId { get; set; }
     }
 }

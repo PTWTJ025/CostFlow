@@ -1337,6 +1337,7 @@ namespace CostFlow.Controllers
                             : action.Action == "Skipped" ? 0
                             : action.Price,
                         IsForcedPayment = false,
+                        IsStockReceived = action.Action == "Deferred" ? action.IsStockReceived : (action.Action == "ReceivedFull" || action.Action == "Received"),
                         DeferredFromMonth = (action.Action == "Deferred" && priorAction != null) ? priorAction.MonthYear : null,
                         CreatedAt = DateTime.UtcNow,
                         UpdatedAt = DateTime.UtcNow
@@ -1358,6 +1359,7 @@ namespace CostFlow.Controllers
                             Action = "Skipped",
                             ActionPrice = 0,
                             IsForcedPayment = false,
+                            IsStockReceived = false,
                             DeferredFromMonth = null,
                             CreatedAt = DateTime.UtcNow,
                             UpdatedAt = DateTime.UtcNow
@@ -1389,9 +1391,9 @@ namespace CostFlow.Controllers
 
                 await _hubContext.Clients.All.SendAsync("ReceiveMonthlyCostUpdate");
                 
-                // คัดเฉพาะรายการที่เพิ่งรับของใน Request นี้
+                // คัดเฉพาะรายการที่เพิ่งรับของใน Request นี้ (รวมรายการผ่อนชำระที่ติ๊กรับของเข้าสต๊อก)
                 var receivedOrderIds = request.Actions
-                    .Where(a => a.Action == "ReceivedFull" || a.Action == "Received")
+                    .Where(a => a.Action == "ReceivedFull" || a.Action == "Received" || (a.Action == "Deferred" && a.IsStockReceived))
                     .Select(a => a.OrderId)
                     .ToList();
 
@@ -3401,6 +3403,7 @@ namespace CostFlow.Controllers
         public Guid OrderId { get; set; }
         public string Action { get; set; } = string.Empty;
         public decimal Price { get; set; }
+        public bool IsStockReceived { get; set; } = false;
     }
 
     public class SetMockDateRequest
@@ -3417,5 +3420,6 @@ namespace CostFlow.Controllers
     {
         public string action { get; set; } = string.Empty;
         public decimal actionPrice { get; set; }
+        public bool isStockReceived { get; set; } = false;
     }
 }

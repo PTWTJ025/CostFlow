@@ -145,6 +145,7 @@ namespace CostFlow.Models
         
         public string? DeferredFromMonth { get; set; } // เดือนที่ผ่อนมา (ถ้ามี)
         public bool IsForcedPayment { get; set; } // true = บังคับจ่ายจากการผ่อนเดือนก่อน
+        public bool IsStockReceived { get; set; } = false; // true = ของจริงเข้าคลังแล้ว แม้จะผ่อนชำระ
         
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }

@@ -86,6 +86,21 @@
 
     .deferred-note.open {
         display: flex;
+        flex-direction: column;
+    }
+
+    .defer-stock-checkbox {
+        box-shadow: none !important;
+        --tw-ring-shadow: 0 0 #0000 !important;
+        --tw-ring-offset-shadow: 0 0 #0000 !important;
+        outline: none !important;
+    }
+    .defer-stock-checkbox:focus,
+    .defer-stock-checkbox:active {
+        box-shadow: none !important;
+        --tw-ring-shadow: 0 0 #0000 !important;
+        --tw-ring-offset-shadow: 0 0 #0000 !important;
+        outline: none !important;
     }
 
     @@media (prefers-reduced-motion: reduce) {
@@ -1025,7 +1040,8 @@
                 forwardedFrom: card.dataset.forwardedFrom || '',
                 originalMonth: card.dataset.originalMonth || '',
                 action: 'ReceivedFull',
-                actionPrice: parseFloat(card.dataset.price) || 0
+                actionPrice: parseFloat(card.dataset.price) || 0,
+                isStockReceived: false
             };
 
             card.classList.add('in-cart');
@@ -1071,7 +1087,7 @@
             const receiveClass = isRec ? 'action-pill active-receive' : 'action-pill';
             const deferClass = isDef ? 'action-pill active-defer' : 'action-pill';
             const skipClass = isSkip ? 'action-pill active-skip' : 'action-pill';
-            const deferNoteClass = isDef ? 'deferred-note open mt-2 items-center gap-2 bg-amber-50 border border-amber-200 rounded-md px-3 py-2' : 'deferred-note mt-2 items-center gap-2 bg-amber-50 border border-amber-200 rounded-md px-3 py-2';
+            const deferNoteClass = isDef ? 'deferred-note open mt-2 gap-2 bg-amber-50 border border-amber-200 rounded-md px-3 py-2' : 'deferred-note mt-2 items-center gap-2 bg-amber-50 border border-amber-200 rounded-md px-3 py-2';
 
             const deferPillHtml = isDeferredCarryOver ? '' : `
                         <label class="${deferClass}" id="pill-defer-${orderId}" onclick="setAction('${orderId}','Deferred')">
@@ -1083,10 +1099,14 @@
 
             const deferNoteHtml = isDeferredCarryOver ? '' : `
                         <div class="${deferNoteClass}" id="defer-wrap-${orderId}">
-                            <svg class="w-3.5 h-3.5 text-amber-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
-                            </svg>
-                            <span class="text-[11px] text-amber-700">${deferNoteText}</span>
+                                <label class="inline-flex gap-2 cursor-pointer select-none" onclick="event.stopPropagation()">
+                                    <input type="checkbox" 
+                                           id="chk-defer-stock-${orderId}" 
+                                           class="defer-stock-checkbox w-3.5 h-3.5 rounded border-slate-300 text-amber-600 focus:ring-0 focus:ring-offset-0 focus:outline-none cursor-pointer" 
+                                           ${item.isStockReceived ? 'checked' : ''} 
+                                           onchange="toggleDeferredStock('${orderId}', this.checked)">
+                                    <span class="text-[11px] font-semibold text-amber-900">รับของจริงเข้าสต๊อกแล้ว (ส่งไปรอรับลงสต๊อก)</span>
+                                </label>
                         </div>
                     `;
 
@@ -1139,6 +1159,12 @@
                     `;
 
             document.getElementById('cart-list').appendChild(el);
+        }
+
+        function toggleDeferredStock(orderId, isChecked) {
+            if (!cart[orderId]) return;
+            cart[orderId].isStockReceived = isChecked;
+            saveCartToStorage();
         }
 
         // ─── Remove from cart ─────────────────────────────────────────────────────────
@@ -1531,7 +1557,8 @@
                 forwardedFrom: card.dataset.forwardedFrom || '',
                 originalMonth: card.dataset.originalMonth || '',
                 action: finalAction,
-                actionPrice: finalAction === 'Skipped' ? 0 : (parseFloat(card.dataset.price) || 0)
+                actionPrice: finalAction === 'Skipped' ? 0 : (parseFloat(card.dataset.price) || 0),
+                isStockReceived: false
             };
 
             cart[orderId] = item;
@@ -1614,7 +1641,8 @@
                         actions: ids.map(id => ({
                             orderId: cart[id].orderId,
                             action: cart[id].action,
-                            price: cart[id].actionPrice
+                            price: cart[id].actionPrice,
+                            isStockReceived: !!cart[id].isStockReceived
                         })),
                         isCloseMonth: false  // คืนเป็น false - บันทึกเฉพาะรายการที่เลือก
                     })

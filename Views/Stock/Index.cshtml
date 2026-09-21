@@ -1018,7 +1018,10 @@
                 </div>
                 <div class="flex items-center gap-1.5 shrink-0">
                     <span id="receiveOrderCountBadge" class="inline-flex items-center px-2.5 h-8 text-[11px] font-semibold text-slate-600 bg-white border border-slate-200 rounded-md shadow-2xs whitespace-nowrap"></span>
-                    <button type="button" onclick="loadPendingOrders()" class="inline-flex items-center justify-center w-8 h-8 text-slate-400 hover:text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 rounded-md transition-colors shadow-2xs shrink-0" title="รีเฟรชรายการ">
+                    <button type="button" onclick="skipToNextReceiveOrder()" class="inline-flex items-center justify-center w-8 h-8 text-slate-500 hover:text-slate-800 bg-white border border-slate-200 hover:bg-slate-50 rounded-md transition-colors shadow-2xs shrink-0 cursor-pointer" title="ข้ามไปยังรายการรอรับถัดไป">
+                        <i data-lucide="skip-forward" class="w-3.5 h-3.5"></i>
+                    </button>
+                    <button type="button" onclick="loadPendingOrders()" class="inline-flex items-center justify-center w-8 h-8 text-slate-400 hover:text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 rounded-md transition-colors shadow-2xs shrink-0 cursor-pointer" title="รีเฟรชรายการ">
                         <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
                     </button>
                 </div>
@@ -1039,6 +1042,9 @@
                             
                             <span>ข้อความรายการจากใบสั่งซื้อ (PO)</span>
                         </span>
+                        <div id="receiveSourceBadgeContainer" class="flex items-center gap-1.5">
+                            <span id="receiveSourceBadge" class="hidden text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full"></span>
+                        </div>
                     </div>
                     <!-- กล่องแสดงข้อความของคำนั้น (ไม่ใช่กล่องกรอก) -->
                     <div id="simulateRawTextDisplay" class="w-full px-4 py-3 bg-slate-50/90 border border-slate-200/90 rounded-lg text-xs font-medium text-slate-700 break-words leading-relaxed whitespace-pre-line min-h-[44px] shadow-2xs">
@@ -1131,8 +1137,9 @@
                                 <span>สร้างเป็นสินค้าใหม่</span>
                             </button>
                         }
-                        <button type="button" onclick="skipToNextReceiveOrder()" class="text-xs text-primary hover:text-primary/80 font-semibold underline cursor-pointer flex items-center gap-1" title="ข้ามไปยังรายการรอรับถัดไปใน Dropdown">
-                            <span>ข้ามรายการนี้</span>
+                        <button type="button" onclick="dismissCurrentReceiveOrder()" class="text-xs text-rose-600 hover:text-rose-700 font-semibold cursor-pointer flex items-center gap-1" title="ไม่ต้องการนำรายการนี้เข้าสต๊อก">
+                            <i data-lucide="slash" class="w-3.5 h-3.5"></i>
+                            <span>ไม่ต้องการอัปเดตลงสต๊อก</span>
                         </button>
                     </div>
                 </div>
@@ -2835,11 +2842,17 @@
                 const qty = it.quantity || it.Quantity || 1;
                 const unit = it.unit || it.Unit || 'ชิ้น';
                 const isRecon = it.isReconciled || it.IsReconciled;
+                const sourceAction = it.sourceAction || it.SourceAction || 'ReceivedFull';
+                const monthYear = it.monthYear || it.MonthYear || '';
                 const isSelected = currentSelectedId && currentSelectedId == id;
                 const info = parseOrderInfo(name);
 
                 const safeTitle = `[PO: ${po || '-'}] ${name}`.replace(/"/g, '&quot;');
                 const displayText = (po && po !== '-') ? `${po} ${info.cleanName}` : info.cleanName;
+
+                const sourceBadge = sourceAction === 'Deferred'
+                    ? `<span class="text-[9px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded leading-none">ผ่อนชำระ${monthYear ? ` (${monthYear})` : ''}</span>`
+                    : '';
 
                 return `
                     <div class="receive-order-option-item px-3 py-2 hover:bg-slate-50 cursor-pointer transition-colors text-left border-l-2 ${isSelected ? 'bg-blue-50/60 border-primary' : 'border-transparent'}" 
@@ -2849,6 +2862,7 @@
                         <div class="flex items-center justify-between gap-2 text-xs font-semibold text-slate-800 leading-snug">
                             <span class="truncate flex-1 min-w-0">${escapeHtml(displayText)}</span>
                             <div class="flex items-center gap-1.5 shrink-0 font-normal">
+                                ${sourceBadge}
                                 ${isRecon ? '<span class="text-[9px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1 py-0.5 rounded leading-none">รับแล้ว</span>' : ''}
                                 <span class="text-[11px] text-slate-500 font-sans">(${Number(qty).toLocaleString()} ${escapeHtml(unit)})</span>
                             </div>
@@ -2932,6 +2946,89 @@
             selectCustomReceiveOrder(nextItem);
         }
 
+        async function dismissCurrentReceiveOrder() {
+            if (!currentLoadedOrder) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'ไม่มีรายการที่เลือก',
+                    text: 'กรุณาเลือกรายการที่ต้องการยกเว้น'
+                });
+                return;
+            }
+
+            const orderId = currentLoadedOrder.orderId || currentLoadedOrder.OrderId;
+            const po = currentLoadedOrder.poNumber || currentLoadedOrder.PoNumber || '-';
+            const name = currentLoadedOrder.orderName || currentLoadedOrder.OrderName || '';
+            const info = parseOrderInfo(name);
+
+            const result = await Swal.fire({
+                title: 'ยืนยันไม่ต้องการอัปเดตลงสต๊อก?',
+                html: `
+                    <div class="text-left text-xs text-slate-600 space-y-1.5 p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                        <div><strong>PO:</strong> <span class="font-mono text-slate-800">${escapeHtml(po)}</span></div>
+                        <div><strong>รายการ:</strong> <span class="text-slate-800">${escapeHtml(info.cleanName)}</span></div>
+                    </div>
+                    <p class="text-xs text-rose-600 font-medium mt-3">
+                        รายการนี้จะถูกตัดออกจากคิวรอรับเข้าสต๊อกถาวร และไม่เตือนให้รับเข้าอีก
+                    </p>
+                `,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#e11d48',
+                cancelButtonColor: '#64748b',
+                confirmButtonText: 'ยืนยัน ไม่นำเข้าสต๊อก',
+                cancelButtonText: 'ยกเลิก',
+                reverseButtons: true
+            });
+
+            if (!result.isConfirmed) return;
+
+            try {
+                Swal.fire({
+                    title: 'กำลังดำเนินการ...',
+                    allowOutsideClick: false,
+                    didOpen: () => { Swal.showLoading(); }
+                });
+
+                const resp = await fetch('/Stock/DismissReceiveOrder', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ orderId: orderId })
+                });
+
+                const data = await resp.json();
+                if (resp.ok && data.success) {
+                    await Swal.fire({
+                        icon: 'success',
+                        title: 'สำเร็จ',
+                        text: data.message || 'ยกเว้นการรับเข้าสต๊อกเรียบร้อยแล้ว',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+
+                    // อัปเดตรายการที่ค้างรับ
+                    await loadPendingOrders();
+                    await refreshPendingBadgeCount();
+                    if (!pendingOrdersList || pendingOrdersList.length === 0) {
+                        closeReceiveModal();
+                    }
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'เกิดข้อผิดพลาด',
+                        text: data.message || 'ไม่สามารถดำเนินการได้'
+                    });
+                }
+            } catch (err) {
+                console.error('dismissCurrentReceiveOrder error:', err);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'เกิดข้อผิดพลาด',
+                    text: 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้'
+                });
+            }
+        }
+
         function filterReceiveOrderOptions(query) {
             const q = (query || '').toLowerCase().trim();
             const listEl = document.getElementById('receiveOrderOptionsList');
@@ -2977,6 +3074,18 @@
             const rawDisplay = document.getElementById('simulateRawTextDisplay');
             if (rawDisplay) {
                 rawDisplay.textContent = orderName || '-';
+            }
+
+            const sourceAction = item.sourceAction || item.SourceAction || 'ReceivedFull';
+            const monthYear = item.monthYear || item.MonthYear || '';
+            const sourceBadge = document.getElementById('receiveSourceBadge');
+            if (sourceBadge) {
+                if (sourceAction === 'Deferred') {
+                    sourceBadge.textContent = `ผ่อนชำระ${monthYear ? ` (งวด ${monthYear})` : ''}`;
+                    sourceBadge.classList.remove('hidden');
+                } else {
+                    sourceBadge.classList.add('hidden');
+                }
             }
 
             // Always ensure PO badge and Month badge remain hidden as requested
@@ -3290,9 +3399,38 @@
                         confirmButtonText: 'ตกลง'
                     });
 
+                    // อัปเดตยอดคงเหลือและสถานะบนการ์ดสินค้าในหน้าจอทันทีแบบ Real-time
+                    const card = document.querySelector(`.stock-card[data-code="${result.productCode}"]`);
+                    if (card) {
+                        card.dataset.quantity = result.newQuantity;
+                        const minVal = parseFloat(card.dataset.min) || 0;
+                        const qtyVal = card.querySelector('.stock-card-qty-val');
+                        if (qtyVal) {
+                            qtyVal.textContent = Number(result.newQuantity).toLocaleString();
+                            qtyVal.className = `stock-card-qty-val text-base font-bold ${result.newQuantity <= minVal ? 'text-red-600' : 'text-emerald-600'} leading-none`;
+                        }
+                        const inlineInput = card.querySelector('.stock-inline-qty-input');
+                        if (inlineInput) {
+                            inlineInput.value = result.newQuantity;
+                            inlineInput.dataset.original = result.newQuantity;
+                        }
+                        const statusBadge = card.querySelector('.stock-status-badge');
+                        if (statusBadge) {
+                            statusBadge.textContent = result.newStatus;
+                            if (result.newQuantity <= 0) {
+                                statusBadge.className = 'stock-status-badge inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-600/95 text-white shadow-2xs';
+                            } else if (result.newQuantity <= minVal) {
+                                statusBadge.className = 'stock-status-badge inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/95 text-white shadow-2xs';
+                            } else {
+                                statusBadge.className = 'stock-status-badge inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-600/95 text-white shadow-2xs';
+                            }
+                        }
+                    }
+
                     // อัปเดตรายการที่ค้างรับ
                     if (pendingOrdersList && pendingOrdersList.length > 1) {
                         await loadPendingOrders();
+                        await refreshPendingBadgeCount();
                     } else {
                         closeReceiveModal();
                         window.location.reload();
