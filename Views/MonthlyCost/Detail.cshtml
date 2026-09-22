@@ -86,7 +86,6 @@
 
     .deferred-note.open {
         display: flex;
-        flex-direction: column;
     }
 
     .defer-stock-checkbox {
@@ -1087,7 +1086,7 @@
             const receiveClass = isRec ? 'action-pill active-receive' : 'action-pill';
             const deferClass = isDef ? 'action-pill active-defer' : 'action-pill';
             const skipClass = isSkip ? 'action-pill active-skip' : 'action-pill';
-            const deferNoteClass = isDef ? 'deferred-note open mt-2 gap-2 bg-amber-50 border border-amber-200 rounded-md px-3 py-2' : 'deferred-note mt-2 items-center gap-2 bg-amber-50 border border-amber-200 rounded-md px-3 py-2';
+            const deferNoteClass = isDef ? 'deferred-note open ml-auto' : 'deferred-note ml-auto';
 
             const deferPillHtml = isDeferredCarryOver ? '' : `
                         <label class="${deferClass}" id="pill-defer-${orderId}" onclick="setAction('${orderId}','Deferred')">
@@ -1099,14 +1098,14 @@
 
             const deferNoteHtml = isDeferredCarryOver ? '' : `
                         <div class="${deferNoteClass}" id="defer-wrap-${orderId}">
-                                <label class="inline-flex gap-2 cursor-pointer select-none" onclick="event.stopPropagation()">
-                                    <input type="checkbox" 
-                                           id="chk-defer-stock-${orderId}" 
-                                           class="defer-stock-checkbox w-3.5 h-3.5 rounded border-slate-300 text-amber-600 focus:ring-0 focus:ring-offset-0 focus:outline-none cursor-pointer" 
-                                           ${item.isStockReceived ? 'checked' : ''} 
-                                           onchange="toggleDeferredStock('${orderId}', this.checked)">
-                                    <span class="text-[11px] font-semibold text-amber-900">รับของจริงเข้าสต๊อกแล้ว (ส่งไปรอรับลงสต๊อก)</span>
-                                </label>
+                            <label class="inline-flex items-center gap-1.5 cursor-pointer select-none text-slate-600 hover:text-amber-800 transition-colors py-1 px-1" onclick="event.stopPropagation()">
+                                <input type="checkbox" 
+                                       id="chk-defer-stock-${orderId}" 
+                                       class="defer-stock-checkbox w-3.5 h-3.5 rounded border-slate-300 text-amber-600 focus:ring-0 focus:ring-offset-0 focus:outline-none cursor-pointer" 
+                                       ${item.isStockReceived ? 'checked' : ''} 
+                                       onchange="toggleDeferredStock('${orderId}', this.checked)">
+                                <span class="text-[11px] font-semibold text-amber-900 whitespace-nowrap">รับเข้าสต๊อกแล้ว</span>
+                            </label>
                         </div>
                     `;
 
@@ -1140,7 +1139,7 @@
                             </div>
         
                             <!-- Action pills -->
-                            <div class="flex flex-wrap gap-1.5" id="pills-${orderId}">
+                            <div class="flex items-center flex-wrap gap-1.5" id="pills-${orderId}">
                                 <label class="${receiveClass}" id="pill-receive-${orderId}" onclick="setAction('${orderId}','ReceivedFull')">
                                     <input type="radio" name="act_${orderId}" value="ReceivedFull" ${isRec ? 'checked' : ''} onclick="event.stopPropagation()" onchange="setAction('${orderId}','ReceivedFull')">
                                     <span>${receiveLabel}</span>
@@ -1151,10 +1150,8 @@
                                     <input type="radio" name="act_${orderId}" value="Skipped" ${isSkip ? 'checked' : ''} onclick="event.stopPropagation()" onchange="setAction('${orderId}','Skipped')">
                                     <span>ยังไม่รับสินค้า</span>
                                 </label>
+                                ${deferNoteHtml}
                             </div>
-        
-                            <!-- Deferred note -->
-                            ${deferNoteHtml}
                         </div>
                     `;
 
