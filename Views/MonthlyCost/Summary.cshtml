@@ -272,7 +272,10 @@
                         <!-- ── Group Header ── -->
                         <tr class="bg-slate-100 hover:bg-slate-200 cursor-pointer transition-colors group-header-row select-none @(isInitiallyCollapsed ? "is-collapsed" : "")"
                             onclick="toggleGroup('@groupId')"
-                            data-group-id="@groupId">
+                            data-group-id="@groupId"
+                            data-original-count="@groupCount"
+                            data-original-total="@groupTotal.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)"
+                            data-initially-collapsed="@(isInitiallyCollapsed ? "true" : "false")">
                             <td colspan="9" class="py-2.5 px-3 border-y border-slate-200 shadow-sm">
                                 <div class="flex items-center justify-between">
                                     <div class="flex items-center gap-2">
@@ -286,10 +289,10 @@
                                         {
                                             <span class="text-[10px] font-bold text-blue-700 bg-blue-100 px-1.5 py-0.5 rounded uppercase tracking-wider ml-1">เดือนปัจจุบัน</span>
                                         }
-                                        <span class="text-xs font-medium text-slate-600 px-2 py-0.5 ml-1">@groupCount รายการ</span>
+                                        <span class="text-xs font-medium text-slate-600 px-2 py-0.5 ml-1" id="count-badge-@groupId">@groupCount รายการ</span>
                                     </div>
                                     <div class="font-bold text-slate-900 text-sm">
-                                        <span class="text-emerald-700">฿@groupTotal.ToString("N2")</span>
+                                        <span class="text-emerald-700" id="total-badge-@groupId">฿@groupTotal.ToString("N2")</span>
                                     </div>
                                 </div>
                             </td>
@@ -498,6 +501,10 @@
         searchInput.addEventListener('paste', () => setTimeout(applyFilters, 50));
     }
 
+    function fmtCurrency(num) {
+        return '฿' + Number(num || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
     // ── Group Toggle Logic ──
     function toggleGroup(groupId) {
         const header = document.querySelector(`.group-header-row[data-group-id="${groupId}"]`);
@@ -505,11 +512,14 @@
         const rows = document.querySelectorAll(`.${groupId}`);
 
         const isCollapsed = header.classList.toggle('is-collapsed');
+        header.dataset.userToggled = 'true';
+        header.dataset.manualCollapsed = isCollapsed ? 'true' : 'false';
+
         if (isCollapsed) {
-            icon.style.transform = 'rotate(-90deg)';
+            if (icon) icon.style.transform = 'rotate(-90deg)';
             rows.forEach(r => r.classList.add('hidden', 'hidden-by-group'));
         } else {
-            icon.style.transform = 'rotate(0deg)';
+            if (icon) icon.style.transform = 'rotate(0deg)';
             rows.forEach(r => r.classList.remove('hidden', 'hidden-by-group'));
         }
         applyFilters();
@@ -530,14 +540,40 @@
 
         groupHeaders.forEach(header => {
             const groupId = header.getAttribute('data-group-id');
+            const icon = document.getElementById(`icon-${groupId}`);
             const rows = document.querySelectorAll(`.${groupId}`);
+            const isInitiallyCollapsed = header.getAttribute('data-initially-collapsed') === 'true';
+
+            // ถ้าไม่ได้อยู่ในโหมดค้นหา/กรอง ให้คืนสถานะการพับของกลุ่มเดือน
+            if (!isFiltering) {
+                if (header.dataset.userToggled === 'true') {
+                    const wasCollapsed = header.dataset.manualCollapsed === 'true';
+                    header.classList.toggle('is-collapsed', wasCollapsed);
+                    if (icon) icon.style.transform = wasCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)';
+                } else {
+                    header.classList.toggle('is-collapsed', isInitiallyCollapsed);
+                    if (icon) icon.style.transform = isInitiallyCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)';
+                }
+            }
+
+            const isGroupCollapsed = header.classList.contains('is-collapsed');
+
             let hasVisibleRow = false;
+            let groupVisibleCount = 0;
+            let groupVisibleTotal = 0;
 
             rows.forEach(function (row) {
+                if (row.dataset.empty === "true") {
+                    const showEmpty = !isFiltering && !isGroupCollapsed;
+                    row.style.display = showEmpty ? '' : 'none';
+                    return;
+                }
+
                 const rowPo = (row.getAttribute('data-po') || '').toLowerCase();
                 const rowName = (row.getAttribute('data-name') || '').toLowerCase();
                 const rowMonth = row.getAttribute('data-month');
                 const rowStatus = row.getAttribute('data-status');
+                const rowAmount = parseFloat(row.getAttribute('data-amount')) || 0;
 
                 let matchSearch = true;
                 if (keywords.length > 0) {
@@ -547,10 +583,32 @@
                 let matchMonth = !monthVal || rowMonth === monthVal;
                 let matchStatus = currentStatusFilter === 'all' || rowStatus === currentStatusFilter;
 
-                let show = matchSearch && matchMonth && matchStatus;
+                let matchesFilter = matchSearch && matchMonth && matchStatus;
 
-                // คำนวณ KPI เฉพาะตัวที่แสดงผลและไม่ถูกพับซ่อน (แต่ถ้า filter อยู่ เราจะอิงตาม match logic)
-                if (show) {
+                let show = matchesFilter;
+
+                if (isFiltering) {
+                    // ในโหมดค้นหา/กรอง: แสดงเฉพาะแถวที่ตรงเงื่อนไขเท่านั้น
+                    if (matchesFilter) {
+                        hasVisibleRow = true;
+                        groupVisibleCount++;
+                        groupVisibleTotal += rowAmount;
+                        visibleCount++;
+                        totalMonthCount++;
+                        if (rowStatus === 'ReceivedFull') receivedCount++;
+                        else if (rowStatus === 'Deferred') deferredCount++;
+                        else if (rowStatus === 'Skipped') skippedCount++;
+                        row.classList.remove('hidden', 'hidden-by-group');
+                    }
+                } else {
+                    // ในโหมดปกติ: แสดงตามสถานะการพับของกลุ่มเดือน
+                    if (isGroupCollapsed) {
+                        show = false;
+                        row.classList.add('hidden', 'hidden-by-group');
+                    } else {
+                        row.classList.remove('hidden', 'hidden-by-group');
+                    }
+
                     hasVisibleRow = true;
                     visibleCount++;
                     totalMonthCount++;
@@ -559,29 +617,36 @@
                     else if (rowStatus === 'Skipped') skippedCount++;
                 }
 
-                if (row.classList.contains('hidden-by-group')) {
-                    show = false; // ถ้ากลุ่มถูกพับ ก็ซ่อนไว้
-                }
-
                 row.style.display = show ? '' : 'none';
             });
 
-            // ถ้ามีการค้นหา ให้กางกล่องอัตโนมัติเพื่อให้เห็นผลลัพธ์
-            if (isFiltering && hasVisibleRow) {
-                header.classList.remove('is-collapsed');
-                const icon = document.getElementById(`icon-${groupId}`);
-                if (icon) icon.style.transform = 'rotate(0deg)';
-                rows.forEach(r => {
-                    r.classList.remove('hidden', 'hidden-by-group');
-                    r.style.display = ''; // force show
-                });
+            // ถ้ามีการค้นหา/กรอง และกลุ่มนี้มีผลลัพธ์ ให้กางกล่องอัตโนมัติเพื่อให้เห็นเฉพาะรายการที่ค้นพบ
+            if (isFiltering) {
+                if (hasVisibleRow) {
+                    header.classList.remove('is-collapsed');
+                    if (icon) icon.style.transform = 'rotate(0deg)';
+                    header.style.display = '';
+                } else {
+                    header.style.display = 'none';
+                }
+            } else {
+                header.style.display = '';
             }
 
-            // ซ่อนหัวข้อเดือน ถ้าข้างในไม่มีรายการไหนตรงกับตัวกรองเลย
-            header.style.display = hasVisibleRow ? '' : 'none';
+            // อัปเดตตัวเลขจำนวนรายการและยอดเงินบนแถบหัวข้อเดือน
+            const countBadge = document.getElementById(`count-badge-${groupId}`);
+            const totalBadge = document.getElementById(`total-badge-${groupId}`);
+            if (countBadge) {
+                const countToShow = isFiltering ? groupVisibleCount : (header.getAttribute('data-original-count') || groupVisibleCount);
+                countBadge.textContent = `${countToShow} รายการ`;
+            }
+            if (totalBadge) {
+                const totalToShow = isFiltering ? groupVisibleTotal : parseFloat(header.getAttribute('data-original-total') || groupVisibleTotal);
+                totalBadge.textContent = fmtCurrency(totalToShow);
+            }
         });
 
-        // อัปเดตตัวเลขบน KPI Badges ตามเดือนที่เลือก
+        // อัปเดตตัวเลขบน KPI Badges ตามผลลัพธ์
         const countAllEl = document.getElementById('count-all');
         const countRecEl = document.getElementById('count-received');
         const countDefEl = document.getElementById('count-deferred');
