@@ -37,115 +37,89 @@
         </div>
     </div>
 
-    <!-- Stats Row -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 shrink-0">
-
-        <!-- Card 1: สินค้าทั้งหมด -->
-        <div class="bg-surface border border-outline-variant rounded-lg px-4 py-3 flex items-center gap-3">
-            <div class="w-8 h-8 rounded flex items-center justify-center shrink-0" style="background:rgba(0,40,142,0.08);">
-                <!-- Lucide: package -->
-                <svg class="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>
-                </svg>
-            </div>
-            <div class="ml-auto text-right">
-                <p class="text-[11px] font-medium text-on-surface-variant leading-none mb-1">รายการสินค้าทั้งหมด</p>
-                <p class="text-[20px] font-bold text-primary leading-none">
-                    <span id="stat-total-count">@(Model?.Count ?? 0)</span> <span class="text-[13px] font-medium text-on-surface-variant">รายการ</span>
-                </p>
-            </div>
-        </div>
-
-        <!-- Card 2: จำนวนชิ้นรวม -->
-        <div class="bg-surface border border-outline-variant rounded-lg px-4 py-3 flex items-center gap-3">
-            <div class="w-8 h-8 rounded flex items-center justify-center shrink-0" style="background:rgba(5,150,105,0.08);">
-                <!-- Lucide: clipboard-check -->
-                <svg class="w-4 h-4" style="color:#059669" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-                    <rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/>
-                </svg>
-            </div>
-            <div class="ml-auto text-right">
-                <p class="text-[11px] font-medium text-on-surface-variant leading-none mb-1">จำนวนรวมสะสม</p>
-                <p class="text-[20px] font-bold leading-none" style="color:#059669;">
-                    @{
-                        var totalQtyVal = Model?.Sum(i => i.Quantity) ?? 0;
-                        string formattedTotalQty = totalQtyVal % 1 == 0 ? totalQtyVal.ToString("N0") : totalQtyVal.ToString("N2");
+    <!-- Custom Toolbar: Filters & KPI Summary Badges (Compact Style เหมือน MonthlyCost/Summary) -->
+    <div class="bg-white rounded border border-outline-variant shadow-sm p-3 sm:p-3.5 custom-toolbar flex items-center justify-between gap-3 overflow-x-auto scrollbar-none shrink-0">
+        <!-- Left Side: Year & Month Dropdown Filters -->
+        <form method="get" action="/ProductSearch/SavedOrders" class="flex items-center gap-2 flex-shrink-0" id="filter-form">
+            <select name="year" id="filter-year" onchange="handleFilterChange(this)" class="w-[120px] border border-slate-200 rounded-md focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all text-xs font-medium text-slate-700 bg-white truncate cursor-pointer shadow-2xs" style="height: 32px; padding: 0 10px;">
+                <option value="">ปีทั้งหมด</option>
+                @if (ViewData["AvailableYears"] is List<int> years)
+                {
+                    foreach (var y in years)
+                    {
+                        if ((int?)ViewData["SelectedYear"] == y)
+                        {
+                            <option value="@y" selected>ปี @(y + 543)</option>
+                        }
+                        else
+                        {
+                            <option value="@y">ปี @(y + 543)</option>
+                        }
                     }
-                    <span id="stat-total-qty">@formattedTotalQty</span> <span class="text-[13px] font-medium text-on-surface-variant">หน่วย</span>
-                </p>
-            </div>
-        </div>
+                }
+            </select>
+            <select name="month" id="filter-month" onchange="handleFilterChange(this)" class="w-[130px] border border-slate-200 rounded-md focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all text-xs font-medium text-slate-700 bg-white truncate cursor-pointer shadow-2xs" style="height: 32px; padding: 0 10px;">
+                <option value="">เดือนทั้งหมด</option>
+                @if (ViewData["AvailableMonths"] is List<int> months)
+                {
+                    string[] monthsTh = { "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม" };
+                    foreach (var m in months)
+                    {
+                        if (m >= 1 && m <= 12)
+                        {
+                            if ((int?)ViewData["SelectedMonth"] == m)
+                            {
+                                <option value="@m" selected>@monthsTh[m - 1]</option>
+                            }
+                            else
+                            {
+                                <option value="@m">@monthsTh[m - 1]</option>
+                            }
+                        }
+                    }
+                }
+            </select>
+        </form>
 
-        <!-- Card 3: มูลค่ารวมสะสม -->
-        <div class="bg-surface border border-outline-variant rounded-lg px-4 py-3 flex items-center gap-3">
-            <div class="w-8 h-8 rounded flex items-center justify-center shrink-0" style="background:rgba(37,99,235,0.08);">
-                <!-- Lucide: banknote -->
-                <svg class="w-4 h-4" style="color:#2563eb" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-                    <rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/>
+        <!-- Right Side: KPI Summary Badges (Compact Pills) -->
+        <div class="custom-toolbar-right flex items-center gap-2 shrink-0 ml-auto">
+            <!-- Badge 1: สินค้าทั้งหมด -->
+            <div class="inline-flex items-center gap-1.5 px-3 text-xs font-semibold rounded-md text-blue-700 border border-blue-200 bg-blue-50/40 select-none whitespace-nowrap transition-all shadow-2xs" style="height: 34px;">
+                <svg class="w-3.5 h-3.5 text-blue-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m7.5 4.27 9 5.15"></path><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path><path d="m3.3 7 8.7 5 8.7-5"></path><path d="M12 22V12"></path>
                 </svg>
+                <span>รายการสินค้า</span>
+                <span class="font-bold px-1.5 py-0.5 text-blue-800 text-[11px] rounded bg-white border border-blue-200 shadow-2xs" id="stat-total-count">@(Model?.Count ?? 0)</span>
+                <span class="text-[11px] text-blue-600 font-medium">รายการ</span>
             </div>
-            <div class="ml-auto text-right">
-                <p class="text-[11px] font-medium text-on-surface-variant leading-none mb-1">มูลค่ารวมสะสม</p>
-                <p class="text-[20px] font-bold leading-none" style="color:#2563eb;" id="stat-total-amount">฿@(Model?.Sum(i => i.TotalAmount).ToString("N2") ?? "0.00")</p>
+
+            <!-- Badge 2: จำนวนชิ้นรวม -->
+            @{
+                var totalQtyVal = Model?.Sum(i => i.Quantity) ?? 0;
+                string formattedTotalQty = totalQtyVal % 1 == 0 ? totalQtyVal.ToString("N0") : totalQtyVal.ToString("N2");
+            }
+            <div class="inline-flex items-center gap-1.5 px-3 text-xs font-semibold rounded-md text-emerald-700 border border-emerald-200 bg-emerald-50/40 select-none whitespace-nowrap transition-all shadow-2xs" style="height: 34px;">
+                <svg class="w-3.5 h-3.5 text-emerald-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect width="8" height="4" x="8" y="2" rx="1" ry="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="m9 14 2 2 4-4"></path>
+                </svg>
+                <span>จำนวนรวม</span>
+                <span class="font-bold px-1.5 py-0.5 text-emerald-800 text-[11px] rounded bg-white border border-emerald-200 shadow-2xs" id="stat-total-qty">@formattedTotalQty</span>
+                <span class="text-[11px] text-emerald-600 font-medium">หน่วย</span>
+            </div>
+
+            <!-- Badge 3: มูลค่ารวมสะสม -->
+            <div class="inline-flex items-center gap-1.5 px-3 text-xs font-semibold rounded-md text-blue-800 border border-blue-200 bg-blue-50/50 select-none whitespace-nowrap transition-all shadow-2xs" style="height: 34px;">
+                <svg class="w-3.5 h-3.5 text-blue-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect width="20" height="12" x="2" y="6" rx="2"></rect><circle cx="12" cy="12" r="2"></circle><path d="M6 12h.01M18 12h.01"></path>
+                </svg>
+                <span>มูลค่ารวมสะสม</span>
+                <span class="font-bold px-1.5 py-0.5 text-blue-900 text-[11px] rounded bg-white border border-blue-200 shadow-2xs font-mono" id="stat-total-amount">฿@(Model?.Sum(i => i.TotalAmount).ToString("N2") ?? "0.00")</span>
             </div>
         </div>
     </div>
 
     <!-- Table Card -->
     <div class="flex-1 flex flex-col bg-surface border border-outline-variant rounded-lg overflow-hidden min-h-0">
-        <!-- Toolbar & Filters -->
-        <div class="bg-slate-50/50 p-3.5 border-b border-slate-200/60 shrink-0 flex flex-wrap items-center justify-between gap-3">
-            
-            <!-- 1. Filters (Left) -->
-            <form method="get" action="/ProductSearch/SavedOrders" class="flex flex-wrap items-center gap-2 flex-shrink-0" id="filter-form">
-                <select name="year" id="filter-year" onchange="handleFilterChange(this)" class="w-[120px] border border-slate-200 rounded-md focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all text-xs font-medium text-slate-700 bg-white truncate cursor-pointer shadow-2xs" style="height: 32px; padding: 0 10px;">
-                    <option value="">ปีทั้งหมด</option>
-                    @if (ViewData["AvailableYears"] is List<int> years)
-                    {
-                        foreach (var y in years)
-                        {
-                            if ((int?)ViewData["SelectedYear"] == y)
-                            {
-                                <option value="@y" selected>ปี @(y + 543)</option>
-                            }
-                            else
-                            {
-                                <option value="@y">ปี @(y + 543)</option>
-                            }
-                        }
-                    }
-                </select>
-                <select name="month" id="filter-month" onchange="handleFilterChange(this)" class="w-[130px] border border-slate-200 rounded-md focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all text-xs font-medium text-slate-700 bg-white truncate cursor-pointer shadow-2xs" style="height: 32px; padding: 0 10px;">
-                    <option value="">เดือนทั้งหมด</option>
-                    @if (ViewData["AvailableMonths"] is List<int> months)
-                    {
-                        string[] monthsTh = { "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม" };
-                        foreach (var m in months)
-                        {
-                            if (m >= 1 && m <= 12)
-                            {
-                                if ((int?)ViewData["SelectedMonth"] == m)
-                                {
-                                    <option value="@m" selected>@monthsTh[m - 1]</option>
-                                }
-                                else
-                                {
-                                    <option value="@m">@monthsTh[m - 1]</option>
-                                }
-                            }
-                        }
-                    }
-                </select>
-            </form>
-
-            <!-- 2. Search Box (Right) -->
-            <div class="relative flex-1 min-w-[240px] ml-auto" style="max-width: 380px;">
-                <input type="text" id="search-input" placeholder="ค้นหาชื่อสินค้า..."
-                       class="block w-full pl-3 pr-3 py-1.5 text-xs border border-slate-200 rounded-md focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all bg-white text-slate-700 shadow-2xs"
-                       style="height: 32px;" autocomplete="off"/>
-                <div id="saved-suggestions-dropdown" class="hidden absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-md shadow-lg z-50 max-h-[240px] overflow-y-auto divide-y divide-slate-100"></div>
-            </div>
-        </div>
 
         <!-- Table -->
         <div class="flex-1 overflow-auto relative min-h-0">
@@ -175,10 +149,10 @@
                             data-code="@item.ProductCode"
                             data-qty="@item.Quantity"
                             data-amount="@item.TotalAmount">
-                            <td class="py-3 px-4 text-on-surface-variant font-mono text-xs whitespace-nowrap">
+                            <td class="py-3 px-4 text-on-surface-variant font-mono text-xs">
                                 @(item.CreatedAt == default ? "-" : item.CreatedAt.ToString("dd/MM/yyyy HH:mm"))
                             </td>
-                            <td class="py-3 px-4 font-mono font-semibold text-on-surface whitespace-nowrap">
+                            <td class="py-3 px-4 font-mono font-semibold text-on-surface">
                                 @item.ProductCode
                             </td>
                             <td class="py-3 px-4 font-medium text-on-surface max-w-[220px] truncate" title="@item.ProductName">
@@ -356,7 +330,7 @@
                         data-qty="${item.quantity}"
                         data-amount="${item.totalAmount}">
                         <td class="py-3 px-4 text-on-surface-variant font-mono text-xs whitespace-nowrap">${item.createdAtStr}</td>
-                        <td class="py-3 px-4 font-mono font-semibold text-on-surface whitespace-nowrap">${item.productCode}</td>
+                        <td class="py-3 px-4 font-mono font-semibold text-on-surface">${item.productCode}</td>
                         <td class="py-3 px-4 font-medium text-on-surface max-w-[220px] truncate" title="${item.productName}">${item.productName}</td>
                         <td class="py-3 px-4 text-right font-semibold text-on-surface">
                             ${formatQuantity(item.quantity)} <span class="text-xs font-normal text-on-surface-variant">${item.unit}</span>

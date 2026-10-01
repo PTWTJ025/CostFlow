@@ -92,7 +92,12 @@ namespace CostFlow.Controllers
             try
             {
                 var now = GetThaiNow();
-                if (!string.IsNullOrWhiteSpace(request.OrderDate) && DateTime.TryParseExact(request.OrderDate, "yyyy-MM-dd", null, System.Globalization.DateTimeStyles.None, out var parsedDate))
+                string userName = User.Identity?.Name ?? "";
+                bool isAdmin = User.IsInRole("Admin") || User.IsInRole("Dev") ||
+                               userName.Equals("ADMIN01", StringComparison.OrdinalIgnoreCase) ||
+                               userName.Equals("DEV01", StringComparison.OrdinalIgnoreCase);
+
+                if (isAdmin && !string.IsNullOrWhiteSpace(request.OrderDate) && DateTime.TryParseExact(request.OrderDate, "yyyy-MM-dd", null, System.Globalization.DateTimeStyles.None, out var parsedDate))
                 {
                     now = new DateTime(parsedDate.Year, parsedDate.Month, parsedDate.Day, now.Hour, now.Minute, now.Second);
                 }

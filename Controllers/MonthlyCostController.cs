@@ -1327,18 +1327,34 @@ namespace CostFlow.Controllers
                         }
                     }
 
+                    bool isForced = priorAction?.Action == "Deferred";
+                    string finalAction = isForced ? "ReceivedFull" : action.Action;
+                    decimal finalPrice = 0;
+                    if (finalAction == "Deferred")
+                    {
+                        finalPrice = originalPrice;
+                    }
+                    else if (finalAction == "Skipped" || finalAction == "Requested")
+                    {
+                        finalPrice = 0;
+                    }
+                    else
+                    {
+                        finalPrice = isForced && originalPrice > 0 ? originalPrice : action.Price;
+                    }
+
+                    bool isStock = (finalAction == "ReceivedFull" || finalAction == "Deferred" || finalAction == "Received" || isForced);
+
                     var monthlyAction = new MonthlyOrderAction
                     {
                         Id = Guid.NewGuid(),
                         OrderTrackingMasterId = action.OrderId,
                         MonthYear = monthYearKey,
-                        Action = action.Action,
-                        ActionPrice = action.Action == "Deferred" ? originalPrice
-                            : action.Action == "Skipped" ? 0
-                            : action.Price,
-                        IsForcedPayment = false,
-                        IsStockReceived = action.Action == "Deferred" ? action.IsStockReceived : (action.Action == "ReceivedFull" || action.Action == "Received"),
-                        DeferredFromMonth = (action.Action == "Deferred" && priorAction != null) ? priorAction.MonthYear : null,
+                        Action = finalAction,
+                        ActionPrice = finalPrice,
+                        IsForcedPayment = isForced,
+                        IsStockReceived = isStock,
+                        DeferredFromMonth = isForced ? priorAction?.MonthYear : (finalAction == "Deferred" && priorAction != null ? priorAction.MonthYear : null),
                         CreatedAt = DateTime.UtcNow,
                         UpdatedAt = DateTime.UtcNow
                     };
@@ -1346,26 +1362,61 @@ namespace CostFlow.Controllers
                     _context.MonthlyOrderActions.Add(monthlyAction);
                 }
 
-                // หากเป็นการปิดยอดเดือน (IsCloseMonth = true) ให้บันทึกสินค้าที่ไม่ได้เลือกเป็น "Skipped" อัตโนมัติ เพื่อยกยอดไปเดือนถัดไป
+                // หากเป็นการปิดยอดเดือน (IsCloseMonth = true)
+                // - รายการที่เคยผ่อนมาจากงวดก่อน (Deferred) ต้องบังคับตัดจ่ายอัตโนมัติ (ReceivedFull, IsForcedPayment = true)
+                // - รายการอื่นๆ ที่ไม่ได้เลือก ให้บันทึกเป็น "Skipped" อัตโนมัติ เพื่อยกยอดไปเดือนถัดไป
                 if (request.IsCloseMonth)
                 {
                     foreach (var unselectedId in unselectedIds)
                     {
-                        var monthlyAction = new MonthlyOrderAction
-                        {
-                            Id = Guid.NewGuid(),
-                            OrderTrackingMasterId = unselectedId,
-                            MonthYear = monthYearKey,
-                            Action = "Skipped",
-                            ActionPrice = 0,
-                            IsForcedPayment = false,
-                            IsStockReceived = false,
-                            DeferredFromMonth = null,
-                            CreatedAt = DateTime.UtcNow,
-                            UpdatedAt = DateTime.UtcNow
-                        };
+                        latestPriorActionMap.TryGetValue(unselectedId, out var priorAct);
+                        bool isUnselectedDeferred = priorAct?.Action == "Deferred";
 
-                        _context.MonthlyOrderActions.Add(monthlyAction);
+                        if (isUnselectedDeferred)
+                        {
+                            decimal forcedPrice = priorAct.ActionPrice;
+                            if (forcedPrice <= 0)
+                            {
+                                var otm = await _context.OrderTrackingMasters
+                                    .Where(o => o.Id == unselectedId)
+                                    .Select(o => o.Amount)
+                                    .FirstOrDefaultAsync();
+                                if (!string.IsNullOrEmpty(otm) && decimal.TryParse(otm, out var rp))
+                                    forcedPrice = rp;
+                            }
+
+                            var forcedAction = new MonthlyOrderAction
+                            {
+                                Id = Guid.NewGuid(),
+                                OrderTrackingMasterId = unselectedId,
+                                MonthYear = monthYearKey,
+                                Action = "ReceivedFull",
+                                ActionPrice = forcedPrice,
+                                IsForcedPayment = true,
+                                IsStockReceived = true,
+                                DeferredFromMonth = priorAct.MonthYear,
+                                CreatedAt = DateTime.UtcNow,
+                                UpdatedAt = DateTime.UtcNow
+                            };
+                            _context.MonthlyOrderActions.Add(forcedAction);
+                        }
+                        else
+                        {
+                            var monthlyAction = new MonthlyOrderAction
+                            {
+                                Id = Guid.NewGuid(),
+                                OrderTrackingMasterId = unselectedId,
+                                MonthYear = monthYearKey,
+                                Action = "Skipped",
+                                ActionPrice = 0,
+                                IsForcedPayment = false,
+                                IsStockReceived = false,
+                                DeferredFromMonth = null,
+                                CreatedAt = DateTime.UtcNow,
+                                UpdatedAt = DateTime.UtcNow
+                            };
+                            _context.MonthlyOrderActions.Add(monthlyAction);
+                        }
                     }
                 }
 
@@ -2266,15 +2317,16 @@ namespace CostFlow.Controllers
                     if (otm != null && latestPriorActionMap.TryGetValue(otm.Id, out var prior))
                     {
                         if (prior.Action == "Deferred")
-                            sourceText = $"ผ่อนยกยอดมาจาก {ConvertKeyToThaiMonth(prior.MonthYear)}";
+                            sourceText = $"ผ่อนชำระต่อเนื่องมาจาก {ConvertKeyToThaiMonth(prior.MonthYear)}";
                         else if (prior.Action == "Skipped")
                             sourceText = $"ค้างมาจาก {ConvertKeyToThaiMonth(prior.MonthYear)}";
                     }
 
                     string actionLabel = action.Action switch
                     {
-                        "ReceivedFull" => "รับสินค้าแล้ว",
-                        "Deferred" => "ผ่อนชำระ",
+                        "ReceivedFull" => "รับสินค้า (ชำระแล้ว)",
+                        "Deferred" => "รับสินค้า (ยังไม่ชำระ)",
+                        "Requested" => "ต้องการรับของ",
                         "Skipped" => "ยังไม่รับสินค้า",
                         _ => action.Action
                     };
@@ -2318,9 +2370,9 @@ namespace CostFlow.Controllers
                     {
                         if (prior.Action == "Deferred")
                         {
-                            sourceText = $"ผ่อนยกยอดมาจาก {ConvertKeyToThaiMonth(prior.MonthYear)}";
+                            sourceText = $"ผ่อนชำระต่อเนื่องมาจาก {ConvertKeyToThaiMonth(prior.MonthYear)}";
                             actionType = "Deferred";
-                            actionLabel = "ผ่อนชำระ (รอยืนยัน)";
+                            actionLabel = "รับสินค้า (ยังไม่ชำระ)";
                         }
                         else if (prior.Action == "Skipped")
                         {
@@ -2339,8 +2391,9 @@ namespace CostFlow.Controllers
                         actionType = draft.action;
                         actionLabel = draft.action switch
                         {
-                            "ReceivedFull" => "รับสินค้าแล้ว",
-                            "Deferred" => "ผ่อนชำระ",
+                            "ReceivedFull" => "รับสินค้า (ชำระแล้ว)",
+                            "Deferred" => "รับสินค้า (ยังไม่ชำระ)",
+                            "Requested" => "ต้องการรับของ",
                             "Skipped" => "ยังไม่รับสินค้า",
                             _ => draft.action
                         };
@@ -2398,8 +2451,9 @@ namespace CostFlow.Controllers
             // เงื่อนไข Filter ภาษาไทยสำหรับ Subtitle
             string actionTextDesc = actionFilter switch
             {
-                "ReceivedFull" => "เฉพาะรับสินค้าแล้ว",
-                "Deferred" => "เฉพาะผ่อนชำระ",
+                "ReceivedFull" => "เฉพาะรับสินค้า (ชำระแล้ว)",
+                "Deferred" => "เฉพาะรับสินค้า (ยังไม่ชำระ)",
+                "Requested" => "เฉพาะต้องการรับของ",
                 "Skipped" => "เฉพาะยังไม่รับสินค้า",
                 "DraftOnly" => "เฉพาะรายการจำลองในตะกร้า",
                 _ => "ทั้งหมดทุกประเภท"
@@ -2461,6 +2515,7 @@ namespace CostFlow.Controllers
             decimal totalAmount = 0m;
             decimal receivedAmount = 0m;
             decimal deferredAmount = 0m;
+            decimal requestedAmount = 0m;
             decimal skippedOrPendingAmount = 0m;
 
             foreach (var row in exportRows)
@@ -2468,6 +2523,7 @@ namespace CostFlow.Controllers
                 totalAmount += row.Amount;
                 if (row.ActionType == "ReceivedFull") receivedAmount += row.Amount;
                 else if (row.ActionType == "Deferred") deferredAmount += row.Amount;
+                else if (row.ActionType == "Requested") requestedAmount += row.Amount;
                 else skippedOrPendingAmount += row.Amount;
 
                 // Standard uniform row height
@@ -2526,6 +2582,16 @@ namespace CostFlow.Controllers
                     actionCell.Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.FromHtml("#FEF3C7");
                     actionCell.Style.Font.FontColor = ClosedXML.Excel.XLColor.FromHtml("#92400E");
                 }
+                else if (row.ActionType == "Requested")
+                {
+                    actionCell.Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.FromHtml("#DBEAFE");
+                    actionCell.Style.Font.FontColor = ClosedXML.Excel.XLColor.FromHtml("#1D4ED8");
+                }
+                else if (row.ActionType == "Skipped")
+                {
+                    actionCell.Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.FromHtml("#F3E8FF");
+                    actionCell.Style.Font.FontColor = ClosedXML.Excel.XLColor.FromHtml("#6B21A8");
+                }
                 else
                 {
                     actionCell.Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.FromHtml("#F1F5F9");
@@ -2571,7 +2637,7 @@ namespace CostFlow.Controllers
             currentRow++;
             if (receivedAmount > 0)
             {
-                ws.Cell(currentRow, 9).Value = "รวมยอดรับสินค้าแล้ว";
+                ws.Cell(currentRow, 9).Value = "รวมยอดรับสินค้า (ชำระแล้ว)";
                 ws.Cell(currentRow, 9).Style.Font.FontName = fontName;
                 ws.Cell(currentRow, 9).Style.Font.Bold = true;
                 ws.Cell(currentRow, 9).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Right;
@@ -2585,7 +2651,7 @@ namespace CostFlow.Controllers
 
             if (deferredAmount > 0)
             {
-                ws.Cell(currentRow, 9).Value = "รวมยอดผ่อนชำระ";
+                ws.Cell(currentRow, 9).Value = "รวมยอดรับสินค้า (ยังไม่ชำระ)";
                 ws.Cell(currentRow, 9).Style.Font.FontName = fontName;
                 ws.Cell(currentRow, 9).Style.Font.Bold = true;
                 ws.Cell(currentRow, 9).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Right;
@@ -2597,9 +2663,23 @@ namespace CostFlow.Controllers
                 currentRow++;
             }
 
+            if (requestedAmount > 0)
+            {
+                ws.Cell(currentRow, 9).Value = "รวมยอดต้องการรับของ";
+                ws.Cell(currentRow, 9).Style.Font.FontName = fontName;
+                ws.Cell(currentRow, 9).Style.Font.Bold = true;
+                ws.Cell(currentRow, 9).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Right;
+                ws.Cell(currentRow, 11).Value = requestedAmount;
+                ws.Cell(currentRow, 11).Style.Font.FontName = fontName;
+                ws.Cell(currentRow, 11).Style.Font.Bold = true;
+                ws.Cell(currentRow, 11).Style.NumberFormat.Format = "#,##0.00";
+                ws.Cell(currentRow, 11).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Right;
+                currentRow++;
+            }
+
             if (skippedOrPendingAmount > 0)
             {
-                ws.Cell(currentRow, 9).Value = "รวมยอดยังไม่รับ/รอดำเนินการ";
+                ws.Cell(currentRow, 9).Value = "รวมยอดยังไม่รับสินค้า / รอดำเนินการ";
                 ws.Cell(currentRow, 9).Style.Font.FontName = fontName;
                 ws.Cell(currentRow, 9).Style.Font.Bold = true;
                 ws.Cell(currentRow, 9).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Right;

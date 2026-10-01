@@ -64,6 +64,12 @@
         color: #4c1d95;
     }
 
+    .action-pill.active-request {
+        border-color: #3b82f6;
+        background: #eff6ff;
+        color: #1e40af;
+    }
+
     .cart-item {
         animation: slideIn 0.18s ease forwards;
     }
@@ -228,8 +234,36 @@
                 </g><path fill="#0c7238" d="M22.319,34H5.681C4.753,34,4,33.247,4,32.319V15.681C4,14.753,4.753,14,5.681,14h16.638 C23.247,14,24,14.753,24,15.681v16.638C24,33.247,23.247,34,22.319,34z"></path><path fill="#fff" d="M9.807 19L12.193 19 14.129 22.754 16.175 19 18.404 19 15.333 24 18.474 29 16.123 29 14.013 25.07 11.912 29 9.526 29 12.719 23.982z"></path>
             </svg>
         </button>
+
+        <!-- ปุ่ม Import Excel ใบตอบกลับจากฝ่ายผลิต (Auto-Match) - คลุมโทน กรอบสีน้ำเงิน -->
+        <button
+    type="button"
+    onclick="openImportModal()"
+    title="นำเข้า Excel ใบตอบกลับจากฝ่ายผลิต (Auto-Match)"
+    class="flex items-center justify-center bg-blue-50 border border-blue-300 hover:border-blue-400 text-blue-600 hover:text-blue-700 rounded-md shadow-sm transition-all active:scale-95 shrink-0 cursor-pointer group"
+    style="width: 34px !important; height: 34px !important; padding: 0 !important;"
+>
+    <svg
+        class="w-5 h-5 transition-transform duration-200 group-hover:-translate-y-0.5"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        stroke-width="1.75"
+        style="width: 19px !important; height: 19px !important;"
+    >
+        <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M12 16.5V9.75m0 0 3 3m-3-3-3 3M6.75 19.5a4.5 4.5 0 0 1-1.41-8.775 5.25 5.25 0 0 1 10.233-2.33 3 3 0 0 1 3.758 3.848A3.752 3.752 0 0 1 18 19.5H6.75Z"
+        ></path>
+    </svg>
+</button>
     </div>
 </div>
+
+@{
+    var deferredCarryOverOrders = Model.PendingOrders.Where(o => o.ForwardedStatus == "Deferred").ToList();
+}
 
 <!-- ── Split screen ── -->
 <div class="flex-1 min-h-0 flex flex-col lg:flex-row gap-4 lg:gap-6">
@@ -277,9 +311,8 @@
         <div class="relative flex items-center" id="search-wrap">
             <div class="relative flex items-center w-48 sm:w-60 focus-within:w-60 sm:focus-within:w-72 transition-all duration-200">
                 <input type="text" id="search-pending" placeholder="ค้นหา / วางหลายเลข PO..."
-                       title="สามารถ Copy เลข PO หลายรายการ (คั่นด้วยการขึ้นบรรทัดใหม่จาก Excel หรือลูกน้ำ) มาวางได้เลย"
-                       class="pl-7 pr-7 py-1.5 text-xs border border-slate-200 rounded-md w-full focus:ring-1 focus:ring-primary focus:border-primary outline-none bg-white shadow-2xs">
-               
+                    title="สามารถ Copy เลข PO หลายรายการ (คั่นด้วยการขึ้นบรรทัดใหม่จาก Excel หรือลูกน้ำ) มาวางได้เลย"
+                    class="py-1.5 text-xs border border-slate-200 rounded-md w-full focus:ring-1 focus:ring-primary focus:border-primary outline-none bg-white shadow-2xs">
                 <button type="button" id="clear-search-btn" onclick="clearSearchInput()" style="display:none;"
                         title="ล้างคำค้นหา"
                         class="absolute right-2 text-slate-400 hover:text-slate-600 p-0.5 rounded-full hover:bg-slate-100 transition-all cursor-pointer">
@@ -292,24 +325,23 @@
     </div>
 
     <!-- Bulk actions toolbar (shown on pending tab) -->
-    <div id="bulk-actions-toolbar" class="flex flex-wrap items-center justify-between py-2.5 px-3 border-t border-slate-200/80 bg-slate-50/80 gap-3 rounded-b-md shadow-inner text-xs">
+    <div id="bulk-actions-toolbar" class="flex items-center justify-between py-2 px-3 border-t border-slate-200/80 bg-slate-50/80 gap-2 rounded-b-md shadow-inner text-xs flex-nowrap overflow-x-auto">
         <!-- Left side: Select all & Sort -->
-        <div class="flex items-center gap-4">
-            <label class="flex items-center gap-2 cursor-pointer font-medium text-slate-600 hover:text-slate-900 select-none transition-colors">
-                <input type="checkbox" id="select-all-pending" onchange="toggleSelectAllPending(this)" class="rounded border-slate-300 text-primary focus:ring-primary w-4 h-4 transition-all">
-                <span>เลือกทั้งหมด</span>
-            </label>
+        <div class="flex items-center gap-2.5 shrink-0">
+            <input type="checkbox" id="select-all-pending" onchange="toggleSelectAllPending(this)"
+                   title="เลือกทั้งหมด"
+                   class="rounded border-slate-300 text-primary focus:ring-primary w-4 h-4 transition-all cursor-pointer">
 
-            <div class="h-4 w-px bg-slate-300 hidden sm:block"></div>
+            <div class="h-4 w-px bg-slate-300"></div>
 
             <div class="flex items-center gap-1.5 text-slate-500 bg-white border border-slate-200 rounded-md px-2 py-1 shadow-xs" style="height: 30px;">
                 <svg class="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M3 7.5L7.5 3m0 0L12 7.5M7.5 3v13.5m13.5 0L16.5 21m0 0L12 16.5m4.5 4.5V7.5"/>
                 </svg>
                 <select id="pending-sort-select" onchange="sortPendingOrders(this.value)"
-                        class="bg-transparent text-slate-700 font-bold outline-none cursor-pointer text-xs focus:ring-0 p-0 m-0 h-full w-[130px]"
+                        class="bg-transparent text-slate-700 font-bold outline-none cursor-pointer text-xs focus:ring-0 p-0 m-0 h-full w-[115px]"
                         style="border: none !important; box-shadow: none !important;">
-                    <option value="default">เรียงตามมาตรฐาน</option>
+                    <option value="default">เรียงมาตรฐาน</option>
                     <option value="this-month">เฉพาะเดือนนี้</option>
                     <option value="deferred">ผ่อนยกยอด</option>
                     <option value="skipped">ค้างยกยอด</option>
@@ -318,38 +350,45 @@
         </div>
 
         <!-- Right side: Bulk actions -->
-        <div class="flex items-center gap-2 shrink-0">
-            <span class="text-[11px] text-slate-400 font-medium mr-1 hidden lg:inline-block">จัดการที่เลือก:</span>
+        <div class="flex items-center gap-1.5 shrink-0 flex-nowrap">
             <button type="button" onclick="bulkAddToCart('ReceivedFull')"
-                    class="px-2.5 py-1.5 rounded-md font-bold bg-white text-emerald-700 border border-emerald-200 hover:bg-emerald-50 hover:border-emerald-300 shadow-sm transition-all flex items-center gap-1.5 cursor-pointer">
+                    title="รับสินค้า (ชำระแล้ว)"
+                    class="px-2 py-1 rounded-md font-bold bg-white text-emerald-700 border border-emerald-200 hover:bg-emerald-50 hover:border-emerald-300 shadow-2xs transition-all flex items-center gap-1 cursor-pointer text-xs whitespace-nowrap">
                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                รับเต็มจำนวน
+                ชำระแล้ว
             </button>
             <button type="button" onclick="bulkAddToCart('Deferred')"
-                    class="px-2.5 py-1.5 rounded-md font-bold bg-white text-amber-700 border border-amber-200 hover:bg-amber-50 hover:border-amber-300 shadow-sm transition-all flex items-center gap-1.5 cursor-pointer">
+                    title="รับสินค้า (ยังไม่ชำระ)"
+                    class="px-2 py-1 rounded-md font-bold bg-white text-amber-700 border border-amber-200 hover:bg-amber-50 hover:border-amber-300 shadow-2xs transition-all flex items-center gap-1 cursor-pointer text-xs whitespace-nowrap">
                 <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-                ผ่อนชำระ
+                ยังไม่ชำระ
+            </button>
+            <button type="button" onclick="bulkAddToCart('Requested')"
+                    title="ต้องการรับของ"
+                    class="px-2 py-1 rounded-md font-bold bg-white text-blue-700 border border-blue-200 hover:bg-blue-50 hover:border-blue-300 shadow-2xs transition-all flex items-center gap-1 cursor-pointer text-xs whitespace-nowrap">
+                <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                ต้องการรับ
             </button>
             <button type="button" onclick="bulkAddToCart('Skipped')"
-                    class="px-2.5 py-1.5 rounded-md font-bold bg-white text-purple-700 border border-purple-200 hover:bg-purple-50 hover:border-purple-300 shadow-sm transition-all flex items-center gap-1.5 cursor-pointer">
+                    title="ยังไม่รับสินค้า"
+                    class="px-2 py-1 rounded-md font-bold bg-white text-purple-700 border border-purple-200 hover:bg-purple-50 hover:border-purple-300 shadow-2xs transition-all flex items-center gap-1 cursor-pointer text-xs whitespace-nowrap">
                 <span class="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
-                ยังไม่รับสินค้า
+                ยังไม่รับ
             </button>
         </div>
     </div>
 
     <!-- Bulk actions toolbar (shown on saved tab) -->
-    <div id="saved-actions-toolbar" class="hidden flex flex-wrap items-center justify-between py-2.5 px-3 border-t border-slate-200/80 bg-slate-50/80 gap-3 rounded-b-md shadow-inner text-xs">
+    <div id="saved-actions-toolbar" class="hidden flex items-center justify-between py-2 px-3 border-t border-slate-200/80 bg-slate-50/80 gap-2 rounded-b-md shadow-inner text-xs flex-nowrap overflow-x-auto">
         <!-- Left side: Select all, count & Action filter -->
-        <div class="flex items-center gap-3 flex-wrap">
-            <label class="flex items-center gap-2 cursor-pointer font-medium text-slate-600 hover:text-slate-900 select-none transition-colors">
-                <input type="checkbox" id="select-all-saved" onchange="toggleSelectAllSaved(this)" class="rounded border-slate-300 text-rose-600 focus:ring-rose-500 w-4 h-4 transition-all cursor-pointer">
-                <span>เลือกทั้งหมด</span>
-            </label>
-            <div class="h-4 w-px bg-slate-300 hidden sm:block"></div>
-            <span class="text-[11px] text-slate-500 font-semibold" id="saved-selected-count">เลือกแล้ว 0 รายการ</span>
+        <div class="flex items-center gap-2.5 shrink-0 flex-nowrap">
+            <input type="checkbox" id="select-all-saved" onchange="toggleSelectAllSaved(this)"
+                   title="เลือกทั้งหมด"
+                   class="rounded border-slate-300 text-rose-600 focus:ring-rose-500 w-4 h-4 transition-all cursor-pointer">
+            <div class="h-4 w-px bg-slate-300"></div>
+            <span class="text-[11px] text-slate-500 font-semibold whitespace-nowrap" id="saved-selected-count">เลือกแล้ว 0</span>
 
-            <div class="h-4 w-px bg-slate-300 hidden sm:block"></div>
+            <div class="h-4 w-px bg-slate-300"></div>
 
             <!-- Filter by action -->
             <div class="flex items-center gap-1.5 text-slate-500 bg-white border border-slate-200 rounded-md px-2 py-1 shadow-xs" style="height: 30px;">
@@ -357,12 +396,13 @@
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 0 1-.659 1.591l-5.432 5.432a2.25 2.25 0 0 0-.659 1.591v2.927a2.25 2.25 0 0 1-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 0 0-.659-1.591L3.659 7.409A2.25 2.25 0 0 1 3 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0 1 12 3Z"/>
                 </svg>
                 <select id="saved-action-select" onchange="applySavedFilters()"
-                        class="bg-transparent text-slate-700 font-bold outline-none cursor-pointer text-xs focus:ring-0 p-0 m-0 h-full w-[130px]"
+                        class="bg-transparent text-slate-700 font-bold outline-none cursor-pointer text-xs focus:ring-0 p-0 m-0 h-full w-[125px]"
                         style="border: none !important; box-shadow: none !important;">
                     <option value="all">สถานะทั้งหมด</option>
-                    <option value="ReceivedFull">รับสินค้าแล้ว</option>
-                    <option value="Deferred">ผ่อน → เดือนหน้า</option>
-                    <option value="Skipped">ยังไม่รับ / ค้าง</option>
+                    <option value="ReceivedFull">ชำระแล้ว</option>
+                    <option value="Deferred">ยังไม่ชำระ</option>
+                    <option value="Requested">ต้องการรับ</option>
+                    <option value="Skipped">ยังไม่รับ</option>
                 </select>
             </div>
         </div>
@@ -398,7 +438,7 @@
                 var tooltipText = !string.IsNullOrEmpty(order.OriginalMonth)
                     ? $"WO สร้างจาก {order.OriginalMonth} • กดผ่อนล่าสุดที่ {order.ForwardedFromMonth}"
                     : $"กดผ่อนล่าสุดที่ {order.ForwardedFromMonth}";
-                fwdBadge = $"<span class=\"ml-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-700\" title=\"{tooltipText}\">ผ่อนยกยอดมา</span>";
+                fwdBadge = $"<span class=\"ml-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-700\" title=\"{tooltipText}\">ผ่อนชำระต่อเนื่อง</span>";
             }
             else if (order.ForwardedStatus == "Skipped")
             {
@@ -408,7 +448,7 @@
                 fwdBadge = $"<span class=\"ml-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-purple-100 text-purple-700\" title=\"{tooltipText}\">ค้างยกยอดมา</span>";
             }
 
-            <div class="order-card border border-slate-200 rounded p-3 bg-white"
+            <div class="order-card border border-slate-200 rounded p-3 bg-white @(order.ForwardedStatus == "Deferred" ? "in-cart is-locked-deferred" : "")"
                  data-order-id="@order.OrderId"
                  data-po-number="@order.PoNumber"
                  data-order-name="@order.OrderName"
@@ -421,7 +461,18 @@
                  data-original-month="@order.OriginalMonth">
 
                 <div class="flex items-start gap-3">
-                    <input type="checkbox" class="pending-card-checkbox mt-1 rounded border-slate-300 text-primary focus:ring-primary shrink-0 cursor-pointer" onchange="onCardCheckboxChange()"/>
+                    @if (order.ForwardedStatus == "Deferred")
+                    {
+                        <div class="mt-1 shrink-0 w-4 h-4 flex items-center justify-center text-amber-500 select-none" title="รายการผ่อนชำระต่อเนื่อง ถูกล็อกในรายการที่เลือกแล้ว">
+                            <svg class="w-3.5 h-3.5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z"/>
+                            </svg>
+                        </div>
+                    }
+                    else
+                    {
+                        <input type="checkbox" class="pending-card-checkbox mt-1 rounded border-slate-300 text-primary focus:ring-primary shrink-0 cursor-pointer" onchange="onCardCheckboxChange()"/>
+                    }
                     <!-- Info -->
                     <div class="flex-1 min-w-0">
                         <div class="flex items-center flex-wrap gap-1 mb-0.5">
@@ -501,11 +552,23 @@
                     <!-- Price + Add btn -->
                     <div class="shrink-0 flex flex-col items-end gap-2">
                         <span class="font-bold text-sm text-slate-800">฿@order.TotalPrice.ToString("N2")</span>
-                        <button type="button"
-                                onclick="addToCart(this)"
-                                class="add-btn px-3 py-1.5 rounded-md text-xs font-bold bg-primary text-white hover:bg-primary/90 active:scale-95 transition-all cursor-pointer">
-                            + เพิ่ม
-                        </button>
+                        @if (order.ForwardedStatus == "Deferred")
+                        {
+                            <span class="px-2.5 py-1 rounded-md text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1 select-none cursor-default" title="ถูกล็อกตัดจ่ายในรายการที่เลือกแล้ว">
+                                <svg class="w-3 h-3 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z"/>
+                                </svg>
+                                ล็อกตัดจ่าย
+                            </span>
+                        }
+                        else
+                        {
+                            <button type="button"
+                                    onclick="addToCart(this)"
+                                    class="add-btn px-3 py-1.5 rounded-md text-xs font-bold bg-primary text-white hover:bg-primary/90 active:scale-95 transition-all cursor-pointer">
+                                + เพิ่ม
+                            </button>
+                        }
                     </div>
                 </div>
             </div>
@@ -530,12 +593,15 @@
         {
             var actionBg = saved.Action == "ReceivedFull" ? "bg-emerald-50 border-emerald-200 text-emerald-700"
                 : saved.Action == "Deferred" ? "bg-amber-50 border-amber-200 text-amber-700"
+                : saved.Action == "Requested" ? "bg-blue-50 border-blue-200 text-blue-700"
                 : "bg-purple-50 border-purple-200 text-purple-700";
             var actionColor = saved.Action == "ReceivedFull" ? "text-emerald-600"
                 : saved.Action == "Deferred" ? "text-amber-600"
+                : saved.Action == "Requested" ? "text-blue-600"
                 : "text-purple-600";
-            var actionLabel = saved.Action == "ReceivedFull" ? "รับสินค้าแล้ว"
-                : saved.Action == "Deferred" ? "ผ่อน → เดือนหน้า"
+            var actionLabel = saved.Action == "ReceivedFull" ? "รับสินค้า (ชำระแล้ว)"
+                : saved.Action == "Deferred" ? "รับสินค้า (ยังไม่ชำระ)"
+                : saved.Action == "Requested" ? "ต้องการรับของ"
                 : "ยังไม่รับสินค้า";
             var fwdBadge = "";
             if (saved.ForwardedStatus == "Deferred")
@@ -692,27 +758,33 @@
     <div class="px-4 py-2.5 border-b border-blue-100 bg-blue-50/60 shrink-0 flex items-center justify-between flex-wrap gap-2">
         <div class="flex items-center">
             <span class="font-bold text-blue-800 text-sm">รายการที่เลือก</span>
-            <span class="ml-2 text-xs text-blue-500 font-semibold" id="cart-count-label">0 รายการ</span>
+            <span class="ml-2 text-xs text-blue-500 font-semibold" id="cart-count-label">@deferredCarryOverOrders.Count รายการ</span>
         </div>
         <div class="flex items-center gap-1.5 flex-wrap" id="cart-header-actions" style="display:none;">
             <span class="text-[11px] text-slate-400 font-medium mr-0.5 hidden xl:inline-block">ปรับทั้งหมดเป็น:</span>
             <button type="button" onclick="setAllCartAction('ReceivedFull')"
                     class="px-2 py-1 rounded-md text-[11px] font-bold bg-white text-emerald-700 border border-emerald-200 hover:bg-emerald-50 hover:border-emerald-300 shadow-2xs transition-all flex items-center gap-1 cursor-pointer"
-                    title="ปรับทุกรายการในตะกร้าเป็น รับเต็มจำนวน">
+                    title="รับสินค้า (ชำระแล้ว)">
                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                รับเต็มจำนวน
+                ชำระแล้ว
             </button>
             <button type="button" onclick="setAllCartAction('Deferred')"
                     class="px-2 py-1 rounded-md text-[11px] font-bold bg-white text-amber-700 border border-amber-200 hover:bg-amber-50 hover:border-amber-300 shadow-2xs transition-all flex items-center gap-1 cursor-pointer"
-                    title="ปรับทุกรายการในตะกร้าเป็น ผ่อนชำระ">
+                    title="รับสินค้า (ยังไม่ชำระ)">
                 <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-                ผ่อนชำระ
+                ยังไม่ชำระ
+            </button>
+            <button type="button" onclick="setAllCartAction('Requested')"
+                    class="px-2 py-1 rounded-md text-[11px] font-bold bg-white text-blue-700 border border-blue-200 hover:bg-blue-50 hover:border-blue-300 shadow-2xs transition-all flex items-center gap-1 cursor-pointer"
+                    title="ต้องการรับของ">
+                <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                ต้องการรับ
             </button>
             <button type="button" onclick="setAllCartAction('Skipped')"
                     class="px-2 py-1 rounded-md text-[11px] font-bold bg-white text-purple-700 border border-purple-200 hover:bg-purple-50 hover:border-purple-300 shadow-2xs transition-all flex items-center gap-1 cursor-pointer"
-                    title="ปรับทุกรายการในตะกร้าเป็น ยังไม่รับสินค้า">
+                    title="ยังไม่รับสินค้า">
                 <span class="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
-                ยังไม่รับสินค้า
+                ยังไม่รับ
             </button>
             <div class="h-4 w-px bg-blue-200 mx-0.5"></div>
             <button type="button" id="clear-cart-btn" onclick="clearAllCart()"
@@ -733,38 +805,78 @@
     <!-- Footer -->
     <div class="shrink-0 border-t border-slate-200 bg-slate-50 px-4 py-3" id="cart-footer">
         <!-- Breakdown -->
-        <div class="flex flex-col gap-2 mb-3">
-            <!-- Received Full -->
-            <div class="flex items-center justify-between text-xs" id="breakdown-received" style="display:none;">
-                <div class="flex items-center gap-1.5">
-                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                    <span class="text-slate-600">รับสินค้าชำระเต็ม</span>
-                </div>
-                <span class="font-bold text-emerald-700" id="total-received">฿0.00</span>
-            </div>
+        <div class="flex flex-col gap-2 mb-3" id="cart-breakdown-container" style="display:none;">
             <!-- Deferred -->
             <div class="flex items-center justify-between text-xs" id="breakdown-deferred" style="display:none;">
                 <div class="flex items-center gap-1.5">
                     <span class="w-2 h-2 rounded-full bg-amber-500"></span>
-                    <span class="text-slate-600">ผ่อนชำระ → เดือนหน้า</span>
+                    <span class="text-slate-600">รับสินค้า (ยังไม่ชำระ → ยกไปเดือนหน้า)</span>
                 </div>
                 <span class="font-bold text-amber-700" id="total-deferred">฿0.00</span>
+            </div>
+            <!-- Requested -->
+            <div class="flex items-center justify-between text-xs" id="breakdown-requested" style="display:none;">
+                <div class="flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+                    <span class="text-slate-600">ต้องการรับของ (แผนส่งฝ่ายผลิต)</span>
+                </div>
+                <span class="font-bold text-blue-700" id="count-requested">0 รายการ</span>
             </div>
             <!-- Skipped -->
             <div class="flex items-center justify-between text-xs" id="breakdown-skipped" style="display:none;">
                 <div class="flex items-center gap-1.5">
                     <span class="w-2 h-2 rounded-full bg-purple-500"></span>
-                    <span class="text-slate-600">ยังไม่รับสินค้า → เดือนหน้า</span>
+                    <span class="text-slate-600">ยังไม่รับสินค้า → ยกยอด</span>
                 </div>
                 <span class="font-bold text-purple-700" id="count-skipped">0 รายการ</span>
             </div>
         </div>
 
+        @if (deferredCarryOverOrders.Any())
+        {
+            <!-- ข้อความเตือนรายการตัดจ่ายอัตโนมัติจากรอบก่อน -->
+            <!-- Banner wrapper: overflow-hidden enables slide-up/down animation -->
+            <div id="deferred-notice-banner-wrap" style="overflow:hidden; transition: max-height 0.35s cubic-bezier(0.4,0,0.2,1), opacity 0.3s ease, margin-bottom 0.3s ease; max-height: 120px; opacity:1; margin-bottom:0.75rem;">
+                <div id="deferred-notice-banner" class="px-3 py-2 rounded-lg bg-amber-50/90 border border-amber-200 flex items-center justify-between gap-2 text-xs text-amber-900 shadow-2xs">
+                    <div class="flex items-center gap-2 min-w-0">
+                        <svg class="w-4 h-4 text-amber-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"/>
+                        </svg>
+                        <div class="leading-tight">
+                            <span>รายการตัดจ่ายอัตโนมัติ <b>@deferredCarryOverOrders.Count รายการ</b> (<b>฿@deferredCarryOverOrders.Sum(x => x.TotalPrice).ToString("N2")</b>) รับสินค้ามาจากรอบก่อน ต้องดำเนินการตัดจ่ายในรอบนี้</span>
+                        </div>
+                    </div>
+                    <!-- Hide button -->
+                    <button type="button" onclick="hideDeferredBanner()" title="ซ่อนการแจ้งเตือน" class="shrink-0 text-amber-600/70 hover:text-amber-900 hover:bg-amber-100/80 rounded p-1 transition-colors cursor-pointer ml-1">
+                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <!-- Chevron restore button (hidden by default) — tiny corner icon only -->
+            <div id="deferred-notice-restore" style="display:none; margin-bottom:0.5rem;" class="w-full flex justify-end">
+                <button type="button" onclick="showDeferredBanner()" title="แสดงการแจ้งเตือนอีกครั้ง"
+                    class="w-6 h-6 flex items-center justify-center text-amber-400 hover:text-amber-600 transition-colors cursor-pointer">
+                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7"/>
+                    </svg>
+                </button>
+            </div>
+
+        }
+
         <!-- Total + Save Buttons -->
         <div class="flex items-center justify-between gap-4 pt-3 border-t border-slate-200 flex-wrap">
             <div>
-                <div class="text-[10px] font-bold text-slate-500 uppercase tracking-wide">ยอดรวมรายการที่เลือก</div>
-                <div class="text-lg font-black text-slate-800" id="cart-total">฿0.00</div>
+                <div class="text-[10px] font-bold text-slate-500 uppercase tracking-wide">ยอดรวมชำระจริงเดือนนี้</div>
+                <div class="text-lg font-black text-slate-800" id="cart-total">฿@deferredCarryOverOrders.Sum(x => x.TotalPrice).ToString("N2")</div>
+                @if (deferredCarryOverOrders.Any())
+                {
+                    <div class="text-[10px] text-amber-700 font-semibold mt-0.5">
+                        <span>รวมยอดตัดจ่ายอัตโนมัติ @deferredCarryOverOrders.Count รายการ</span>
+                    </div>
+                }
             </div>
             <div class="flex items-center gap-3.5 flex-wrap">
                 @if (Model.IsFutureMonth)
@@ -778,8 +890,8 @@
                 }
                 else
                 {
-                    <button type="button" id="save-btn" disabled
-                            title="บันทึกรายการที่เลือก"
+                    <button type="button" id="save-btn" @(deferredCarryOverOrders.Any() ? "" : "disabled")
+                            title="บันทึกรายการ"
                             class="px-6 py-2.5 rounded-lg font-bold text-xs text-white bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 disabled:cursor-not-allowed active:scale-95 transition-all cursor-pointer shadow-sm whitespace-nowrap">
                         บันทึกรายการ
                     </button>
@@ -791,9 +903,151 @@
 </div><!-- /split screen -->
 </div>
 
+<!-- ── Custom Modal: นำเข้าใบตอบกลับจากฝ่ายผลิต (Auto-Match) ── -->
+<div id="import-feedback-modal-overlay" class="fixed inset-0 bg-slate-900/50 backdrop-blur-[2px] z-[100] hidden items-center justify-center p-4">
+    <div id="import-feedback-modal-card" class="bg-white rounded-xl border border-slate-200 shadow-2xl max-w-lg w-full overflow-hidden transform scale-95 opacity-0 transition-all duration-200">
+        
+        <!-- Modal Header -->
+        <div class="px-5 py-4 border-b border-slate-100 bg-slate-50/70 flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-lg bg-blue-50 border border-blue-200/80 flex items-center justify-center text-blue-600 shrink-0">
+                    <svg class="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0 3 3m-3-3-3 3M6.75 19.5a4.5 4.5 0 0 1-1.41-8.775 5.25 5.25 0 0 1 10.233-2.33 3 3 0 0 1 3.758 3.848A3.752 3.752 0 0 1 18 19.5H6.75Z"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-sm font-bold text-slate-800">นำเข้าใบตอบกลับจากฝ่ายผลิต</h3>
+                    <p class="text-[11px] text-slate-500">จับคู่รหัสสั่งซื้อ/WO และอัปเดตสถานะของเดือน @Model.MonthYear</p>
+                </div>
+            </div>
+            <button type="button" onclick="closeImportFeedbackModal()" class="text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg p-1.5 transition-colors cursor-pointer">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Modal Body -->
+        <div class="p-5 space-y-4">
+
+            <!-- Condition Banner -->
+            <div class="p-3 bg-emerald-50/50 border border-emerald-200/70 rounded-lg space-y-1.5">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-emerald-900 flex items-center gap-1.5">
+                        <span>เงื่อนไขการตรวจจับในไฟล์:</span>
+                    </span>
+                    <span class="text-[10px] font-semibold text-emerald-700 bg-emerald-100/70 px-2 py-0.5 rounded">ระบบตรวจจับให้อัตโนมัติ</span>
+                </div>
+                <div class="text-[11px] text-emerald-800 space-y-1">
+                    <div class="flex items-start gap-1.5">
+                        <span class="text-emerald-600 font-bold">•</span>
+                        <span>แท็บ <b>งานส่งมอบแล้ว</b> ➔ ระบบจะเลือกรับสินค้าให้ทันที (ReceivedFull)</span>
+                    </div>
+                    <div class="flex items-start gap-1.5">
+                        <span class="text-emerald-600 font-bold">•</span>
+                        <span>แท็บ <b>งานอยู่ระหว่างผลิต</b> ➔ ระบบจะปรับเป็นรอดำเนินการ / ยกยอด (Deferred)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Upload Dropzone Area -->
+            <div id="import-dropzone" onclick="document.getElementById('import-file-input').click()" class="border-2 border-dashed border-slate-300 hover:border-emerald-500 bg-slate-50/50 hover:bg-emerald-50/30 rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer transition-all text-center select-none">
+                <input type="file" id="import-file-input" accept=".xlsx, .xls" class="hidden" />
+                
+                <div class="w-12 h-12 rounded-full bg-emerald-100/70 text-emerald-700 flex items-center justify-center mb-2.5">
+                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0 3 3m-3-3-3 3M6.75 19.5a4.5 4.5 0 0 1-1.41-8.775 5.25 5.25 0 0 1 10.233-2.33 3 3 0 0 1 3.758 3.848A3.752 3.752 0 0 1 18 19.5H6.75Z" />
+                    </svg>
+                </div>
+                <p class="text-xs font-semibold text-slate-700 mb-1">
+                    ลากและวางไฟล์ที่นี่ หรือ <span class="text-emerald-600 underline font-bold">คลิกเพื่อเลือกไฟล์</span>
+                </p>
+                <p class="text-[11px] text-slate-400">รองรับไฟล์ Excel (.xlsx, .xls) ตอบกลับจากฝ่ายผลิต</p>
+            </div>
+
+            <!-- Selected File Details Card (Hidden until file selected) -->
+            <div id="import-file-card" class="hidden bg-emerald-50/60 border border-emerald-200 rounded-lg p-3 flex items-center justify-between gap-3">
+                <div class="flex items-center gap-2.5 min-w-0">
+                    <div class="w-9 h-9 rounded bg-white border border-emerald-200 flex items-center justify-center shrink-0">
+                        <svg class="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                    </div>
+                    <div class="min-w-0">
+                        <p class="text-xs font-bold text-slate-800 truncate" id="import-file-name">ไฟล์ตัวอย่าง.xlsx</p>
+                        <p class="text-[10px] text-emerald-700 font-medium" id="import-file-size">0 KB</p>
+                    </div>
+                </div>
+                <button type="button" onclick="resetImportFileInput()" class="text-xs font-bold text-rose-600 hover:text-rose-700 hover:bg-rose-50 px-2.5 py-1 rounded transition-colors shrink-0 cursor-pointer">
+                    เปลี่ยนไฟล์
+                </button>
+            </div>
+
+            <!-- Sheet Detection & Mapping Box (Hidden until file selected & parsed) -->
+            <div id="import-sheets-container" class="hidden space-y-2.5 pt-1 border-t border-slate-100">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                        <span>ผลการตรวจจับชีทในไฟล์:</span>
+                    </span>
+                    <span id="import-sheets-badge" class="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded flex items-center gap-1">
+                        <span>ตรวจพบตรงตามเงื่อนไขอัตโนมัติ</span>
+                        <svg class="w-3 h-3 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                    </span>
+                </div>
+
+                <!-- Mapping Row 1: Delivered -->
+                <div class="p-2.5 bg-slate-50 border border-slate-200 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div class="flex items-center gap-2">
+                        <div class="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></div>
+                        <div>
+                            <span class="block text-xs font-bold text-slate-800">แท็บงานส่งมอบแล้ว</span>
+                            <span class="block text-[10px] text-slate-500">ปรับเป็น: รับสินค้าทันที (ReceivedFull)</span>
+                        </div>
+                    </div>
+                    <select id="import-select-delivered" class="text-xs font-semibold border border-slate-300 rounded px-2.5 py-1.5 bg-white text-slate-700 focus:ring-1 focus:ring-emerald-500 outline-none w-full sm:w-48 shadow-2xs cursor-pointer">
+                        <option value="">-- ไม่พบชีท --</option>
+                    </select>
+                </div>
+
+                <!-- Mapping Row 2: WIP / In Progress -->
+                <div class="p-2.5 bg-slate-50 border border-slate-200 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div class="flex items-center gap-2">
+                        <div class="w-2 h-2 rounded-full bg-amber-500 shrink-0"></div>
+                        <div>
+                            <span class="block text-xs font-bold text-slate-800">แท็บงานอยู่ระหว่างผลิต</span>
+                            <span class="block text-[10px] text-slate-500">ปรับเป็น: รอดำเนินการ / ยกยอด (Deferred)</span>
+                        </div>
+                    </div>
+                    <select id="import-select-wip" class="text-xs font-semibold border border-slate-300 rounded px-2.5 py-1.5 bg-white text-slate-700 focus:ring-1 focus:ring-amber-500 outline-none w-full sm:w-48 shadow-2xs cursor-pointer">
+                        <option value="">-- ไม่พบชีท --</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Error message if any -->
+            <p id="import-error-msg" class="text-xs text-rose-600 font-semibold hidden"></p>
+        </div>
+
+        <!-- Modal Footer -->
+        <div class="px-5 py-3.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-3">
+            <span class="text-[11px] text-slate-400" id="import-status-text">กรุณาเลือกไฟล์ Excel</span>
+            <div class="flex items-center gap-2">
+                <button type="button" onclick="closeImportFeedbackModal()" class="px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-200/60 bg-white border border-slate-200 transition-colors cursor-pointer">
+                    ยกเลิก
+                </button>
+                <button type="button" id="btn-process-import" onclick="processImportMatch()" disabled class="px-5 py-2 rounded-lg text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 disabled:cursor-not-allowed shadow-sm transition-all flex items-center gap-1.5 cursor-pointer">
+                    <span>อัปโหลดและจับคู่ข้อมูล</span>
+                </button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
 @section Scripts {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" type="text/javascript"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script type="text/javascript">
         // ─── Tab switching ────────────────────────────────────────────────────────────
         function switchTab(tab) {
@@ -852,6 +1106,23 @@
         const cart = {}; // orderId → { poNumber, orderName, price, department, delivery, action, actionPrice }
         const CART_STORAGE_KEY = `costflow_cart_${'@Html.Raw(Model.MonthYear)'}`;
 
+        const LOCKED_DEFERRED_ORDERS = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(deferredCarryOverOrders.Select(o => new {
+            orderId = o.OrderId,
+            poNumber = o.PoNumber,
+            orderName = o.OrderName,
+            price = o.TotalPrice,
+            quantity = o.Quantity,
+            department = o.Department,
+            delivery = o.DeliveryTarget,
+            forwardedStatus = o.ForwardedStatus,
+            forwardedFrom = o.ForwardedFromMonth,
+            originalMonth = o.OriginalMonth,
+            action = "ReceivedFull",
+            actionPrice = o.TotalPrice,
+            isStockReceived = true,
+            isLocked = true
+        })));
+
         function saveCartToStorage() {
             try {
                 localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
@@ -860,36 +1131,89 @@
 
         function loadCartFromStorage() {
             try {
+                // 1. โหลดรายการที่ผู้ใช้เลือกไว้เองจาก localStorage (ยกเว้นรายการที่ระบบล็อกไว้)
                 const stored = localStorage.getItem(CART_STORAGE_KEY);
-                if (!stored) return;
-                const parsed = JSON.parse(stored);
-                if (!parsed || typeof parsed !== 'object') return;
-                
-                let hasItems = false;
-                Object.keys(parsed).forEach(orderId => {
-                    const item = parsed[orderId];
-                    const card = document.querySelector(`.order-card[data-order-id="${orderId}"]`);
-                    if (card && card.style.display !== 'none' && !card.classList.contains('in-cart')) {
-                        if (!item.quantity && card.dataset.quantity) {
-                            item.quantity = parseInt(card.dataset.quantity) || 1;
-                        }
-                        cart[orderId] = item;
-                        card.classList.add('in-cart');
-                        const btn = card.querySelector('.add-btn');
-                        if (btn) btn.textContent = '✓ เพิ่มแล้ว';
-                        
-                        renderCartItem(orderId);
-                        hasItems = true;
+                if (stored) {
+                    const parsed = JSON.parse(stored);
+                    if (parsed && typeof parsed === 'object') {
+                        Object.keys(parsed).forEach(orderId => {
+                            if (LOCKED_DEFERRED_ORDERS.some(l => l.orderId === orderId)) return;
+
+                            const item = parsed[orderId];
+                            const card = document.querySelector(`.order-card[data-order-id="${orderId}"]`);
+                            if (card && card.style.display !== 'none' && !card.classList.contains('in-cart')) {
+                                if (!item.quantity && card.dataset.quantity) {
+                                    item.quantity = parseInt(card.dataset.quantity) || 1;
+                                }
+                                cart[orderId] = item;
+                                card.classList.add('in-cart');
+                                const btn = card.querySelector('.add-btn');
+                                if (btn) btn.textContent = '✓ เพิ่มแล้ว';
+                                
+                                renderCartItem(orderId);
+                            }
+                        });
                     }
+                }
+
+                // 2. บรรจุรายการผ่อนชำระต่อเนื่อง (13 รายการ) เข้าตะกร้าและล็อกไว้เสมอ
+                LOCKED_DEFERRED_ORDERS.forEach(item => {
+                    cart[item.orderId] = {
+                        ...item,
+                        action: 'ReceivedFull',
+                        actionPrice: item.price,
+                        isStockReceived: true,
+                        isLocked: true
+                    };
+                    const card = document.querySelector(`.order-card[data-order-id="${item.orderId}"]`);
+                    if (card) {
+                        card.classList.add('in-cart', 'is-locked-deferred');
+                    }
+                    renderCartItem(item.orderId);
                 });
-                
-                if (hasItems) {
+
+                if (Object.keys(cart).length > 0) {
                     const emptyEl = document.getElementById('cart-empty');
                     if (emptyEl) emptyEl.style.display = 'none';
                 }
             } catch (e) {
                 console.error('Failed to load cart from storage', e);
             }
+        }
+
+        // ─── Banner Toggle ────────────────────────────────────────────────────────────
+        function hideDeferredBanner() {
+            const wrap = document.getElementById('deferred-notice-banner-wrap');
+            const restore = document.getElementById('deferred-notice-restore');
+            if (!wrap) return;
+            wrap.style.maxHeight = wrap.scrollHeight + 'px'; // pin before collapsing
+            requestAnimationFrame(() => {
+                wrap.style.maxHeight = '0px';
+                wrap.style.opacity = '0';
+                wrap.style.marginBottom = '0';
+            });
+            setTimeout(() => {
+                wrap.style.display = 'none';
+                if (restore) restore.style.display = 'block';
+            }, 350);
+        }
+
+        function showDeferredBanner() {
+            const wrap = document.getElementById('deferred-notice-banner-wrap');
+            const restore = document.getElementById('deferred-notice-restore');
+            if (!wrap) return;
+            if (restore) restore.style.display = 'none';
+            wrap.style.display = '';
+            wrap.style.maxHeight = '0px';
+            wrap.style.opacity = '0';
+            wrap.style.marginBottom = '0';
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    wrap.style.maxHeight = '120px';
+                    wrap.style.opacity = '1';
+                    wrap.style.marginBottom = '0.75rem';
+                });
+            });
         }
 
         // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -907,22 +1231,19 @@
                 .reduce((s, id) => s + (cart[id].actionPrice || 0), 0);
             const deferredTotal = ids.filter(id => cart[id].action === 'Deferred')
                 .reduce((s, id) => s + (cart[id].actionPrice || 0), 0);
+            const requestedCount = ids.filter(id => cart[id].action === 'Requested').length;
             const skippedCount = ids.filter(id => cart[id].action === 'Skipped').length;
 
-            // Show/hide breakdown rows
-            const receivedRow = document.getElementById('breakdown-received');
-            const deferredRow = document.getElementById('breakdown-deferred');
-            const skippedRow = document.getElementById('breakdown-skipped');
-
-            if (receivedRow) {
-                if (receivedTotal > 0) {
-                    receivedRow.style.display = 'flex';
-                    const el = document.getElementById('total-received');
-                    if (el) el.textContent = fmt(receivedTotal);
-                } else {
-                    receivedRow.style.display = 'none';
-                }
+            // Show/hide breakdown rows & container
+            const breakdownContainer = document.getElementById('cart-breakdown-container');
+            const hasExtraBreakdown = deferredTotal > 0 || requestedCount > 0 || skippedCount > 0;
+            if (breakdownContainer) {
+                breakdownContainer.style.display = hasExtraBreakdown ? 'flex' : 'none';
             }
+
+            const deferredRow = document.getElementById('breakdown-deferred');
+            const requestedRow = document.getElementById('breakdown-requested');
+            const skippedRow = document.getElementById('breakdown-skipped');
 
             if (deferredRow) {
                 if (deferredTotal > 0) {
@@ -931,6 +1252,16 @@
                     if (el) el.textContent = fmt(deferredTotal);
                 } else {
                     deferredRow.style.display = 'none';
+                }
+            }
+
+            if (requestedRow) {
+                if (requestedCount > 0) {
+                    requestedRow.style.display = 'flex';
+                    const el = document.getElementById('count-requested');
+                    if (el) el.textContent = requestedCount + ' รายการ';
+                } else {
+                    requestedRow.style.display = 'none';
                 }
             }
 
@@ -952,17 +1283,14 @@
             if (cartTotalEl) cartTotalEl.textContent = fmt(total);
             
             const saveBtn = document.getElementById('save-btn');
-            if (saveBtn) saveBtn.disabled = ids.length === 0;
+            if (saveBtn) {
+                saveBtn.disabled = ids.length === 0;
+            }
 
             const allPendingCount = @Model.PendingOrders.Count;
             const closeBtn = document.getElementById('close-month-btn');
             if (closeBtn) {
                 closeBtn.disabled = allPendingCount === 0;
-            }
-
-            const clearBtn = document.getElementById('clear-cart-btn');
-            if (clearBtn) {
-                clearBtn.style.display = ids.length > 0 ? 'inline-block' : 'none';
             }
 
             const cartHeaderActions = document.getElementById('cart-header-actions');
@@ -971,85 +1299,30 @@
             }
         }
 
-        // ─── Initialization ──────────────────────────────────────────────────────────
-        window.addEventListener('DOMContentLoaded', () => {
+        // ─── Lifecycle ────────────────────────────────────────────────────────────────
+        document.addEventListener('DOMContentLoaded', function () {
             loadCartFromStorage();
             updateSummary();
         });
 
-        // ปรับ Action ของทุกรายการที่อยู่ในตะกร้าพร้อมกัน (Bulk Set All in Cart)
+        function addToCart(btn) {
+            addToCartWithAction(btn, 'ReceivedFull');
+        }
+
         function setAllCartAction(action) {
-            const ids = Object.keys(cart);
-            if (!ids.length) return;
-
-            ids.forEach(orderId => {
-                const item = cart[orderId];
-                let targetAction = action;
-                if (item.forwardedStatus === 'Deferred' && targetAction === 'Deferred') {
-                    targetAction = 'ReceivedFull';
+            Object.keys(cart).forEach(orderId => {
+                if (!cart[orderId].isLocked) {
+                    setAction(orderId, action);
                 }
-                setAction(orderId, targetAction);
             });
-
-            updateSummary();
         }
 
         function clearAllCart() {
-            const ids = Object.keys(cart);
-            if (!ids.length) return;
-
-            ids.forEach(orderId => {
-                delete cart[orderId];
-                const ci = document.getElementById('ci-' + orderId);
-                if (ci) ci.remove();
-
-                const card = document.querySelector(`.order-card[data-order-id="${orderId}"]`);
-                if (card) {
-                    card.classList.remove('in-cart');
-                    const btn = card.querySelector('.add-btn');
-                    if (btn) btn.textContent = '+ เพิ่ม';
+            Object.keys(cart).forEach(orderId => {
+                if (!cart[orderId].isLocked) {
+                    removeFromCart(orderId);
                 }
             });
-
-            localStorage.removeItem(CART_STORAGE_KEY);
-
-            const selectAll = document.getElementById('select-all-pending');
-            if (selectAll) selectAll.checked = false;
-            document.querySelectorAll('.pending-card-checkbox').forEach(cb => cb.checked = false);
-
-            document.getElementById('cart-empty').style.display = 'flex';
-            updateSummary();
-        }
-
-        // ─── Add to cart ─────────────────────────────────────────────────────────────
-        function addToCart(btn) {
-            const card = btn.closest('.order-card');
-            const orderId = card.dataset.orderId;
-            if (cart[orderId]) return; // already added
-
-            cart[orderId] = {
-                orderId: orderId,
-                poNumber: card.dataset.poNumber,
-                orderName: card.dataset.orderName,
-                price: parseFloat(card.dataset.price) || 0,
-                quantity: parseInt(card.dataset.quantity) || 1,
-                department: card.dataset.department,
-                delivery: card.dataset.delivery,
-                forwardedStatus: card.dataset.forwardedStatus || '',
-                forwardedFrom: card.dataset.forwardedFrom || '',
-                originalMonth: card.dataset.originalMonth || '',
-                action: 'ReceivedFull',
-                actionPrice: parseFloat(card.dataset.price) || 0,
-                isStockReceived: false
-            };
-
-            card.classList.add('in-cart');
-            btn.textContent = '✓ เพิ่มแล้ว';
-
-            renderCartItem(orderId);
-            document.getElementById('cart-empty').style.display = 'none';
-            setAction(orderId, 'ReceivedFull');
-            updateSummary();
         }
 
         // ─── Render one cart item ─────────────────────────────────────────────────────
@@ -1060,112 +1333,144 @@
             el.id = 'ci-' + orderId;
             el.dataset.id = orderId;
 
+            // ตรวจสอบว่าเป็นรายการผ่อนชำระที่ระบบล็อกไว้หรือไม่
+            if (item.isLocked) {
+                const fromMonth = item.forwardedFrom || item.originalMonth;
+                const fromMonthText = fromMonth
+                    ? `รายการรับสินค้าจากเดือน ${fromMonth} • ตัดจ่ายรอบเดือนนี้อัตโนมัติ`
+                    : `รายการรับสินค้า • ตัดจ่ายรอบเดือนนี้อัตโนมัติ`;
+
+                el.innerHTML = `
+                    <div class="p-3 pb-2.5 bg-amber-50/25 border-l-4 border-l-amber-500 rounded-r-lg">
+                        <div class="flex items-start justify-between gap-2 mb-1.5">
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center flex-wrap gap-1 mb-0.5">
+                                    <span class="font-bold text-[13px] text-slate-800">${item.poNumber}</span>
+                                </div>
+                                <p class="text-xs text-slate-500 leading-snug line-clamp-2 mt-0.5">${item.orderName}</p>
+                                <div class="flex items-center gap-1.5 mt-2 mb-0.5 text-[11px] leading-none">
+                                    <span class="inline-flex items-center gap-1 font-medium text-amber-800 leading-none">
+                                        <span>จำนวน:</span>
+                                        <span class="font-bold leading-none">${(item.quantity || 1).toLocaleString()}</span>
+                                        <span>ชิ้น</span>
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="shrink-0 flex flex-col items-end gap-1.5">
+                                <span class="font-bold text-sm text-slate-800">${fmt(item.price)}</span>
+                            </div>
+                        </div>
+
+                        <p class="text-[11px] text-amber-700 mt-1 font-medium flex items-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6.5A2.5 2.5 0 0 0 4 4.5v15"/><path d="M17 2v6"/><path d="M17 4h2"/><path d="M20 15.2V21a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20"/><circle cx="17" cy="10" r="2"/></svg>
+                            <span>${fromMonthText}</span>
+                        </p>
+
+                    </div>
+                `;
+
+                document.getElementById('cart-list').appendChild(el);
+                return;
+            }
+
             const isDeferredCarryOver = item.forwardedStatus === 'Deferred';
             const isSkippedCarryOver = item.forwardedStatus === 'Skipped';
-            const isCarryOver = isDeferredCarryOver || isSkippedCarryOver;
-            let receiveLabel = isDeferredCarryOver ? "ได้รับสินค้าแล้ว" : "รับสินค้า";
-            let deferNoteText = `ยอด <b>${fmt(item.price)}</b> จะถูกนำไปคิดในเดือนถัดไป`;
+            const isRequestedCarryOver = item.forwardedStatus === 'Requested';
 
             let fwdBadgeHtml = '';
             if (isDeferredCarryOver) {
                 const tooltipText = item.originalMonth
-                    ? `WO สร้างจาก ${item.originalMonth} • กดผ่อนล่าสุดที่ ${item.forwardedFrom}`
-                    : `กดผ่อนล่าสุดที่ ${item.forwardedFrom}`;
-                fwdBadgeHtml = `<span class="ml-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-700 cursor-help" title="${tooltipText}">ผ่อนยกยอดมา</span>`;
+                    ? `WO สั่งซื้อจาก ${item.originalMonth} • ผ่อนมาจาก ${item.forwardedFrom}`
+                    : `ผ่อนมาจาก ${item.forwardedFrom}`;
+                fwdBadgeHtml = `<span class="ml-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-800 cursor-help" title="${tooltipText}">ผ่อนชำระต่อเนื่อง</span>`;
             } else if (isSkippedCarryOver) {
                 const tooltipText = item.originalMonth
                     ? `WO สร้างจาก ${item.originalMonth} • ค้างมาจาก ${item.forwardedFrom}`
                     : `ค้างมาจาก ${item.forwardedFrom}`;
                 fwdBadgeHtml = `<span class="ml-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-purple-100 text-purple-700 cursor-help" title="${tooltipText}">ค้างยกยอดมา</span>`;
+            } else if (isRequestedCarryOver) {
+                fwdBadgeHtml = `<span class="ml-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-100 text-blue-700 cursor-help">แผนขอรับของ</span>`;
             }
 
             const isRec = item.action === 'ReceivedFull';
             const isDef = item.action === 'Deferred';
+            const isReq = item.action === 'Requested';
             const isSkip = item.action === 'Skipped';
 
             const receiveClass = isRec ? 'action-pill active-receive' : 'action-pill';
             const deferClass = isDef ? 'action-pill active-defer' : 'action-pill';
+            const reqClass = isReq ? 'action-pill active-request' : 'action-pill';
             const skipClass = isSkip ? 'action-pill active-skip' : 'action-pill';
-            const deferNoteClass = isDef ? 'deferred-note open ml-auto' : 'deferred-note ml-auto';
 
-            const deferPillHtml = isDeferredCarryOver ? '' : `
-                        <label class="${deferClass}" id="pill-defer-${orderId}" onclick="setAction('${orderId}','Deferred')">
-                            <input type="radio" name="act_${orderId}" value="Deferred" ${isDef ? 'checked' : ''} onclick="event.stopPropagation()" onchange="setAction('${orderId}','Deferred')">
-                            <span>ผ่อนชำระ</span>
-                            <span class="font-bold ml-1">${fmt(item.price)}</span>
-                        </label>
-                    `;
+            const actionContentHtml = `
+                <div class="flex items-center flex-wrap gap-1.5" id="pills-${orderId}">
+                    <label class="${receiveClass}" id="pill-receive-${orderId}" onclick="setAction('${orderId}','ReceivedFull')">
+                        <input type="radio" name="act_${orderId}" value="ReceivedFull" ${isRec ? 'checked' : ''} onclick="event.stopPropagation()" onchange="setAction('${orderId}','ReceivedFull')">
+                        <span>รับสินค้า (ชำระแล้ว)</span>
+                        <span class="font-bold ml-1">${fmt(item.price)}</span>
+                    </label>
+                    <label class="${deferClass}" id="pill-defer-${orderId}" onclick="setAction('${orderId}','Deferred')">
+                        <input type="radio" name="act_${orderId}" value="Deferred" ${isDef ? 'checked' : ''} onclick="event.stopPropagation()" onchange="setAction('${orderId}','Deferred')">
+                        <span>รับสินค้า (ยังไม่ชำระ)</span>
+                        <span class="font-bold ml-1">${fmt(item.price)}</span>
+                    </label>
+                    <label class="${reqClass}" id="pill-request-${orderId}" onclick="setAction('${orderId}','Requested')">
+                        <input type="radio" name="act_${orderId}" value="Requested" ${isReq ? 'checked' : ''} onclick="event.stopPropagation()" onchange="setAction('${orderId}','Requested')">
+                        <span>ต้องการรับของ</span>
+                    </label>
+                    <label class="${skipClass}" id="pill-skip-${orderId}" onclick="setAction('${orderId}','Skipped')">
+                        <input type="radio" name="act_${orderId}" value="Skipped" ${isSkip ? 'checked' : ''} onclick="event.stopPropagation()" onchange="setAction('${orderId}','Skipped')">
+                        <span>ยังไม่รับสินค้า</span>
+                    </label>
+                </div>
+                <p class="text-[11px] text-amber-700 mt-1.5 font-medium" id="defer-note-${orderId}" style="display:${isDef ? 'block' : 'none'};">
+                    ✓ รับของแล้ว • ยอดเงิน <b>${fmt(item.price)}</b> ยกไปตัดจ่ายเดือนหน้า
+                </p>
+                <p class="text-[11px] text-blue-700 mt-1.5 font-medium" id="request-note-${orderId}" style="display:${isReq ? 'block' : 'none'};">
+                    📋 บันทึกในแผนขอรับของรอบหน้า • ยังไม่ตัดงบเดือนนี้ (รอฝ่ายผลิตตอบกลับ)
+                </p>
+            `;
 
-            const deferNoteHtml = isDeferredCarryOver ? '' : `
-                        <div class="${deferNoteClass}" id="defer-wrap-${orderId}">
-                            <label class="inline-flex items-center gap-1.5 cursor-pointer select-none text-slate-600 hover:text-amber-800 transition-colors py-1 px-1" onclick="event.stopPropagation()">
-                                <input type="checkbox" 
-                                       id="chk-defer-stock-${orderId}" 
-                                       class="defer-stock-checkbox w-3.5 h-3.5 rounded border-slate-300 text-amber-600 focus:ring-0 focus:ring-offset-0 focus:outline-none cursor-pointer" 
-                                       ${item.isStockReceived ? 'checked' : ''} 
-                                       onchange="toggleDeferredStock('${orderId}', this.checked)">
-                                <span class="text-[11px] font-semibold text-amber-900 whitespace-nowrap">รับเข้าสต๊อกแล้ว</span>
-                            </label>
-                        </div>
-                    `;
+            const removeBtnHtml = `<button type="button" onclick="removeFromCart('${orderId}')" class="remove-btn" title="นำออกจากรายการที่เลือก">
+                       <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                           <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
+                       </svg>
+                   </button>`;
 
             el.innerHTML = `
-                        <div class="p-3 pb-2">
-                            <div class="flex items-start justify-between gap-2 mb-2">
-                                <div class="flex-1 min-w-0">
-                                    <div class="flex items-center flex-wrap gap-1 mb-0.5">
-                                        <span class="font-bold text-[13px] text-slate-800">${item.poNumber}</span>
-                                        ${fwdBadgeHtml}
-                                    </div>
-                                    <p class="text-xs text-slate-500 leading-snug line-clamp-2 mt-0.5">${item.orderName}</p>
-                                    <div class="flex items-center gap-1.5 mt-2 mb-0.5 text-[11px] leading-none">
-                                        <span class="inline-flex items-center gap-1 font-medium text-blue-600 leading-none">
-                                            <span>จำนวน:</span>
-                                            <span class="font-bold leading-none">${(item.quantity || 1).toLocaleString()}</span>
-                                            <span>ชิ้น</span>
-                                        </span>
-                                    </div>
-                                </div>
-                                <div class="shrink-0 flex flex-col items-end gap-1.5">
-                                    <span class="font-bold text-sm text-slate-700">${fmt(item.price)}</span>
-                                    <button type="button"
-                                        onclick="removeFromCart('${orderId}')"
-                                        class="remove-btn">
-                                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
-                                        </svg>
-                                    </button>
-                                </div>
+                <div class="p-3 pb-2.5">
+                    <div class="flex items-start justify-between gap-2 mb-2">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center flex-wrap gap-1 mb-0.5">
+                                <span class="font-bold text-[13px] text-slate-800">${item.poNumber}</span>
+                                ${fwdBadgeHtml}
                             </div>
-        
-                            <!-- Action pills -->
-                            <div class="flex items-center flex-wrap gap-1.5" id="pills-${orderId}">
-                                <label class="${receiveClass}" id="pill-receive-${orderId}" onclick="setAction('${orderId}','ReceivedFull')">
-                                    <input type="radio" name="act_${orderId}" value="ReceivedFull" ${isRec ? 'checked' : ''} onclick="event.stopPropagation()" onchange="setAction('${orderId}','ReceivedFull')">
-                                    <span>${receiveLabel}</span>
-                                    <span class="font-bold ml-1">${fmt(item.price)}</span>
-                                </label>
-                                ${deferPillHtml}
-                                <label class="${skipClass}" id="pill-skip-${orderId}" onclick="setAction('${orderId}','Skipped')">
-                                    <input type="radio" name="act_${orderId}" value="Skipped" ${isSkip ? 'checked' : ''} onclick="event.stopPropagation()" onchange="setAction('${orderId}','Skipped')">
-                                    <span>ยังไม่รับสินค้า</span>
-                                </label>
-                                ${deferNoteHtml}
+                            <p class="text-xs text-slate-500 leading-snug line-clamp-2 mt-0.5">${item.orderName}</p>
+                            <div class="flex items-center gap-1.5 mt-2 mb-0.5 text-[11px] leading-none">
+                                <span class="inline-flex items-center gap-1 font-medium text-blue-600 leading-none">
+                                    <span>จำนวน:</span>
+                                    <span class="font-bold leading-none">${(item.quantity || 1).toLocaleString()}</span>
+                                    <span>ชิ้น</span>
+                                </span>
                             </div>
                         </div>
-                    `;
+                        <div class="shrink-0 flex flex-col items-end gap-1.5">
+                            <span class="font-bold text-sm text-slate-700">${fmt(item.price)}</span>
+                            ${removeBtnHtml}
+                        </div>
+                    </div>
+
+                    <!-- Action pills / Locked state -->
+                    ${actionContentHtml}
+                </div>
+            `;
 
             document.getElementById('cart-list').appendChild(el);
         }
 
-        function toggleDeferredStock(orderId, isChecked) {
-            if (!cart[orderId]) return;
-            cart[orderId].isStockReceived = isChecked;
-            saveCartToStorage();
-        }
-
         // ─── Remove from cart ─────────────────────────────────────────────────────────
         function removeFromCart(orderId) {
+            if (cart[orderId] && cart[orderId].isLocked) return;
             delete cart[orderId];
 
             // Remove cart item DOM
@@ -1190,15 +1495,9 @@
 
         // ─── Set action ───────────────────────────────────────────────────────────────
         function setAction(orderId, action) {
-            if (!cart[orderId]) return;
-
-            // ถ้าเป็นรายการที่ผ่อนยกยอดมาจากเดือนก่อน ไม่อนุญาตให้เลือก Deferred ซ้ำ ให้บังคับเป็น ReceivedFull
-            if (cart[orderId].forwardedStatus === 'Deferred' && action === 'Deferred') {
-                action = 'ReceivedFull';
-            }
+            if (!cart[orderId] || cart[orderId].isLocked) return;
 
             cart[orderId].action = action;
-
             const item = cart[orderId];
 
             // ซิงค์สถานะ checked ของ radio element ใน DOM ให้ตรงกันเสมอ
@@ -1210,24 +1509,33 @@
             // Update pill active classes
             document.getElementById('pill-receive-' + orderId)?.classList.toggle('active-receive', action === 'ReceivedFull');
             document.getElementById('pill-defer-' + orderId)?.classList.toggle('active-defer', action === 'Deferred');
+            document.getElementById('pill-request-' + orderId)?.classList.toggle('active-request', action === 'Requested');
             document.getElementById('pill-skip-' + orderId)?.classList.toggle('active-skip', action === 'Skipped');
             document.getElementById('pill-receive-' + orderId)?.classList.toggle('action-pill', true);
             document.getElementById('pill-defer-' + orderId)?.classList.toggle('action-pill', true);
+            document.getElementById('pill-request-' + orderId)?.classList.toggle('action-pill', true);
             document.getElementById('pill-skip-' + orderId)?.classList.toggle('action-pill', true);
 
-            // Deferred note visibility
-            const wrap = document.getElementById('defer-wrap-' + orderId);
-            if (wrap) {
-                wrap.classList.toggle('open', action === 'Deferred');
-            }
+            // Note visibility
+            const deferNote = document.getElementById('defer-note-' + orderId);
+            if (deferNote) deferNote.style.display = (action === 'Deferred') ? 'block' : 'none';
 
-            // Update action price
+            const reqNote = document.getElementById('request-note-' + orderId);
+            if (reqNote) reqNote.style.display = (action === 'Requested') ? 'block' : 'none';
+
+            // Update action price & stock received status
             if (action === 'ReceivedFull') {
                 cart[orderId].actionPrice = item.price;
+                cart[orderId].isStockReceived = true;
             } else if (action === 'Deferred') {
-                cart[orderId].actionPrice = item.price; // แสดงราคาผ่อนชำระในยอดรวม
+                cart[orderId].actionPrice = 0; // รับของแล้วยังไม่จ่าย -> ไม่ตัดงบเดือนนี้ (ยกไปตัดจ่ายเดือนหน้า)
+                cart[orderId].isStockReceived = true;  // รับของแล้วเข้าสต๊อกอัตโนมัติ
+            } else if (action === 'Requested') {
+                cart[orderId].actionPrice = 0; // แผนขอรับของ ยังไม่ตัดเงินเดือนนี้
+                cart[orderId].isStockReceived = false;
             } else if (action === 'Skipped') {
                 cart[orderId].actionPrice = 0;
+                cart[orderId].isStockReceived = false;
             }
 
             updateSummary();
@@ -1505,10 +1813,13 @@
                     if (card.style.display === 'none' || card.classList.contains('in-cart')) return false;
 
                     const fwdStatus = card.getAttribute('data-forwarded-status') || '';
+
                     if (action === 'Deferred') {
                         return fwdStatus === 'Deferred';
                     } else if (action === 'Skipped') {
                         return fwdStatus === 'Skipped';
+                    } else if (action === 'Requested') {
+                        return fwdStatus === 'Requested';
                     } else {
                         // ReceivedFull เอาทั้งหมดที่มองเห็นอยู่
                         return true;
@@ -1535,18 +1846,19 @@
             const card = btnEl.closest('.order-card');
             const orderId = card.dataset.orderId;
 
-            if (cart[orderId]) return;
+            if (cart[orderId] || card.classList.contains('is-locked-deferred')) return;
 
             let finalAction = specifiedAction || 'ReceivedFull';
-            if (card.dataset.forwardedStatus === 'Deferred' && finalAction === 'Deferred') {
+            if (card.dataset.forwardedStatus === 'Deferred') {
                 finalAction = 'ReceivedFull';
             }
 
+            const itemPrice = parseFloat(card.dataset.price) || 0;
             const item = {
                 orderId: orderId,
                 poNumber: card.dataset.poNumber,
                 orderName: card.dataset.orderName,
-                price: parseFloat(card.dataset.price) || 0,
+                price: itemPrice,
                 quantity: parseInt(card.dataset.quantity) || 1,
                 department: card.dataset.department,
                 delivery: card.dataset.delivery,
@@ -1554,8 +1866,8 @@
                 forwardedFrom: card.dataset.forwardedFrom || '',
                 originalMonth: card.dataset.originalMonth || '',
                 action: finalAction,
-                actionPrice: finalAction === 'Skipped' ? 0 : (parseFloat(card.dataset.price) || 0),
-                isStockReceived: false
+                actionPrice: finalAction === 'ReceivedFull' ? itemPrice : 0,
+                isStockReceived: (finalAction === 'ReceivedFull' || finalAction === 'Deferred')
             };
 
             cart[orderId] = item;
@@ -1599,9 +1911,11 @@
 
             const total = ids.reduce((s, id) => s + (cart[id].actionPrice || 0), 0);
 
+            const confirmHtml = `คุณกำลังจะบันทึก <b>${ids.length} รายการ</b> ที่เลือก<br><span class="text-slate-600 text-sm font-semibold">ยอดรวมชำระจริงเดือนนี้: ${fmt(total)}</span><br><br><span class="text-xs text-slate-500">* รายการที่เลือกจะย้ายไปแท็บบันทึกแล้ว รายการที่ไม่เลือกจะคงอยู่รอดำเนินการ</span>`;
+
             const result = await Swal.fire({
                 title: 'ยืนยันการบันทึกรายการ',
-                html: `คุณกำลังจะบันทึก <b>${ids.length} รายการ</b> ที่เลือก<br><span class="text-slate-500 text-sm">ยอดรวมรายการที่เลือก: ${fmt(total)}</span><br><br><span class="text-xs text-slate-500">* รายการที่เลือกจะย้ายไปแท็บบันทึกแล้ว รายการที่ไม่เลือกจะคงอยู่รอดำเนินการ</span>`,
+                html: confirmHtml,
                 icon: 'question',
                 showCancelButton: true,
                 confirmButtonText: 'ยืนยันบันทึก',
@@ -1629,37 +1943,35 @@
             });
 
             try {
+                const payloadActions = ids.map(id => ({
+                    orderId: cart[id].orderId,
+                    action: cart[id].action,
+                    price: cart[id].actionPrice,
+                    isStockReceived: !!cart[id].isStockReceived
+                }));
+
                 const resp = await fetch('/MonthlyCost/SaveActions', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         monthYear: MONTH_YEAR,
                         allPendingOrderIds: allPendingIds,
-                        actions: ids.map(id => ({
-                            orderId: cart[id].orderId,
-                            action: cart[id].action,
-                            price: cart[id].actionPrice,
-                            isStockReceived: !!cart[id].isStockReceived
-                        })),
-                        isCloseMonth: false  // คืนเป็น false - บันทึกเฉพาะรายการที่เลือก
+                        actions: payloadActions,
+                        isCloseMonth: false
                     })
                 });
 
                 const data = await resp.json();
                 if (data.success) {
+                    try { localStorage.removeItem(CART_STORAGE_KEY); } catch (e) {}
                     await Swal.fire({
                         icon: 'success',
                         title: 'บันทึกสำเร็จ!',
-                        text: 'บันทึกอัปเดตรายการที่เลือกเรียบร้อยแล้ว',
+                        text: `บันทึกรายการเรียบร้อยแล้ว (${ids.length} รายการ)`,
                         timer: 1500,
                         showConfirmButton: false
                     });
-                    if (data.reconcileIds && data.reconcileIds.length > 0) {
-                        // สลับมาที่หน้าสต๊อกสินค้า พร้อมเปิด Popup ตรวจรับของของรายการนี้ทันที
-                        window.location.href = `/Stock?autoOpenReceive=true&orderId=${data.reconcileIds[0]}`;
-                    } else {
-                        window.location.replace('/MonthlyCost');
-                    }
+                    location.reload();
                 } else {
                     await Swal.fire({
                         icon: 'error',
@@ -1764,37 +2076,38 @@
                                 <input type="radio" name="swal_action_filter" value="all" checked class="text-emerald-600 focus:ring-emerald-500 w-4 h-4 cursor-pointer">
                                 <div class="flex-1">
                                     <span class="font-bold text-slate-800 text-xs">ทั้งหมดทุกประเภท (All Categories)</span>
-                                    <p class="text-[11px] text-slate-400">ส่งออกครบทุกรายการ ทั้งรับสินค้า, ผ่อนชำระ และยังไม่รับสินค้า</p>
+                                    <p class="text-[11px] text-slate-400">ส่งออกครบทุกรายการ ทั้งรับสินค้า (ชำระแล้ว), รับสินค้า (ยังไม่ชำระ), ต้องการรับของ และยังไม่รับสินค้า</p>
                                 </div>
                             </label>
                             <label class="flex items-center gap-2.5 p-2 rounded-lg border border-slate-200 hover:bg-emerald-50/50 cursor-pointer transition-all">
                                 <input type="radio" name="swal_action_filter" value="ReceivedFull" class="text-emerald-600 focus:ring-emerald-500 w-4 h-4 cursor-pointer">
                                 <div class="flex-1">
-                                    <span class="font-bold text-emerald-800 text-xs">เฉพาะรายการรับสินค้าแล้ว (Received)</span>
+                                    <span class="font-bold text-emerald-800 text-xs">เฉพาะรายการรับสินค้า (ชำระแล้ว) (Received)</span>
                                     <p class="text-[11px] text-slate-400">รายการที่ได้รับมอบสินค้าและชำระเต็มจำนวนในงวดนี้</p>
                                 </div>
                             </label>
                             <label class="flex items-center gap-2.5 p-2 rounded-lg border border-slate-200 hover:bg-amber-50/50 cursor-pointer transition-all">
                                 <input type="radio" name="swal_action_filter" value="Deferred" class="text-amber-600 focus:ring-amber-500 w-4 h-4 cursor-pointer">
                                 <div class="flex-1">
-                                    <span class="font-bold text-amber-800 text-xs">เฉพาะรายการผ่อนชำระ (Deferred)</span>
-                                    <p class="text-[11px] text-slate-400">รายการที่ตั้งยอดผ่อนไปเดือนหน้า หรือรายการผ่อนยกยอดมางวดนี้</p>
+                                    <span class="font-bold text-amber-800 text-xs">เฉพาะรายการรับสินค้า (ยังไม่ชำระ) (Deferred)</span>
+                                    <p class="text-[11px] text-slate-400">รายการที่รับของแล้วแต่ตั้งยอดตัดจ่ายเดือนถัดไป หรือรายการตัดจ่ายต่อเนื่อง</p>
+                                </div>
+                            </label>
+                            <label class="flex items-center gap-2.5 p-2 rounded-lg border border-slate-200 hover:bg-blue-50/50 cursor-pointer transition-all">
+                                <input type="radio" name="swal_action_filter" value="Requested" class="text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer">
+                                <div class="flex-1">
+                                    <span class="font-bold text-blue-800 text-xs">เฉพาะรายการต้องการรับของ (Requested)</span>
+                                    <p class="text-[11px] text-slate-400">รายการที่บันทึกตามแผนขอรับของรอบหน้า (ยังไม่ตัดงบเดือนนี้)</p>
                                 </div>
                             </label>
                             <label class="flex items-center gap-2.5 p-2 rounded-lg border border-slate-200 hover:bg-purple-50/50 cursor-pointer transition-all">
                                 <input type="radio" name="swal_action_filter" value="Skipped" class="text-purple-600 focus:ring-purple-500 w-4 h-4 cursor-pointer">
                                 <div class="flex-1">
-                                    <span class="font-bold text-purple-800 text-xs">เฉพาะรายการยังไม่รับสินค้า / ค้างส่งมอบ (Skipped)</span>
-                                    <p class="text-[11px] text-slate-400">รายการที่ของยังไม่มา หรือยังรอดำเนินการ</p>
+                                    <span class="font-bold text-purple-800 text-xs">เฉพาะรายการยังไม่รับสินค้า (Skipped)</span>
+                                    <p class="text-[11px] text-slate-400">รายการที่ของยังไม่มา หรือยังรอดำเนินการในรอบถัดไป</p>
                                 </div>
                             </label>
-                            <label class="flex items-center gap-2.5 p-2 rounded-lg border border-slate-200 hover:bg-blue-50/50 cursor-pointer transition-all">
-                                <input type="radio" name="swal_action_filter" value="DraftOnly" class="text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer">
-                                <div class="flex-1">
-                                    <span class="font-bold text-blue-800 text-xs">เฉพาะรายการในตะกร้าจำลอง (Draft Only)</span>
-                                    <p class="text-[11px] text-slate-500">ส่งออกเฉพาะรายการที่คุณกำลังติ๊กเลือกไว้ในตะกร้า เพื่อดูยอดประมาณการ</p>
-                                </div>
-                            </label>
+
                         </div>
                     </div>
                 </div>
@@ -1856,6 +2169,387 @@
                 document.body.removeChild(form);
             }
         }
+
+        // ─── Import Production Feedback Modal (Auto-Match) ──────────────────────────
+        let currentImportWorkbook = null;
+        let currentImportFile = null;
+
+        function openImportModal() {
+            resetImportFileInput();
+            const overlay = document.getElementById('import-feedback-modal-overlay');
+            const card = document.getElementById('import-feedback-modal-card');
+            if (!overlay || !card) return;
+
+            overlay.classList.remove('hidden');
+            overlay.classList.add('flex');
+            setTimeout(() => {
+                card.classList.remove('scale-95', 'opacity-0');
+                card.classList.add('scale-100', 'opacity-100');
+            }, 30);
+        }
+
+        function closeImportFeedbackModal() {
+            const overlay = document.getElementById('import-feedback-modal-overlay');
+            const card = document.getElementById('import-feedback-modal-card');
+            if (!overlay || !card) return;
+
+            card.classList.remove('scale-100', 'opacity-100');
+            card.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => {
+                overlay.classList.remove('flex');
+                overlay.classList.add('hidden');
+            }, 150);
+        }
+
+        function resetImportFileInput() {
+            currentImportWorkbook = null;
+            currentImportFile = null;
+            const fileInput = document.getElementById('import-file-input');
+            if (fileInput) fileInput.value = '';
+
+            const dropzone = document.getElementById('import-dropzone');
+            if (dropzone) dropzone.classList.remove('hidden');
+
+            const fileCard = document.getElementById('import-file-card');
+            if (fileCard) fileCard.classList.add('hidden');
+
+            const sheetsContainer = document.getElementById('import-sheets-container');
+            if (sheetsContainer) sheetsContainer.classList.add('hidden');
+
+            const errorMsg = document.getElementById('import-error-msg');
+            if (errorMsg) {
+                errorMsg.textContent = '';
+                errorMsg.classList.add('hidden');
+            }
+
+            const btnProcess = document.getElementById('btn-process-import');
+            if (btnProcess) btnProcess.disabled = true;
+
+            const statusText = document.getElementById('import-status-text');
+            if (statusText) statusText.textContent = 'กรุณาเลือกไฟล์ Excel';
+        }
+
+        function handleImportFileSelect(file) {
+            if (!file) return;
+
+            const validExts = ['.xlsx', '.xls'];
+            const fileName = file.name || '';
+            const ext = fileName.substring(fileName.lastIndexOf('.')).toLowerCase();
+            const errorMsg = document.getElementById('import-error-msg');
+
+            if (!validExts.includes(ext)) {
+                if (errorMsg) {
+                    errorMsg.textContent = 'รองรับเฉพาะไฟล์ Excel (.xlsx, .xls) เท่านั้น';
+                    errorMsg.classList.remove('hidden');
+                }
+                return;
+            }
+
+            if (errorMsg) errorMsg.classList.add('hidden');
+            currentImportFile = file;
+
+            // Show file card
+            const dropzone = document.getElementById('import-dropzone');
+            if (dropzone) dropzone.classList.add('hidden');
+
+            const fileCard = document.getElementById('import-file-card');
+            if (fileCard) fileCard.classList.remove('hidden');
+
+            const nameEl = document.getElementById('import-file-name');
+            if (nameEl) nameEl.textContent = file.name;
+
+            const sizeEl = document.getElementById('import-file-size');
+            if (sizeEl) {
+                const kb = (file.size / 1024).toFixed(1);
+                sizeEl.textContent = `${kb} KB`;
+            }
+
+            const statusText = document.getElementById('import-status-text');
+            if (statusText) statusText.textContent = 'กำลังอ่านโครงสร้างชีทในไฟล์...';
+
+            // Read sheets via SheetJS
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    currentImportWorkbook = XLSX.read(data, { type: 'array' });
+                    const sheetNames = currentImportWorkbook.SheetNames || [];
+                    if (sheetNames.length === 0) {
+                        throw new Error('ไม่พบแท็บชีทในไฟล์');
+                    }
+                    populateImportSheets(sheetNames);
+                } catch(err) {
+                    if (errorMsg) {
+                        errorMsg.textContent = 'เกิดข้อผิดพลาดในการอ่านไฟล์: ' + err.message;
+                        errorMsg.classList.remove('hidden');
+                    }
+                    if (statusText) statusText.textContent = 'อ่านไฟล์ล้มเหลว';
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function populateImportSheets(sheetNames) {
+            const sheetsContainer = document.getElementById('import-sheets-container');
+            const selectDelivered = document.getElementById('import-select-delivered');
+            const selectWip = document.getElementById('import-select-wip');
+            const badge = document.getElementById('import-sheets-badge');
+            const btnProcess = document.getElementById('btn-process-import');
+            const statusText = document.getElementById('import-status-text');
+
+            if (!sheetsContainer || !selectDelivered || !selectWip) return;
+
+            // Keywords detection
+            const deliveredRegex = /ส่งมอบ|เสร็จ|delivered|complete/i;
+            const deliveredMatch = sheetNames.find(s => deliveredRegex.test(s));
+
+            const wipRegex = /ระหว่างผลิต|กำลังผลิต|wip|progress|pending/i;
+            const wipMatch = sheetNames.find(s => wipRegex.test(s));
+
+            // Populate delivered dropdown
+            selectDelivered.innerHTML = '<option value="">-- ไม่เลือกแท็บนี้ --</option>' + 
+                sheetNames.map(s => `<option value="${s}">${s} ${s === deliveredMatch ? ' (ตรวจพบอัตโนมัติ)' : ''}</option>`).join('');
+            if (deliveredMatch) {
+                selectDelivered.value = deliveredMatch;
+            } else if (sheetNames.length > 0) {
+                selectDelivered.value = sheetNames[0];
+            }
+
+            // Populate WIP dropdown
+            selectWip.innerHTML = '<option value="">-- ไม่เลือกแท็บนี้ --</option>' + 
+                sheetNames.map(s => `<option value="${s}">${s} ${s === wipMatch ? ' (ตรวจพบอัตโนมัติ)' : ''}</option>`).join('');
+            if (wipMatch) {
+                selectWip.value = wipMatch;
+            } else if (sheetNames.length > 1 && selectDelivered.value !== sheetNames[1]) {
+                selectWip.value = sheetNames[1];
+            }
+
+            const isAutoMatched = (deliveredMatch && wipMatch);
+            if (badge) {
+                if (isAutoMatched) {
+                    badge.innerHTML = `<span>ตรวจพบตรงตามเงื่อนไขอัตโนมัติ</span><svg class="w-3 h-3 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>`;
+                    badge.className = 'text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded flex items-center gap-1';
+                } else {
+                    badge.innerHTML = `<span>พบ ${sheetNames.length} ชีท (กรุณาตรวจสอบการเลือก)</span>`;
+                    badge.className = 'text-[10px] font-bold text-slate-700 bg-slate-200/80 px-2 py-0.5 rounded flex items-center gap-1';
+                }
+            }
+
+            sheetsContainer.classList.remove('hidden');
+            if (btnProcess) btnProcess.disabled = false;
+            if (statusText) statusText.textContent = `พบ ${sheetNames.length} ชีท พร้อมสำหรับการจับคู่ข้อมูล`;
+        }
+
+        async function processImportMatch() {
+            if (!currentImportWorkbook) return;
+
+            const selectDelivered = document.getElementById('import-select-delivered');
+            const selectWip = document.getElementById('import-select-wip');
+            const deliveredSheetName = selectDelivered ? selectDelivered.value : '';
+            const wipSheetName = selectWip ? selectWip.value : '';
+
+            if (!deliveredSheetName && !wipSheetName) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'ยังไม่ได้เลือกชีท',
+                    text: 'กรุณาเลือกชีทสำหรับงานส่งมอบแล้ว หรือ งานอยู่ระหว่างผลิต อย่างน้อย 1 ชีท'
+                });
+                return;
+            }
+
+            // Index pending cards by PO Number
+            const pendingCards = Array.from(document.querySelectorAll('.order-card[data-po-number]'));
+            const poToCardMap = new Map();
+            pendingCards.forEach(card => {
+                const po = (card.dataset.poNumber || '').trim().toUpperCase();
+                if (po) {
+                    poToCardMap.set(po, card);
+                }
+            });
+
+            function extractPoListFromSheet(sheetName) {
+                if (!sheetName || !currentImportWorkbook.Sheets[sheetName]) return new Set();
+                const sheet = currentImportWorkbook.Sheets[sheetName];
+                const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+                const matchedPos = new Set();
+
+                for (let r = 0; r < rows.length; r++) {
+                    const row = rows[r];
+                    if (!Array.isArray(row)) continue;
+                    for (let c = 0; c < row.length; c++) {
+                        const cellVal = String(row[c] || '').trim().toUpperCase();
+                        if (!cellVal) continue;
+                        
+                        // Exact match
+                        if (poToCardMap.has(cellVal)) {
+                            matchedPos.add(cellVal);
+                        } else {
+                            // Substring token match inside cell
+                            poToCardMap.forEach((_, poKey) => {
+                                if (cellVal.includes(poKey)) {
+                                    matchedPos.add(poKey);
+                                }
+                            });
+                        }
+                    }
+                }
+                return matchedPos;
+            }
+
+            const deliveredPos = extractPoListFromSheet(deliveredSheetName);
+            const wipPos = extractPoListFromSheet(wipSheetName);
+
+            let addedDeliveredCount = 0;
+            let addedWipCount = 0;
+
+            function addCardToCartWithAction(card, actionType) {
+                const orderId = card.dataset.orderId;
+                if (!orderId) return false;
+
+                const price = parseFloat(card.dataset.price) || 0;
+                const item = {
+                    orderId: orderId,
+                    poNumber: card.dataset.poNumber,
+                    orderName: card.dataset.orderName,
+                    price: price,
+                    department: card.dataset.department,
+                    delivery: card.dataset.delivery,
+                    quantity: parseInt(card.dataset.quantity) || 1,
+                    forwardedStatus: card.dataset.forwardedStatus || '',
+                    forwardedFrom: card.dataset.forwardedFrom || '',
+                    originalMonth: card.dataset.originalMonth || '',
+                    action: actionType,
+                    actionPrice: (actionType === 'ReceivedFull') ? price : 0,
+                    isStockReceived: true
+                };
+
+                cart[orderId] = item;
+                card.classList.add('in-cart');
+                const btn = card.querySelector('.add-btn');
+                if (btn) btn.textContent = '✓ เพิ่มแล้ว';
+
+                const existingCi = document.getElementById('ci-' + orderId);
+                if (existingCi) existingCi.remove();
+                renderCartItem(orderId);
+                return true;
+            }
+
+            // 1. Process Delivered POs -> ReceivedFull
+            deliveredPos.forEach(po => {
+                const card = poToCardMap.get(po);
+                if (card && addCardToCartWithAction(card, 'ReceivedFull')) {
+                    addedDeliveredCount++;
+                }
+            });
+
+            // 2. Process WIP POs -> Deferred (if not already in Delivered)
+            wipPos.forEach(po => {
+                if (!deliveredPos.has(po)) {
+                    const card = poToCardMap.get(po);
+                    if (card && addCardToCartWithAction(card, 'Deferred')) {
+                        addedWipCount++;
+                    }
+                }
+            });
+
+            const totalMatched = addedDeliveredCount + addedWipCount;
+
+            if (totalMatched === 0) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'ไม่พบรหัสสั่งซื้อที่ตรงกัน',
+                    html: `
+                        <div class="text-left text-xs space-y-2 py-1">
+                            <p class="text-slate-600">ระบบสแกนชีท <b>${deliveredSheetName || '-'}</b> และ <b>${wipSheetName || '-'}</b> แล้ว แต่ไม่พบเลขที่ PO/WO ที่ตรงกับรายการรอดำเนินการของเดือนนี้</p>
+                            <p class="text-slate-400">กรุณาตรวจสอบว่าไฟล์มีคอลัมน์รหัส PO/WO ตรงกับในระบบหรือไม่</p>
+                        </div>
+                    `,
+                    confirmButtonText: 'ตกลง',
+                    confirmButtonColor: '#059669'
+                });
+                return;
+            }
+
+            // Update Cart UI
+            const emptyEl = document.getElementById('cart-empty');
+            if (emptyEl) emptyEl.style.display = 'none';
+            updateSummary();
+            saveCartToStorage();
+
+            closeImportFeedbackModal();
+
+            Swal.fire({
+                icon: 'success',
+                title: 'นำเข้าและจับคู่ข้อมูลสำเร็จ!',
+                html: `
+                    <div class="text-left text-xs space-y-2 py-1">
+                        <p class="text-slate-700">ระบบจับคู่รหัสสั่งซื้อจากไฟล์ Excel ตรงกับระบบทั้งหมด <b>${totalMatched} รายการ</b>:</p>
+                        <div class="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-1.5 font-medium">
+                            <div class="text-emerald-700 flex items-center justify-between">
+                                <span>• แท็บ <b>งานส่งมอบแล้ว</b> (รับสินค้าทันที):</span>
+                                <span class="font-bold">${addedDeliveredCount} รายการ</span>
+                            </div>
+                            <div class="text-amber-700 flex items-center justify-between">
+                                <span>• แท็บ <b>งานอยู่ระหว่างผลิต</b> (รอดำเนินการ/ยกยอด):</span>
+                                <span class="font-bold">${addedWipCount} รายการ</span>
+                            </div>
+                        </div>
+                        <p class="text-slate-500 text-[11px] mt-2">* รายการทั้งหมดถูกใส่ใน <b>"รายการที่เลือก"</b> ทางฝั่งขวาเรียบร้อยแล้ว คุณสามารถตรวจสอบความถูกต้องแล้วกด <b>[บันทึกรายการ]</b> ได้ทันที</p>
+                    </div>
+                `,
+                confirmButtonText: 'รับทราบ',
+                confirmButtonColor: '#059669',
+                customClass: { popup: 'rounded-xl max-w-md' }
+            });
+        }
+
+        // Initialize drag-and-drop & file change event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            const dropzone = document.getElementById('import-dropzone');
+            const fileInput = document.getElementById('import-file-input');
+
+            if (dropzone && fileInput) {
+                ['dragenter', 'dragover'].forEach(eventName => {
+                    dropzone.addEventListener(eventName, (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        dropzone.classList.add('border-emerald-500', 'bg-emerald-50/50');
+                    }, false);
+                });
+
+                ['dragleave', 'drop'].forEach(eventName => {
+                    dropzone.addEventListener(eventName, (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        dropzone.classList.remove('border-emerald-500', 'bg-emerald-50/50');
+                    }, false);
+                });
+
+                dropzone.addEventListener('drop', (e) => {
+                    const dt = e.dataTransfer;
+                    const files = dt.files;
+                    if (files && files.length > 0) {
+                        handleImportFileSelect(files[0]);
+                    }
+                }, false);
+
+                fileInput.addEventListener('change', (e) => {
+                    if (fileInput.files && fileInput.files.length > 0) {
+                        handleImportFileSelect(fileInput.files[0]);
+                    }
+                });
+            }
+
+            // Close modal on ESC
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    const overlay = document.getElementById('import-feedback-modal-overlay');
+                    if (overlay && !overlay.classList.contains('hidden')) {
+                        closeImportFeedbackModal();
+                    }
+                }
+            });
+        });
 
         document.getElementById('save-btn').addEventListener('click', function () {
             handleSaveProcess();
