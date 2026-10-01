@@ -746,6 +746,7 @@
             }
 
             const isEditMode = @(isEdit ? "true" : "false");
+            const isAdmin = @(isAdmin ? "true" : "false");
 
             // Generate dynamic default name
             const now = new Date();
@@ -755,10 +756,12 @@
 
             showCustomModal({
                 title: isEditMode ? "ยืนยันการบันทึกแก้ไขชุดสั่งซื้อ" : "บันทึกข้อมูลเข้าระบบ",
-                desc: isEditMode ? "กรุณาตรวจสอบชื่อชุดสั่งซื้ออะไหล่ที่ต้องการแก้ไขบันทึก:" : @(isAdmin ? "\"กรุณาระบุชื่อชุดสั่งซื้อและวันที่ เพื่อเก็บบันทึกประวัติ:\"" : "\"กรุณาระบุชื่อชุดสั่งซื้อ เพื่อเก็บบันทึกประวัติ:\""),
+                desc: isEditMode
+                    ? "กรุณาตรวจสอบชื่อชุดสั่งซื้ออะไหล่ที่ต้องการแก้ไขบันทึก:"
+                    : (isAdmin ? "กรุณาระบุชื่อชุดสั่งซื้อและวันที่ เพื่อเก็บบันทึกประวัติ:" : "กรุณาระบุชื่อชุดสั่งซื้อ เพื่อเก็บบันทึกประวัติ:"),
                 showInput: true,
-                showDatePicker: @(isAdmin ? "true" : "false"),
-                allowAdvance: @(isAdmin && !isEdit ? "true" : "false"),
+                showDatePicker: isAdmin,
+                allowAdvance: isAdmin && !isEditMode,
                 defaultValue: defaultName,
                 confirmText: isEditMode ? "บันทึกการแก้ไข" : "บันทึกข้อมูล",
                 confirmClass: "bg-primary hover:bg-primary/95 text-white",

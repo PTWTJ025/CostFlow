@@ -596,7 +596,11 @@ namespace CostFlow.Controllers
                 .OrderByDescending(moa => moa.CreatedAt)
                 .ToListAsync();
 
-            var existingActionIds = existingActions.Select(ea => ea.OrderTrackingMasterId).ToHashSet();
+            // เฉพาะ action ที่ไม่ใช่ Requested จึงถือว่าบันทึกสำเร็จ/เสร็จสิ้นแล้ว (Requested ยังถือเป็นงานรอดำเนินการรอฝ่ายผลิตตอบกลับ)
+            var existingActionIds = existingActions
+                .Where(ea => ea.Action != "Requested")
+                .Select(ea => ea.OrderTrackingMasterId)
+                .ToHashSet();
 
             // Get all prior actions strictly earlier than this monthYearKey
             var priorActions = await _context.MonthlyOrderActions
@@ -609,11 +613,11 @@ namespace CostFlow.Controllers
                 .GroupBy(a => a.OrderTrackingMasterId)
                 .ToDictionary(g => g.Key, g => g.First());
 
-            // IDs of orders that were Deferred or Skipped in a prior month → must carry-over to this month
+            // IDs of orders that were Deferred, Skipped, or Requested in a prior month → must carry-over to this month
             // For Deferred: only carry over if the prior action is from the IMMEDIATELY preceding month (exactly 1 month)
             //               AND the target month is NOT a future month
-            // For Skipped: carry over from any prior month (can skip multiple months)
-            //              BUT NOT if the target month is a future month
+            // For Skipped & Requested: carry over from any prior month (can skip/wait multiple months)
+            //                          BUT NOT if the target month is a future month
             var carryOverIds = latestPriorActionMap
                 .Where(kvp =>
                 {
@@ -630,9 +634,9 @@ namespace CostFlow.Controllers
                             return monthDiff == 1;
                         }
                     }
-                    else if (kvp.Value.Action == "Skipped")
+                    else if (kvp.Value.Action == "Skipped" || kvp.Value.Action == "Requested")
                     {
-                        // Skipped: ของยังไม่มา ลอยข้ามเดือนได้เรื่อยๆ จนกว่าจะตัดสินใจ
+                        // Skipped / Requested: ของยังไม่มา/รอตอบกลับ ลอยข้ามเดือนได้เรื่อยๆ จนกว่าจะตัดสินใจหรือจับคู่รับของ
                         var pp = kvp.Value.MonthYear.Split('-');
                         var tp = monthYearKey.Split('-');
                         if (pp.Length == 2 && tp.Length == 2
@@ -709,8 +713,9 @@ namespace CostFlow.Controllers
                 .ToList();
 
 
-            // Transform existingActions to SavedOrderItem
+            // Transform existingActions to SavedOrderItem (เฉพาะที่ไม่ใช่ Requested เพราะ Requested ถือว่ายังรอดำเนินการรอฝ่ายผลิตตอบกลับ)
             var savedItems = existingActions
+                .Where(moa => moa.Action != "Requested")
                 .Select(moa =>
                 {
                     var otm = moa.OrderTrackingMaster;
@@ -763,6 +768,11 @@ namespace CostFlow.Controllers
                         if (priorAction.Action == "Deferred" && isExactPrevMonth)
                         {
                             forwardedStatus = "Deferred";
+                            forwardedFromMonth = ConvertKeyToThaiMonth(priorAction.MonthYear);
+                        }
+                        else if (priorAction.Action == "Requested")
+                        {
+                            forwardedStatus = "Requested";
                             forwardedFromMonth = ConvertKeyToThaiMonth(priorAction.MonthYear);
                         }
                         else
@@ -837,7 +847,14 @@ namespace CostFlow.Controllers
                 var forwardedStatus = string.Empty;
                 var forwardedFromMonth = string.Empty;
 
-                if (priorAction != null)
+                // ตรวจสอบสถานะ: หากในงวดเดือนปัจจุบันเคยกด Requested ไว้ ให้แสดงสถานะ Requested ทันที
+                var thisMonthRequested = existingActions.FirstOrDefault(ea => ea.OrderTrackingMasterId == otm.Id && ea.Action == "Requested");
+                if (thisMonthRequested != null)
+                {
+                    forwardedStatus = "Requested";
+                    forwardedFromMonth = ConvertKeyToThaiMonth(monthYearKey);
+                }
+                else if (priorAction != null)
                 {
                     var isExactPrevMonth = false;
                     var pp = priorAction.MonthYear.Split('-');
@@ -859,6 +876,11 @@ namespace CostFlow.Controllers
                         {
                             amount = priorAction.ActionPrice;
                         }
+                    }
+                    else if (priorAction.Action == "Requested")
+                    {
+                        forwardedStatus = "Requested";
+                        forwardedFromMonth = ConvertKeyToThaiMonth(priorAction.MonthYear);
                     }
                     else
                     {
@@ -926,10 +948,11 @@ namespace CostFlow.Controllers
                     originalMonth = ConvertKeyToThaiMonth($"{reportDate.Year:0000}-{reportDate.Month:00}");
                 }
 
-                if (isPastMonth)
+                if (isPastMonth && forwardedStatus != "Requested")
                 {
-                    // สำหรับเดือนที่ผ่านไปแล้ว (เช่น กรกฎาคม 2569): รายการค้างที่ยังไม่ถูกกด action
+                    // สำหรับเดือนที่ผ่านไปแล้ว: รายการค้างที่ยังไม่ถูกกด action
                     // ถือเป็น "ผลัดอัตโนมัติไปเดือนถัดไป" (Auto-Skipped) → ย้ายไปอยู่ใน savedItems (แท็บบันทึกแล้ว)
+                    // ส่วนรายการที่ "ต้องการรับของ" (Requested) ให้คงอยู่ในรอดำเนินการเสมอเพื่อรอใบตอบกลับจากฝ่ายผลิต
                     savedItems.Add(new SavedOrderItem
                     {
                         ActionId = Guid.Empty,
@@ -1220,7 +1243,7 @@ namespace CostFlow.Controllers
                                     return ((tY - pY) * 12) + (tM - pM) == 1;
                                 }
                             }
-                            else if (kvp.Value.Action == "Skipped")
+                            else if (kvp.Value.Action == "Skipped" || kvp.Value.Action == "Requested")
                             {
                                 var pp = kvp.Value.MonthYear.Split('-');
                                 var tp = monthYearKey.Split('-');
@@ -1402,20 +1425,48 @@ namespace CostFlow.Controllers
                         }
                         else
                         {
-                            var monthlyAction = new MonthlyOrderAction
+                            // ถ้ามี Action เป็น Requested จากเดือนก่อนหน้า หรือในเดือนนี้ ให้คงสถานะ Requested ไว้ รอฝ่ายผลิตตอบกลับ (ไม่เปลี่ยนเป็น Skipped)
+                            bool isPriorRequested = priorAct?.Action == "Requested";
+                            var isAlreadyRequested = await _context.MonthlyOrderActions
+                                .AnyAsync(a => a.MonthYear == monthYearKey && a.OrderTrackingMasterId == unselectedId && a.Action == "Requested");
+
+                            if (isPriorRequested || isAlreadyRequested)
                             {
-                                Id = Guid.NewGuid(),
-                                OrderTrackingMasterId = unselectedId,
-                                MonthYear = monthYearKey,
-                                Action = "Skipped",
-                                ActionPrice = 0,
-                                IsForcedPayment = false,
-                                IsStockReceived = false,
-                                DeferredFromMonth = null,
-                                CreatedAt = DateTime.UtcNow,
-                                UpdatedAt = DateTime.UtcNow
-                            };
-                            _context.MonthlyOrderActions.Add(monthlyAction);
+                                if (!isAlreadyRequested)
+                                {
+                                    var requestedAction = new MonthlyOrderAction
+                                    {
+                                        Id = Guid.NewGuid(),
+                                        OrderTrackingMasterId = unselectedId,
+                                        MonthYear = monthYearKey,
+                                        Action = "Requested",
+                                        ActionPrice = 0,
+                                        IsForcedPayment = false,
+                                        IsStockReceived = false,
+                                        DeferredFromMonth = null,
+                                        CreatedAt = DateTime.UtcNow,
+                                        UpdatedAt = DateTime.UtcNow
+                                    };
+                                    _context.MonthlyOrderActions.Add(requestedAction);
+                                }
+                            }
+                            else
+                            {
+                                var monthlyAction = new MonthlyOrderAction
+                                {
+                                    Id = Guid.NewGuid(),
+                                    OrderTrackingMasterId = unselectedId,
+                                    MonthYear = monthYearKey,
+                                    Action = "Skipped",
+                                    ActionPrice = 0,
+                                    IsForcedPayment = false,
+                                    IsStockReceived = false,
+                                    DeferredFromMonth = null,
+                                    CreatedAt = DateTime.UtcNow,
+                                    UpdatedAt = DateTime.UtcNow
+                                };
+                                _context.MonthlyOrderActions.Add(monthlyAction);
+                            }
                         }
                     }
                 }
@@ -1491,7 +1542,11 @@ namespace CostFlow.Controllers
                 .GroupBy(a => a.OrderTrackingMasterId)
                 .ToDictionary(g => g.Key, g => g.First());
 
-            var existingActionIds = existingActions.Select(ea => ea.OrderTrackingMasterId).ToHashSet();
+            // เฉพาะ action ที่ไม่ใช่ Requested จึงถือว่าบันทึกสำเร็จ/เสร็จสิ้นแล้ว (Requested ยังถือเป็นงานรอดำเนินการรอฝ่ายผลิตตอบกลับ)
+            var existingActionIds = existingActions
+                .Where(ea => ea.Action != "Requested")
+                .Select(ea => ea.OrderTrackingMasterId)
+                .ToHashSet();
 
             var keyParts = monthYearKey.Split('-');
             DateTime monthStart = DateTime.MinValue, monthEnd = DateTime.MaxValue;
@@ -1559,10 +1614,11 @@ namespace CostFlow.Controllers
 
             var remainingAmount = Math.Max(0m, totalPlanned - processedAmount);
 
+            var actualSavedCount = existingActions.Count(ea => ea.Action != "Requested");
             return Json(new
             {
-                totalOrders = existingActions.Count + pendingOrders.Count,
-                savedCount = existingActions.Count,
+                totalOrders = actualSavedCount + pendingOrders.Count,
+                savedCount = actualSavedCount,
                 pendingCount = pendingOrders.Count,
                 receivedAmount = processedAmount,
                 processedAmount,
@@ -1587,7 +1643,10 @@ namespace CostFlow.Controllers
                     .Where(moa => moa.MonthYear == monthYearKey)
                     .ToListAsync();
 
-                var existingActionIds = existingActions.Select(ea => ea.OrderTrackingMasterId).ToHashSet();
+                var existingActionIds = existingActions
+                    .Where(ea => ea.Action != "Requested")
+                    .Select(ea => ea.OrderTrackingMasterId)
+                    .ToHashSet();
 
                 var priorActions = await _context.MonthlyOrderActions
                     .Where(moa => string.Compare(moa.MonthYear, monthYearKey) < 0)
@@ -2268,7 +2327,10 @@ namespace CostFlow.Controllers
                 .GroupBy(a => a.OrderTrackingMasterId)
                 .ToDictionary(g => g.Key, g => g.First());
 
-            var existingActionIds = existingActions.Select(ea => ea.OrderTrackingMasterId).ToHashSet();
+            var existingActionIds = existingActions
+                .Where(ea => ea.Action != "Requested")
+                .Select(ea => ea.OrderTrackingMasterId)
+                .ToHashSet();
 
             // Parse month date range
             var keyParts = monthYearKey.Split('-');
@@ -2308,7 +2370,7 @@ namespace CostFlow.Controllers
             // A. รายการที่บันทึกแล้ว (Saved)
             if (actionFilter != "DraftOnly" && (statusFilter == "all" || statusFilter == "saved"))
             {
-                foreach (var action in existingActions)
+                foreach (var action in existingActions.Where(a => a.Action != "Requested"))
                 {
                     var otm = action.OrderTrackingMaster;
                     var latestPlan = otm?.MatchedInWeeklyPlans?.OrderByDescending(w => w.WeeklyPlan?.UploadedAt).FirstOrDefault();
@@ -3417,12 +3479,21 @@ namespace CostFlow.Controllers
 
                         if (!actionByOrderAndMonth.ContainsKey((order.Id, loopMonthKey)))
                         {
-                            var autoSkip = new MonthlyOrderAction
+                            // ตรวจสอบ action ล่าสุดก่อนเดือนนี้ ถ้าเป็น Requested ให้คงสถานะ Requested ต่อไปเพื่อรอฝ่ายผลิตตอบกลับ
+                            var priorActionForOrder = priorActions
+                                .Where(a => a.OrderTrackingMasterId == order.Id && string.Compare(a.MonthYear, loopMonthKey) < 0)
+                                .OrderByDescending(a => a.MonthYear)
+                                .ThenByDescending(a => a.CreatedAt)
+                                .FirstOrDefault();
+
+                            string actionToAssign = (priorActionForOrder?.Action == "Requested") ? "Requested" : "Skipped";
+
+                            var autoAction = new MonthlyOrderAction
                             {
                                 Id = Guid.NewGuid(),
                                 OrderTrackingMasterId = order.Id,
                                 MonthYear = loopMonthKey,
-                                Action = "Skipped",
+                                Action = actionToAssign,
                                 ActionPrice = 0,
                                 IsForcedPayment = false,
                                 DeferredFromMonth = null,
@@ -3430,8 +3501,8 @@ namespace CostFlow.Controllers
                                 UpdatedAt = DateTime.UtcNow
                             };
 
-                            _context.MonthlyOrderActions.Add(autoSkip);
-                            actionByOrderAndMonth[(order.Id, loopMonthKey)] = autoSkip;
+                            _context.MonthlyOrderActions.Add(autoAction);
+                            actionByOrderAndMonth[(order.Id, loopMonthKey)] = autoAction;
                             affectedMonths.Add(loopMonthKey);
                             hasNewActions = true;
                         }

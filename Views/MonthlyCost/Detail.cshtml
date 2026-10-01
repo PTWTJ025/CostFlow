@@ -190,7 +190,7 @@
     <!-- Right: summary pills -->
     <div class="flex items-center gap-2 flex-wrap">
         <!-- ทั้งหมด -->
-        <div class="flex items-center gap-1.5 bg-white border border-slate-200 rounded-md px-3 py-1.5 shadow-sm">
+        <div class="flex items-center gap-1.5 bg-white border border-slate-200 rounded-md px-3 shadow-sm select-none" style="height: 34px !important;">
             <svg class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 12h.007v.008H3.75V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm-.375 5.25h.007v.008H3.75v-.008Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"/>
             </svg>
@@ -199,7 +199,7 @@
         </div>
 
         <!-- รอดำเนินการ -->
-        <div class="flex items-center gap-1.5 bg-amber-50 border border-amber-200 rounded-md px-3 py-1.5 shadow-sm">
+        <div class="flex items-center gap-1.5 bg-amber-50 border border-amber-200 rounded-md px-3 shadow-sm select-none" style="height: 34px !important;">
             <svg class="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
             </svg>
@@ -208,7 +208,7 @@
         </div>
 
         <!-- ดำเนินการแล้ว -->
-        <div class="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 rounded-md px-3 py-1.5 shadow-sm">
+        <div class="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 rounded-md px-3 shadow-sm select-none" style="height: 34px !important;">
             <svg class="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
             </svg>
@@ -217,7 +217,7 @@
         </div>
 
         <!-- ยอดรวมสั่งผลิตประจำเดือน -->
-        <div class="flex items-center gap-1.5 bg-purple-50 border border-purple-200 rounded-md px-3 py-1.5 shadow-sm">
+        <div class="flex items-center gap-1.5 bg-purple-50 border border-purple-200 rounded-md px-3 shadow-sm select-none" style="height: 34px !important;">
             <svg class="w-4 h-4 text-purple-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm3 0h.008v.008H18V10.5Zm-12 0h.008v.008H6V10.5Z"/>
             </svg>
@@ -240,7 +240,7 @@
     type="button"
     onclick="openImportModal()"
     title="นำเข้า Excel ใบตอบกลับจากฝ่ายผลิต (Auto-Match)"
-    class="flex items-center justify-center bg-blue-50 border border-blue-300 hover:border-blue-400 text-blue-600 hover:text-blue-700 rounded-md shadow-sm transition-all active:scale-95 shrink-0 cursor-pointer group"
+    class="flex items-center justify-center btn-custom-blue-soft rounded-md shadow-sm transition-all active:scale-95 shrink-0 cursor-pointer group"
     style="width: 34px !important; height: 34px !important; padding: 0 !important;"
 >
     <svg
@@ -344,6 +344,7 @@
                     <option value="default">เรียงมาตรฐาน</option>
                     <option value="this-month">เฉพาะเดือนนี้</option>
                     <option value="deferred">ผ่อนยกยอด</option>
+                    <option value="requested">ต้องการรับของ</option>
                     <option value="skipped">ค้างยกยอด</option>
                 </select>
             </div>
@@ -447,8 +448,15 @@
                     : $"ค้างมาจาก {order.ForwardedFromMonth}";
                 fwdBadge = $"<span class=\"ml-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-purple-100 text-purple-700\" title=\"{tooltipText}\">ค้างยกยอดมา</span>";
             }
+            else if (order.ForwardedStatus == "Requested")
+            {
+                var tooltipText = !string.IsNullOrEmpty(order.OriginalMonth)
+                    ? $"WO สร้างจาก {order.OriginalMonth} • ขอรับของเมื่อ {order.ForwardedFromMonth} (รอใบตอบกลับฝ่ายผลิต)"
+                    : $"ขอรับของเมื่อ {order.ForwardedFromMonth} (รอใบตอบกลับฝ่ายผลิต)";
+                fwdBadge = $"<span class=\"ml-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-100 text-blue-700\" title=\"{tooltipText}\">ต้องการรับของ</span>";
+            }
 
-            <div class="order-card border border-slate-200 rounded p-3 bg-white @(order.ForwardedStatus == "Deferred" ? "in-cart is-locked-deferred" : "")"
+            <div class="order-card border border-slate-200 rounded p-3 bg-white @(order.ForwardedStatus == "Deferred" ? "in-cart is-locked-deferred" : (order.ForwardedStatus == "Requested" ? "is-locked-requested" : ""))"
                  data-order-id="@order.OrderId"
                  data-po-number="@order.PoNumber"
                  data-order-name="@order.OrderName"
@@ -466,6 +474,14 @@
                         <div class="mt-1 shrink-0 w-4 h-4 flex items-center justify-center text-amber-500 select-none" title="รายการผ่อนชำระต่อเนื่อง ถูกล็อกในรายการที่เลือกแล้ว">
                             <svg class="w-3.5 h-3.5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z"/>
+                            </svg>
+                        </div>
+                    }
+                    else if (order.ForwardedStatus == "Requested")
+                    {
+                        <div class="mt-1 shrink-0 w-4 h-4 flex items-center justify-center text-blue-500 select-none" title="รายการต้องการรับของ รอใบตอบกลับจากฝ่ายผลิต (ไม่สามารถเลือกด้วยตนเองได้)">
+                            <svg class="w-3.5 h-3.5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
                             </svg>
                         </div>
                     }
@@ -526,6 +542,30 @@
                                 <span>@infoText</span>
                             </div>
                         }
+                        else if (order.ForwardedStatus == "Requested")
+                        {
+                            var infoText = "";
+                            if (!string.IsNullOrEmpty(order.OriginalMonth) && !string.IsNullOrEmpty(order.ForwardedFromMonth))
+                            {
+                                infoText = $"WO สร้างจาก {order.OriginalMonth} • ขอรับของจาก {order.ForwardedFromMonth} (รอใบตอบกลับฝ่ายผลิต)";
+                            }
+                            else if (!string.IsNullOrEmpty(order.ForwardedFromMonth))
+                            {
+                                infoText = $"ขอรับของจาก {order.ForwardedFromMonth} (รอใบตอบกลับฝ่ายผลิต)";
+                            }
+                            else if (!string.IsNullOrEmpty(order.OriginalMonth))
+                            {
+                                infoText = $"WO สร้างจาก {order.OriginalMonth} • รอใบตอบกลับฝ่ายผลิต";
+                            }
+                            else
+                            {
+                                infoText = "ต้องการรับของ (รอใบตอบกลับฝ่ายผลิต)";
+                            }
+
+                            <div class="mt-1.5 mb-1.5 text-[11px] font-bold text-blue-700 bg-blue-50/70 border border-blue-100 rounded-md px-2.5 py-1 inline-flex items-center gap-1.5">
+                                <span>@infoText</span>
+                            </div>
+                        }
 
                         <div class="flex items-center flex-wrap gap-x-2.5 gap-y-1 mt-1.5 text-[11px] leading-none">
                             <span class="inline-flex items-center gap-1 font-medium @qtyColor leading-none">
@@ -559,6 +599,15 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z"/>
                                 </svg>
                                 ล็อกตัดจ่าย
+                            </span>
+                        }
+                        else if (order.ForwardedStatus == "Requested")
+                        {
+                            <span class="btn-locked-requested px-2.5 py-1 rounded-md text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200 flex items-center gap-1 select-none cursor-default" title="อยู่ในสถานะต้องการรับของ รอใบตอบกลับจากฝ่ายผลิต (นำเข้า Excel เพื่อปลดล็อกและจับคู่อัตโนมัติ)">
+                                <svg class="w-3.5 h-3.5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+                                </svg>
+                                รอตอบกลับ
                             </span>
                         }
                         else
@@ -760,35 +809,34 @@
             <span class="font-bold text-blue-800 text-sm">รายการที่เลือก</span>
             <span class="ml-2 text-xs text-blue-500 font-semibold" id="cart-count-label">@deferredCarryOverOrders.Count รายการ</span>
         </div>
-        <div class="flex items-center gap-1.5 flex-wrap" id="cart-header-actions" style="display:none;">
+        <div class="w-full flex items-center gap-1.5 flex-wrap" id="cart-header-actions" style="display:none;">
             <span class="text-[11px] text-slate-400 font-medium mr-0.5 hidden xl:inline-block">ปรับทั้งหมดเป็น:</span>
             <button type="button" onclick="setAllCartAction('ReceivedFull')"
                     class="px-2 py-1 rounded-md text-[11px] font-bold bg-white text-emerald-700 border border-emerald-200 hover:bg-emerald-50 hover:border-emerald-300 shadow-2xs transition-all flex items-center gap-1 cursor-pointer"
                     title="รับสินค้า (ชำระแล้ว)">
                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                ชำระแล้ว
+                รับสินค้า (ชำระแล้ว)
             </button>
             <button type="button" onclick="setAllCartAction('Deferred')"
                     class="px-2 py-1 rounded-md text-[11px] font-bold bg-white text-amber-700 border border-amber-200 hover:bg-amber-50 hover:border-amber-300 shadow-2xs transition-all flex items-center gap-1 cursor-pointer"
                     title="รับสินค้า (ยังไม่ชำระ)">
                 <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-                ยังไม่ชำระ
+                รับสินค้า (ยังไม่ชำระ)
             </button>
             <button type="button" onclick="setAllCartAction('Requested')"
                     class="px-2 py-1 rounded-md text-[11px] font-bold bg-white text-blue-700 border border-blue-200 hover:bg-blue-50 hover:border-blue-300 shadow-2xs transition-all flex items-center gap-1 cursor-pointer"
                     title="ต้องการรับของ">
                 <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                ต้องการรับ
+                ต้องการรับของ
             </button>
             <button type="button" onclick="setAllCartAction('Skipped')"
                     class="px-2 py-1 rounded-md text-[11px] font-bold bg-white text-purple-700 border border-purple-200 hover:bg-purple-50 hover:border-purple-300 shadow-2xs transition-all flex items-center gap-1 cursor-pointer"
                     title="ยังไม่รับสินค้า">
                 <span class="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
-                ยังไม่รับ
+                ยังไม่รับสินค้า
             </button>
-            <div class="h-4 w-px bg-blue-200 mx-0.5"></div>
             <button type="button" id="clear-cart-btn" onclick="clearAllCart()"
-                    class="px-2.5 py-1 rounded text-[11px] font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 border border-rose-200 transition-all cursor-pointer">
+                    class="ml-auto px-2.5 py-1 rounded text-[11px] font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 border border-rose-200 transition-all cursor-pointer">
                 ✕ เคลียร์
             </button>
         </div>
@@ -910,14 +958,8 @@
         <!-- Modal Header -->
         <div class="px-5 py-4 border-b border-slate-100 bg-slate-50/70 flex items-center justify-between">
             <div class="flex items-center gap-2.5">
-                <div class="w-8 h-8 rounded-lg bg-blue-50 border border-blue-200/80 flex items-center justify-center text-blue-600 shrink-0">
-                    <svg class="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0 3 3m-3-3-3 3M6.75 19.5a4.5 4.5 0 0 1-1.41-8.775 5.25 5.25 0 0 1 10.233-2.33 3 3 0 0 1 3.758 3.848A3.752 3.752 0 0 1 18 19.5H6.75Z"></path>
-                    </svg>
-                </div>
                 <div>
                     <h3 class="text-sm font-bold text-slate-800">นำเข้าใบตอบกลับจากฝ่ายผลิต</h3>
-                    <p class="text-[11px] text-slate-500">จับคู่รหัสสั่งซื้อ/WO และอัปเดตสถานะของเดือน @Model.MonthYear</p>
                 </div>
             </div>
             <button type="button" onclick="closeImportFeedbackModal()" class="text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg p-1.5 transition-colors cursor-pointer">
@@ -1149,6 +1191,12 @@
                                 card.classList.add('in-cart');
                                 const btn = card.querySelector('.add-btn');
                                 if (btn) btn.textContent = '✓ เพิ่มแล้ว';
+                                const lockedReq = card.querySelector('.btn-locked-requested');
+                                if (lockedReq) {
+                                    lockedReq.innerHTML = `<svg class="w-3.5 h-3.5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg> ✓ จับคู่แล้ว`;
+                                    lockedReq.className = 'btn-locked-requested px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1 select-none cursor-default';
+                                    lockedReq.title = 'จับคู่กับใบตอบกลับจากฝ่ายผลิตแล้ว';
+                                }
                                 
                                 renderCartItem(orderId);
                             }
@@ -1427,7 +1475,7 @@
                     ✓ รับของแล้ว • ยอดเงิน <b>${fmt(item.price)}</b> ยกไปตัดจ่ายเดือนหน้า
                 </p>
                 <p class="text-[11px] text-blue-700 mt-1.5 font-medium" id="request-note-${orderId}" style="display:${isReq ? 'block' : 'none'};">
-                    📋 บันทึกในแผนขอรับของรอบหน้า • ยังไม่ตัดงบเดือนนี้ (รอฝ่ายผลิตตอบกลับ)
+                    บันทึกในแผนขอรับของรอบหน้า • ยังไม่ตัดงบเดือนนี้ (รอฝ่ายผลิตตอบกลับ)
                 </p>
             `;
 
@@ -1483,6 +1531,13 @@
                 card.classList.remove('in-cart');
                 const btn = card.querySelector('.add-btn');
                 if (btn) btn.textContent = '+ เพิ่ม';
+
+                const lockedReq = card.querySelector('.btn-locked-requested');
+                if (lockedReq) {
+                    lockedReq.innerHTML = `<svg class="w-3.5 h-3.5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg> รอตอบกลับ`;
+                    lockedReq.className = 'btn-locked-requested px-2.5 py-1 rounded-md text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200 flex items-center gap-1 select-none cursor-default';
+                    lockedReq.title = 'อยู่ในสถานะต้องการรับของ รอใบตอบกลับจากฝ่ายผลิต (นำเข้า Excel เพื่อปลดล็อกและจับคู่อัตโนมัติ)';
+                }
             }
 
             // Show empty state if cart is empty
@@ -1718,6 +1773,7 @@
                 let matchType = true;
                 if (filterType === 'this-month') matchType = (fwdStatus === '');
                 else if (filterType === 'deferred') matchType = (fwdStatus === 'Deferred');
+                else if (filterType === 'requested') matchType = (fwdStatus === 'Requested');
                 else if (filterType === 'skipped') matchType = (fwdStatus === 'Skipped');
 
                 if (matchSearch && matchType) {
@@ -1741,6 +1797,8 @@
                 
                 if (filterType === 'deferred') {
                     totalContainerEl.classList.add('bg-amber-50', 'text-amber-700', 'border-amber-100');
+                } else if (filterType === 'requested') {
+                    totalContainerEl.classList.add('bg-blue-50', 'text-blue-700', 'border-blue-100');
                 } else if (filterType === 'skipped') {
                     totalContainerEl.classList.add('bg-purple-50', 'text-purple-700', 'border-purple-100');
                 } else {
@@ -1821,8 +1879,8 @@
                     } else if (action === 'Requested') {
                         return fwdStatus === 'Requested';
                     } else {
-                        // ReceivedFull เอาทั้งหมดที่มองเห็นอยู่
-                        return true;
+                        // ReceivedFull เอาทั้งหมดที่มองเห็นอยู่ ยกเว้น Requested ที่ถูกล็อกรอใบตอบกลับ
+                        return fwdStatus !== 'Requested';
                     }
                 });
             }
@@ -1846,7 +1904,7 @@
             const card = btnEl.closest('.order-card');
             const orderId = card.dataset.orderId;
 
-            if (cart[orderId] || card.classList.contains('is-locked-deferred')) return;
+            if (cart[orderId] || card.classList.contains('is-locked-deferred') || card.classList.contains('is-locked-requested')) return;
 
             let finalAction = specifiedAction || 'ReceivedFull';
             if (card.dataset.forwardedStatus === 'Deferred') {
@@ -2427,6 +2485,12 @@
                 card.classList.add('in-cart');
                 const btn = card.querySelector('.add-btn');
                 if (btn) btn.textContent = '✓ เพิ่มแล้ว';
+                const lockedReq = card.querySelector('.btn-locked-requested');
+                if (lockedReq) {
+                    lockedReq.innerHTML = `<svg class="w-3.5 h-3.5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg> ✓ จับคู่แล้ว`;
+                    lockedReq.className = 'btn-locked-requested px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1 select-none cursor-default';
+                    lockedReq.title = 'จับคู่กับใบตอบกลับจากฝ่ายผลิตแล้ว';
+                }
 
                 const existingCi = document.getElementById('ci-' + orderId);
                 if (existingCi) existingCi.remove();
