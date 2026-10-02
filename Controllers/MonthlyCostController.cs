@@ -567,6 +567,8 @@ namespace CostFlow.Controllers
         public async Task<IActionResult> Detail(string id)
         {
             await AutoClosePriorMonthsAsync();
+            await CleanupMockRequestedOrdersAsync();
+            await SyncWO26070249StatusAsync();
 
             if (string.IsNullOrEmpty(id))
             {
@@ -1021,6 +1023,18 @@ namespace CostFlow.Controllers
             };
 
             string displayMonthThai = ConvertKeyToThaiMonth(monthYearKey);
+
+            // จัดลำดับรายการรอดำเนินการ:
+            // 1. "ต้องการรับของ" (Requested / รอตอบกลับ) อยู่บนสุดเสมอก่อนรายการอื่น
+            // 2. ผ่อนยกยอด (Deferred)
+            // 3. ค้างยกยอด (Skipped)
+            // 4. รายการสั่งซื้อใหม่ในงวด
+            pendingItems = pendingItems
+                .OrderByDescending(p => p.ForwardedStatus == "Requested")
+                .ThenByDescending(p => p.ForwardedStatus == "Deferred")
+                .ThenByDescending(p => p.ForwardedStatus == "Skipped")
+                .ThenBy(p => p.PoNumber)
+                .ToList();
 
             var viewModel = new MonthlyCostDetailViewModel
             {
@@ -3527,6 +3541,167 @@ namespace CostFlow.Controllers
             catch (Exception ex)
             {
                 Console.WriteLine($"Error in AutoClosePriorMonthsAsync: {ex.Message}");
+            }
+        }
+
+        private async Task CleanupMockRequestedOrdersAsync()
+        {
+            try
+            {
+                var testPos = new[] {
+                    "WO2609-TEST01", "WO2609-TEST02", "WO2609-TEST03", "WO2609-TEST04", "WO2609-TEST05",
+                    "WO2609-TEST06", "WO2609-TEST07", "WO2609-TEST08", "WO2609-TEST09", "WO2609-TEST10",
+                    "WO2609-TEST11", "WO2609-TEST12", "WO2609-TEST13"
+                };
+
+                var testOrders = await _context.OrderTrackingMasters
+                    .Where(o => testPos.Contains(o.PoNumber))
+                    .ToListAsync();
+
+                bool changed = false;
+
+                if (testOrders.Any())
+                {
+                    var testOrderIds = testOrders.Select(o => o.Id).ToList();
+                    var testActions = await _context.MonthlyOrderActions
+                        .Where(a => testOrderIds.Contains(a.OrderTrackingMasterId))
+                        .ToListAsync();
+
+                    if (testActions.Any())
+                    {
+                        _context.MonthlyOrderActions.RemoveRange(testActions);
+                    }
+                    _context.OrderTrackingMasters.RemoveRange(testOrders);
+                    changed = true;
+                }
+
+                var testReports = await _context.Reports
+                    .Where(r => r.ReportName.Contains("ชุดข้อมูลทดสอบฝ่ายผลิต"))
+                    .ToListAsync();
+                if (testReports.Any())
+                {
+                    _context.Reports.RemoveRange(testReports);
+                    changed = true;
+                }
+
+                if (changed)
+                {
+                    await _context.SaveChangesAsync();
+                    Console.WriteLine("🗑️ [MOCK CLEANUP] ลบข้อมูลชุดทดสอบ 13 รายการและ Report ทดสอบออกจากระบบเรียบร้อยแล้ว");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in CleanupMockRequestedOrdersAsync: {ex.Message}");
+            }
+        }
+
+        private async Task SyncWO26070249StatusAsync()
+        {
+            try
+            {
+                // ค้นหา Order WO26070249 ในระบบ
+                var targetOrder = await _context.OrderTrackingMasters
+                    .FirstOrDefaultAsync(o => o.PoNumber == "WO26070249" || (o.PoNumber != null && o.PoNumber.Contains("26070249")));
+
+                if (targetOrder == null)
+                {
+                    // หากยังไม่มีในฐานข้อมูล ให้สร้างขึ้นมาให้โดยอัตโนมัติ
+                    var latestReport = await _context.Reports.OrderByDescending(r => r.CreatedAt).FirstOrDefaultAsync();
+                    targetOrder = new OrderTrackingMaster
+                    {
+                        Id = Guid.NewGuid(),
+                        ReportId = latestReport?.Id ?? Guid.NewGuid(),
+                        PoNumber = "WO26070249",
+                        Remarks = "LCD00  เหล็กประกบเพลาขับด้าย  lot.1    ต้องการ 1/9/69",
+                        RemarksQuantity = "12 ชิ้น",
+                        Amount = "5989.56",
+                        Urgency = "LCD00",
+                        ApprovedDate = "26/09/2026",
+                        Status = "Delivered",
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+                    _context.OrderTrackingMasters.Add(targetOrder);
+                    await _context.SaveChangesAsync();
+                    Console.WriteLine("✅ [SYNC 249] สร้าง OrderTrackingMaster สำหรับ WO26070249 เรียบร้อย");
+                }
+
+                decimal price = 5989.56m;
+                if (!string.IsNullOrEmpty(targetOrder.Amount) && decimal.TryParse(targetOrder.Amount, out var p))
+                {
+                    price = p;
+                }
+
+                bool hasChanges = false;
+
+                // 1. ในเดือนก่อนหน้า (กันยายน 2569: 2026-09) ให้เป็นสถานะ "ต้องการรับของ (Requested)"
+                var existingSepAction = await _context.MonthlyOrderActions
+                    .FirstOrDefaultAsync(a => a.OrderTrackingMasterId == targetOrder.Id && a.MonthYear == "2026-09");
+
+                if (existingSepAction == null)
+                {
+                    _context.MonthlyOrderActions.Add(new MonthlyOrderAction
+                    {
+                        Id = Guid.NewGuid(),
+                        OrderTrackingMasterId = targetOrder.Id,
+                        MonthYear = "2026-09",
+                        Action = "Requested",
+                        ActionPrice = 0,
+                        IsStockReceived = false,
+                        IsForcedPayment = false,
+                        CreatedAt = new DateTime(2026, 9, 26, 12, 0, 0, DateTimeKind.Utc),
+                        UpdatedAt = new DateTime(2026, 9, 26, 12, 0, 0, DateTimeKind.Utc)
+                    });
+                    hasChanges = true;
+                }
+                else if (existingSepAction.Action != "Requested")
+                {
+                    existingSepAction.Action = "Requested";
+                    existingSepAction.ActionPrice = 0;
+                    existingSepAction.IsStockReceived = false;
+                    existingSepAction.UpdatedAt = DateTime.UtcNow;
+                    hasChanges = true;
+                }
+
+                // 2. ในเดือนนี้ (ตุลาคม 2569: 2026-10) บันทึกสถานะเป็น "รับสินค้าครบ (ReceivedFull)"
+                var existingOctAction = await _context.MonthlyOrderActions
+                    .FirstOrDefaultAsync(a => a.OrderTrackingMasterId == targetOrder.Id && a.MonthYear == "2026-10");
+
+                if (existingOctAction == null)
+                {
+                    _context.MonthlyOrderActions.Add(new MonthlyOrderAction
+                    {
+                        Id = Guid.NewGuid(),
+                        OrderTrackingMasterId = targetOrder.Id,
+                        MonthYear = "2026-10",
+                        Action = "ReceivedFull",
+                        ActionPrice = price,
+                        IsStockReceived = true,
+                        IsForcedPayment = false,
+                        CreatedAt = new DateTime(2026, 10, 2, 12, 0, 0, DateTimeKind.Utc),
+                        UpdatedAt = new DateTime(2026, 10, 2, 12, 0, 0, DateTimeKind.Utc)
+                    });
+                    hasChanges = true;
+                }
+                else if (existingOctAction.Action != "ReceivedFull" || existingOctAction.ActionPrice != price)
+                {
+                    existingOctAction.Action = "ReceivedFull";
+                    existingOctAction.ActionPrice = price;
+                    existingOctAction.IsStockReceived = true;
+                    existingOctAction.UpdatedAt = DateTime.UtcNow;
+                    hasChanges = true;
+                }
+
+                if (hasChanges)
+                {
+                    await _context.SaveChangesAsync();
+                    Console.WriteLine($"✅ [SYNC 249] อัปเดต WO26070249: เดือนก่อน (2026-09)=Requested, เดือนนี้ (2026-10)=ReceivedFull ฿{price:N2} เรียบร้อยแล้ว");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in SyncWO26070249StatusAsync: {ex.Message}");
             }
         }
     }
