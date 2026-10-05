@@ -1341,7 +1341,7 @@
 
         function setAllCartAction(action) {
             Object.keys(cart).forEach(orderId => {
-                if (!cart[orderId].isLocked) {
+                if (!cart[orderId].isLocked && cart[orderId].forwardedStatus !== 'Requested') {
                     setAction(orderId, action);
                 }
             });
@@ -1432,36 +1432,56 @@
             const reqClass = isReq ? 'action-pill active-request' : 'action-pill';
             const skipClass = isSkip ? 'action-pill active-skip' : 'action-pill';
 
-            const actionContentHtml = `
-                <div class="flex items-center flex-wrap gap-1.5" id="pills-${orderId}">
-                    <label class="${receiveClass}" id="pill-receive-${orderId}" onclick="setAction('${orderId}','ReceivedFull')">
-                        <input type="radio" name="act_${orderId}" value="ReceivedFull" ${isRec ? 'checked' : ''} onclick="event.stopPropagation()" onchange="setAction('${orderId}','ReceivedFull')">
-                        <span>รับสินค้า (ชำระแล้ว)</span>
-                        <span class="font-bold ml-1">${fmt(item.price)}</span>
-                    </label>
-                    <label class="${deferClass}" id="pill-defer-${orderId}" onclick="setAction('${orderId}','Deferred')">
-                        <input type="radio" name="act_${orderId}" value="Deferred" ${isDef ? 'checked' : ''} onclick="event.stopPropagation()" onchange="setAction('${orderId}','Deferred')">
-                        <span>รับสินค้า (ยังไม่ชำระ)</span>
-                        <span class="font-bold ml-1">${fmt(item.price)}</span>
-                    </label>
-                    <label class="${reqClass}" id="pill-request-${orderId}" onclick="setAction('${orderId}','Requested')">
-                        <input type="radio" name="act_${orderId}" value="Requested" ${isReq ? 'checked' : ''} onclick="event.stopPropagation()" onchange="setAction('${orderId}','Requested')">
-                        <span>ต้องการรับของ</span>
-                    </label>
-                    <label class="${skipClass}" id="pill-skip-${orderId}" onclick="setAction('${orderId}','Skipped')">
-                        <input type="radio" name="act_${orderId}" value="Skipped" ${isSkip ? 'checked' : ''} onclick="event.stopPropagation()" onchange="setAction('${orderId}','Skipped')">
-                        <span>ยังไม่รับสินค้า</span>
-                    </label>
-                </div>
-                <p class="text-[11px] text-amber-700 mt-1.5 font-medium" id="defer-note-${orderId}" style="display:${isDef ? 'block' : 'none'};">
-                    ✓ รับของแล้ว • ยอดเงิน <b>${fmt(item.price)}</b> ยกไปตัดจ่ายเดือนหน้า
-                </p>
-                <p class="text-[11px] text-blue-700 mt-1.5 font-medium" id="request-note-${orderId}" style="display:${isReq ? 'block' : 'none'};">
-                    บันทึกในแผนขอรับของรอบหน้า • ยังไม่ตัดงบเดือนนี้ (รอฝ่ายผลิตตอบกลับ)
-                </p>
-            `;
+            let actionContentHtml = '';
+            if (isRequestedCarryOver) {
+                actionContentHtml = `
+                    <div class="flex items-center flex-wrap gap-1.5" id="pills-${orderId}">
+                        <label class="action-pill active-receive cursor-default" id="pill-receive-${orderId}">
+                            <input type="radio" name="act_${orderId}" value="ReceivedFull" checked onclick="event.stopPropagation()">
+                            <svg class="w-3.5 h-3.5 text-emerald-600 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+                            <span>รับสินค้า (ชำระแล้ว)</span>
+                            <span class="font-bold ml-1">${fmt(item.price)}</span>
+                        </label>
+                    </div>
+                    <p class="text-[11px] text-emerald-700 mt-1.5 font-medium flex items-center gap-1">
+                        <svg class="w-3.5 h-3.5 text-emerald-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                        <span>ฝ่ายผลิตส่งมอบแล้ว • บันทึกรับสินค้าและตัดจ่ายชำระเงินงวดนี้</span>
+                    </p>
+                `;
+            } else {
+                actionContentHtml = `
+                    <div class="flex items-center flex-wrap gap-1.5" id="pills-${orderId}">
+                        <label class="${receiveClass}" id="pill-receive-${orderId}" onclick="setAction('${orderId}','ReceivedFull')">
+                            <input type="radio" name="act_${orderId}" value="ReceivedFull" ${isRec ? 'checked' : ''} onclick="event.stopPropagation()" onchange="setAction('${orderId}','ReceivedFull')">
+                            <span>รับสินค้า (ชำระแล้ว)</span>
+                            <span class="font-bold ml-1">${fmt(item.price)}</span>
+                        </label>
+                        <label class="${deferClass}" id="pill-defer-${orderId}" onclick="setAction('${orderId}','Deferred')">
+                            <input type="radio" name="act_${orderId}" value="Deferred" ${isDef ? 'checked' : ''} onclick="event.stopPropagation()" onchange="setAction('${orderId}','Deferred')">
+                            <span>รับสินค้า (ยังไม่ชำระ)</span>
+                            <span class="font-bold ml-1">${fmt(item.price)}</span>
+                        </label>
+                        <label class="${reqClass}" id="pill-request-${orderId}" onclick="setAction('${orderId}','Requested')">
+                            <input type="radio" name="act_${orderId}" value="Requested" ${isReq ? 'checked' : ''} onclick="event.stopPropagation()" onchange="setAction('${orderId}','Requested')">
+                            <span>ต้องการรับของ</span>
+                        </label>
+                        <label class="${skipClass}" id="pill-skip-${orderId}" onclick="setAction('${orderId}','Skipped')">
+                            <input type="radio" name="act_${orderId}" value="Skipped" ${isSkip ? 'checked' : ''} onclick="event.stopPropagation()" onchange="setAction('${orderId}','Skipped')">
+                            <span>ยังไม่รับสินค้า</span>
+                        </label>
+                    </div>
+                    <p class="text-[11px] text-amber-700 mt-1.5 font-medium" id="defer-note-${orderId}" style="display:${isDef ? 'block' : 'none'};">
+                        ✓ รับของแล้ว • ยอดเงิน <b>${fmt(item.price)}</b> ยกไปตัดจ่ายเดือนหน้า
+                    </p>
+                    <p class="text-[11px] text-blue-700 mt-1.5 font-medium" id="request-note-${orderId}" style="display:${isReq ? 'block' : 'none'};">
+                        บันทึกในแผนขอรับของรอบหน้า • ยังไม่ตัดงบเดือนนี้ (รอฝ่ายผลิตตอบกลับ)
+                    </p>
+                `;
+            }
 
-            const removeBtnHtml = `<button type="button" onclick="removeFromCart('${orderId}')" class="remove-btn" title="นำออกจากรายการที่เลือก">
+            const removeBtnHtml = isRequestedCarryOver
+                ? ''
+                : `<button type="button" onclick="removeFromCart('${orderId}')" class="remove-btn" title="นำออกจากรายการที่เลือก">
                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
                        </svg>
@@ -1500,7 +1520,7 @@
 
         // ─── Remove from cart ─────────────────────────────────────────────────────────
         function removeFromCart(orderId) {
-            if (cart[orderId] && cart[orderId].isLocked) return;
+            if (cart[orderId] && (cart[orderId].isLocked || cart[orderId].forwardedStatus === 'Requested')) return;
             delete cart[orderId];
 
             // Remove cart item DOM
@@ -1516,9 +1536,12 @@
 
                 const lockedReq = card.querySelector('.btn-locked-requested');
                 if (lockedReq) {
-                    lockedReq.innerHTML = `<svg class="w-3.5 h-3.5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg> รอตอบกลับ`;
-                    lockedReq.className = 'btn-locked-requested px-2.5 py-1 rounded-md text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200 flex items-center gap-1 select-none cursor-default';
-                    lockedReq.title = 'อยู่ในสถานะต้องการรับของ รอใบตอบกลับจากฝ่ายผลิต (นำเข้า Excel เพื่อปลดล็อกและจับคู่อัตโนมัติ)';
+                    const newBtn = document.createElement('button');
+                    newBtn.type = 'button';
+                    newBtn.className = 'add-btn px-3 py-1.5 rounded-md text-xs font-bold bg-primary text-white hover:bg-primary/90 active:scale-95 transition-all cursor-pointer';
+                    newBtn.textContent = '+ เพิ่ม';
+                    newBtn.onclick = function() { addToCartWithAction(this, 'ReceivedFull'); };
+                    lockedReq.replaceWith(newBtn);
                 }
             }
 
@@ -1886,7 +1909,10 @@
             const card = btnEl.closest('.order-card');
             const orderId = card.dataset.orderId;
 
-            if (cart[orderId] || card.classList.contains('is-locked-deferred') || card.classList.contains('is-locked-requested')) return;
+            if (cart[orderId] || card.classList.contains('is-locked-deferred')) return;
+            if (card.classList.contains('is-locked-requested') && !card.querySelector('.add-btn')) return;
+
+            card.classList.remove('is-locked-requested');
 
             let finalAction = specifiedAction || 'ReceivedFull';
             if (card.dataset.forwardedStatus === 'Deferred') {
@@ -2471,9 +2497,20 @@
                 }
             });
 
+            // ตรวจหารายการที่เดิมเป็น "รอตอบกลับ" (Requested) แต่ไม่อยู่ในไฟล์ตอบกลับ
+            let downgradedCount = 0;
+            pendingCards.forEach(card => {
+                const fwdStatus = card.dataset.forwardedStatus || '';
+                const po = (card.dataset.poNumber || '').trim().toUpperCase();
+                if (fwdStatus === 'Requested' && !deliveredPos.has(po)) {
+                    downgradeCardToSkipped(card);
+                    downgradedCount++;
+                }
+            });
+
             const totalMatched = addedDeliveredCount;
 
-            if (totalMatched === 0) {
+            if (totalMatched === 0 && downgradedCount === 0) {
                 Swal.fire({
                     icon: 'warning',
                     title: 'ไม่พบรหัสสั่งซื้อที่ตรงกัน',
@@ -2497,17 +2534,28 @@
 
             closeImportFeedbackModal();
 
+            let unmatchedHtml = '';
+            if (downgradedCount > 0) {
+                unmatchedHtml = `
+                    <div class="text-purple-700 flex items-center justify-between">
+                        <span>• รายการรอตอบกลับที่ไม่อยู่ในไฟล์:</span>
+                        <span class="font-bold">${downgradedCount} รายการ (ปรับเป็นค้างยกยอดและปลดล็อกแล้ว)</span>
+                    </div>
+                `;
+            }
+
             Swal.fire({
                 icon: 'success',
                 title: 'นำเข้าและจับคู่ข้อมูลสำเร็จ!',
                 html: `
                     <div class="text-left text-xs space-y-2 py-1">
-                        <p class="text-slate-700">ระบบจับคู่รหัสสั่งซื้อจากไฟล์ Excel ตรงกับระบบทั้งหมด <b>${totalMatched} รายการ</b>:</p>
+                        <p class="text-slate-700">ระบบประมวลผลข้อมูลจากไฟล์ Excel เรียบร้อยแล้ว:</p>
                         <div class="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-1.5 font-medium">
                             <div class="text-emerald-700 flex items-center justify-between">
                                 <span>• แท็บ <b>งานส่งมอบแล้ว (งบหน่วยงาน)</b>:</span>
                                 <span class="font-bold">${addedDeliveredCount} รายการ (ปรับเป็นรับสินค้าแล้ว)</span>
                             </div>
+                            ${unmatchedHtml}
                         </div>
                         <p class="text-slate-500 text-[11px] mt-2">* รายการที่ตรวจพบถูกนำเข้า <b>"รายการที่เลือก"</b> ฝั่งขวาเรียบร้อยแล้ว คุณสามารถตรวจสอบความถูกต้องแล้วกด <b>[บันทึกรายการ]</b> ได้ทันที</p>
                     </div>
@@ -2516,6 +2564,56 @@
                 confirmButtonColor: '#059669',
                 customClass: { popup: 'rounded-xl max-w-md' }
             });
+        }
+
+        function downgradeCardToSkipped(card) {
+            if (!card) return;
+            card.dataset.forwardedStatus = 'Skipped';
+            card.classList.remove('is-locked-requested');
+
+            // 1. เปลี่ยน icon นาฬิกาสีฟ้าด้านหน้าเป็น checkbox
+            const iconContainer = card.querySelector('.text-blue-500');
+            if (iconContainer) {
+                const chk = document.createElement('input');
+                chk.type = 'checkbox';
+                chk.className = 'pending-card-checkbox mt-1 rounded border-slate-300 text-primary focus:ring-primary shrink-0 cursor-pointer';
+                chk.onchange = onCardCheckboxChange;
+                iconContainer.replaceWith(chk);
+            }
+
+            // 2. เปลี่ยนป้ายหัวการ์ด "ต้องการรับของ" เป็น "ค้างยกยอดมา"
+            const blueBadge = card.querySelector('.bg-blue-100.text-blue-700');
+            if (blueBadge) {
+                blueBadge.className = 'ml-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-purple-100 text-purple-700';
+                blueBadge.textContent = 'ค้างยกยอดมา';
+                blueBadge.title = 'ค้างยกยอดมา (ฝ่ายผลิตยังไม่ส่งมอบในงวดนี้)';
+            }
+
+            // 3. เปลี่ยนแถบข้อความสีฟ้าเป็นสีม่วง
+            const blueInfo = card.querySelector('.text-blue-700.bg-blue-50\\/70') || card.querySelector('.text-blue-700');
+            if (blueInfo) {
+                const origMonth = card.dataset.originalMonth || '';
+                const txt = origMonth
+                    ? `WO สร้างจาก ${origMonth} • ค้างยกยอดมา (ฝ่ายผลิตยังไม่ส่งมอบในงวดนี้)`
+                    : `ค้างยกยอดมา (ฝ่ายผลิตยังไม่ส่งมอบในงวดนี้)`;
+
+                const container = blueInfo.closest('div');
+                if (container) {
+                    container.className = 'mt-1.5 mb-1.5 text-[11px] font-bold text-purple-700 bg-purple-50/70 border border-purple-100 rounded-md px-2.5 py-1 inline-flex items-center gap-1.5';
+                    container.innerHTML = `<span>${txt}</span>`;
+                }
+            }
+
+            // 4. เปลี่ยนปุ่ม "รอตอบกลับ" สีฟ้า เป็นปุ่ม "+ เพิ่ม"
+            const lockedBtn = card.querySelector('.btn-locked-requested');
+            if (lockedBtn) {
+                const addBtn = document.createElement('button');
+                addBtn.type = 'button';
+                addBtn.className = 'add-btn px-3 py-1.5 rounded-md text-xs font-bold bg-primary text-white hover:bg-primary/90 active:scale-95 transition-all cursor-pointer';
+                addBtn.textContent = '+ เพิ่ม';
+                addBtn.onclick = function() { addToCart(this); };
+                lockedBtn.replaceWith(addBtn);
+            }
         }
 
         // Initialize drag-and-drop & file change event listeners
