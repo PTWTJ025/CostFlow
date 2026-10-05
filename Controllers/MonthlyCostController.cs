@@ -568,7 +568,6 @@ namespace CostFlow.Controllers
         {
             await AutoClosePriorMonthsAsync();
             await CleanupMockRequestedOrdersAsync();
-            await EnsureFiveMockTestOrdersAsync();
             await SyncWO26070249StatusAsync();
 
             if (string.IsNullOrEmpty(id))
@@ -3526,7 +3525,8 @@ namespace CostFlow.Controllers
                 var testPos = new[] {
                     "WO2609-TEST01", "WO2609-TEST02", "WO2609-TEST03", "WO2609-TEST04", "WO2609-TEST05",
                     "WO2609-TEST06", "WO2609-TEST07", "WO2609-TEST08", "WO2609-TEST09", "WO2609-TEST10",
-                    "WO2609-TEST11", "WO2609-TEST12", "WO2609-TEST13"
+                    "WO2609-TEST11", "WO2609-TEST12", "WO2609-TEST13",
+                    "WO2610-TEST01", "WO2610-TEST02", "WO2610-TEST03", "WO2610-TEST04", "WO2610-TEST05"
                 };
 
                 var testOrders = await _context.OrderTrackingMasters
@@ -3551,7 +3551,7 @@ namespace CostFlow.Controllers
                 }
 
                 var testReports = await _context.Reports
-                    .Where(r => r.ReportName.Contains("ชุดข้อมูลทดสอบฝ่ายผลิต"))
+                    .Where(r => r.ReportName.Contains("ชุดข้อมูลทดสอบฝ่ายผลิต") || r.ReportName.Contains("ชุดข้อมูลทดสอบ 5 รายการ"))
                     .ToListAsync();
                 if (testReports.Any())
                 {
@@ -3562,161 +3562,12 @@ namespace CostFlow.Controllers
                 if (changed)
                 {
                     await _context.SaveChangesAsync();
-                    Console.WriteLine("🗑️ [MOCK CLEANUP] ลบข้อมูลชุดทดสอบ 13 รายการและ Report ทดสอบออกจากระบบเรียบร้อยแล้ว");
+                    Console.WriteLine("🗑️ [MOCK CLEANUP] ลบข้อมูลชุดทดสอบ 5 รายการและ 13 รายการออกจากระบบเรียบร้อยแล้ว");
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error in CleanupMockRequestedOrdersAsync: {ex.Message}");
-            }
-        }
-
-        private async Task EnsureFiveMockTestOrdersAsync()
-        {
-            try
-            {
-                var testReport = await _context.Reports
-                    .FirstOrDefaultAsync(r => r.ReportName == "ชุดข้อมูลทดสอบ 5 รายการ (นำเข้าฝ่ายผลิต)");
-
-                if (testReport == null)
-                {
-                    testReport = new Report
-                    {
-                        Id = Guid.NewGuid(),
-                        ReportName = "ชุดข้อมูลทดสอบ 5 รายการ (นำเข้าฝ่ายผลิต)",
-                        OriginalFileName = "test_mock_5_orders.xlsx",
-                        CreatedAt = new DateTime(2026, 9, 20, 9, 0, 0, DateTimeKind.Utc)
-                    };
-                    _context.Reports.Add(testReport);
-                    await _context.SaveChangesAsync();
-                }
-
-                var mockDefinitions = new[]
-                {
-                    new {
-                        Po = "WO2610-TEST01",
-                        Name = "🧪 [ของเฟค 01] สายพานไทม์มิ่งขับแกนหลักโมเดล T-880 (TEST)",
-                        Qty = "5 ชิ้น",
-                        Amt = "3450.00",
-                        Dept = "LCD00",
-                        AppDate = "10/09/2026"
-                    },
-                    new {
-                        Po = "WO2610-TEST02",
-                        Name = "🧪 [ของเฟค 02] ชุดลูกปืนรอบจัดความเร็วสูง 6204ZZ (TEST)",
-                        Qty = "10 ชิ้น",
-                        Amt = "1850.00",
-                        Dept = "LCD00",
-                        AppDate = "12/09/2026"
-                    },
-                    new {
-                        Po = "WO2610-TEST03",
-                        Name = "🧪 [ของเฟค 03] แกนเพลาขับลูกกลิ้งยางเครื่องจักรไลน์ 3 (TEST)",
-                        Qty = "2 ชิ้น",
-                        Amt = "4200.00",
-                        Dept = "LCD00",
-                        AppDate = "15/09/2026"
-                    },
-                    new {
-                        Po = "WO2610-TEST04",
-                        Name = "🧪 [ของเฟค 04] โซ่ส่งกำลังสแตนเลสข้อคู่ SS-40 (TEST)",
-                        Qty = "4 ชิ้น",
-                        Amt = "2680.00",
-                        Dept = "LCD00",
-                        AppDate = "18/09/2026"
-                    },
-                    new {
-                        Po = "WO2610-TEST05",
-                        Name = "🧪 [ของเฟค 05] มอเตอร์เกียร์ขับใบพัดกวนสาร 0.75kW (TEST)",
-                        Qty = "1 ชิ้น",
-                        Amt = "8500.00",
-                        Dept = "LCD00",
-                        AppDate = "20/09/2026"
-                    }
-                };
-
-                var mockPos = mockDefinitions.Select(m => m.Po).ToList();
-                var existingOrders = await _context.OrderTrackingMasters
-                    .Where(o => mockPos.Contains(o.PoNumber))
-                    .ToListAsync();
-
-                bool changed = false;
-                var currentOrders = new List<OrderTrackingMaster>();
-
-                foreach (var def in mockDefinitions)
-                {
-                    var ord = existingOrders.FirstOrDefault(o => o.PoNumber == def.Po);
-                    if (ord == null)
-                    {
-                        ord = new OrderTrackingMaster
-                        {
-                            Id = Guid.NewGuid(),
-                            ReportId = testReport.Id,
-                            PoNumber = def.Po,
-                            Remarks = def.Name,
-                            RemarksQuantity = def.Qty,
-                            Amount = def.Amt,
-                            Urgency = def.Dept,
-                            ApprovedDate = def.AppDate,
-                            Status = "Pending",
-                            CreatedAt = new DateTime(2026, 9, 20, 10, 0, 0, DateTimeKind.Utc),
-                            UpdatedAt = DateTime.UtcNow
-                        };
-                        _context.OrderTrackingMasters.Add(ord);
-                        changed = true;
-                    }
-                    currentOrders.Add(ord);
-                }
-
-                if (changed)
-                {
-                    await _context.SaveChangesAsync();
-                }
-
-                var orderIds = currentOrders.Select(o => o.Id).ToList();
-                var existingActions = await _context.MonthlyOrderActions
-                    .Where(a => orderIds.Contains(a.OrderTrackingMasterId))
-                    .ToListAsync();
-
-                bool actionChanged = false;
-                foreach (var ord in currentOrders)
-                {
-                    var sepAction = existingActions.FirstOrDefault(a => a.OrderTrackingMasterId == ord.Id && a.MonthYear == "2026-09");
-                    if (sepAction == null)
-                    {
-                        _context.MonthlyOrderActions.Add(new MonthlyOrderAction
-                        {
-                            Id = Guid.NewGuid(),
-                            OrderTrackingMasterId = ord.Id,
-                            MonthYear = "2026-09",
-                            Action = "Requested",
-                            ActionPrice = 0,
-                            IsStockReceived = false,
-                            IsForcedPayment = false,
-                            CreatedAt = new DateTime(2026, 9, 25, 10, 0, 0, DateTimeKind.Utc),
-                            UpdatedAt = DateTime.UtcNow
-                        });
-                        actionChanged = true;
-                    }
-                    else if (sepAction.Action != "Requested")
-                    {
-                        sepAction.Action = "Requested";
-                        sepAction.ActionPrice = 0;
-                        sepAction.IsStockReceived = false;
-                        sepAction.UpdatedAt = DateTime.UtcNow;
-                        actionChanged = true;
-                    }
-                }
-
-                if (actionChanged)
-                {
-                    await _context.SaveChangesAsync();
-                    Console.WriteLine("✨ [MOCK 5 ITEMS] สร้าง/อัปเดตข้อมูลสินค้าเฟค 5 รายการ (Requested ใน 2026-09) สำเร็จ");
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error in EnsureFiveMockTestOrdersAsync: {ex.Message}");
             }
         }
 
