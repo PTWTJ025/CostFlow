@@ -9,5 +9,7 @@ namespace CostFlow.Services
         Task<bool> DeleteFileAsync(string filePathOrUrl);
         Task<bool> PingKeepAliveAsync();
         Task<bool> PingAssetHubKeepAliveAsync();
+        Task<bool> TriggerImageKeepAlivePingAsync();
+        bool ShouldPingToday();
     }
 }

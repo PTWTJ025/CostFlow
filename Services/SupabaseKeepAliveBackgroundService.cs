@@ -82,6 +82,12 @@ namespace CostFlow.Services
                     {
                         _logger.LogWarning("[AssetHub Keep-Alive] [Hey HuaNa, wake up and get to work] Heartbeat was unacknowledged for AssetHub Supabase. Will retry in next scheduled cycle.");
                     }
+
+                    // 3. Upsert Keep-Alive Image (68 bytes) to guarantee active database transactions (Max 2 times/day)
+                    if (storageService.ShouldPingToday())
+                    {
+                        await storageService.TriggerImageKeepAlivePingAsync();
+                    }
                 }
                 catch (Exception ex)
                 {

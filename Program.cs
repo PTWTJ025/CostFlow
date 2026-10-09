@@ -189,6 +189,28 @@ app.Use(async (context, next) =>
 
 app.UseAuthorization();
 
+// ⭐ Supabase Keep-Alive: เมื่อมีคนเข้าเว็บ ส่งรูปจิ๋ว (68 bytes) บันทึกทับ keepalive.png วันละสูงสุด 2 ครั้ง
+app.Use(async (context, next) =>
+{
+    var path = context.Request.Path.Value ?? "";
+    if (!path.StartsWith("/lib", StringComparison.OrdinalIgnoreCase) &&
+        !path.StartsWith("/css", StringComparison.OrdinalIgnoreCase) &&
+        !path.StartsWith("/js", StringComparison.OrdinalIgnoreCase) &&
+        !path.StartsWith("/images", StringComparison.OrdinalIgnoreCase))
+    {
+        var storage = context.RequestServices.GetService<CostFlow.Services.ISupabaseStorageService>();
+        if (storage != null && storage.ShouldPingToday())
+        {
+            _ = Task.Run(async () =>
+            {
+                try { await storage.TriggerImageKeepAlivePingAsync(); }
+                catch { /* Non-blocking background keepalive */ }
+            });
+        }
+    }
+    await next();
+});
+
 app.UseStaticFiles(new StaticFileOptions
 {
     OnPrepareResponse = ctx =>

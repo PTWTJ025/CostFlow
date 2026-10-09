@@ -192,5 +192,101 @@ namespace CostFlow.Services
                 return false;
             }
         }
+
+        // 1x1 transparent PNG (68 bytes) for zero-footprint keep-alive image upsert
+        private static readonly byte[] TinyKeepAlivePng = Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==");
+        private static int _dailyUploadCount = 0;
+        private static DateTime _lastUploadDate = DateTime.MinValue;
+        private static readonly object _rateLock = new();
+
+        public bool ShouldPingToday()
+        {
+            var today = DateTime.UtcNow.Date;
+            lock (_rateLock)
+            {
+                if (_lastUploadDate != today)
+                {
+                    _lastUploadDate = today;
+                    _dailyUploadCount = 0;
+                }
+                return _dailyUploadCount < 2;
+            }
+        }
+
+        public async Task<bool> TriggerImageKeepAlivePingAsync()
+        {
+            if (!ShouldPingToday())
+            {
+                return true; // Reached max 2 times today
+            }
+
+            int currentCount;
+            lock (_rateLock)
+            {
+                if (_dailyUploadCount >= 2) return true;
+                _dailyUploadCount++;
+                currentCount = _dailyUploadCount;
+            }
+
+            _logger.LogInformation("[Supabase Keep-Alive] [Hey HuaNa, wake up and get to work] Starting keep-alive image upload ({CurrentCount}/2 for today)...", currentCount);
+
+            bool costFlowSuccess = false;
+            bool assetHubSuccess = false;
+
+            // 1. CostFlow keepalive image upload
+            if (!string.IsNullOrWhiteSpace(_supabaseUrl) && !string.IsNullOrWhiteSpace(_secretKey))
+            {
+                costFlowSuccess = await UploadKeepAliveImageDirectAsync(_supabaseUrl, _secretKey, _bucket, "CostFlow");
+            }
+
+            // 2. AssetHub keepalive image upload
+            var assetHubUrl = _configuration["Supabase:AssetHub:Url"]?.Trim().TrimEnd('/');
+            var assetHubApiKey = _configuration["Supabase:AssetHub:ApiKey"]?.Trim();
+            var assetHubBucket = _configuration["Supabase:AssetHub:Bucket"]?.Trim() ?? "assets";
+            if (!string.IsNullOrWhiteSpace(assetHubUrl) && !string.IsNullOrWhiteSpace(assetHubApiKey))
+            {
+                assetHubSuccess = await UploadKeepAliveImageDirectAsync(assetHubUrl, assetHubApiKey, assetHubBucket, "AssetHub");
+            }
+
+            return costFlowSuccess || assetHubSuccess;
+        }
+
+        private async Task<bool> UploadKeepAliveImageDirectAsync(string supabaseUrl, string apiKey, string bucket, string projectName)
+        {
+            try
+            {
+                var encodedBucket = Uri.EscapeDataString(bucket);
+                var uploadUrl = $"{supabaseUrl}/storage/v1/object/{encodedBucket}/system/keepalive.png";
+
+                using var request = new HttpRequestMessage(HttpMethod.Post, uploadUrl);
+                request.Headers.Add("apikey", apiKey);
+                request.Headers.Add("Authorization", $"Bearer {apiKey}");
+                request.Headers.Add("x-upsert", "true");
+                request.Headers.TryAddWithoutValidation("User-Agent", $"CostFlow-KeepAlive/2.0 (Hey HuaNa, wake up and get to work! Target: {projectName})");
+                request.Headers.TryAddWithoutValidation("X-Client-Info", $"CostFlow-{projectName}-ImageHeartbeat/2.0");
+
+                using var content = new ByteArrayContent(TinyKeepAlivePng);
+                content.Headers.ContentType = new MediaTypeHeaderValue("image/png");
+                request.Content = content;
+
+                var response = await _httpClient.SendAsync(request);
+                if (response.IsSuccessStatusCode)
+                {
+                    _logger.LogInformation("[Supabase Keep-Alive] [Hey HuaNa, wake up and get to work] Successfully upserted keep-alive image (68 bytes) to {ProjectName} Supabase Storage (Status: {StatusCode} OK). Project is active.", projectName, (int)response.StatusCode);
+                    return true;
+                }
+                else
+                {
+                    var error = await response.Content.ReadAsStringAsync();
+                    _logger.LogWarning("[Supabase Keep-Alive] [Hey HuaNa, wake up and get to work] Upsert keep-alive image to {ProjectName} returned status {StatusCode}: {Error}", projectName, response.StatusCode, error);
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[Supabase Keep-Alive] [Hey HuaNa, wake up and get to work] Failed to upsert keep-alive image to {ProjectName}: {Message}", projectName, ex.Message);
+                return false;
+            }
+        }
     }
 }
