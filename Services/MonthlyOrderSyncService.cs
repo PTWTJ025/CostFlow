@@ -793,13 +793,11 @@ public class MonthlyOrderSyncService
 
     private static int GetStatusSortOrder(string? status)
     {
-        return status switch
-        {
-            "รับสินค้าแล้ว" => 1,
-            "ผ่อนชำระ" => 2,
-            "ยังไม่รับสินค้า" => 3,
-            _ => 4
-        };
+        if (string.IsNullOrWhiteSpace(status)) return 4;
+        if (status.Contains("รับสินค้าแล้ว") || status.Contains("จ่ายเงิน") || status.Contains("รับของครบ")) return 1;
+        if (status.Contains("ผ่อนชำระ") || status.Contains("ยังไม่จ่าย")) return 2;
+        if (status.Contains("ยังไม่รับ") || status.Contains("ค้างรับ") || status.Contains("ผลัดยอด")) return 3;
+        return 4;
     }
 
     private static DateTime? ParseThaiDate(string? thaiDateStr)
