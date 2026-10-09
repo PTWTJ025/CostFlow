@@ -249,9 +249,9 @@ namespace CostFlow.Data
                     `ProductCode` varchar(255) NOT NULL,
                     `ProductName` longtext NOT NULL,
                     `Unit` longtext NOT NULL,
-                    `TotalQty` double NOT NULL DEFAULT 0,
-                    `TotalValue` double NOT NULL DEFAULT 0,
-                    `PricePerUnit` double NOT NULL DEFAULT 0,
+                    `TotalQty` decimal(18,2) NOT NULL DEFAULT 0.00,
+                    `TotalValue` decimal(18,2) NOT NULL DEFAULT 0.00,
+                    `PricePerUnit` decimal(18,2) NOT NULL DEFAULT 0.00,
                     `Sources` longtext NOT NULL,
                     PRIMARY KEY (`ProductCode`)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
@@ -393,7 +393,7 @@ namespace CostFlow.Data
                         `BatchName` varchar(255) NOT NULL,
                         `CreatedAt` datetime(6) NOT NULL,
                         `TotalItems` int NOT NULL,
-                        `TotalAmount` decimal(65,30) NOT NULL,
+                        `TotalAmount` decimal(18,2) NOT NULL DEFAULT 0.00,
                         PRIMARY KEY (`Id`),
                         UNIQUE KEY `IX_SavedOrderBatches_BatchName` (`BatchName`)
                     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
@@ -404,8 +404,8 @@ namespace CostFlow.Data
                         `ProductCode` varchar(100) NOT NULL DEFAULT '',
                         `ProductName` varchar(255) NOT NULL DEFAULT '',
                         `Unit` varchar(50) NOT NULL DEFAULT '',
-                        `UnitPrice` decimal(65,30) NOT NULL,
-                        `Quantity` decimal(65,30) NOT NULL,
+                        `UnitPrice` decimal(18,2) NOT NULL DEFAULT 0.00,
+                        `Quantity` decimal(18,2) NOT NULL DEFAULT 0.00,
                         `Remarks` longtext NOT NULL,
                         `IsReceived` tinyint(1) NOT NULL DEFAULT 0,
                         `ReceiveDate` datetime(6) DEFAULT NULL,
@@ -480,6 +480,24 @@ namespace CostFlow.Data
                 await db.Database.ExecuteSqlRawAsync("ALTER TABLE StockItems ADD COLUMN StockGroup varchar(100) NULL;");
             }
             catch { /* Column already exists */ }
+
+            // 3. Fix ProductPrices (costflow_db) from double to decimal(18,2)
+            try
+            {
+                await db.Database.ExecuteSqlRawAsync("ALTER TABLE `ProductPrices` MODIFY COLUMN `PricePerUnit` decimal(18,2) NOT NULL DEFAULT 0.00;");
+                await db.Database.ExecuteSqlRawAsync("ALTER TABLE `ProductPrices` MODIFY COLUMN `TotalValue` decimal(18,2) NOT NULL DEFAULT 0.00;");
+                await db.Database.ExecuteSqlRawAsync("ALTER TABLE `ProductPrices` MODIFY COLUMN `TotalQty` decimal(18,2) NOT NULL DEFAULT 0.00;");
+            }
+            catch { /* Ignore if already altered */ }
+
+            // 4. Fix SavedOrderBatches & SavedOrderItems (test db) from decimal(65,30) to decimal(18,2)
+            try
+            {
+                await tiDb.Database.ExecuteSqlRawAsync("ALTER TABLE `SavedOrderBatches` MODIFY COLUMN `TotalAmount` decimal(18,2) NOT NULL DEFAULT 0.00;");
+                await tiDb.Database.ExecuteSqlRawAsync("ALTER TABLE `SavedOrderItems` MODIFY COLUMN `UnitPrice` decimal(18,2) NOT NULL DEFAULT 0.00;");
+                await tiDb.Database.ExecuteSqlRawAsync("ALTER TABLE `SavedOrderItems` MODIFY COLUMN `Quantity` decimal(18,2) NOT NULL DEFAULT 0.00;");
+            }
+            catch { /* Ignore if already altered */ }
         }
 
         private static async Task SeedProductPricesAsync(AppDbContext db, IWebHostEnvironment env)

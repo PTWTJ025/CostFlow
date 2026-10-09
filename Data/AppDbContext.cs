@@ -80,6 +80,14 @@ namespace CostFlow.Data
             builder.Entity<ItemMapping>()
                 .HasIndex(m => m.OrderName)
                 .IsUnique();
+
+            // ProductPrice Decimals (18, 2)
+            builder.Entity<ProductPrice>(p =>
+            {
+                p.Property(x => x.PricePerUnit).HasPrecision(18, 2);
+                p.Property(x => x.TotalValue).HasPrecision(18, 2);
+                p.Property(x => x.TotalQty).HasPrecision(18, 2);
+            });
         }
     }
 }

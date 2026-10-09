@@ -25,9 +25,9 @@ namespace CostFlow.Models
         public string ProductCode { get; set; } = string.Empty;
         public string ProductName { get; set; } = string.Empty;
         public string Unit { get; set; } = string.Empty;
-        public double TotalQty { get; set; }
-        public double TotalValue { get; set; }
-        public double PricePerUnit { get; set; }
+        public decimal TotalQty { get; set; }
+        public decimal TotalValue { get; set; }
+        public decimal PricePerUnit { get; set; }
         public string Sources { get; set; } = string.Empty;
     }
 

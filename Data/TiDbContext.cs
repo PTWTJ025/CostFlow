@@ -25,6 +25,17 @@ namespace CostFlow.Data
                 .WithMany(b => b.Items)
                 .HasForeignKey(i => i.BatchId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<SavedOrderBatch>(b =>
+            {
+                b.Property(x => x.TotalAmount).HasPrecision(18, 2);
+            });
+
+            builder.Entity<SavedOrderItem>(i =>
+            {
+                i.Property(x => x.UnitPrice).HasPrecision(18, 2);
+                i.Property(x => x.Quantity).HasPrecision(18, 2);
+            });
         }
     }
 }

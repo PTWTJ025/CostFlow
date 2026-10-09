@@ -244,9 +244,9 @@ public class TempProductJsonItem
     public string รหัสสินค้า { get; set; } = string.Empty;
     public string ชื่อสินค้า { get; set; } = string.Empty;
     public string หน่วย { get; set; } = string.Empty;
-    public double จำนวนรวม { get; set; }
-    public double มูลค่ารวม { get; set; }
-    public double ราคาต่อชิ้น { get; set; }
+    public decimal จำนวนรวม { get; set; }
+    public decimal มูลค่ารวม { get; set; }
+    public decimal ราคาต่อชิ้น { get; set; }
     public List<string> แหล่งข้อมูล { get; set; } = new();
 }
 // Auto-reload trigger - stock grouping 2026-09-08
