@@ -280,9 +280,9 @@ namespace CostFlow.Controllers
 
                     string name = csv.GetField(1)?.Trim() ?? "";
                     string unit = csv.GetField(2)?.Trim() ?? "";
-                    double price = ParseDoubleSafe(csv.GetField(3));
-                    double totalQty = ParseDoubleSafe(csv.GetField(4));
-                    double totalValue = ParseDoubleSafe(csv.GetField(5));
+                    decimal price = ParseDecimalSafe(csv.GetField(3));
+                    decimal totalQty = ParseDecimalSafe(csv.GetField(4));
+                    decimal totalValue = ParseDecimalSafe(csv.GetField(5));
                     string sources = csv.GetField(6)?.Trim() ?? "Google Sheets";
 
                     totalProcessed++;
@@ -364,15 +364,15 @@ namespace CostFlow.Controllers
             }
         }
 
-        private static double ParseDoubleSafe(string? input)
+        private static decimal ParseDecimalSafe(string? input)
         {
-            if (string.IsNullOrWhiteSpace(input)) return 0;
+            if (string.IsNullOrWhiteSpace(input)) return 0m;
             var cleaned = new string(input.Where(c => char.IsDigit(c) || c == '.' || c == '-' || c == '+').ToArray());
-            if (double.TryParse(cleaned, NumberStyles.Any, CultureInfo.InvariantCulture, out double result))
+            if (decimal.TryParse(cleaned, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal result))
             {
                 return result;
             }
-            return 0;
+            return 0m;
         }
     }
 }
