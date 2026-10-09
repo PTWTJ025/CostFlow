@@ -338,10 +338,10 @@ namespace CostFlow.Data
                     `Category` varchar(100) DEFAULT NULL,
                     `StockGroup` varchar(100) DEFAULT NULL,
                     `FilePath` varchar(500) DEFAULT NULL,
-                    `InitialStock` decimal(18,4) NOT NULL DEFAULT 0.0000,
-                    `Quantity` decimal(18,4) NOT NULL DEFAULT 0.0000,
-                    `MinStock` decimal(18,4) NOT NULL DEFAULT 0.0000,
-                    `MaxStock` decimal(18,4) NOT NULL DEFAULT 0.0000,
+                    `InitialStock` decimal(18,2) NOT NULL DEFAULT 0.00,
+                    `Quantity` decimal(18,2) NOT NULL DEFAULT 0.00,
+                    `MinStock` decimal(18,2) NOT NULL DEFAULT 0.00,
+                    `MaxStock` decimal(18,2) NOT NULL DEFAULT 0.00,
                     `StockStatus` varchar(50) DEFAULT NULL,
                     `CreatedAt` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
                     `UpdatedAt` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
@@ -362,7 +362,7 @@ namespace CostFlow.Data
                     `Id` int NOT NULL AUTO_INCREMENT,
                     `StockItemCode` varchar(100) NOT NULL,
                     `Action` varchar(50) NOT NULL,
-                    `QuantityChanged` decimal(18,4) NOT NULL DEFAULT 0.0000,
+                    `QuantityChanged` decimal(18,2) NOT NULL DEFAULT 0.00,
                     `ReferenceId` varchar(255) DEFAULT NULL,
                     `Remarks` varchar(500) DEFAULT NULL,
                     `Timestamp` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
@@ -471,7 +471,7 @@ namespace CostFlow.Data
 
             try
             {
-                await db.Database.ExecuteSqlRawAsync("ALTER TABLE StockItems ADD COLUMN InitialStock decimal(18,4) NOT NULL DEFAULT 0.0000;");
+                await db.Database.ExecuteSqlRawAsync("ALTER TABLE StockItems ADD COLUMN InitialStock decimal(18,2) NOT NULL DEFAULT 0.00;");
             }
             catch { /* Column already exists */ }
 
@@ -496,6 +496,17 @@ namespace CostFlow.Data
                 await tiDb.Database.ExecuteSqlRawAsync("ALTER TABLE `SavedOrderBatches` MODIFY COLUMN `TotalAmount` decimal(18,2) NOT NULL DEFAULT 0.00;");
                 await tiDb.Database.ExecuteSqlRawAsync("ALTER TABLE `SavedOrderItems` MODIFY COLUMN `UnitPrice` decimal(18,2) NOT NULL DEFAULT 0.00;");
                 await tiDb.Database.ExecuteSqlRawAsync("ALTER TABLE `SavedOrderItems` MODIFY COLUMN `Quantity` decimal(18,2) NOT NULL DEFAULT 0.00;");
+            }
+            catch { /* Ignore if already altered */ }
+
+            // 5. Fix StockItems & StockLogs (costflow_db) from decimal(18,4) to decimal(18,2)
+            try
+            {
+                await db.Database.ExecuteSqlRawAsync("ALTER TABLE `StockItems` MODIFY COLUMN `InitialStock` decimal(18,2) NOT NULL DEFAULT 0.00;");
+                await db.Database.ExecuteSqlRawAsync("ALTER TABLE `StockItems` MODIFY COLUMN `Quantity` decimal(18,2) NOT NULL DEFAULT 0.00;");
+                await db.Database.ExecuteSqlRawAsync("ALTER TABLE `StockItems` MODIFY COLUMN `MinStock` decimal(18,2) NOT NULL DEFAULT 0.00;");
+                await db.Database.ExecuteSqlRawAsync("ALTER TABLE `StockItems` MODIFY COLUMN `MaxStock` decimal(18,2) NOT NULL DEFAULT 0.00;");
+                await db.Database.ExecuteSqlRawAsync("ALTER TABLE `StockLogs` MODIFY COLUMN `QuantityChanged` decimal(18,2) NOT NULL DEFAULT 0.00;");
             }
             catch { /* Ignore if already altered */ }
         }

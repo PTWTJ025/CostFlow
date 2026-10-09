@@ -88,6 +88,27 @@ namespace CostFlow.Data
                 p.Property(x => x.TotalValue).HasPrecision(18, 2);
                 p.Property(x => x.TotalQty).HasPrecision(18, 2);
             });
+
+            // StockItem Decimals (18, 2)
+            builder.Entity<StockItem>(s =>
+            {
+                s.Property(x => x.InitialStock).HasPrecision(18, 2);
+                s.Property(x => x.Quantity).HasPrecision(18, 2);
+                s.Property(x => x.MinStock).HasPrecision(18, 2);
+                s.Property(x => x.MaxStock).HasPrecision(18, 2);
+            });
+
+            // StockLog Decimals (18, 2)
+            builder.Entity<StockLog>(l =>
+            {
+                l.Property(x => x.QuantityChanged).HasPrecision(18, 2);
+            });
+
+            // MonthlyOrderAction Decimals (18, 2)
+            builder.Entity<MonthlyOrderAction>(m =>
+            {
+                m.Property(x => x.ActionPrice).HasPrecision(18, 2);
+            });
         }
     }
 }
