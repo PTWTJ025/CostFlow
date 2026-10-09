@@ -153,8 +153,8 @@
                 <div>
                     <span class="text-[10px] text-slate-500 font-semibold uppercase block mb-1">ข้อมูลที่จะส่งออก (แยก 2 ไฟล์ รวม 9 แท็บ)</span>
                     <div class="text-xs text-slate-800 space-y-1.5 mt-1">
-                        <div><span class="font-bold text-slate-900">ชีทที่ 1 (ข้อมูลหลัก 5 แท็บ):</span> บันทึกรับของ, ประวัติสั่งซื้อ, ติดตามรับของ, คลังสินค้า, ราคากลาง</div>
-                        <div><span class="font-bold text-slate-900">ชีทที่ 2 (แผนผลิต & ประวัติ 4 แท็บ):</span> แผนผลิตประจำสัปดาห์, ประวัติสต็อก, รายงานภาพรวม, AI Mapping</div>
+                        <div><span class="font-bold text-slate-900">ชีทที่ 1 (สต๊อกโรงงาน & งานสั่งผลิต 5 แท็บ):</span> บันทึกรับของ, แผนผลิตประจำสัปดาห์, คลังสินค้า, ประวัติสต็อก, AI Mapping</div>
+                        <div><span class="font-bold text-slate-900">ชีทที่ 2 (ของจิปาถะ & ซื้อทั่วไป 4 แท็บ):</span> ประวัติสั่งซื้อ, ติดตามรับของ, ราคากลาง, รายงานภาพรวม</div>
                     </div>
                 </div>
                 <span class="text-[10px] text-slate-400 mt-2 block">ตัด Internal PK/FK ออกทั้งหมด เก็บเฉพาะ Business Columns & เวลาทำรายการ</span>
@@ -164,11 +164,11 @@
                 <div>
                     <span class="text-[10px] text-slate-500 font-semibold uppercase block mb-1">Google Sheets ปลายทาง</span>
                     <div class="space-y-1 mt-1">
-                        <a href="https://docs.google.com/spreadsheets/d/1DJeeOYd1hGFAaRZ7emkdgLys7G88T13cylayh6Za1xc/edit?usp=sharing" target="_blank" class="text-xs font-bold text-emerald-700 hover:text-emerald-900 hover:underline block">
-                            เปิดดู Google Sheet 1 (ข้อมูลหลัก) &rarr;
+                        <a href="https://docs.google.com/spreadsheets/d/1RFXMLRLjidiH6z9C6-DFHZcf8pP_K4TskJJcMVzPS5w/edit?usp=sharing" target="_blank" class="text-xs font-bold text-emerald-700 hover:text-emerald-900 hover:underline block">
+                            เปิดดู Google Sheet 1 (สต๊อกโรงงาน & งานสั่งผลิต) &rarr;
                         </a>
-                        <a href="https://docs.google.com/spreadsheets/d/1RFXMLRLjidiH6z9C6-DFHZcf8pP_K4TskJJcMVzPS5w/edit?usp=sharing" target="_blank" class="text-xs font-bold text-blue-700 hover:text-blue-900 hover:underline block">
-                            เปิดดู Google Sheet 2 (แผนผลิต & ประวัติ) &rarr;
+                        <a href="https://docs.google.com/spreadsheets/d/1DJeeOYd1hGFAaRZ7emkdgLys7G88T13cylayh6Za1xc/edit?usp=sharing" target="_blank" class="text-xs font-bold text-blue-700 hover:text-blue-900 hover:underline block">
+                            เปิดดู Google Sheet 2 (ของจิปาถะ & ซื้อทั่วไป) &rarr;
                         </a>
                     </div>
                 </div>
@@ -368,8 +368,8 @@ function executeSyncToGoogleSheets() {
                 <div class="text-left text-xs text-slate-600 space-y-2 mt-2 leading-relaxed">
                     <p>ระบบจะส่งข้อมูลทั้งหมดจากฐานข้อมูลไปอัปเดตบน Google Sheets 2 ไฟล์ (รวม 9 แท็บ) พร้อมกัน:</p>
                     <div class="p-2.5 bg-slate-50 rounded-md border border-slate-200 text-slate-800 font-medium">
-                        <div><b>ชีทที่ 1 (ข้อมูลหลัก):</b> บันทึกรับของ, ประวัติสั่งซื้อ, ติดตามรับของ, คลังสินค้า, ราคากลาง</div>
-                        <div class="mt-1"><b>ชีทที่ 2 (แผนผลิต/ประวัติ):</b> แผนผลิตประจำสัปดาห์, ประวัติสต็อก, รายงานภาพรวม, AI Mapping</div>
+                        <div><b>ชีทที่ 1 (สต๊อกโรงงาน & งานสั่งผลิต):</b> บันทึกรับของ, แผนผลิตประจำสัปดาห์, คลังสินค้า, ประวัติสต็อก, AI Mapping</div>
+                        <div class="mt-1"><b>ชีทที่ 2 (ของจิปาถะ & ซื้อทั่วไป):</b> ประวัติสั่งซื้อ, ติดตามรับของ, ราคากลาง, รายงานภาพรวม</div>
                     </div>
                     <p class="text-slate-500 text-[11px]">* หมายเหตุ: ระบบจะไม่ลบหรือเปลี่ยนแปลงข้อมูลใดๆ ในฐานข้อมูล</p>
                 </div>
@@ -417,26 +417,26 @@ function executeSyncToGoogleSheets() {
                             <div class="text-left text-xs text-slate-700 space-y-3 mt-3">
                                 <div class="p-3 bg-slate-50 rounded-md border border-slate-200">
                                     <div class="font-bold text-slate-900 text-sm mb-1.5">
-                                        ชีทที่ 1 (ข้อมูลหลัก - Core Operations)
+                                        ชีทที่ 1 (สต๊อกโรงงาน & งานสั่งผลิต - Primary & Production)
                                     </div>
                                     <ul class="list-disc pl-5 space-y-0.5 text-slate-700 text-[11px]">
                                         <li>บันทึกการรับของประจำเดือน: <b>${s1.actions ?? 0}</b> รายการ</li>
-                                        <li>ประวัติการสั่งซื้อ: <b>${s1.orderHistory ?? 0}</b> รายการ</li>
-                                        <li>ติดตามการรับสินค้า: <b>${s1.receivedTracking ?? 0}</b> รายการ</li>
+                                        <li>แผนผลิตประจำสัปดาห์: <b>${s1.weeklyPlans ?? 0}</b> รายการ</li>
                                         <li>คลังสินค้า / สต็อกคงเหลือ: <b>${s1.stockItems ?? 0}</b> รายการ</li>
-                                        <li>ราคากลางสินค้า: <b>${s1.productPrices ?? 0}</b> รายการ</li>
+                                        <li>ประวัติการเคลื่อนไหวสต็อก: <b>${s1.stockLogs ?? 0}</b> รายการ</li>
+                                        <li>หน่วยความจำ AI จับคู่สินค้า: <b>${s1.itemMappings ?? 0}</b> รายการ</li>
                                     </ul>
                                 </div>
 
                                 <div class="p-3 bg-slate-50 rounded-md border border-slate-200">
                                     <div class="font-bold text-slate-900 text-sm mb-1.5">
-                                        ชีทที่ 2 (แผนผลิตและประวัติ - Secondary & History)
+                                        ชีทที่ 2 (ของจิปาถะ & ซื้อทั่วไป - Sundry & Orders)
                                     </div>
                                     <ul class="list-disc pl-5 space-y-0.5 text-slate-700 text-[11px]">
-                                        <li>แผนผลิตประจำสัปดาห์: <b>${s2.weeklyPlans ?? 0}</b> รายการ</li>
-                                        <li>ประวัติการเคลื่อนไหวสต็อก: <b>${s2.stockLogs ?? 0}</b> รายการ</li>
+                                        <li>ประวัติการสั่งซื้อ: <b>${s2.orderHistory ?? 0}</b> รายการ</li>
+                                        <li>ติดตามการรับสินค้า: <b>${s2.receivedTracking ?? 0}</b> รายการ</li>
+                                        <li>ราคากลางสินค้า: <b>${s2.productPrices ?? 0}</b> รายการ</li>
                                         <li>รายงานสรุปภาพรวมคำสั่งซื้อ: <b>${s2.reports ?? 0}</b> รายการ</li>
-                                        <li>หน่วยความจำ AI จับคู่สินค้า: <b>${s2.itemMappings ?? 0}</b> รายการ</li>
                                     </ul>
                                 </div>
 

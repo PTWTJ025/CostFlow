@@ -678,9 +678,10 @@ namespace CostFlow.Controllers
                                 FormatMoneyStr(order.Amount), // G ยอดสั่งซื้อเต็ม
                                 act.Action switch // H สถานะการรับของ
                                 {
-                                    "ReceivedFull" => "รับของครบแล้ว",
-                                    "Deferred" => "ผ่อนชำระ",
-                                    "Skipped" => "ข้าม / ยังไม่รับ",
+                                    "ReceivedFull" => "รับสินค้าแล้ว",
+                                    "Deferred" => "รับสินค้า (ยังไม่ชำระ)",
+                                    "Requested" => "ต้องการรับของ",
+                                    "Skipped" => "ยังไม่รับสินค้า",
                                     _ => act.Action
                                 },
                                 act.ActionPrice.ToString("N2"), // I ยอดที่จ่ายจริง

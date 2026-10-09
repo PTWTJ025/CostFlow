@@ -776,6 +776,20 @@
             }, 3000);
         }
 
+        // รองรับการกดปุ่ม Enter บนคีย์บอร์ด PC
+        [emailInput, pwInput].forEach(input => {
+            input.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (input === emailInput && !pwInput.value.trim()) {
+                        pwInput.focus();
+                    } else {
+                        form.requestSubmit();
+                    }
+                }
+            });
+        });
+
         // Submit
         form.addEventListener('submit', async function (e) {
             e.preventDefault();
@@ -796,11 +810,15 @@
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<div class="spinner"></div> กำลังเข้าสู่ระบบ...';
 
+            // ดึง ReturnUrl จาก Query String ถ้ามี
+            const urlParams = new URLSearchParams(window.location.search);
+            const returnUrl = urlParams.get('ReturnUrl') || '';
+
             try {
                 const res = await fetch('/Account/SubmitLogin', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: new URLSearchParams({ email, password, rememberMe: rememberMe.checked })
+                    body: new URLSearchParams({ email, password, rememberMe: rememberMe.checked, returnUrl })
                 });
 
                 const data = await res.json();
@@ -812,7 +830,7 @@
                         localStorage.removeItem(REMEMBER_KEY);
                     }
                     showToast('เข้าสู่ระบบสำเร็จ', 'success');
-                    setTimeout(() => { window.location.href = data.redirectUrl; }, 150);
+                    setTimeout(() => { window.location.href = data.redirectUrl || '/'; }, 150);
                 } else {
                     errorText.textContent = data.error || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง';
                     errorMsg.classList.add('show');

@@ -515,8 +515,9 @@ namespace CostFlow.Controllers
                         actionType = latestAct.Action;
                         actionDisplay = latestAct.Action switch
                         {
-                            "ReceivedFull" => "รับเต็มจำนวน",
-                            "Deferred" => "ผ่อนชำระ",
+                            "ReceivedFull" => "รับสินค้าแล้ว",
+                            "Deferred" => "รับสินค้า (ยังไม่ชำระ)",
+                            "Requested" => "ต้องการรับของ",
                             "Skipped" => "ยังไม่รับสินค้า",
                             _ => latestAct.Action
                         };

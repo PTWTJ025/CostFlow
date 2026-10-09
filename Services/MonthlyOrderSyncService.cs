@@ -152,7 +152,8 @@ public class MonthlyOrderSyncService
                 string statusLabel = act.Action switch
                 {
                     "ReceivedFull" => "รับสินค้าแล้ว",
-                    "Deferred" => "ผ่อนชำระ",
+                    "Deferred" => "รับสินค้า (ยังไม่ชำระ)",
+                    "Requested" => "ต้องการรับของ",
                     "Skipped" => "ยังไม่รับสินค้า",
                     _ => act.Action
                 };
@@ -165,9 +166,9 @@ public class MonthlyOrderSyncService
                     .ThenByDescending(x => x.CreatedAt)
                     .FirstOrDefault();
 
-                if (priorAct != null && (priorAct.Action == "Deferred" || priorAct.Action == "Skipped"))
+                if (priorAct != null && (priorAct.Action == "Deferred" || priorAct.Action == "Skipped" || priorAct.Action == "Requested"))
                 {
-                    carriedOverFromMonth = (priorAct.Action == "Deferred" ? "ผ่อนชำระมาจาก " : "ค้างรับมาจาก ") + ConvertKeyToThaiMonth(priorAct.MonthYear);
+                    carriedOverFromMonth = (priorAct.Action == "Deferred" ? "ยกยอด (ยังไม่ชำระ) มาจาก " : "ค้างรับมาจาก ") + ConvertKeyToThaiMonth(priorAct.MonthYear);
                 }
 
                 string qtyDisplay = FormatQuantityDisplay(otm.RemarksQuantity, otm.Remarks);
@@ -225,7 +226,8 @@ public class MonthlyOrderSyncService
                     string statusLabel = currentMonthAct.Action switch
                     {
                         "ReceivedFull" => "รับสินค้าแล้ว",
-                        "Deferred" => "ผ่อนชำระ",
+                        "Deferred" => "รับสินค้า (ยังไม่ชำระ)",
+                        "Requested" => "ต้องการรับของ",
                         "Skipped" => "ยังไม่รับสินค้า",
                         _ => currentMonthAct.Action
                     };
@@ -239,7 +241,7 @@ public class MonthlyOrderSyncService
 
                     if (priorAct != null)
                     {
-                        carriedOver = (priorAct.Action == "Deferred" ? "ผ่อนชำระมาจาก " : "ค้างรับมาจาก ") + ConvertKeyToThaiMonth(priorAct.MonthYear);
+                        carriedOver = (priorAct.Action == "Deferred" ? "ยกยอด (ยังไม่ชำระ) มาจาก " : "ค้างรับมาจาก ") + ConvertKeyToThaiMonth(priorAct.MonthYear);
                     }
                     else if (approvedDt.HasValue && $"{approvedDt.Value.Year:0000}-{approvedDt.Value.Month:00}" != currentMonthKey)
                     {
@@ -279,7 +281,7 @@ public class MonthlyOrderSyncService
                             if (targetDate == currentMonthDate)
                             {
                                 decimal displayAmount = latestAct.ActionPrice > 0 ? latestAct.ActionPrice : itemTotalPrice;
-                                string carriedOver = "ผ่อนชำระมาจาก " + ConvertKeyToThaiMonth(lKey);
+                                string carriedOver = "ยกยอด (ยังไม่ชำระ) มาจาก " + ConvertKeyToThaiMonth(lKey);
 
                                 formattedActionItems.Add((currentMonthKey, new object?[]
                                 {
@@ -290,7 +292,7 @@ public class MonthlyOrderSyncService
                                     qtyDisplay,
                                     dept,
                                     displayAmount,
-                                    "ผ่อนชำระ",
+                                    "รับสินค้า (ยังไม่ชำระ)",
                                     carriedOver
                                 }));
                                 processedCurrentMonthOrderIds.Add(otm.Id);
@@ -299,7 +301,7 @@ public class MonthlyOrderSyncService
                             else if (targetDate > currentMonthDate)
                             {
                                 decimal displayAmount = latestAct.ActionPrice > 0 ? latestAct.ActionPrice : itemTotalPrice;
-                                string carriedOver = "ผ่อนชำระมาจาก " + ConvertKeyToThaiMonth(lKey);
+                                string carriedOver = "ยกยอด (ยังไม่ชำระ) มาจาก " + ConvertKeyToThaiMonth(lKey);
 
                                 formattedActionItems.Add((targetKey, new object?[]
                                 {
@@ -310,7 +312,7 @@ public class MonthlyOrderSyncService
                                     qtyDisplay,
                                     dept,
                                     displayAmount,
-                                    "ผ่อนชำระ",
+                                    "รับสินค้า (ยังไม่ชำระ)",
                                     carriedOver
                                 }));
                                 continue;
@@ -323,7 +325,7 @@ public class MonthlyOrderSyncService
 
                     if (latestAct != null)
                     {
-                        carriedOverMonth = (latestAct.Action == "Deferred" ? "ค้างรับ (ผ่อนชำระ) มาจาก " : "ค้างรับมาจาก ") + ConvertKeyToThaiMonth(latestAct.MonthYear);
+                        carriedOverMonth = (latestAct.Action == "Deferred" ? "ค้างรับ (ยังไม่ชำระ) มาจาก " : "ค้างรับมาจาก ") + ConvertKeyToThaiMonth(latestAct.MonthYear);
                     }
                     else if (approvedDt.HasValue && $"{approvedDt.Value.Year:0000}-{approvedDt.Value.Month:00}" != currentMonthKey)
                     {
@@ -537,12 +539,25 @@ public class MonthlyOrderSyncService
                 var allLogs = await _context.StockLogs.OrderByDescending(l => l.Timestamp).ToListAsync();
                 foreach (var log in allLogs)
                 {
+                    string actionThai = log.Action switch
+                    {
+                        "IN_WO" => "รับเข้า (WO)",
+                        "SKIP_STOCK" => "ข้ามสต๊อก",
+                        "MANUAL_ADD" => "เพิ่มสินค้า",
+                        "MANUAL_EDIT" => "ปรับยอด",
+                        "DELETE_ITEM" => "ลบสินค้า",
+                        "INITIAL_IMPORT" => "นำเข้าเริ่มต้น",
+                        _ => log.Action
+                    };
+
+                    int qtyInt = Convert.ToInt32(Math.Round(log.QuantityChanged));
+
                     stockLogRows.Add(new object?[]
                     {
                         log.Timestamp.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss"),
                         log.StockItemCode,
-                        log.Action,
-                        log.QuantityChanged,
+                        actionThai,
+                        qtyInt,
                         log.ReferenceId ?? "-",
                         log.Remarks ?? "-",
                         log.User ?? "-"
@@ -577,17 +592,24 @@ public class MonthlyOrderSyncService
                 Console.WriteLine($"[Sync] Note: Could not fetch Reports: {ex.Message}");
             }
 
-            // 2.4 หน่วยความจำ AI จับคู่สินค้า (ItemMappings)
+            // 2.4 หน่วยความจำ AI จับคู่สินค้า (ItemMappings พร้อมชื่อสินค้าจากคลังสินค้า)
             var itemMappingRows = new List<object?[]>();
             try
             {
+                var stockNameMap = await _context.StockItems
+                    .AsNoTracking()
+                    .ToDictionaryAsync(s => s.ProductCode, s => s.ProductName);
+
                 var allMappings = await _context.ItemMappings.OrderByDescending(m => m.CreatedAt).ToListAsync();
                 foreach (var map in allMappings)
                 {
+                    string stockName = stockNameMap.TryGetValue(map.StockItemCode, out var sName) ? sName : "-";
+
                     itemMappingRows.Add(new object?[]
                     {
                         map.OrderName,
                         map.StockItemCode,
+                        stockName,
                         map.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
                     });
                 }
@@ -599,41 +621,43 @@ public class MonthlyOrderSyncService
 
             // =========================================================================
             // 🚀 ยิงส่งออกไปยัง Google Sheets ทั้ง 2 ปลายทาง
+            // ชีท 1 (สต๊อกโรงงาน & งานสั่งผลิต - Primary & Production): 5 แท็บ
+            // ชีท 2 (ของจิปาถะ / ซื้อทั่วไป - Sundry & Orders): 4 แท็บ
             // =========================================================================
             var sheetPayloadPrimary = new
             {
                 SheetName_Actions = "บันทึกการรับของประจำเดือน",
                 ActionGroups = actionGroups,
-                SheetName_OrderHistory = "ประวัติการสั่งซื้อ",
-                OrderHistoryRows = orderHistoryRows,
-                SheetName_ReceivedTracking = "ติดตามการรับสินค้า",
-                ReceivedTrackingGroups = receivedTrackingGroups,
+                SheetName_WeeklyPlans = "แผนผลิตประจำสัปดาห์",
+                WeeklyPlanRows = weeklyPlanRows,
                 SheetName_Stock = "คลังสินค้า",
                 StockItemRows = stockItemRows,
-                SheetName_ProductPrices = "ราคากลางสินค้า",
-                ProductPriceRows = productPriceRows
+                SheetName_StockLogs = "ประวัติการเคลื่อนไหวสต็อก",
+                StockLogRows = stockLogRows,
+                SheetName_ItemMappings = "หน่วยความจำ AI จับคู่สินค้า",
+                ItemMappingRows = itemMappingRows
             };
 
             var sheetPayloadSecondary = new
             {
-                SheetName_WeeklyPlans = "แผนผลิตประจำสัปดาห์",
-                WeeklyPlanRows = weeklyPlanRows,
-                SheetName_StockLogs = "ประวัติการเคลื่อนไหวสต็อก",
-                StockLogRows = stockLogRows,
+                SheetName_OrderHistory = "ประวัติการสั่งซื้อ",
+                OrderHistoryRows = orderHistoryRows,
+                SheetName_ReceivedTracking = "ติดตามการรับสินค้า",
+                ReceivedTrackingGroups = receivedTrackingGroups,
+                SheetName_ProductPrices = "ราคากลางสินค้า",
+                ProductPriceRows = productPriceRows,
                 SheetName_Reports = "รายงานสรุปภาพรวมคำสั่งซื้อ",
-                ReportRows = reportRows,
-                SheetName_ItemMappings = "หน่วยความจำ AI จับคู่สินค้า",
-                ItemMappingRows = itemMappingRows
+                ReportRows = reportRows
             };
 
             var client = _httpClientFactory.CreateClient("GoogleAppsScript");
             client.Timeout = TimeSpan.FromSeconds(180);
 
-            // ส่งชีท 1
+            // ส่งชีท 1 (สต๊อกโรงงาน & งานสั่งผลิต)
             var primaryContent = new StringContent(JsonSerializer.Serialize(sheetPayloadPrimary), System.Text.Encoding.UTF8, "application/json");
             var primaryTask = client.PostAsync(appScriptUrlPrimary, primaryContent);
 
-            // ส่งชีท 2 (ถ้ามีการระบุ URL)
+            // ส่งชีท 2 (ของจิปาถะ & สั่งซื้อทั่วไป ถ้ามีการระบุ URL)
             Task<HttpResponseMessage>? secondaryTask = null;
             if (!string.IsNullOrWhiteSpace(appScriptUrlSecondary) && !appScriptUrlSecondary.Contains("_placeholder"))
             {
@@ -646,8 +670,43 @@ public class MonthlyOrderSyncService
             var primaryRes = await primaryTask;
             var secondaryRes = secondaryTask != null ? await secondaryTask : null;
 
+            string primaryBody = await primaryRes.Content.ReadAsStringAsync();
+            string? secondaryBody = secondaryRes != null ? await secondaryRes.Content.ReadAsStringAsync() : null;
+
             bool primarySuccess = primaryRes.IsSuccessStatusCode;
+            string? primaryError = null;
+            try
+            {
+                using var pDoc = JsonDocument.Parse(primaryBody);
+                if (pDoc.RootElement.TryGetProperty("success", out var ps))
+                {
+                    primarySuccess = primarySuccess && ps.GetBoolean();
+                    if (!primarySuccess && pDoc.RootElement.TryGetProperty("error", out var pe))
+                    {
+                        primaryError = pe.GetString();
+                    }
+                }
+            }
+            catch { }
+
             bool secondarySuccess = secondaryRes == null || secondaryRes.IsSuccessStatusCode;
+            string? secondaryError = null;
+            if (secondaryBody != null)
+            {
+                try
+                {
+                    using var sDoc = JsonDocument.Parse(secondaryBody);
+                    if (sDoc.RootElement.TryGetProperty("success", out var ss))
+                    {
+                        secondarySuccess = secondarySuccess && ss.GetBoolean();
+                        if (!secondarySuccess && sDoc.RootElement.TryGetProperty("error", out var se))
+                        {
+                            secondaryError = se.GetString();
+                        }
+                    }
+                }
+                catch { }
+            }
 
             var details = new
             {
@@ -655,35 +714,37 @@ public class MonthlyOrderSyncService
                 {
                     success = primarySuccess,
                     statusCode = (int)primaryRes.StatusCode,
+                    error = primaryError,
                     actions = formattedActionItems.Count,
-                    orderHistory = orderHistoryRows.Count,
-                    receivedTracking = receivedTrackingItems.Count,
+                    weeklyPlans = weeklyPlanRows.Count,
                     stockItems = stockItemRows.Count,
-                    productPrices = productPriceRows.Count
+                    stockLogs = stockLogRows.Count,
+                    itemMappings = itemMappingRows.Count
                 },
                 sheet2 = new
                 {
                     success = secondarySuccess,
                     statusCode = secondaryRes != null ? (int)secondaryRes.StatusCode : 200,
-                    weeklyPlans = weeklyPlanRows.Count,
-                    stockLogs = stockLogRows.Count,
-                    reports = reportRows.Count,
-                    itemMappings = itemMappingRows.Count
+                    error = secondaryError,
+                    orderHistory = orderHistoryRows.Count,
+                    receivedTracking = receivedTrackingItems.Count,
+                    productPrices = productPriceRows.Count,
+                    reports = reportRows.Count
                 }
             };
 
             if (primarySuccess && secondarySuccess)
             {
                 string msg = $"ส่งข้อมูลลง Google Sheet สำเร็จครบทั้ง 2 ไฟล์!\n" +
-                             $"• ชีทหลัก (5 แท็บ): รับของ {formattedActionItems.Count} รายการ, ประวัติสั่งซื้อ {orderHistoryRows.Count} รายการ, ติดตามรับของ {receivedTrackingItems.Count} รายการ, คลังสินค้า {stockItemRows.Count} รายการ, ราคากลาง {productPriceRows.Count} รายการ\n" +
-                             $"• ชีทรอง (4 แท็บ): แผนผลิต {weeklyPlanRows.Count} รายการ, ประวัติสต็อก {stockLogRows.Count} รายการ, รายงาน {reportRows.Count} รายการ, AI Mapping {itemMappingRows.Count} รายการ";
+                             $"• ชีทที่ 1 สต๊อกโรงงาน & งานสั่งผลิต (5 แท็บ): รับของ {formattedActionItems.Count} รายการ, แผนผลิต {weeklyPlanRows.Count} รายการ, คลังสินค้า {stockItemRows.Count} รายการ, ประวัติสต็อก {stockLogRows.Count} รายการ, AI Mapping {itemMappingRows.Count} รายการ\n" +
+                             $"• ชีทที่ 2 ของจิปาถะ & ซื้อทั่วไป (4 แท็บ): ประวัติสั่งซื้อ {orderHistoryRows.Count} รายการ, ติดตามรับของ {receivedTrackingItems.Count} รายการ, ราคากลาง {productPriceRows.Count} รายการ, รายงาน {reportRows.Count} รายการ";
 
                 return (true, msg, formattedActionItems.Count, actionGroups.Count, (object)details);
             }
             else
             {
-                string err1 = primarySuccess ? "OK" : $"HTTP {(int)primaryRes.StatusCode}";
-                string err2 = secondarySuccess ? "OK" : (secondaryRes != null ? $"HTTP {(int)secondaryRes.StatusCode}" : "Not Sent");
+                string err1 = primarySuccess ? "OK" : (!string.IsNullOrWhiteSpace(primaryError) ? primaryError : $"HTTP {(int)primaryRes.StatusCode}");
+                string err2 = secondarySuccess ? "OK" : (!string.IsNullOrWhiteSpace(secondaryError) ? secondaryError : (secondaryRes != null ? $"HTTP {(int)secondaryRes.StatusCode}" : "Not Sent"));
                 return (false, $"เกิดข้อผิดพลาดในการส่งข้อมูล (ชีท 1: {err1}, ชีท 2: {err2})", formattedActionItems.Count, actionGroups.Count, (object)details);
             }
         }
@@ -793,11 +854,12 @@ public class MonthlyOrderSyncService
 
     private static int GetStatusSortOrder(string? status)
     {
-        if (string.IsNullOrWhiteSpace(status)) return 4;
-        if (status.Contains("รับสินค้าแล้ว") || status.Contains("จ่ายเงิน") || status.Contains("รับของครบ")) return 1;
-        if (status.Contains("ผ่อนชำระ") || status.Contains("ยังไม่จ่าย")) return 2;
-        if (status.Contains("ยังไม่รับ") || status.Contains("ค้างรับ") || status.Contains("ผลัดยอด")) return 3;
-        return 4;
+        if (string.IsNullOrWhiteSpace(status)) return 5;
+        if (status.Contains("รับสินค้าแล้ว") || status.Contains("จ่ายเงิน") || status.Contains("รับของครบ") || status.Contains("รับสินค้า (ชำระแล้ว)")) return 1;
+        if (status.Contains("ยังไม่ชำระ") || status.Contains("ผ่อนชำระ") || status.Contains("ยังไม่จ่าย")) return 2;
+        if (status.Contains("ต้องการรับของ") || status.Contains("Requested")) return 3;
+        if (status.Contains("ยังไม่รับ") || status.Contains("ค้างรับ") || status.Contains("ผลัดยอด")) return 4;
+        return 5;
     }
 
     private static DateTime? ParseThaiDate(string? thaiDateStr)

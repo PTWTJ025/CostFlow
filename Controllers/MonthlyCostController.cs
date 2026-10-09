@@ -2108,7 +2108,8 @@ namespace CostFlow.Controllers
                 string actionDisplay = finalAction switch
                 {
                     "ReceivedFull" => "รับสินค้าแล้ว",
-                    "Deferred" => "ผ่อนชำระ",
+                    "Deferred" => "รับสินค้า (ยังไม่ชำระ)",
+                    "Requested" => "ต้องการรับของ",
                     "Skipped" => "ยังไม่รับสินค้า",
                     _ => finalAction
                 };
@@ -2931,7 +2932,8 @@ namespace CostFlow.Controllers
                 string actionDisplay = finalAction switch
                 {
                     "ReceivedFull" => "รับสินค้าแล้ว",
-                    "Deferred" => "ผ่อนชำระ",
+                    "Deferred" => "รับสินค้า (ยังไม่ชำระ)",
+                    "Requested" => "ต้องการรับของ",
                     "Skipped" => "ยังไม่รับสินค้า",
                     _ => finalAction
                 };
@@ -3028,7 +3030,8 @@ namespace CostFlow.Controllers
             string statusFilterText = status switch
             {
                 "ReceivedFull" => "รับสินค้าแล้ว",
-                "Deferred" => "ผ่อนชำระ",
+                "Deferred" => "รับสินค้า (ยังไม่ชำระ)",
+                "Requested" => "ต้องการรับของ",
                 "Skipped" => "ยังไม่รับสินค้า",
                 _ => "ทุกสถานะ"
             };

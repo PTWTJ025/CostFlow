@@ -65,7 +65,8 @@
                 <select id="filter-status" onchange="onStatusSelectChange()" class="block w-full border border-slate-200 rounded-md outline-none transition-all bg-white text-slate-700 cursor-pointer font-medium text-xs shadow-2xs hover:border-slate-300 focus:border-primary" style="height: 32px; padding: 4px 8px; font-size: 12px;">
                     <option value="all">ทุกสถานะ</option>
                     <option value="ReceivedFull">รับสินค้าแล้ว</option>
-                    <option value="Deferred">ผ่อนชำระ</option>
+                    <option value="Deferred">รับสินค้า (ยังไม่ชำระ)</option>
+                    <option value="Requested">ต้องการรับของ</option>
                     <option value="Skipped">ยังไม่รับสินค้า</option>
                 </select>
             </div> -->
@@ -89,11 +90,11 @@
                     <span>รับสินค้าแล้ว</span>
                     <span class="font-bold px-1.5 py-0.5 text-emerald-800 text-[11px] rounded shadow-2xs" id="count-received">@Model.TotalReceivedCount</span>
                 </div>
-                <div class="inline-flex items-center gap-1.5 px-2.5 text-xs font-semibold rounded-md text-amber-700 border border-amber-200 select-none whitespace-nowrap transition-all status-badge-pill" data-filter="Deferred" title="คลิกเพื่อกรองผ่อนชำระ" style="height: 34px;">
+                <div class="inline-flex items-center gap-1.5 px-2.5 text-xs font-semibold rounded-md text-amber-700 border border-amber-200 select-none whitespace-nowrap transition-all status-badge-pill" data-filter="Deferred" title="คลิกเพื่อกรองรับสินค้า (ยังไม่ชำระ)" style="height: 34px;">
                     <svg class="w-3.5 h-3.5 text-amber-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
                     </svg>
-                    <span>ผ่อนชำระ</span>
+                    <span>รับสินค้า (ยังไม่ชำระ)</span>
                     <span class="font-bold px-1.5 py-0.5 text-amber-800 text-[11px] rounded shadow-2xs" id="count-deferred">@Model.TotalDeferredCount</span>
                 </div>
                 <div class="inline-flex items-center gap-1.5 px-2.5 text-xs font-semibold rounded-md text-purple-700 border border-purple-200 select-none whitespace-nowrap transition-all status-badge-pill cursor-pointer" data-filter="Skipped" title="คลิกเพื่อกรองยังไม่รับสินค้า" style="height: 34px;">
@@ -406,7 +407,16 @@
                                             <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
                                             </svg>
-                                            <span class="leading-none">ผ่อนชำระ</span>
+                                            <span class="leading-none">รับสินค้า (ยังไม่ชำระ)</span>
+                                        </span>
+                                    }
+                                    else if (item.Action == "Requested")
+                                    {
+                                        <span class="inline-flex items-center justify-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md whitespace-nowrap" style="background: #dbeafe; color: #1d4ed8; border: 1px solid #bfdbfe;">
+                                            <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"/>
+                                            </svg>
+                                            <span class="leading-none">ต้องการรับของ</span>
                                         </span>
                                     }
                                     else
@@ -776,7 +786,8 @@
 
             let statusThai = 'ทั้งหมด';
             if (status === 'ReceivedFull') statusThai = 'รับสินค้าแล้ว';
-            else if (status === 'Deferred') statusThai = 'ผ่อนชำระ';
+            else if (status === 'Deferred') statusThai = 'รับสินค้า (ยังไม่ชำระ)';
+            else if (status === 'Requested') statusThai = 'ต้องการรับของ';
             else if (status === 'Skipped') statusThai = 'ยังไม่รับสินค้า';
 
             const defaultFileName = `รายงานสรุปรายการสั่งซื้อ_ปี${parseInt(year) + 543}_${statusThai}`;

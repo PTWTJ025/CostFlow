@@ -50,7 +50,7 @@ namespace CostFlow.Controllers
 
         // POST: /Account/SubmitLogin
         [HttpPost]
-        public async Task<IActionResult> SubmitLogin(string email, string password, bool rememberMe = false)
+        public async Task<IActionResult> SubmitLogin(string email, string password, bool rememberMe = false, string? returnUrl = null)
         {
             if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
             {
@@ -72,13 +72,11 @@ namespace CostFlow.Controllers
                 return Json(new { success = false, error = "บัญชีนี้ถูกระงับการใช้งานชั่วคราว" });
             }
 
-            // ตรวจสอบรหัสผ่าน + set cookie เป็น Session Cookie (isPersistent = false)
-            // ตามมาตรฐานความปลอดภัย Production: เมื่อปิดเบราว์เซอร์แล้วเปิดใหม่ จะต้องล็อกอินใหม่เสมอ
-            // และระหว่างเปิดใช้งาน จะอยู่ได้ 8 ชม. ต่อเวลาอัตโนมัติ และไม่ออกเมื่อรีสตาร์ตเซิร์ฟเวอร์
+            // ตรวจสอบรหัสผ่าน + set cookie ตามที่ผู้ใช้เลือกจำการเข้าสู่ระบบ
             var result = await _signInManager.PasswordSignInAsync(
                 user,
                 password,
-                isPersistent: false,
+                isPersistent: rememberMe,
                 lockoutOnFailure: false
             );
 
@@ -105,7 +103,16 @@ namespace CostFlow.Controllers
                                await _userManager.IsInRoleAsync(user, "Admin") || 
                                await _userManager.IsInRoleAsync(user, "Dev");
 
-                string redirect = isAdmin ? Url.Action("Index", "Home")! : Url.Action("Index", "ProductSearch")!;
+                string redirect;
+                if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+                {
+                    redirect = returnUrl;
+                }
+                else
+                {
+                    redirect = isAdmin ? Url.Action("Index", "Home")! : Url.Action("Index", "ProductSearch")!;
+                }
+
                 return Json(new { success = true, redirectUrl = redirect });
             }
 
