@@ -113,7 +113,7 @@
                                                         <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium @(match.IsExactMapping ? "bg-green-100 text-green-800" : match.MatchPercentage >= 80 ? "bg-emerald-100 text-emerald-800" : "bg-orange-100 text-orange-800")">
                                                             @(match.IsExactMapping ? "Exact Match" : $"{match.MatchPercentage}% Match")
                                                         </span>
-                                                        <span class="text-xs text-slate-500 mt-1">คงเหลือ: <strong class="@(match.StockItem.Quantity <= match.StockItem.MinStock ? "text-rose-600" : "text-slate-700")">@match.StockItem.Quantity</strong></span>
+                                                        <span class="text-xs text-slate-500 mt-1">คงเหลือ: <strong class="@(match.StockItem.Quantity <= match.StockItem.MinStock ? "text-rose-600" : "text-slate-700")">@(match.StockItem.Quantity % 1 == 0 ? match.StockItem.Quantity.ToString("N0") : match.StockItem.Quantity.ToString("N2"))</strong></span>
                                                     </div>
                                                 </div>
                                                 @if (!match.IsExactMapping)

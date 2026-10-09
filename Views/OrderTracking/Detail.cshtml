@@ -67,7 +67,7 @@
                             </td>
                             <td class="py-3 px-4 font-mono text-slate-600 text-xs">@item.ProductCode</td>
                             <td class="py-3 px-4 font-medium text-slate-800">@item.ProductName</td>
-                            <td class="py-3 px-4 text-right font-medium">@item.Quantity</td>
+                            <td class="py-3 px-4 text-right font-medium">@(item.Quantity % 1 == 0 ? item.Quantity.ToString("N0") : item.Quantity.ToString("N2"))</td>
                             <td class="py-3 px-4 text-center text-slate-500 text-xs">@item.Unit</td>
                             <td class="py-3 px-4 text-center">
                                 @if (isReceived)
