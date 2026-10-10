@@ -64,6 +64,9 @@ namespace CostFlow.Data
 
             // 10. Auto-classify Stock Groups (วงแหวน, ตัวครอบ, ตุ๊กตา, แกนเฟือง, เฟืองขับ/ท้าย, ซุปเปอร์ลีน, พูลเลย์/สายพาน, เบ็ดเตล็ด)
             await ClassifyStockGroupsAsync(db);
+
+            // 11. Sync Curated Stock Images and Groups from mapping JSON (81 items)
+            await SyncStockImagesFromMappingJsonAsync(db, env);
         }
 
         private static async Task FixCategoryCodesAsync(AppDbContext db)
@@ -148,6 +151,92 @@ namespace CostFlow.Data
             catch (Exception ex)
             {
                 Console.WriteLine($"[DB Init ClassifyStockGroups Warning] {ex.Message}");
+            }
+        }
+
+        private static async Task SyncStockImagesFromMappingJsonAsync(AppDbContext db, IWebHostEnvironment env)
+        {
+            try
+            {
+                var jsonPath = Path.Combine(env.ContentRootPath, "Data", "stock_images_mapping.json");
+                if (!File.Exists(jsonPath))
+                {
+                    jsonPath = Path.Combine(env.WebRootPath, "data", "stock_images_mapping.json");
+                }
+                if (!File.Exists(jsonPath))
+                {
+                    Console.WriteLine("[DB Init] stock_images_mapping.json not found.");
+                    return;
+                }
+
+                var jsonContent = await File.ReadAllTextAsync(jsonPath);
+                using var doc = System.Text.Json.JsonDocument.Parse(jsonContent);
+                var root = doc.RootElement;
+                if (root.ValueKind != System.Text.Json.JsonValueKind.Array) return;
+
+                var mappingList = new List<(string Code, string ImageUrl, string StockGroup)>();
+                foreach (var elem in root.EnumerateArray())
+                {
+                    string code = elem.TryGetProperty("product_code", out var c) ? c.GetString()?.Trim() ?? "" : "";
+                    string url = elem.TryGetProperty("image_url", out var u) ? u.GetString()?.Trim() ?? "" : "";
+                    string group = elem.TryGetProperty("stock_group", out var g) ? g.GetString()?.Trim() ?? "" : "";
+                    if (!string.IsNullOrEmpty(code))
+                    {
+                        mappingList.Add((code, url, group));
+                    }
+                }
+
+                if (!mappingList.Any()) return;
+
+                var dbItems = await db.StockItems.ToListAsync();
+                var dbMap = new Dictionary<string, StockItem>(StringComparer.OrdinalIgnoreCase);
+                foreach (var item in dbItems)
+                {
+                    var code = (item.ProductCode ?? "").Trim();
+                    if (!string.IsNullOrEmpty(code) && !dbMap.ContainsKey(code))
+                    {
+                        dbMap[code] = item;
+                    }
+                }
+
+                int updatedCount = 0;
+                foreach (var m in mappingList)
+                {
+                    if (dbMap.TryGetValue(m.Code, out var item))
+                    {
+                        bool changed = false;
+                        if (!string.IsNullOrEmpty(m.ImageUrl) && item.FilePath != m.ImageUrl)
+                        {
+                            item.FilePath = m.ImageUrl;
+                            changed = true;
+                        }
+                        if (!string.IsNullOrEmpty(m.StockGroup) && item.StockGroup != m.StockGroup)
+                        {
+                            item.StockGroup = m.StockGroup;
+                            changed = true;
+                        }
+
+                        if (changed)
+                        {
+                            item.UpdatedAt = DateTime.UtcNow;
+                            updatedCount++;
+                        }
+                    }
+                }
+
+                if (updatedCount > 0)
+                {
+                    await db.SaveChangesAsync();
+                    Console.WriteLine($"[DB Init] Successfully synced {updatedCount} StockItems with images and stock groups from mapping JSON!");
+                }
+                else
+                {
+                    Console.WriteLine("[DB Init] All StockItems already have up-to-date images and groups.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[DB Init] Error syncing stock images from JSON: {ex.Message}");
             }
         }
 

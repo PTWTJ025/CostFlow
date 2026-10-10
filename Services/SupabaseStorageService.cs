@@ -255,8 +255,13 @@ namespace CostFlow.Services
         {
             try
             {
+                // Format file name based on Thai Buddhist calendar date: keepDD_MM_YY.png (e.g. keep10_10_69.png)
+                var thaiTime = DateTime.UtcNow.AddHours(7);
+                int thaiYearShort = (thaiTime.Year + 543) % 100;
+                var fileName = $"keep{thaiTime.Day:D2}_{thaiTime.Month:D2}_{thaiYearShort:D2}.png";
+
                 var encodedBucket = Uri.EscapeDataString(bucket);
-                var uploadUrl = $"{supabaseUrl}/storage/v1/object/{encodedBucket}/system/keepalive.png";
+                var uploadUrl = $"{supabaseUrl}/storage/v1/object/{encodedBucket}/system/{fileName}";
 
                 using var request = new HttpRequestMessage(HttpMethod.Post, uploadUrl);
                 request.Headers.Add("apikey", apiKey);
@@ -272,13 +277,13 @@ namespace CostFlow.Services
                 var response = await _httpClient.SendAsync(request);
                 if (response.IsSuccessStatusCode)
                 {
-                    _logger.LogInformation("[Supabase Keep-Alive] [Hey HuaNa, wake up and get to work] Successfully upserted keep-alive image (68 bytes) to {ProjectName} Supabase Storage (Status: {StatusCode} OK). Project is active.", projectName, (int)response.StatusCode);
+                    _logger.LogInformation("[Supabase Keep-Alive] [Hey HuaNa, wake up and get to work] Successfully upserted keep-alive image '{FileName}' (68 bytes) to {ProjectName} Supabase Storage (Status: {StatusCode} OK). Project is active.", fileName, projectName, (int)response.StatusCode);
                     return true;
                 }
                 else
                 {
                     var error = await response.Content.ReadAsStringAsync();
-                    _logger.LogWarning("[Supabase Keep-Alive] [Hey HuaNa, wake up and get to work] Upsert keep-alive image to {ProjectName} returned status {StatusCode}: {Error}", projectName, response.StatusCode, error);
+                    _logger.LogWarning("[Supabase Keep-Alive] [Hey HuaNa, wake up and get to work] Upsert keep-alive image '{FileName}' to {ProjectName} returned status {StatusCode}: {Error}", fileName, projectName, response.StatusCode, error);
                     return false;
                 }
             }
