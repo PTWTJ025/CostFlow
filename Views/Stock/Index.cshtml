@@ -8,6 +8,35 @@
                    userName.Equals("DEV01", StringComparison.OrdinalIgnoreCase) ||
                    userName.Equals("STAFF01", StringComparison.OrdinalIgnoreCase);
 
+    string NormalizeStockGroup(string? rawGroup, string? productName)
+    {
+        var grp = (rawGroup ?? "").Trim();
+        if (grp == "วงแหวน" || grp == "ตัวครอบ" || grp == "ตุ๊กตา" || grp == "แกนเฟือง" ||
+            grp == "เฟืองขับ/ท้าย" || grp == "ซุปเปอร์ลีน" || grp == "พูลเลย์/สายพาน" || grp == "เบ็ดเตล็ด")
+        {
+            return grp;
+        }
+
+        var name = (productName ?? "").Trim();
+        if (System.Text.RegularExpressions.Regex.IsMatch(name, @"^(ตุ๊กตา|ตุ๊กเพลา)")) return "ตุ๊กตา";
+        if (System.Text.RegularExpressions.Regex.IsMatch(name, @"^(ตัวครอบ|ต้วครอบ)")) return "ตัวครอบ";
+        if (System.Text.RegularExpressions.Regex.IsMatch(name, @"^(วงแหวน)")) return "วงแหวน";
+        if (System.Text.RegularExpressions.Regex.IsMatch(name, @"^(พูลเลย์|พลูเล่ย์|ล้อตึง|ล้อดึง|เพลาพูลเล่ย์|เพลาพูลเลย์|แกนพูลเลย์|แกบพูลเลย์|แกนพลูเลย์)")) return "พูลเลย์/สายพาน";
+        if (System.Text.RegularExpressions.Regex.IsMatch(name, @"^(แกนเฟือง|เพลาเฟือง)")) return "แกนเฟือง";
+        if (System.Text.RegularExpressions.Regex.IsMatch(name, @"(ซุปเปอร์ลีน|ชุบเปอร์ลีน|ชุเปอร์ลีน)")) return "ซุปเปอร์ลีน";
+        if (System.Text.RegularExpressions.Regex.IsMatch(name, @"^(เฟือง|เฟีอง|เฟิอง)")) return "เฟืองขับ/ท้าย";
+
+        if (grp.Contains("ตุ๊กตา")) return "ตุ๊กตา";
+        if (grp.Contains("วงแหวน")) return "วงแหวน";
+        if (grp.Contains("ตัวครอบ")) return "ตัวครอบ";
+        if (grp.Contains("แกนเฟือง")) return "แกนเฟือง";
+        if (grp.Contains("ซุปเปอร์ลีน")) return "ซุปเปอร์ลีน";
+        if (grp.Contains("พูลเลย์") || grp.Contains("สายพาน")) return "พูลเลย์/สายพาน";
+        if (grp.Contains("เฟือง")) return "เฟืองขับ/ท้าย";
+
+        return "เบ็ดเตล็ด";
+    }
+
     (string badgeBg, string chipIdle, string chipActive, string chipDot, string badgeActive) GetCategoryTheme(string? group) => (group ?? "").Trim() switch
     {
         "วงแหวน" => (
@@ -349,7 +378,7 @@
                     </button>
                     @foreach (var grp in standardGroupList)
                     {
-                        var count = Model.Count(i => (i.StockGroup ?? "เบ็ดเตล็ด") == grp);
+                        var count = Model.Count(i => NormalizeStockGroup(i.StockGroup, i.ProductName) == grp);
                         var theme = GetCategoryTheme(grp);
                         <button type="button" 
                                 onclick="filterStockByGroup('@grp', this)" 
@@ -432,13 +461,14 @@
                     string imageUrl = !string.IsNullOrWhiteSpace(item.FilePath)
                         ? item.FilePath
                         : mockImages[imgIndex];
+                    var itemNormalizedGroup = NormalizeStockGroup(item.StockGroup, item.ProductName);
 
                     <div class="stock-card bg-white border border-slate-200 hover:border-slate-300 rounded-lg shadow-2xs hover:shadow-sm transition-all overflow-hidden flex flex-col justify-between group"
                          data-id="@item.Id"
                          data-code="@item.ProductCode"
                          data-name="@item.ProductName"
                          data-category="@(item.Category ?? "อะไหล่")"
-                         data-group="@(item.StockGroup ?? "เบ็ดเตล็ด")"
+                         data-group="@itemNormalizedGroup"
                          data-image="@(item.FilePath ?? "")"
                          data-min="@item.MinStock"
                          data-max="@item.MaxStock"
@@ -477,7 +507,7 @@
 
                             <!-- Category Group Badge overlaid bottom-left (Color-coded to match category) -->
                             @{
-                                var cardGroup = string.IsNullOrEmpty(item.StockGroup) ? "เบ็ดเตล็ด" : item.StockGroup;
+                                var cardGroup = itemNormalizedGroup;
                                 var cardTheme = GetCategoryTheme(cardGroup);
                             }
                             <div class="stock-badge-bottom-left" style="position: absolute; bottom: 8px; left: 8px; z-index: 5;">
@@ -523,7 +553,7 @@
                                                     data-code="@item.ProductCode"
                                                     data-name="@item.ProductName"
                                                     data-category="@(item.Category ?? "อะไหล่")"
-                                                    data-group="@(item.StockGroup ?? "เบ็ดเตล็ด")"
+                                                    data-group="@itemNormalizedGroup"
                                                     data-image="@(item.FilePath ?? "")"
                                                     data-min="@item.MinStock"
                                                     data-max="@item.MaxStock"
@@ -1851,6 +1881,28 @@
             filterStockByGroup('ALL', allBtn);
         }
 
+        function getStandardGroup(group, name) {
+            const g = (group || '').trim();
+            const standard = ['วงแหวน', 'ตัวครอบ', 'ตุ๊กตา', 'แกนเฟือง', 'เฟืองขับ/ท้าย', 'ซุปเปอร์ลีน', 'พูลเลย์/สายพาน', 'เบ็ดเตล็ด'];
+            if (standard.includes(g)) return g;
+            const n = (name || '').trim();
+            if (/^(ตุ๊กตา|ตุ๊กเพลา)/.test(n)) return 'ตุ๊กตา';
+            if (/^(ตัวครอบ|ต้วครอบ)/.test(n)) return 'ตัวครอบ';
+            if (/^(วงแหวน)/.test(n)) return 'วงแหวน';
+            if (/^(พูลเลย์|พลูเล่ย์|ล้อตึง|ล้อดึง|เพลาพูลเล่ย์|เพลาพูลเลย์|แกนพูลเลย์|แกบพูลเลย์|แกนพลูเลย์)/.test(n)) return 'พูลเลย์/สายพาน';
+            if (/^(แกนเฟือง|เพลาเฟือง)/.test(n)) return 'แกนเฟือง';
+            if (/(ซุปเปอร์ลีน|ชุบเปอร์ลีน|ชุเปอร์ลีน)/.test(n)) return 'ซุปเปอร์ลีน';
+            if (/^(เฟือง|เฟีอง|เฟิอง)/.test(n)) return 'เฟืองขับ/ท้าย';
+            if (g.includes('ตุ๊กตา')) return 'ตุ๊กตา';
+            if (g.includes('วงแหวน')) return 'วงแหวน';
+            if (g.includes('ตัวครอบ')) return 'ตัวครอบ';
+            if (g.includes('แกนเฟือง')) return 'แกนเฟือง';
+            if (g.includes('ซุปเปอร์ลีน')) return 'ซุปเปอร์ลีน';
+            if (g.includes('พูลเลย์') || g.includes('สายพาน')) return 'พูลเลย์/สายพาน';
+            if (g.includes('เฟือง')) return 'เฟืองขับ/ท้าย';
+            return 'เบ็ดเตล็ด';
+        }
+
         function applyStockFilter() {
             const searchInput = document.getElementById('stockCustomSearch');
             const query = (searchInput ? searchInput.value : '').toLowerCase().trim();
@@ -1866,8 +1918,9 @@
 
             for (let i = 0; i < cards.length; i++) {
                 const card = cards[i];
-                const cardGroup = (card.getAttribute('data-group') || 'เบ็ดเตล็ด').trim();
+                const rawGroup = (card.getAttribute('data-group') || 'เบ็ดเตล็ด').trim();
                 const cardName = (card.querySelector('.stock-card-title')?.textContent || '').trim();
+                const cardGroup = getStandardGroup(rawGroup, cardName);
 
                 // 1. Group match
                 const matchesGroup = (currentSelectedGroup === 'ALL') || (cardGroup === currentSelectedGroup);

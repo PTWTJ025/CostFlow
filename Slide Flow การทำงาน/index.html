@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CostFlow - ผังขั้นตอนการทำงานระบบ (Interactive Process Flowchart)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --primary-subtle: #eff6ff;
+            --slate-50: #f8fafc;
+            --slate-100: #f1f5f9;
+            --slate-200: #e2e8f0;
+            --slate-300: #cbd5e1;
+            --slate-400: #94a3b8;
+            --slate-500: #64748b;
+            --slate-600: #475569;
+            --slate-700: #334155;
+            --slate-800: #1e293b;
+            --slate-900: #0f172a;
+            --radius-md: 8px;
+            --radius-sm: 6px;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.07);
+            --shadow-lg: 0 10px 25px -5px rgb(0 0 0 / 0.1);
+            --transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'IBM Plex Sans Thai', 'Poppins', -apple-system, sans-serif;
+            background-color: #f8fafc;
+            color: var(--slate-800);
+            user-select: none;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            background-image: 
+                radial-gradient(#cbd5e1 1.1px, transparent 1.1px),
+                radial-gradient(at 0% 0%, rgba(37, 99, 235, 0.03) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(2, 132, 199, 0.03) 0px, transparent 50%);
+            background-size: 24px 24px, 100% 100%, 100% 100%;
+        }
+
+        /* Pure Canvas Workspace */
+        main#canvas-container {
+            flex: 1;
+            position: relative;
+            overflow: auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 24px 16px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        /* Flowchart Wrapper */
+        .flowchart-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: var(--transition);
+            transform-origin: center top;
+        }
+
+        /* Default Fit Screen: Scales neatly to viewport height */
+        .fit-mode .flowchart-svg {
+            height: calc(100vh - 90px);
+            max-height: 1520px;
+            width: auto;
+            max-width: 95vw;
+            display: block;
+        }
+
+        /* Zoom Mode: Wider view with scroll & auto-center */
+        .zoom-mode {
+            align-items: flex-start !important;
+            padding-top: 28px !important;
+            padding-bottom: 70px !important;
+        }
+
+        .zoom-mode .flowchart-svg {
+            width: 820px;
+            height: auto;
+            max-width: none;
+            display: block;
+        }
+
+        /* SVG Flowchart Elements Initial Hidden State */
+        .fc-node, .fc-arrow, .fc-edge-label {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .fc-node {
+            cursor: pointer;
+            transform: scale(0.92);
+            transform-origin: center;
+        }
+
+        .fc-shape {
+            fill: #ffffff;
+            stroke: #1e293b;
+            stroke-width: 2;
+            transition: stroke 0.35s ease, stroke-width 0.35s ease, fill 0.35s ease, filter 0.35s ease;
+        }
+
+        .fc-text {
+            font-family: 'IBM Plex Sans Thai', 'Poppins', sans-serif;
+            font-size: 12px;
+            fill: #0f172a;
+            text-anchor: middle;
+            dominant-baseline: central;
+            pointer-events: none;
+            font-weight: 500;
+        }
+
+        .fc-text-title {
+            font-family: 'IBM Plex Sans Thai', 'Poppins', sans-serif;
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        .fc-edge-label {
+            font-family: 'IBM Plex Sans Thai', 'Poppins', sans-serif;
+            font-size: 11px;
+            fill: #475569;
+            font-weight: 600;
+            pointer-events: none;
+        }
+
+        /* Modern Line & Chevron Arrowhead Styling */
+        .fc-arrow {
+            stroke: #1e293b;
+            stroke-width: 2.2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            fill: none;
+        }
+
+        /* Revealed States */
+        .fc-node.revealed {
+            opacity: 1;
+            pointer-events: auto;
+            transform: scale(1);
+        }
+
+        .fc-arrow.revealed {
+            opacity: 1;
+        }
+
+        .fc-edge-label.revealed {
+            opacity: 1;
+        }
+
+        /* Active / Just Revealed Highlights */
+        .fc-node.active-focus {
+            filter: drop-shadow(0 8px 22px rgba(37, 99, 235, 0.36));
+        }
+
+        .fc-node.active-focus .fc-shape {
+            stroke: #2563eb !important;
+            stroke-width: 3.2px !important;
+            fill: #eff6ff !important;
+        }
+
+        .fc-node.active-focus .fc-text {
+            fill: #1e3a8a !important;
+            font-weight: 700 !important;
+        }
+
+        .fc-arrow.active-flow {
+            stroke: #2563eb !important;
+            stroke-width: 3px !important;
+            filter: drop-shadow(0 0 6px rgba(37, 99, 235, 0.6));
+        }
+
+        /* Floating Click Indicator Hint */
+        .click-hint {
+            position: absolute;
+            top: 20px;
+            right: 24px;
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(8px);
+            border: 1px solid var(--slate-200);
+            border-radius: 999px;
+            padding: 6px 14px;
+            font-size: 11.5px;
+            font-weight: 600;
+            color: var(--slate-600);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: var(--shadow-sm);
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .click-hint-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--primary);
+            animation: pulseHint 1.8s infinite;
+        }
+
+        @keyframes pulseHint {
+            0% { transform: scale(0.9); opacity: 0.7; }
+            50% { transform: scale(1.3); opacity: 1; }
+            100% { transform: scale(0.9); opacity: 0.7; }
+        }
+
+        /* Footer Controls */
+        footer {
+            background: white;
+            border-top: 1px solid var(--slate-200);
+            padding: 12px 28px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            z-index: 40;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.03);
+            cursor: default;
+        }
+
+        .keyboard-hint {
+            font-size: 12px;
+            color: var(--slate-400);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .kbd {
+            background: var(--slate-100);
+            border: 1px solid var(--slate-300);
+            border-radius: 4px;
+            padding: 2px 6px;
+            font-size: 10px;
+            font-family: inherit;
+            color: var(--slate-600);
+        }
+
+        .dots-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--slate-300);
+            transition: var(--transition);
+            cursor: pointer;
+        }
+
+        .dot:hover {
+            background: var(--slate-400);
+        }
+
+        .dot.active {
+            width: 24px;
+            border-radius: 999px;
+            background: var(--primary);
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.35);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 18px;
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            transition: var(--transition);
+            border: none;
+        }
+
+        .btn-outline {
+            background: white;
+            border: 1px solid var(--slate-300);
+            color: var(--slate-700);
+        }
+
+        .btn-outline:hover:not(:disabled) {
+            background: var(--slate-100);
+            color: var(--slate-900);
+            border-color: var(--slate-400);
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 4px 10px rgba(37, 99, 235, 0.25);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        .btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        /* Print Media Query for Report Submission */
+        @media print {
+            footer, .keyboard-hint, .dots-indicator, .btn, .click-hint {
+                display: none !important;
+            }
+            html, body {
+                height: auto !important;
+                overflow: visible !important;
+                background: white !important;
+            }
+            main#canvas-container {
+                display: block !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                overflow: visible !important;
+                cursor: default !important;
+            }
+            .flowchart-wrapper {
+                display: block !important;
+                width: 100% !important;
+            }
+            .flowchart-svg {
+                width: 100% !important;
+                max-width: 100% !important;
+                height: auto !important;
+            }
+            .print-caption {
+                display: block !important;
+                font-family: 'IBM Plex Sans Thai', 'Poppins', sans-serif;
+                font-size: 14pt;
+                font-weight: bold;
+                text-align: center;
+                margin-top: 15px;
+                margin-bottom: 25px;
+                color: black;
+            }
+            .fc-node, .fc-arrow, .fc-edge-label {
+                opacity: 1 !important;
+                visibility: visible !important;
+                filter: none !important;
+                transform: none !important;
+            }
+            .fc-shape {
+                stroke: black !important;
+                stroke-width: 1.8 !important;
+                fill: white !important;
+                filter: none !important;
+            }
+            .fc-text {
+                fill: black !important;
+            }
+            .fc-arrow {
+                stroke: black !important;
+                stroke-width: 1.8 !important;
+                stroke-dasharray: none !important;
+                stroke-dashoffset: 0 !important;
+                filter: none !important;
+            }
+            marker path {
+                stroke: black !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Main Pure Flowchart Canvas -->
+    <main id="canvas-container" class="fit-mode" onclick="handleCanvasClick(event)">
+        
+        <!-- Floating Click Hint -->
+        <div class="click-hint">
+            <div class="click-hint-dot"></div>
+            <span>คลิกที่หน้าจอหรือกดปุ่มเพื่อเลื่อนสเต็ป</span>
+        </div>
+
+        <!-- Print Caption for Official Academic Report -->
+        <div class="print-caption" style="display: none;">ภาพประกอบที่ 3.7 ผังขั้นตอนการทำงานระบบสั่งผลิตและบริหารสต๊อกพัสดุ CostFlow</div>
+
+        <div class="flowchart-wrapper" id="flowchart-wrap">
+            <svg class="flowchart-svg" id="flowchart-svg" viewBox="0 0 820 1520" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <!-- Modern Compact Open Chevron Arrowhead (Scaled & Proportional) -->
+                    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="7" refY="5" orient="auto" markerUnits="userSpaceOnUse">
+                        <path d="M 2.5 2 L 7 5 L 2.5 8" fill="none" stroke="#1e293b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                    </marker>
+                    <!-- Active Glowing Open Chevron Arrowhead -->
+                    <marker id="arrowhead-active" markerWidth="10" markerHeight="10" refX="7" refY="5" orient="auto" markerUnits="userSpaceOnUse">
+                        <path d="M 2.5 2 L 7 5 L 2.5 8" fill="none" stroke="#2563eb" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+                    </marker>
+                </defs>
+
+                <!-- ================= START ================= -->
+                <g class="fc-node" id="fn-start">
+                    <rect class="fc-shape" x="320" y="25" width="180" height="44" rx="22" ry="22" />
+                    <text class="fc-text fc-text-title" x="410" y="47">เริ่มต้น</text>
+                </g>
+
+                <!-- Arrow from Start to Step 1A (Long Line) -->
+                <path class="fc-arrow" id="fa-0" d="M 410 69 L 410 135" marker-end="url(#arrowhead)" />
+
+                <!-- ================= STEP 1: ORDER & IMPORT ================= -->
+                <g class="fc-node" id="fn-step1-a">
+                    <rect class="fc-shape" x="245" y="135" width="330" height="54" rx="6" />
+                    <text class="fc-text fc-text-title" x="410" y="153">หัวหน้างานคีย์สั่งผลิตในระบบ ERP โรงงาน</text>
+                    <text class="fc-text" x="410" y="172" style="font-size: 11px; fill: #475569;">คีย์รายการเพื่อสั่งงานไปยังฝ่ายผลิตชิ้นส่วน</text>
+                </g>
+
+                <!-- Arrow from Step 1A to Step 1B (Long Line) -->
+                <path class="fc-arrow" id="fa-1" d="M 410 189 L 410 260" marker-end="url(#arrowhead)" />
+
+                <g class="fc-node" id="fn-step1-b">
+                    <rect class="fc-shape" x="235" y="260" width="350" height="56" rx="6" />
+                    <text class="fc-text fc-text-title" x="410" y="279">Export ตาราง & Import เข้า CostFlow</text>
+                    <text class="fc-text" x="410" y="299" style="font-size: 11px; fill: #475569;">ดึงรหัส วันที่ ราคา รวมไว้หน้าเดียว (แก้ปัญหาเปิดหลายชีท)</text>
+                </g>
+
+                <!-- Arrow from Step 1B to Step 2 Decision (Long Line) -->
+                <path class="fc-arrow" id="fa-2" d="M 410 316 L 410 385" marker-end="url(#arrowhead)" />
+
+                <!-- ================= STEP 2: WEEKLY PLAN (KC) DECISION ================= -->
+                <g class="fc-node" id="fn-step2-dec">
+                    <polygon class="fc-shape" points="410,385 550,445 410,505 270,445" />
+                    <text class="fc-text fc-text-title" x="410" y="435">ฝ่ายผลิตส่งแผน KC</text>
+                    <text class="fc-text" x="410" y="455" style="font-size: 11.5px;">(เลือกอัปโหลดเทียบ?)</text>
+                </g>
+
+                <!-- Branch: มีไฟล์ / อัปโหลด (True) -> ขวา (Long Turn Line) -->
+                <path class="fc-arrow" id="fa-kc-yes" d="M 550 445 L 665 445 L 665 505" marker-end="url(#arrowhead)" />
+                <text class="fc-edge-label" id="fl-kc-yes" x="568" y="433">มีไฟล์ / อัปโหลด</text>
+
+                <!-- Process: อัปโหลดแผน KC เทียบรหัส & เป้าหมายส่งมอบ -->
+                <g class="fc-node" id="fn-step2-proc">
+                    <rect class="fc-shape" x="555" y="505" width="220" height="58" rx="6" />
+                    <text class="fc-text fc-text-title" x="665" y="524">อัปโหลดแผน KC เทียบเป้าหมาย</text>
+                    <text class="fc-text" x="665" y="545" style="font-size: 11px; fill: #475569;">เช็ครหัสที่ตรงกัน & วันที่ส่งมอบ</text>
+                </g>
+
+                <!-- Branch: ไม่อัปโหลด / ข้าม (False) -> ตรงลงมา (Long Line) -->
+                <path class="fc-arrow" id="fa-kc-no" d="M 410 505 L 410 620" marker-end="url(#arrowhead)" />
+                <text class="fc-edge-label" id="fl-kc-no" x="420" y="555">ไม่อัปโหลด / ข้าม</text>
+
+                <!-- Merge Arrow from KC Process -->
+                <path class="fc-arrow" id="fa-kc-merge" d="M 665 563 L 665 650 L 575 650" marker-end="url(#arrowhead)" />
+
+                <!-- ================= STEP 3: MONTHLY COST RECEIVE PLANNING ================= -->
+                <g class="fc-node" id="fn-step3-a">
+                    <rect class="fc-shape" x="245" y="620" width="330" height="58" rx="6" />
+                    <text class="fc-text fc-text-title" x="410" y="640">หน้าคิดค่าใช้จ่ายรายเดือน</text>
+                    <text class="fc-text" x="410" y="660" style="font-size: 11px; fill: #475569;">เลือกติ๊กรายการสินค้าที่ต้องการรับของในเดือนนี้ & เซฟ</text>
+                </g>
+
+                <!-- Arrow from Step 3A to Step 3B (Long Line) -->
+                <path class="fc-arrow" id="fa-3" d="M 410 678 L 410 748" marker-end="url(#arrowhead)" />
+
+                <g class="fc-node" id="fn-step3-b">
+                    <rect class="fc-shape" x="235" y="748" width="350" height="54" rx="6" />
+                    <text class="fc-text fc-text-title" x="410" y="767">Export ส่งฝ่ายผลิตเพื่อตอบกลับสถานะ</text>
+                    <text class="fc-text" x="410" y="787" style="font-size: 11px; fill: #475569;">(ฝ่ายผลิตตอบว่าทำทันหรือไม่ / ของเดิมที่ส่งมาก็รับได้ปกติ)</text>
+                </g>
+
+                <!-- Arrow from Step 3B to Step 4 Decision (Long Line) -->
+                <path class="fc-arrow" id="fa-4" d="M 410 802 L 410 870" marker-end="url(#arrowhead)" />
+
+                <!-- ================= STEP 4: CUT-OFF 3 STATUS DECISION ================= -->
+                <g class="fc-node" id="fn-step4-dec">
+                    <polygon class="fc-shape" points="410,870 545,925 410,980 275,925" />
+                    <text class="fc-text fc-text-title" x="410" y="915">ตรวจสอบสถานะการรับ</text>
+                    <text class="fc-text" x="410" y="935" style="font-size: 11.5px;">& การตัดจ่ายสิ้นเดือน</text>
+                </g>
+
+                <!-- Branch 1: ยังไม่ได้รับสินค้า (ของยังไม่มา) -> ซ้าย (Long Turn Line) -->
+                <path class="fc-arrow" id="fa-status-left" d="M 275 925 L 115 925 L 115 995" marker-end="url(#arrowhead)" />
+                <text class="fc-edge-label" id="fl-status-left" x="125" y="915">ยังไม่ได้รับสินค้า</text>
+
+                <g class="fc-node" id="fn-step4-left">
+                    <rect class="fc-shape" x="30" y="995" width="170" height="56" rx="6" />
+                    <text class="fc-text fc-text-title" x="115" y="1014">ผลักยอดไปเดือนหน้า</text>
+                    <text class="fc-text" x="115" y="1033" style="font-size: 11px; fill: #475569;">(ยกยอด Carry-over อัตโนมัติ)</text>
+                </g>
+
+                <!-- Branch 2: รับสินค้า แต่ยังไม่จ่าย (รับแต่ไม่มีตังค์) -> กลาง (Long Line) -->
+                <path class="fc-arrow" id="fa-status-mid" d="M 410 980 L 410 1060" marker-end="url(#arrowhead)" />
+                <text class="fc-edge-label" id="fl-status-mid" x="420" y="1018">รับสินค้าแต่ยังไม่จ่าย</text>
+
+                <g class="fc-node" id="fn-step4-mid">
+                    <rect class="fc-shape" x="305" y="1060" width="210" height="56" rx="6" />
+                    <text class="fc-text fc-text-title" x="410" y="1079">ของเข้า แต่ค้างจ่ายงวดนี้</text>
+                    <text class="fc-text" x="410" y="1098" style="font-size: 10.5px; fill: #475569;">เดือนหน้ากดปุ่มเดียวเพื่อตัดจ่ายได้เลย</text>
+                </g>
+
+                <!-- Branch 3: รับสินค้า และตัดจ่ายเงิน -> ขวา (Long Turn Line) -->
+                <path class="fc-arrow" id="fa-status-right" d="M 545 925 L 705 925 L 705 995" marker-end="url(#arrowhead)" />
+                <text class="fc-edge-label" id="fl-status-right" x="570" y="915">รับสินค้า & ตัดจ่ายตังค์</text>
+
+                <g class="fc-node" id="fn-step4-right">
+                    <rect class="fc-shape" x="620" y="995" width="170" height="56" rx="6" />
+                    <text class="fc-text fc-text-title" x="705" y="1014">ตัดจ่ายต้นทุนงวดนี้</text>
+                    <text class="fc-text" x="705" y="1033" style="font-size: 11px; fill: #475569;">สถานะ: รับสินค้าและจ่ายเงินสมบูรณ์</text>
+                </g>
+
+                <!-- Arrow from Left (Carry-over) leads directly to End/Loop -->
+                <path class="fc-arrow" id="fa-carry-end" d="M 115 1051 L 115 1472 L 320 1472" marker-end="url(#arrowhead)" />
+
+                <!-- Items physically received merge into Stock Queue (Long Clean Lines) -->
+                <path class="fc-arrow" id="fa-merge-stock-r" d="M 705 1051 L 705 1140 L 455 1140 L 455 1170" marker-end="url(#arrowhead)" />
+                <path class="fc-arrow" id="fa-merge-stock-m" d="M 410 1116 L 410 1170" marker-end="url(#arrowhead)" />
+
+                <!-- ================= STEP 5: STOCK QUEUE & FUZZY MATCHING ================= -->
+                <g class="fc-node" id="fn-step5-a">
+                    <rect class="fc-shape" x="275" y="1170" width="270" height="54" rx="6" />
+                    <text class="fc-text fc-text-title" x="410" y="1189">รายการที่รับ วิ่งไปรอในหน้า Stock</text>
+                    <text class="fc-text" x="410" y="1208" style="font-size: 11px; fill: #475569;">รอแอดมิน/หัวหน้างานตรวจรับเข้าคลังกลาง</text>
+                </g>
+
+                <!-- Stock Master (Google Sheets / App Script) cylinder/data store -->
+                <g class="fc-node" id="fn-step5-sheet">
+                    <rect class="fc-shape" x="585" y="1168" width="190" height="58" rx="10" style="stroke-dasharray: 4 2; fill: #f8fafc;" />
+                    <text class="fc-text fc-text-title" x="680" y="1188" style="font-size: 11.5px; fill: #1e3a8a;">ฐานข้อมูลสต๊อกกลาง</text>
+                    <text class="fc-text" x="680" y="1208" style="font-size: 10px; fill: #64748b;">(มาจากชีท Apps Script เดิม)</text>
+                </g>
+
+                <!-- Arrow from Sheet DB to Stock Node -->
+                <path class="fc-arrow" id="fa-sheet-sync" d="M 585 1197 L 545 1197" marker-end="url(#arrowhead)" style="stroke-dasharray: 4 2;" />
+
+                <!-- Arrow to Fuzzy Check Decision (Long Line) -->
+                <path class="fc-arrow" id="fa-5" d="M 410 1224 L 410 1295" marker-end="url(#arrowhead)" />
+
+                <!-- Decision: Fuzzy Check Matching -->
+                <g class="fc-node" id="fn-step5-fuzzy">
+                    <polygon class="fc-shape" points="410,1295 540,1345 410,1395 280,1345" />
+                    <text class="fc-text fc-text-title" x="410" y="1335">Fuzzy Check</text>
+                    <text class="fc-text" x="410" y="1355" style="font-size: 11px;">(ตรวจจับชื่อพิมพ์ผิด/พิมพ์ตก)</text>
+                </g>
+
+                <!-- Branch: ตรวจพบความคล้ายคลึงในสต๊อก (Match Found) -> ขวา (Long Turn Line) -->
+                <path class="fc-arrow" id="fa-fuzz-yes" d="M 540 1345 L 675 1345 L 675 1380" marker-end="url(#arrowhead)" />
+                <text class="fc-edge-label" id="fl-fuzz-yes" x="555" y="1335">พบลักษณะตรง</text>
+
+                <g class="fc-node" id="fn-fuzz-match">
+                    <rect class="fc-shape" x="585" y="1380" width="180" height="48" rx="6" />
+                    <text class="fc-text" x="675" y="1397" style="font-weight: 700; font-size: 11.5px;">จับคู่เข้าตะกร้าเดิม</text>
+                    <text class="fc-text" x="675" y="1413" style="font-size: 10px; fill: #475569;">อัปเดตยอดเข้าสต๊อกกลาง</text>
+                </g>
+
+                <!-- Branch: เป็นสินค้าใหม่ / ไม่ตรง -> ตรงลงมา (Long Line) -->
+                <path class="fc-arrow" id="fa-fuzz-no" d="M 410 1395 L 410 1450" marker-end="url(#arrowhead)" />
+                <text class="fc-edge-label" id="fl-fuzz-no" x="420" y="1422">ของใหม่ / ไม่ตรง</text>
+
+                <!-- Branch from match to End right side -->
+                <path class="fc-arrow" id="fa-fuzz-merge" d="M 675 1428 L 675 1472 L 500 1472" marker-end="url(#arrowhead)" />
+
+                <!-- ================= END ================= -->
+                <g class="fc-node" id="fn-end">
+                    <rect class="fc-shape" x="320" y="1450" width="180" height="44" rx="22" ry="22" />
+                    <text class="fc-text fc-text-title" x="410" y="1472">สิ้นสุด (End)</text>
+                </g>
+
+            </svg>
+        </div>
+    </main>
+
+    <!-- Bottom Controls -->
+    <footer>
+        <div class="keyboard-hint">
+            <span>ใช้คีย์บอร์ด</span>
+            <span class="kbd">←</span>
+            <span class="kbd">→</span>
+            <span>หรือกดสลับขั้นตอนได้</span>
+        </div>
+
+        <div class="dots-indicator" id="dots-container">
+            <div class="dot active" onclick="goToDot(0)"></div>
+            <div class="dot" onclick="goToDot(1)"></div>
+            <div class="dot" onclick="goToDot(2)"></div>
+            <div class="dot" onclick="goToDot(3)"></div>
+            <div class="dot" onclick="goToDot(4)"></div>
+        </div>
+
+        <div style="display: flex; gap: 8px;">
+            <button class="btn btn-outline" id="view-mode-btn" onclick="toggleViewMode()" title="สลับโหมดพอดีจอ / ขยายเต็มตา">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="view-mode-icon"><path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/></svg>
+                <span id="view-mode-text">ขยายเต็มตา</span>
+            </button>
+            <button class="btn btn-outline" id="auto-btn" onclick="toggleAutoPlay()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="auto-icon"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                <span id="auto-text">เล่นอัตโนมัติ</span>
+            </button>
+            <button class="btn btn-outline" onclick="window.print()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                พิมพ์ผังงาน
+            </button>
+            <button class="btn btn-outline" id="prev-btn" onclick="prevAction()" disabled>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"></path></svg>
+                ย้อนกลับ
+            </button>
+            <button class="btn btn-primary" id="next-btn" onclick="nextAction()">
+                ขั้นตอนถัดไป
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"></path></svg>
+            </button>
+        </div>
+    </footer>
+
+    <script>
+        // Storyboard Action Steps for Progressive Reveal Animation
+        const storyboard = [
+            // 0: Initial Screen State (ONLY Start is visible)
+            {
+                type: 'init',
+                nodes: ['fn-start'],
+                dotCategory: 0
+            },
+            // 1: Draw Arrow from Start downwards
+            {
+                type: 'arrow',
+                arrows: ['fa-0'],
+                dotCategory: 0
+            },
+            // 2: Reveal Box 1A
+            {
+                type: 'node',
+                nodes: ['fn-step1-a'],
+                dotCategory: 0
+            },
+            // 3: Draw Arrow to Box 1B
+            {
+                type: 'arrow',
+                arrows: ['fa-1'],
+                dotCategory: 0
+            },
+            // 4: Reveal Box 1B
+            {
+                type: 'node',
+                nodes: ['fn-step1-b'],
+                dotCategory: 0
+            },
+            // 5: Draw Arrow to Step 2 Decision Diamond
+            {
+                type: 'arrow',
+                arrows: ['fa-2'],
+                dotCategory: 0
+            },
+            // 6: Reveal KC Decision Diamond (Category 1)
+            {
+                type: 'node',
+                nodes: ['fn-step2-dec'],
+                dotCategory: 1
+            },
+            // 7: Branch Together: draw both KC branch arrows & labels
+            {
+                type: 'arrow',
+                arrows: ['fa-kc-yes', 'fa-kc-no'],
+                labels: ['fl-kc-yes', 'fl-kc-no'],
+                dotCategory: 1
+            },
+            // 8: Reveal KC Process Box & Merge Line
+            {
+                type: 'node',
+                nodes: ['fn-step2-proc'],
+                arrows: ['fa-kc-merge'],
+                dotCategory: 1
+            },
+            // 9: Reveal Step 3A Box (Category 2)
+            {
+                type: 'node',
+                nodes: ['fn-step3-a'],
+                dotCategory: 2
+            },
+            // 10: Draw Arrow to Step 3B
+            {
+                type: 'arrow',
+                arrows: ['fa-3'],
+                dotCategory: 2
+            },
+            // 11: Reveal Step 3B Box
+            {
+                type: 'node',
+                nodes: ['fn-step3-b'],
+                dotCategory: 2
+            },
+            // 12: Draw Arrow to 3 Accounting Statuses Decision
+            {
+                type: 'arrow',
+                arrows: ['fa-4'],
+                dotCategory: 2
+            },
+            // 13: Reveal 3 Accounting Statuses Decision Diamond (Category 3)
+            {
+                type: 'node',
+                nodes: ['fn-step4-dec'],
+                dotCategory: 3
+            },
+            // 14: Branch Together: draw all 3 status branches & labels
+            {
+                type: 'arrow',
+                arrows: ['fa-status-left', 'fa-status-mid', 'fa-status-right'],
+                labels: ['fl-status-left', 'fl-status-mid', 'fl-status-right'],
+                dotCategory: 3
+            },
+            // 15: Reveal all 3 Status Result Boxes
+            {
+                type: 'node',
+                nodes: ['fn-step4-left', 'fn-step4-mid', 'fn-step4-right'],
+                dotCategory: 3
+            },
+            // 16: Draw lines merging towards Stock Queue & Carry-over loop
+            {
+                type: 'arrow',
+                arrows: ['fa-carry-end', 'fa-merge-stock-r', 'fa-merge-stock-m'],
+                dotCategory: 3
+            },
+            // 17: Reveal Step 5 Stock Waiting Node & Sheet Master DB (Category 4)
+            {
+                type: 'node',
+                nodes: ['fn-step5-a', 'fn-step5-sheet'],
+                arrows: ['fa-sheet-sync'],
+                dotCategory: 4
+            },
+            // 18: Draw Arrow to Fuzzy Check Decision
+            {
+                type: 'arrow',
+                arrows: ['fa-5'],
+                dotCategory: 4
+            },
+            // 19: Reveal Fuzzy Check Decision Diamond
+            {
+                type: 'node',
+                nodes: ['fn-step5-fuzzy'],
+                dotCategory: 4
+            },
+            // 20: Branch Together: draw Match & New branches & labels
+            {
+                type: 'arrow',
+                arrows: ['fa-fuzz-yes', 'fa-fuzz-no'],
+                labels: ['fl-fuzz-yes', 'fl-fuzz-no'],
+                dotCategory: 4
+            },
+            // 21: Reveal Fuzzy Match Box & Merge Line
+            {
+                type: 'node',
+                nodes: ['fn-fuzz-match'],
+                arrows: ['fa-fuzz-merge'],
+                dotCategory: 4
+            },
+            // 22: Reveal END Node (Flow Completed)
+            {
+                type: 'node',
+                nodes: ['fn-end'],
+                dotCategory: 4
+            }
+        ];
+
+        // Mapping from 5 Category Dots to their corresponding starting storyboard step
+        const dotCategoryStarts = [0, 6, 9, 13, 17];
+
+        let currentStep = 0;
+        let isZoomMode = false;
+        let autoPlayTimer = null;
+        const LINE_DRAW_DURATION = 720; // ms
+
+        // Initialize Arrow Paths with stroke-dasharray
+        function initArrowPaths() {
+            const arrows = document.querySelectorAll('.fc-arrow');
+            arrows.forEach(arrow => {
+                const len = Math.ceil(arrow.getTotalLength() || 100);
+                arrow.dataset.length = len;
+                arrow.style.strokeDasharray = `${len} ${len}`;
+                arrow.style.strokeDashoffset = `${len}`;
+            });
+        }
+
+        // Draw an arrow with smooth stroke animation
+        function animateArrowDraw(arrowId, duration = LINE_DRAW_DURATION) {
+            const el = document.getElementById(arrowId);
+            if (!el) return;
+            const len = parseFloat(el.dataset.length) || Math.ceil(el.getTotalLength() || 100);
+            
+            el.classList.add('revealed', 'active-flow');
+            el.setAttribute('marker-end', 'url(#arrowhead-active)');
+            el.style.strokeDasharray = `${len} ${len}`;
+            el.style.strokeDashoffset = `${len}`;
+            el.getBoundingClientRect(); // force reflow
+            el.style.transition = `stroke-dashoffset ${duration}ms cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease`;
+            el.style.opacity = '1';
+            el.style.strokeDashoffset = '0';
+        }
+
+        // Instant show arrow (for fast forward or dot jumping)
+        function showArrowInstant(arrowId) {
+            const el = document.getElementById(arrowId);
+            if (!el) return;
+            el.classList.add('revealed');
+            el.classList.remove('active-flow');
+            el.setAttribute('marker-end', 'url(#arrowhead)');
+            el.style.transition = 'none';
+            el.style.opacity = '1';
+            el.style.strokeDashoffset = '0';
+        }
+
+        // Hide arrow
+        function hideArrow(arrowId) {
+            const el = document.getElementById(arrowId);
+            if (!el) return;
+            const len = parseFloat(el.dataset.length) || Math.ceil(el.getTotalLength() || 100);
+            el.classList.remove('revealed', 'active-flow');
+            el.setAttribute('marker-end', 'url(#arrowhead)');
+            el.style.transition = 'none';
+            el.style.opacity = '0';
+            el.style.strokeDashoffset = `${len}`;
+        }
+
+        // Show node
+        function showNode(nodeId, isFocused = true) {
+            const el = document.getElementById(nodeId);
+            if (!el) return;
+            el.classList.add('revealed');
+            if (isFocused) {
+                el.classList.add('active-focus');
+            } else {
+                el.classList.remove('active-focus');
+            }
+        }
+
+        // Hide node
+        function hideNode(nodeId) {
+            const el = document.getElementById(nodeId);
+            if (!el) return;
+            el.classList.remove('revealed', 'active-focus');
+        }
+
+        // Show label
+        function showLabel(labelId) {
+            const el = document.getElementById(labelId);
+            if (el) el.classList.add('revealed');
+        }
+
+        // Hide label
+        function hideLabel(labelId) {
+            const el = document.getElementById(labelId);
+            if (el) el.classList.remove('revealed');
+        }
+
+        // Apply visual state up to targetStep
+        function applyStepState(targetStep, isForward = true) {
+            // Remove previous active focus/flow highlights
+            document.querySelectorAll('.fc-node').forEach(n => n.classList.remove('active-focus'));
+            document.querySelectorAll('.fc-arrow').forEach(a => {
+                a.classList.remove('active-flow');
+                a.setAttribute('marker-end', 'url(#arrowhead)');
+            });
+
+            // 1. Reveal all items up to targetStep
+            for (let i = 0; i <= targetStep; i++) {
+                const act = storyboard[i];
+                const isCurrent = (i === targetStep);
+
+                // Nodes
+                if (act.nodes) {
+                    act.nodes.forEach(id => {
+                        if (isCurrent && isForward) {
+                            showNode(id, true);
+                        } else {
+                            showNode(id, isCurrent);
+                        }
+                    });
+                }
+
+                // Arrows
+                if (act.arrows) {
+                    act.arrows.forEach(id => {
+                        if (isCurrent && isForward) {
+                            animateArrowDraw(id);
+                        } else {
+                            showArrowInstant(id);
+                        }
+                    });
+                }
+
+                // Labels
+                if (act.labels) {
+                    act.labels.forEach(id => showLabel(id));
+                }
+            }
+
+            // 2. Hide all items after targetStep
+            for (let i = targetStep + 1; i < storyboard.length; i++) {
+                const act = storyboard[i];
+                if (act.nodes) act.nodes.forEach(id => hideNode(id));
+                if (act.arrows) act.arrows.forEach(id => hideArrow(id));
+                if (act.labels) act.labels.forEach(id => hideLabel(id));
+            }
+
+            // 3. Update Dots Indicator
+            const currentCat = storyboard[targetStep].dotCategory;
+            const dots = document.querySelectorAll('.dot');
+            dots.forEach((dot, idx) => {
+                dot.classList.toggle('active', idx === currentCat);
+            });
+
+            // 4. Update Prev/Next Buttons
+            document.getElementById('prev-btn').disabled = (targetStep === 0);
+            const nextBtn = document.getElementById('next-btn');
+            if (targetStep === storyboard.length - 1) {
+                nextBtn.innerHTML = `
+                    เริ่มต้นใหม่
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                `;
+            } else {
+                nextBtn.innerHTML = `
+                    ขั้นตอนถัดไป
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+                `;
+            }
+
+            // 5. Auto Scroll in Zoom Mode
+            if (isZoomMode) {
+                const curAct = storyboard[targetStep];
+                let focusTarget = null;
+                if (curAct.nodes && curAct.nodes.length > 0) {
+                    focusTarget = document.getElementById(curAct.nodes[0]);
+                } else if (curAct.arrows && curAct.arrows.length > 0) {
+                    focusTarget = document.getElementById(curAct.arrows[0]);
+                }
+                if (focusTarget) {
+                    setTimeout(() => {
+                        focusTarget.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }, 60);
+                }
+            }
+        }
+
+        // Next Step Action
+        function nextAction() {
+            if (currentStep < storyboard.length - 1) {
+                currentStep++;
+                applyStepState(currentStep, true);
+            } else {
+                // Restart to beginning
+                currentStep = 0;
+                applyStepState(0, false);
+            }
+        }
+
+        // Prev Step Action
+        function prevAction() {
+            if (currentStep > 0) {
+                currentStep--;
+                applyStepState(currentStep, false);
+            }
+        }
+
+        // Jump to Category Dot (0 - 4)
+        function goToDot(catIndex) {
+            if (catIndex >= 0 && catIndex < dotCategoryStarts.length) {
+                currentStep = dotCategoryStarts[catIndex];
+                applyStepState(currentStep, false);
+            }
+        }
+
+        // Canvas Click Trigger
+        function handleCanvasClick(e) {
+            if (e.target.closest('footer') || e.target.closest('button')) {
+                return;
+            }
+            nextAction();
+        }
+
+        // Toggle Fit Screen vs Zoom Mode
+        function toggleViewMode() {
+            isZoomMode = !isZoomMode;
+            const container = document.getElementById('canvas-container');
+            const modeText = document.getElementById('view-mode-text');
+            const modeIcon = document.getElementById('view-mode-icon');
+
+            if (isZoomMode) {
+                container.classList.remove('fit-mode');
+                container.classList.add('zoom-mode');
+                modeText.textContent = "พอดีหน้าจอ";
+                modeIcon.innerHTML = '<path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/>';
+                
+                const curAct = storyboard[currentStep];
+                let focusTarget = null;
+                if (curAct.nodes && curAct.nodes.length > 0) focusTarget = document.getElementById(curAct.nodes[0]);
+                else if (curAct.arrows && curAct.arrows.length > 0) focusTarget = document.getElementById(curAct.arrows[0]);
+                if (focusTarget) {
+                    focusTarget.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            } else {
+                container.classList.remove('zoom-mode');
+                container.classList.add('fit-mode');
+                modeText.textContent = "ขยายเต็มตา";
+                modeIcon.innerHTML = '<path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/>';
+                container.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+
+        // Auto Play functionality
+        function toggleAutoPlay() {
+            const autoBtn = document.getElementById('auto-btn');
+            const autoText = document.getElementById('auto-text');
+            const autoIcon = document.getElementById('auto-icon');
+
+            if (autoPlayTimer) {
+                clearInterval(autoPlayTimer);
+                autoPlayTimer = null;
+                autoText.textContent = "เล่นอัตโนมัติ";
+                autoBtn.classList.remove('btn-primary');
+                autoBtn.classList.add('btn-outline');
+                autoIcon.innerHTML = '<polygon points="5 3 19 12 5 21 5 3"></polygon>';
+            } else {
+                autoText.textContent = "หยุดชั่วคราว";
+                autoBtn.classList.remove('btn-outline');
+                autoBtn.classList.add('btn-primary');
+                autoIcon.innerHTML = '<rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect>';
+                
+                if (currentStep === storyboard.length - 1) {
+                    currentStep = 0;
+                    applyStepState(0, false);
+                }
+
+                autoPlayTimer = setInterval(() => {
+                    if (currentStep < storyboard.length - 1) {
+                        nextAction();
+                    } else {
+                        toggleAutoPlay();
+                    }
+                }, 1450);
+            }
+        }
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') {
+                e.preventDefault();
+                nextAction();
+            } else if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                prevAction();
+            }
+        });
+
+        // Initialize on load
+        function startInit() {
+            initArrowPaths();
+            applyStepState(0, false);
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', startInit);
+        } else {
+            startInit();
+        }
+    </script>
+</body>
+</html>

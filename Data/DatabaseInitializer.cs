@@ -85,6 +85,51 @@ namespace CostFlow.Data
             }
         }
 
+        private static readonly HashSet<string> StandardMechanicalStockGroups = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "วงแหวน", "ตัวครอบ", "ตุ๊กตา", "แกนเฟือง", "เฟืองขับ/ท้าย", "ซุปเปอร์ลีน", "พูลเลย์/สายพาน", "เบ็ดเตล็ด"
+        };
+
+        public static string DetermineStandardStockGroup(string? productName, string? existingGroup = null)
+        {
+            var name = (productName ?? "").Trim();
+
+            // 1. ตุ๊กตา (Pillow block / bearing housing) - First-word Prefix Priority (e.g. ตุ๊กตาล้อตึงสายพานเครื่องวงแหวน)
+            if (System.Text.RegularExpressions.Regex.IsMatch(name, @"^(ตุ๊กตา|ตุ๊กเพลา)"))
+                return "ตุ๊กตา";
+
+            // 2. ตัวครอบ (Ring frame holder)
+            if (System.Text.RegularExpressions.Regex.IsMatch(name, @"^(ตัวครอบ|ต้วครอบ)"))
+                return "ตัวครอบ";
+
+            // 3. วงแหวน (Spinning ring)
+            if (System.Text.RegularExpressions.Regex.IsMatch(name, @"^(วงแหวน)"))
+                return "วงแหวน";
+
+            // 4. พูลเลย์ / สายพาน (Pulleys, tensioners, tensioner shafts / แกบพูลเลย์ / แกนพลูเลย์)
+            if (System.Text.RegularExpressions.Regex.IsMatch(name, @"^(พูลเลย์|พลูเล่ย์|ล้อตึง|ล้อดึง|เพลาพูลเล่ย์|เพลาพูลเลย์|แกนพูลเลย์|แกบพูลเลย์|แกนพลูเลย์)"))
+                return "พูลเลย์/สายพาน";
+
+            // 5. แกนเฟือง (Gear shafts)
+            if (System.Text.RegularExpressions.Regex.IsMatch(name, @"^(แกนเฟือง|เพลาเฟือง)"))
+                return "แกนเฟือง";
+
+            // 6. ซุปเปอร์ลีน (Superlene gears)
+            if (System.Text.RegularExpressions.Regex.IsMatch(name, @"(ซุปเปอร์ลีน|ชุบเปอร์ลีน|ชุเปอร์ลีน)"))
+                return "ซุปเปอร์ลีน";
+
+            // 7. เฟืองขับ / เฟืองท้าย (Drive / Tail gears)
+            if (System.Text.RegularExpressions.Regex.IsMatch(name, @"^(เฟือง|เฟีอง|เฟิอง)"))
+                return "เฟืองขับ/ท้าย";
+
+            // Preserve existing group if it's already one of the 8 standard groups
+            if (!string.IsNullOrWhiteSpace(existingGroup) && StandardMechanicalStockGroups.Contains(existingGroup.Trim()))
+                return existingGroup.Trim();
+
+            // 8. Default to เบ็ดเตล็ด
+            return "เบ็ดเตล็ด";
+        }
+
         private static async Task ClassifyStockGroupsAsync(AppDbContext db)
         {
             try
@@ -102,49 +147,18 @@ namespace CostFlow.Data
                         hasChanges = true;
                     }
 
-                    // 2. Classify StockGroup if empty or null
-                    if (string.IsNullOrWhiteSpace(item.StockGroup))
+                    // 2. Classify StockGroup into 8 standard groups using Prefix-Priority
+                    var standardGroup = DetermineStandardStockGroup(item.ProductName, item.StockGroup);
+                    if (item.StockGroup != standardGroup)
                     {
-                        var name = (item.ProductName ?? "").Trim();
-                        if (name.Contains("ตัวครอบ") || name.Contains("ต้วครอบ"))
-                        {
-                            item.StockGroup = "ตัวครอบ";
-                        }
-                        else if (name.Contains("ตุ๊กตา") || name.Contains("ตุ๊กเพลา"))
-                        {
-                            item.StockGroup = "ตุ๊กตา";
-                        }
-                        else if (name.Contains("วงแหวน"))
-                        {
-                            item.StockGroup = "วงแหวน";
-                        }
-                        else if (name.Contains("แกนเฟือง"))
-                        {
-                            item.StockGroup = "แกนเฟือง";
-                        }
-                        else if (name.Contains("ซุปเปอร์ลีน") || name.Contains("ชุบเปอร์ลีน") || name.Contains("ชุเปอร์ลีน"))
-                        {
-                            item.StockGroup = "ซุปเปอร์ลีน";
-                        }
-                        else if (System.Text.RegularExpressions.Regex.IsMatch(name, @"เฟ[ืี]อง"))
-                        {
-                            item.StockGroup = "เฟืองขับ/ท้าย";
-                        }
-                        else if (name.Contains("พูลเลย์") || name.Contains("พลูเล่ย์") || name.Contains("สายพาน") || name.Contains("ล้อดึงสายพาน") || name.Contains("ล้อตึงสายพาน"))
-                        {
-                            item.StockGroup = "พูลเลย์/สายพาน";
-                        }
-                        else
-                        {
-                            item.StockGroup = "เบ็ดเตล็ด";
-                        }
+                        item.StockGroup = standardGroup;
                         hasChanges = true;
                     }
                 }
 
                 if (hasChanges)
                 {
-                    Console.WriteLine("[DB Init] Auto-classified stock items into standard 8 mechanical groups...");
+                    Console.WriteLine("[DB Init] Auto-classified stock items into standard 8 mechanical groups using prefix-priority...");
                     await db.SaveChangesAsync();
                 }
             }
@@ -210,10 +224,16 @@ namespace CostFlow.Data
                             item.FilePath = m.ImageUrl;
                             changed = true;
                         }
-                        if (!string.IsNullOrEmpty(m.StockGroup) && item.StockGroup != m.StockGroup)
+                        if (!string.IsNullOrEmpty(m.StockGroup))
                         {
-                            item.StockGroup = m.StockGroup;
-                            changed = true;
+                            var targetGroup = StandardMechanicalStockGroups.Contains(m.StockGroup)
+                                ? m.StockGroup
+                                : DetermineStandardStockGroup(item.ProductName, m.StockGroup);
+                            if (item.StockGroup != targetGroup)
+                            {
+                                item.StockGroup = targetGroup;
+                                changed = true;
+                            }
                         }
 
                         if (changed)
