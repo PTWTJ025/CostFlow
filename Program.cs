@@ -61,6 +61,7 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<IMockDateStore, MockDateStore>();
 builder.Services.AddScoped<IProductPriceRepository, ProductPriceRepository>();
 builder.Services.AddScoped<IDateTimeProvider, DateTimeProvider>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
 
 // ⭐ Service สำหรับ Sync ข้อมูลไป Google Sheets (แชร์ระหว่าง Controller และ Background Service)
 builder.Services.AddScoped<MonthlyOrderSyncService>();

@@ -1218,6 +1218,30 @@
                 window.history.replaceState({}, document.title, window.location.pathname);
             }
 
+            // ตรวจสอบ query param search หรือ highlight เพื่อกรองรายการอัตโนมัติจากการแจ้งเตือน
+            const searchParam = urlParams.get('search') || urlParams.get('highlight') || urlParams.get('q');
+            if (searchParam) {
+                const searchInput = document.getElementById('stockCustomSearch');
+                if (searchInput) {
+                    searchInput.value = searchParam;
+                    setTimeout(() => {
+                        applyStockFilter();
+                        const matchedCard = document.querySelector('.stock-card:not(.hidden)');
+                        if (matchedCard) {
+                            matchedCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            matchedCard.style.outline = '3px solid #2563eb';
+                            matchedCard.style.outlineOffset = '2px';
+                            matchedCard.style.boxShadow = '0 0 15px rgba(37, 99, 235, 0.35)';
+                            setTimeout(() => {
+                                matchedCard.style.transition = 'all 1s ease';
+                                matchedCard.style.outline = '';
+                                matchedCard.style.boxShadow = '';
+                            }, 3000);
+                        }
+                    }, 150);
+                }
+            }
+
             // ระบบค้นหาสินค้า Real-time + ตัวกรองกลุ่มอะไหล่ (Category Chips) + Autocomplete Guide List
             const searchInput = document.getElementById('stockCustomSearch');
             const stockDropdown = document.getElementById('stock-suggestions-dropdown');

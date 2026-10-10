@@ -23,6 +23,9 @@ namespace CostFlow.Data
         public DbSet<StockItem> StockItems { get; set; }
         public DbSet<ItemMapping> ItemMappings { get; set; }
         public DbSet<StockLog> StockLogs { get; set; }
+
+        // Central notification system
+        public DbSet<AppNotification> Notifications { get; set; }
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder); // Identity tables

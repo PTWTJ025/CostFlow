@@ -14,5 +14,11 @@ namespace CostFlow.Hubs
         {
             await Clients.All.SendAsync("ReceiveMonthlyCostUpdate");
         }
+
+        public async Task BroadcastNotification(object notification)
+        {
+            await Clients.All.SendAsync("ReceiveNotification", notification);
+        }
     }
 }
+

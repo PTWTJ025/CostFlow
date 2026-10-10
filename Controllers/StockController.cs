@@ -22,17 +22,20 @@ namespace CostFlow.Controllers
         private readonly StockMatchingService _matchingService;
         private readonly IWebHostEnvironment _env;
         private readonly ISupabaseStorageService _supabaseStorage;
+        private readonly INotificationService _notificationService;
 
         public StockController(
             AppDbContext context, 
             StockMatchingService matchingService, 
             IWebHostEnvironment env,
-            ISupabaseStorageService supabaseStorage)
+            ISupabaseStorageService supabaseStorage,
+            INotificationService notificationService)
         {
             _context = context;
             _matchingService = matchingService;
             _env = env;
             _supabaseStorage = supabaseStorage;
+            _notificationService = notificationService;
         }
 
         // หน้าต่างสำหรับ Admin ตรวจรับของเข้าคลัง (AI Matching)
@@ -416,6 +419,18 @@ namespace CostFlow.Controllers
 
             await _context.SaveChangesAsync();
 
+            // ส่งแจ้งเตือน Real-time เมื่อมีการเพิ่มรายการสต็อกใหม่ (Scenario 3B)
+            await _notificationService.CreateNotificationAsync(
+                type: "STOCK_UPDATE",
+                title: "เพิ่มรายการสต็อกใหม่",
+                message: $"เพิ่มสินค้า '{newItem.ProductName}' ({newItem.ProductCode}) ยอดคงคลัง {newItem.Quantity:N0} ชิ้น",
+                targetUrl: $"/Stock?search={Uri.EscapeDataString(newItem.ProductName)}",
+                category: "stock",
+                referenceId: newItem.ProductCode,
+                actionUser: userId,
+                isRead: false
+            );
+
             return Json(new { success = true, message = "เพิ่มสินค้าใหม่เรียบร้อยแล้ว", item = newItem });
         }
 
@@ -526,6 +541,18 @@ namespace CostFlow.Controllers
 
             await _context.SaveChangesAsync();
 
+            // ส่งแจ้งเตือน Real-time เมื่อมีการแก้ไขข้อมูล/จำนวนสต็อก (Scenario 3B)
+            await _notificationService.CreateNotificationAsync(
+                type: "STOCK_UPDATE",
+                title: "อัปเดตข้อมูลสต็อกสินค้า",
+                message: $"ปรับปรุงข้อมูล '{item.ProductName}' ({item.ProductCode}) ยอดคงเหลือ {newQuantity:N0} ชิ้น",
+                targetUrl: $"/Stock?search={Uri.EscapeDataString(item.ProductName)}",
+                category: "stock",
+                referenceId: item.ProductCode,
+                actionUser: userId,
+                isRead: false
+            );
+
             return Json(new { 
                 success = true, 
                 message = "บันทึกการแก้ไขข้อมูลสินค้าเรียบร้อยแล้ว",
@@ -587,6 +614,18 @@ namespace CostFlow.Controllers
 
             _context.StockItems.Remove(item);
             await _context.SaveChangesAsync();
+
+            // ส่งแจ้งเตือน Real-time เมื่อมีการลบสินค้าสต็อก (Scenario 3B)
+            await _notificationService.CreateNotificationAsync(
+                type: "STOCK_UPDATE",
+                title: "ลบรายการสต็อกสินค้า",
+                message: $"ลบสินค้า '{productName}' ({productCode}) ออกจากระบบสต็อก",
+                targetUrl: "/Stock",
+                category: "stock",
+                referenceId: productCode,
+                actionUser: userId,
+                isRead: false
+            );
 
             return Json(new
             {
@@ -857,6 +896,19 @@ namespace CostFlow.Controllers
 
             await _context.SaveChangesAsync();
 
+            // ส่งแจ้งเตือน Real-time เมื่อนำพัสดุเข้าสต็อกสำเร็จ (Scenario 3A: แจ้งเตือนแบบบันทึกสำเร็จ คลิกแล้วไม่มีการเปลี่ยนหน้า)
+            var woRef = !string.IsNullOrWhiteSpace(dto.ReferenceId) && dto.ReferenceId != "-" ? dto.ReferenceId : "WO";
+            await _notificationService.CreateNotificationAsync(
+                type: "STOCK_RECEIVE",
+                title: "นำของเข้าสต็อกสำเร็จ",
+                message: $"รับพัสดุรหัส {woRef} ลงสต็อก '{stockItem.ProductName}' จำนวน {dto.Quantity:N0} ชิ้น",
+                targetUrl: "", // ว่างไว้ -> คลิกแล้วไม่ redirect
+                category: "stock",
+                referenceId: stockItem.ProductCode,
+                actionUser: userId,
+                isRead: true
+            );
+
             return Json(new
             {
                 success = true,
@@ -919,6 +971,18 @@ namespace CostFlow.Controllers
             });
 
             await _context.SaveChangesAsync();
+
+            // ส่งแจ้งเตือน Real-time เมื่อมีการปรับยอดคงเหลือด่วน (Scenario 3B)
+            await _notificationService.CreateNotificationAsync(
+                type: "STOCK_UPDATE",
+                title: "อัปเดตจำนวนสต็อกสินค้า",
+                message: $"ปรับยอดคงเหลือ '{item.ProductName}' เป็น {item.Quantity:N0} ชิ้น",
+                targetUrl: $"/Stock?search={Uri.EscapeDataString(item.ProductName)}",
+                category: "stock",
+                referenceId: item.ProductCode,
+                actionUser: userId,
+                isRead: false
+            );
 
             return Json(new
             {

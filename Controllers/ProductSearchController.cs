@@ -15,6 +15,7 @@ using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Configuration;
+using CostFlow.Services;
 
 namespace CostFlow.Controllers
 {
@@ -25,13 +26,20 @@ namespace CostFlow.Controllers
         private readonly TiDbContext _tiDbContext;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly IConfiguration _configuration;
+        private readonly INotificationService _notificationService;
 
-        public ProductSearchController(AppDbContext context, TiDbContext tiDbContext, IHttpClientFactory httpClientFactory, IConfiguration configuration)
+        public ProductSearchController(
+            AppDbContext context, 
+            TiDbContext tiDbContext, 
+            IHttpClientFactory httpClientFactory, 
+            IConfiguration configuration,
+            INotificationService notificationService)
         {
             _context = context;
             _tiDbContext = tiDbContext;
             _httpClientFactory = httpClientFactory;
             _configuration = configuration;
+            _notificationService = notificationService;
         }
 
         public async Task<IActionResult> Index(string? editBatchName = null)
@@ -149,6 +157,21 @@ namespace CostFlow.Controllers
 
                 _tiDbContext.SavedOrderItems.AddRange(dbItems);
                 await _tiDbContext.SaveChangesAsync();
+
+                // ส่งแจ้งเตือน Real-time เมื่อหน้างานมีการสั่งซื้อของจุกจิกเข้ามา (Scenario 2)
+                var sampleItems = string.Join(", ", dbItems.Take(3).Select(x => x.ProductName));
+                var moreCount = dbItems.Count > 3 ? $" และอีก {dbItems.Count - 3} รายการ" : "";
+                var currentUserName = User.Identity?.Name ?? "พนักงานหน้างาน";
+                await _notificationService.CreateNotificationAsync(
+                    type: "ORDER_TRACKING",
+                    title: "สั่งซื้อสินค้าทั่วไป",
+                    message: $"ชุดสั่งซื้อ '{batchName}': {sampleItems}{moreCount} รวม {dbItems.Count} รายการ",
+                    targetUrl: "/OrderTracking",
+                    category: "logistics",
+                    referenceId: batchName,
+                    actionUser: currentUserName,
+                    isRead: false
+                );
 
                 return Json(new { success = true });
             }

@@ -76,6 +76,7 @@
     <!-- Static Compiled & Minified Tailwind CSS -->
     <link rel="stylesheet" href="~/css/tailwind.min.css" asp-append-version="true"/>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
     <style>
         /* Arbitrary font-size fallbacks for static Tailwind CSS */
         .text-\[11px\] {
@@ -335,6 +336,297 @@
                 width: 34px !important;
                 height: 34px !important;
             }
+        }
+        /* Facebook-Style Notification Bell Button & Counter Badge */
+        /* CostFlow Enterprise Notification Component Dedicated Styling */
+        #notif-dropdown-btn {
+            position: relative !important;
+            width: 38px !important;
+            height: 38px !important;
+            min-width: 38px !important;
+            min-height: 38px !important;
+            border-radius: 8px !important;
+            background-color: #ffffff !important;
+            border: 1px solid #e2e8f0 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            color: #334155 !important;
+            cursor: pointer !important;
+            transition: all 0.15s ease !important;
+            outline: none !important;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+            padding: 0 !important;
+        }
+        #notif-dropdown-btn:hover {
+            background-color: #f8fafc !important;
+            border-color: #cbd5e1 !important;
+            color: #0f172a !important;
+        }
+        #notif-dropdown-btn.is-active {
+            background-color: #eff6ff !important;
+            color: #2563eb !important;
+            border-color: #bfdbfe !important;
+        }
+        #notif-badge {
+            position: absolute !important;
+            top: -5px !important;
+            right: -5px !important;
+            min-width: 18px !important;
+            height: 18px !important;
+            padding: 0 4px !important;
+            border-radius: 9999px !important;
+            background-color: #ef4444 !important;
+            color: #ffffff !important;
+            font-size: 10px !important;
+            font-weight: 700 !important;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            border: 2px solid #ffffff !important;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15) !important;
+            line-height: 1 !important;
+            pointer-events: none !important;
+            z-index: 10 !important;
+        }
+        #notif-badge.hidden {
+            display: none !important;
+        }
+
+        #notif-dropdown {
+            width: 380px !important;
+            max-width: calc(100vw - 20px) !important;
+            border-radius: 4px !important;
+            box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.12), 0 8px 10px -6px rgba(15, 23, 42, 0.04) !important;
+            border: 1px solid #e2e8f0 !important;
+            background: #ffffff !important;
+            overflow: hidden !important;
+            transition: max-height 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        }
+        #notif-dropdown.is-expanded {
+            max-height: calc(100vh - 80px) !important;
+            display: flex !important;
+            flex-direction: column !important;
+        }
+        #notif-dropdown.is-expanded #notif-items-list {
+            max-height: calc(100vh - 165px) !important;
+            flex: 1 1 auto !important;
+            overflow-y: auto !important;
+        }
+        @@media (max-width: 480px) {
+            #notif-dropdown {
+                width: calc(100vw - 16px) !important;
+                right: -48px !important;
+            }
+            #notif-dropdown.is-expanded {
+                max-height: calc(100dvh - 75px) !important;
+            }
+            #notif-dropdown.is-expanded #notif-items-list {
+                max-height: calc(100dvh - 150px) !important;
+            }
+        }
+
+        .notif-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 9px 12px;
+            border-radius: 2px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            position: relative;
+            margin-bottom: 2px;
+            border: 1px solid transparent;
+        }
+        .notif-item:hover {
+            background-color: #f8fafc;
+            border-color: #f1f5f9;
+        }
+        .notif-item.unread {
+            background-color: #f0f7ff;
+            border-color: #e0f2fe;
+        }
+        .notif-item.unread:hover {
+            background-color: #e0f2fe;
+            border-color: #bae6fd;
+        }
+
+        .notif-avatar-wrap {
+            position: relative;
+            width: 38px;
+            height: 38px;
+            min-width: 38px;
+            min-height: 38px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .notif-avatar-circle {
+            width: 38px;
+            height: 38px;
+            min-width: 38px;
+            min-height: 38px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            border: 1px solid rgba(0, 0, 0, 0.06);
+        }
+        .notif-mini-badge {
+            position: absolute;
+            right: -3px;
+            bottom: -3px;
+            width: 16px;
+            height: 16px;
+            min-width: 16px;
+            min-height: 16px;
+            border-radius: 4px;
+            border: 2px solid #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            flex-shrink: 0;
+        }
+
+        .notif-dot {
+            width: 8px;
+            height: 8px;
+            min-width: 8px;
+            min-height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            transition: opacity 0.15s ease;
+        }
+        .notif-dot.is-unread {
+            background-color: #2563eb;
+        }
+
+        .notif-right-action-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 30px;
+            height: 30px;
+            min-width: 30px;
+            min-height: 30px;
+            flex-shrink: 0;
+        }
+        .notif-row-action-btn {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 30px;
+            height: 30px;
+            border-radius: 2px;
+            background-color: #ffffff;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+            color: #64748b;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.15s ease, background-color 0.12s ease;
+            cursor: pointer;
+        }
+        .notif-item:hover .notif-row-action-btn {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .notif-item:hover .notif-dot.is-unread {
+            opacity: 0;
+        }
+        .notif-row-action-btn:hover {
+            background-color: #f1f5f9;
+            color: #0f172a;
+        }
+
+        .notif-btn-footer {
+            display: block;
+            width: 100%;
+            padding: 8px 14px;
+            background-color: #f1f5f9;
+            color: #334155;
+            font-size: 13px;
+            font-weight: 600;
+            border-radius: 4px;
+            text-align: center;
+            text-decoration: none;
+            transition: all 0.15s ease;
+            border: 1px solid #e2e8f0;
+        }
+        .notif-btn-footer:hover {
+            background-color: #e2e8f0;
+            color: #0f172a;
+        }
+
+        /* Clean-Craft Dropdown Popovers */
+        #notif-more-menu,
+        #notif-row-menu {
+            width: 232px !important;
+            min-width: 232px !important;
+            padding: 4px !important;
+            background: #ffffff !important;
+            border: 1px solid #e2e8f0 !important;
+            border-radius: 6px !important;
+            box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.08), 0 2px 4px -2px rgba(15, 23, 42, 0.04) !important;
+            z-index: 100 !important;
+        }
+
+        .notif-menu-item {
+            display: flex !important;
+            align-items: center !important;
+            gap: 9px !important;
+            width: 100% !important;
+            padding: 7px 10px !important;
+            border-radius: 4px !important;
+            font-size: 13px !important;
+            font-weight: 500 !important;
+            color: #334155 !important;
+            background: transparent !important;
+            border: none !important;
+            cursor: pointer !important;
+            text-align: left !important;
+            white-space: nowrap !important;
+            transition: background-color 0.12s ease, color 0.12s ease !important;
+        }
+        .notif-menu-item:hover {
+            background-color: #f1f5f9 !important;
+            color: #0f172a !important;
+        }
+        .notif-menu-item.is-danger {
+            color: #e11d48 !important;
+        }
+        .notif-menu-item.is-danger:hover {
+            background-color: #fff1f2 !important;
+            color: #be123c !important;
+        }
+        .notif-menu-item svg {
+            width: 15px !important;
+            height: 15px !important;
+            flex-shrink: 0 !important;
+            color: #64748b !important;
+            transition: color 0.12s ease !important;
+        }
+        .notif-menu-item:hover svg {
+            color: #00288e !important;
+        }
+        .notif-menu-item.is-danger svg {
+            color: #f43f5e !important;
+        }
+        .notif-menu-item.is-danger:hover svg {
+            color: #be123c !important;
+        }
+        .notif-menu-divider {
+            height: 1px !important;
+            background-color: #f1f5f9 !important;
+            margin: 3px 0 !important;
         }
 
         /* iPad / tablet: sidebar icon-only, hover to expand */
@@ -666,8 +958,321 @@
             <h2 class="desktop-header-title text-lg font-semibold text-slate-800 truncate">@ViewData["HeaderTitle"]</h2>
         </div>
 
-        <!-- Redesigned Profile Info Pill with Dropdown -->
-        <div class="flex items-center gap-sm relative">
+        <!-- Header Right Area: Notifications + Profile -->
+        <div class="flex items-center gap-2 sm:gap-2.5 relative">
+            <!-- Facebook-Style Notification Dropdown Trigger & Panel -->
+            <div class="relative">
+                <button type="button" 
+                        id="notif-dropdown-btn"
+                        title="การแจ้งเตือน">
+                    <!-- Crisp Authentic Facebook Solid Bell Icon -->
+                    <svg style="width: 20px; height: 20px;" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2C10.343 2 9 3.343 9 5v1.07C6.164 7.076 4 9.789 4 13v4l-1.707 1.707A1 1 0 0 0 3 20h18a1 1 0 0 0 .707-1.293L20 17v-4c0-3.211-2.164-5.924-5-6.93V5c0-1.657-1.343-3-3-3zm0 20a3 3 0 0 0 2.83-2H9.17A3 3 0 0 0 12 22z"/>
+                    </svg>
+                    <!-- Notification Red Counter Badge (Locked to Top-Right Corner) -->
+                    <span id="notif-badge">3</span>
+                </button>
+
+                <!-- Facebook-Style Notification Panel Dropdown -->
+                <div id="notif-dropdown"
+                     class="hidden absolute right-0 top-full mt-2 bg-white rounded-lg border border-slate-200 z-50 overflow-hidden select-none animate-in fade-in zoom-in-95 duration-150">
+                    
+                    <!-- Panel Header -->
+                    <div class="px-4 pt-3.5 pb-2.5 bg-white border-b border-slate-100">
+                        <div class="flex items-center justify-between mb-2.5">
+                            <h3 class="text-xl font-extrabold text-slate-900 tracking-tight">การแจ้งเตือน</h3>
+                            
+                            <!-- Three-dots option menu -->
+                            <div class="relative">
+                                <button type="button" 
+                                        id="notif-more-options-btn"
+                                        onclick="toggleNotifMoreMenu(event)"
+                                        class="w-8 h-8 flex items-center justify-center text-slate-600 transition-colors cursor-pointer"
+                                        title="ตัวเลือกการแจ้งเตือน">
+                                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                        <circle cx="5" cy="12" r="2" />
+                                        <circle cx="12" cy="12" r="2" />
+                                        <circle cx="19" cy="12" r="2" />
+                                    </svg>
+                                </button>
+
+                                <!-- Three dots Dropdown Menu -->
+                                <div id="notif-more-menu" 
+                                     class="hidden absolute right-0 top-full mt-1.5 select-none animate-in fade-in zoom-in-95 duration-100">
+                                    <button type="button" 
+                                            onclick="markAllNotifsAsRead(); closeNotifMoreMenu();"
+                                            class="notif-menu-item">
+                                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                                        </svg>
+                                        <span>ทำเครื่องหมายว่าอ่านแล้วทั้งหมด</span>
+                                    </button>
+                                    <div class="notif-menu-divider"></div>
+                                    <button type="button" 
+                                            onclick="mockNotifSettings(); closeNotifMoreMenu();"
+                                            class="notif-menu-item">
+                                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        </svg>
+                                        <span>การตั้งค่าการแจ้งเตือน</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Notification Items List -->
+                    <div id="notif-items-list" class="max-h-[440px] overflow-y-auto px-2 py-1.5 relative">
+                        
+                        <!-- Section 1: ใหม่ (New / Today) -->
+                        <div class="notif-section mb-1" id="notif-section-new">
+                            <div class="px-2.5 pt-2 pb-1 flex items-center justify-between">
+                                <span class="text-xs font-bold text-slate-900 tracking-wide">ใหม่</span>
+                            </div>
+
+                            <!-- Item 1: รับของแล้วค้างตัดจ่าย (Scenario 1) -->
+                            <div class="notif-item unread group"
+                                 id="notif-item-1"
+                                 data-id="1"
+                                 data-unread="true"
+                                 data-href="/MonthlyCost/Detail/กันยายน 2569"
+                                 onclick="handleNotifItemClick(this, event)">
+                                <div class="notif-avatar-wrap">
+                                    <div class="notif-avatar-circle" style="background-color: #fef3c7; color: #d97706; border-color: #fde68a;">
+                                        <svg style="width: 22px; height: 22px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                        </svg>
+                                    </div>
+                                    <div class="notif-mini-badge" style="background-color: #f59e0b;">
+                                        <svg style="width: 11px; height: 11px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+                                        </svg>
+                                    </div>
+                                </div>
+                                <div class="flex-1 min-w-0 pr-1">
+                                    <p class="text-[13px] leading-snug text-slate-800 line-clamp-3">
+                                        <span class="font-bold text-slate-950">รับของแล้วค้างตัดจ่าย</span> พัสดุรับเข้าเดือน 09/2026 ครบกำหนดบันทึกตัดจ่ายงวดนี้ 3 รายการ
+                                    </p>
+                                    <span class="inline-block text-[12px] font-semibold text-amber-600 mt-1 notif-time">ถึงกำหนดชำระ</span>
+                                </div>
+                                <div class="notif-right-action-wrap" onclick="event.stopPropagation()">
+                                    <span class="notif-dot is-unread"></span>
+                                    <button type="button" 
+                                            class="notif-row-action-btn" 
+                                            title="ตัวเลือกเพิ่มเติม"
+                                            onclick="openRowActionMenu(event, 'notif-item-1')">
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                            <circle cx="5" cy="12" r="2" />
+                                            <circle cx="12" cy="12" r="2" />
+                                            <circle cx="19" cy="12" r="2" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Item 2: สั่งซื้อสินค้าทั่วไป (Scenario 2) -->
+                            <div class="notif-item unread group"
+                                 id="notif-item-2"
+                                 data-id="2"
+                                 data-unread="true"
+                                 data-href="/OrderTracking"
+                                 onclick="handleNotifItemClick(this, event)">
+                                <div class="notif-avatar-wrap">
+                                    <div class="notif-avatar-circle" style="background-color: #eff6ff; color: #2563eb; border-color: #bfdbfe;">
+                                        <svg style="width: 22px; height: 22px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.25V3.75a1.125 1.125 0 0 0-1.125-1.125H3.375A1.125 1.125 0 0 0 2.25 3.75v10.5h12M16.5 7.5h3.75" />
+                                        </svg>
+                                    </div>
+                                    <div class="notif-mini-badge" style="background-color: #2563eb;">
+                                        
+                                    </div>
+                                </div>
+                                <div class="flex-1 min-w-0 pr-1">
+                                    <p class="text-[13px] leading-snug text-slate-800 line-clamp-3">
+                                        <span class="font-bold text-slate-950">สั่งซื้อสินค้าทั่วไป</span> แผนกผลิตส่งใบเบิกของด่วน: สกรู M8, ดอกสว่าน, เทปพันสายไฟ รวม 5 รายการ
+                                    </p>
+                                    <span class="inline-block text-[12px] font-normal text-slate-500 mt-1 notif-time">35 นาทีที่แล้ว</span>
+                                </div>
+                                <div class="notif-right-action-wrap" onclick="event.stopPropagation()">
+                                    <span class="notif-dot is-unread"></span>
+                                    <button type="button" 
+                                            class="notif-row-action-btn" 
+                                            title="ตัวเลือกเพิ่มเติม"
+                                            onclick="openRowActionMenu(event, 'notif-item-2')">
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                            <circle cx="5" cy="12" r="2" />
+                                            <circle cx="12" cy="12" r="2" />
+                                            <circle cx="19" cy="12" r="2" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Section 2: ก่อนหน้านี้ (Earlier) -->
+                        <div class="notif-section" id="notif-section-earlier">
+                            <div class="px-2.5 pt-3 pb-1 flex items-center justify-between">
+                                <span class="text-xs font-bold text-slate-900 tracking-wide">ก่อนหน้านี้</span>
+                                
+                            </div>
+
+                            <!-- Item 3: นำของเข้าสต็อกสำเร็จ (Scenario 3A: รับเองกับมือ คลิกแล้วไม่ออกไปไหน) -->
+                            <div class="notif-item group"
+                                 id="notif-item-3"
+                                 data-id="3"
+                                 data-unread="false"
+                                 data-href=""
+                                 onclick="handleNotifItemClick(this, event)">
+                                <div class="notif-avatar-wrap">
+                                    <div class="notif-avatar-circle" style="background-color: #ecfdf5; color: #059669; border-color: #a7f3d0;">
+                                        <svg style="width: 22px; height: 22px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="m20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5m8.25 3.75 2.25 2.25 4.5-4.5" />
+                                        </svg>
+                                    </div>
+                                    <div class="notif-mini-badge" style="background-color: #10b981;">
+                                        <svg style="width: 11px; height: 11px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                                        </svg>
+                                    </div>
+                                </div>
+                                <div class="flex-1 min-w-0 pr-1">
+                                    <p class="text-[13px] leading-snug text-slate-700 line-clamp-3">
+                                        <span class="font-bold text-slate-900">นำของเข้าสต็อกสำเร็จ</span> รับพัสดุรหัส WO2609-TEST04 ลงสต็อก 'ตุ๊กตาเพลา 40mm' จำนวน 10 ชิ้น
+                                    </p>
+                                    <span class="inline-block text-[12px] font-normal text-slate-400 mt-1 notif-time">2 ชั่วโมงที่แล้ว</span>
+                                </div>
+                                <div class="notif-right-action-wrap" onclick="event.stopPropagation()">
+                                    <span class="notif-dot"></span>
+                                    <button type="button" 
+                                            class="notif-row-action-btn" 
+                                            title="ตัวเลือกเพิ่มเติม"
+                                            onclick="openRowActionMenu(event, 'notif-item-3')">
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                            <circle cx="5" cy="12" r="2" />
+                                            <circle cx="12" cy="12" r="2" />
+                                            <circle cx="19" cy="12" r="2" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Item 4: อัปเดตข้อมูลสต็อกสินค้า (Scenario 3B: ปรับปรุงสต็อก คลิกแล้วไปหน้าสต็อก + ไฮไลท์การ์ด) -->
+                            <div class="notif-item unread group"
+                                 id="notif-item-4"
+                                 data-id="4"
+                                 data-unread="true"
+                                 data-href="/Stock?search=ตุ๊กตาเพลาล่างกลางเครื่อง"
+                                 onclick="handleNotifItemClick(this, event)">
+                                <div class="notif-avatar-wrap">
+                                    <div class="notif-avatar-circle" style="background-color: #f3e8ff; color: #7c3aed; border-color: #ddd6fe;">
+                                        <svg style="width: 22px; height: 22px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125" />
+                                        </svg>
+                                    </div>
+                                    <div class="notif-mini-badge" style="background-color: #8b5cf6;">
+                                        <svg style="width: 11px; height: 11px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                                        </svg>
+                                    </div>
+                                </div>
+                                <div class="flex-1 min-w-0 pr-1">
+                                    <p class="text-[13px] leading-snug text-slate-800 line-clamp-3">
+                                        <span class="font-bold text-slate-950">อัปเดตข้อมูลสต็อกสินค้า</span> ปรับยอดคงเหลือ 'ตุ๊กตาเพลาล่างกลางเครื่อง ( 40 mm )' เป็น 10.00 ชิ้น
+                                    </p>
+                                    <span class="inline-block text-[12px] font-normal text-slate-500 mt-1 notif-time">เมื่อวานนี้</span>
+                                </div>
+                                <div class="notif-right-action-wrap" onclick="event.stopPropagation()">
+                                    <span class="notif-dot is-unread"></span>
+                                    <button type="button" 
+                                            class="notif-row-action-btn" 
+                                            title="ตัวเลือกเพิ่มเติม"
+                                            onclick="openRowActionMenu(event, 'notif-item-4')">
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                            <circle cx="5" cy="12" r="2" />
+                                            <circle cx="12" cy="12" r="2" />
+                                            <circle cx="19" cy="12" r="2" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- Skeleton Loading State (Shown when expanding / loading older notifications) -->
+                        <div id="notif-skeleton-loader" class="hidden px-2 py-2 space-y-2.5">
+                            <div class="flex items-center gap-3 p-2.5 rounded-sm bg-slate-50 border border-slate-100 animate-pulse">
+                                <div class="w-[38px] h-[38px] rounded bg-slate-200 shrink-0"></div>
+                                <div class="flex-1 space-y-2 py-0.5">
+                                    <div class="h-3.5 bg-slate-200 rounded-sm w-4/5"></div>
+                                    <div class="h-2.5 bg-slate-200/80 rounded-sm w-1/3"></div>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3 p-2.5 rounded-sm bg-slate-50 border border-slate-100 animate-pulse">
+                                <div class="w-[38px] h-[38px] rounded bg-slate-200 shrink-0"></div>
+                                <div class="flex-1 space-y-2 py-0.5">
+                                    <div class="h-3.5 bg-slate-200 rounded-sm w-3/4"></div>
+                                    <div class="h-2.5 bg-slate-200/80 rounded-sm w-2/5"></div>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3 p-2.5 rounded-sm bg-slate-50 border border-slate-100 animate-pulse">
+                                <div class="w-[38px] h-[38px] rounded bg-slate-200 shrink-0"></div>
+                                <div class="flex-1 space-y-2 py-0.5">
+                                    <div class="h-3.5 bg-slate-200 rounded-sm w-5/6"></div>
+                                    <div class="h-2.5 bg-slate-200/80 rounded-sm w-1/4"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Empty state when no items match -->
+                        <div id="notif-empty-state" class="hidden py-8 px-4 text-center">
+                            <div class="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-2 text-slate-400">
+                                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0" />
+                                </svg>
+                            </div>
+                            <p class="text-xs font-semibold text-slate-600">ไม่มีการแจ้งเตือนที่ยังไม่ได้อ่าน</p>
+                        </div>
+
+                        <!-- Floating Context Menu for Single Item (Facebook Style) -->
+                        <div id="notif-row-menu" 
+                             class="hidden absolute select-none animate-in fade-in zoom-in-95 duration-100">
+                            <button type="button" 
+                                    id="notif-row-menu-toggle-read" 
+                                    onclick="toggleRowReadStatusFromMenu()"
+                                    class="notif-menu-item">
+                                <svg id="notif-row-menu-toggle-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                                </svg>
+                                <span id="notif-row-menu-toggle-text">ทำเครื่องหมายว่าอ่านแล้ว</span>
+                            </button>
+                            <div class="notif-menu-divider"></div>
+                            <button type="button" 
+                                    id="notif-row-menu-delete" 
+                                    onclick="deleteRowFromMenu()"
+                                    class="notif-menu-item is-danger">
+                                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                                </svg>
+                                <span>ลบการแจ้งเตือนนี้</span>
+                            </button>
+                        </div>
+
+                    </div>
+
+                    <!-- Panel Footer (Facebook Style Full-Width Expand Button) -->
+                    <div class="p-2.5 bg-white border-t border-slate-100">
+                        <button type="button" 
+                                id="btn-load-older-notifs" 
+                                onclick="loadOlderNotifications()" 
+                                class="notif-btn-footer cursor-pointer flex items-center justify-center gap-2">
+                            <span>ดูการแจ้งเตือนก่อนหน้า</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Redesigned Profile Info Pill with Dropdown -->
             <button id="profile-dropdown-btn"
                     class="group flex items-center gap-2 hover:bg-slate-50 hover:shadow-sm border border-slate-200/70 transition-all pl-1 pr-1 sm:pr-3.5 py-1 rounded-full bg-white select-none">
                 <div id="profile-pic-trigger"
@@ -924,6 +1529,18 @@
 </main>
 
 <script>
+    // Global notification handlers exposed on window (prevents ReferenceError on inline onclicks)
+    window.openRowActionMenu = window.openRowActionMenu || function(e, id) {};
+    window.closeRowActionMenu = window.closeRowActionMenu || function() {};
+    window.toggleRowReadStatusFromMenu = window.toggleRowReadStatusFromMenu || function() {};
+    window.deleteRowFromMenu = window.deleteRowFromMenu || function() {};
+    window.handleNotifItemClick = window.handleNotifItemClick || function(el, e) {};
+    window.toggleNotifMoreMenu = window.toggleNotifMoreMenu || function(e) {};
+    window.closeNotifMoreMenu = window.closeNotifMoreMenu || function() {};
+    window.markAllNotifsAsRead = window.markAllNotifsAsRead || function() {};
+    window.filterNotifsTab = window.filterNotifsTab || function(m) {};
+    window.loadOlderNotifications = window.loadOlderNotifications || function() {};
+
     document.addEventListener("DOMContentLoaded", function () {
         // Profile Dropdown
         const profileDropdownBtn = document.getElementById("profile-dropdown-btn");
@@ -1039,6 +1656,10 @@
         if (profileDropdownBtn && profileDropdown) {
             profileDropdownBtn.addEventListener("click", function (e) {
                 e.stopPropagation();
+                if (typeof notifDropdown !== 'undefined' && notifDropdown) {
+                    notifDropdown.classList.add("hidden");
+                    if (typeof notifDropdownBtn !== 'undefined' && notifDropdownBtn) notifDropdownBtn.classList.remove("is-active");
+                }
                 profileDropdown.classList.toggle("hidden");
             });
 
@@ -1048,6 +1669,707 @@
                 }
             });
         }
+
+        // Facebook-Style Notification Dropdown Logic
+        const notifDropdownBtn = document.getElementById("notif-dropdown-btn");
+        const notifDropdown = document.getElementById("notif-dropdown");
+        const notifBadge = document.getElementById("notif-badge");
+        const notifMoreMenu = document.getElementById("notif-more-menu");
+
+        if (notifDropdownBtn && notifDropdown) {
+            notifDropdownBtn.addEventListener("click", function (e) {
+                e.stopPropagation();
+                if (profileDropdown) profileDropdown.classList.add("hidden");
+                closeNotifMoreMenu();
+                closeRowActionMenu();
+                const willOpen = notifDropdown.classList.contains("hidden");
+                notifDropdown.classList.toggle("hidden");
+                notifDropdownBtn.classList.toggle("is-active", willOpen);
+            });
+
+            document.addEventListener("click", function (e) {
+                if (!notifDropdownBtn.contains(e.target) && !notifDropdown.contains(e.target)) {
+                    notifDropdown.classList.add("hidden");
+                    notifDropdownBtn.classList.remove("is-active");
+                    closeNotifMoreMenu();
+                    closeRowActionMenu();
+                }
+            });
+        }
+
+        function toggleNotifMoreMenu(e) {
+            if (e) e.stopPropagation();
+            closeRowActionMenu();
+            if (notifMoreMenu) {
+                notifMoreMenu.classList.toggle("hidden");
+            }
+        }
+
+        function closeNotifMoreMenu() {
+            if (notifMoreMenu) {
+                notifMoreMenu.classList.add("hidden");
+            }
+        }
+
+        function mockNotifSettings() {
+            alert("⚙️ การตั้งค่าการแจ้งเตือน: เปิดรับการแจ้งเตือนพัสดุและสต๊อกสินค้าครบทุกหมวดหมู่");
+        }
+
+        let activeRowActionItemId = null;
+        const notifRowMenu = document.getElementById("notif-row-menu");
+
+        function updateUnreadCount() {
+            const unreadItems = document.querySelectorAll('.notif-item[data-unread="true"]');
+            const count = unreadItems.length;
+            
+            // Header bell badge
+            if (notifBadge) {
+                if (count > 0) {
+                    notifBadge.textContent = count;
+                    notifBadge.classList.remove('hidden');
+                } else {
+                    notifBadge.classList.add('hidden');
+                }
+            }
+
+            // Tab unread counter pill
+            const tabUnreadBadge = document.getElementById('notif-tab-unread-badge');
+            if (tabUnreadBadge) {
+                tabUnreadBadge.textContent = count;
+                tabUnreadBadge.style.display = count > 0 ? 'inline-flex' : 'none';
+            }
+        }
+
+        function handleNotifItemClick(el, event) {
+            if (!el) return;
+            // If the options menu or row menu is open, dismiss the menu without navigating
+            if (notifMoreMenu && !notifMoreMenu.classList.contains("hidden")) {
+                closeNotifMoreMenu();
+                if (event) event.stopPropagation();
+                return;
+            }
+            if (notifRowMenu && !notifRowMenu.classList.contains("hidden")) {
+                closeRowActionMenu();
+                if (event) event.stopPropagation();
+                return;
+            }
+            const notifId = el.getAttribute('data-id');
+            if (notifId) {
+                fetch('/api/notification/' + notifId + '/read', { method: 'POST' }).catch(() => {});
+            }
+            markSingleNotifAsRead(el);
+
+            // Deep link navigation: if data-href is non-empty, navigate; if empty/null, stay on page!
+            const targetUrl = el.getAttribute('data-href');
+            if (targetUrl && targetUrl.trim() !== '') {
+                setTimeout(() => {
+                    window.location.href = targetUrl;
+                }, 120);
+            }
+        }
+
+        function markSingleNotifAsRead(el) {
+            if (el && el.getAttribute('data-unread') === 'true') {
+                el.setAttribute('data-unread', 'false');
+                el.classList.remove('unread');
+                const dot = el.querySelector('.notif-dot');
+                if (dot) {
+                    dot.classList.remove('is-unread');
+                }
+                const timeEl = el.querySelector('.notif-time');
+                if (timeEl) {
+                    timeEl.classList.remove('text-slate-500');
+                    timeEl.classList.remove('text-amber-600');
+                    timeEl.classList.add('text-slate-400');
+                }
+                updateUnreadCount();
+
+                const tabUnread = document.getElementById('notif-tab-unread');
+                if (tabUnread && tabUnread.classList.contains('is-active')) {
+                    el.classList.add('hidden');
+                    checkEmptyState();
+                }
+            }
+        }
+
+        function markAllNotifsAsRead() {
+            fetch('/api/notification/read-all', { method: 'POST' }).catch(() => {});
+            const unreadItems = document.querySelectorAll('.notif-item[data-unread="true"]');
+            unreadItems.forEach(el => {
+                el.setAttribute('data-unread', 'false');
+                el.classList.remove('unread');
+                const dot = el.querySelector('.notif-dot');
+                if (dot) {
+                    dot.classList.remove('is-unread');
+                }
+                const timeEl = el.querySelector('.notif-time');
+                if (timeEl) {
+                    timeEl.classList.remove('text-slate-500');
+                    timeEl.classList.remove('text-amber-600');
+                    timeEl.classList.add('text-slate-400');
+                }
+            });
+            updateUnreadCount();
+            closeNotifMoreMenu();
+
+            const tabUnread = document.getElementById('notif-tab-unread');
+            if (tabUnread && tabUnread.classList.contains('is-active')) {
+                unreadItems.forEach(el => el.classList.add('hidden'));
+                checkEmptyState();
+            }
+        }
+
+        function openRowActionMenu(event, itemId) {
+            if (event) {
+                event.stopPropagation();
+                event.preventDefault();
+            }
+            closeNotifMoreMenu();
+            activeRowActionItemId = itemId;
+            const itemEl = document.getElementById(itemId);
+            if (!itemEl || !notifRowMenu) return;
+
+            const isUnread = itemEl.getAttribute('data-unread') === 'true';
+            const toggleText = document.getElementById('notif-row-menu-toggle-text');
+            const toggleIcon = document.getElementById('notif-row-menu-toggle-icon');
+
+            if (toggleText) {
+                toggleText.textContent = isUnread ? 'ทำเครื่องหมายว่าอ่านแล้ว' : 'ทำเครื่องหมายว่ายังไม่ได้อ่าน';
+            }
+            if (toggleIcon) {
+                if (isUnread) {
+                    toggleIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />';
+                    toggleIcon.setAttribute('class', 'w-4 h-4 text-emerald-600 shrink-0');
+                } else {
+                    toggleIcon.innerHTML = '<circle cx="12" cy="12" r="6" fill="#2563eb" />';
+                    toggleIcon.setAttribute('class', 'w-4 h-4 text-blue-600 shrink-0');
+                }
+            }
+
+            // Calculate position relative to container
+            const listContainer = document.getElementById('notif-items-list');
+            if (listContainer) {
+                const triggerBtn = event.currentTarget;
+                const triggerRect = triggerBtn.getBoundingClientRect();
+                const containerRect = listContainer.getBoundingClientRect();
+
+                let topPos = (triggerRect.bottom - containerRect.top) + listContainer.scrollTop + 4;
+                let rightPos = (containerRect.right - triggerRect.right) + 8;
+
+                notifRowMenu.style.top = topPos + 'px';
+                notifRowMenu.style.right = rightPos + 'px';
+                notifRowMenu.classList.remove('hidden');
+            }
+        }
+
+        function closeRowActionMenu() {
+            if (notifRowMenu) {
+                notifRowMenu.classList.add('hidden');
+            }
+            activeRowActionItemId = null;
+        }
+
+        function toggleRowReadStatusFromMenu() {
+            if (!activeRowActionItemId) return;
+            const itemEl = document.getElementById(activeRowActionItemId);
+            if (!itemEl) return;
+
+            const isUnread = itemEl.getAttribute('data-unread') === 'true';
+            const notifId = itemEl.getAttribute('data-id');
+
+            if (isUnread) {
+                if (notifId) fetch('/api/notification/' + notifId + '/read', { method: 'POST' }).catch(() => {});
+                markSingleNotifAsRead(itemEl);
+            } else {
+                // Mark unread
+                itemEl.setAttribute('data-unread', 'true');
+                itemEl.classList.add('unread');
+                const dot = itemEl.querySelector('.notif-dot');
+                if (dot) {
+                    dot.classList.add('is-unread');
+                }
+                const timeEl = itemEl.querySelector('.notif-time');
+                if (timeEl) {
+                    timeEl.classList.remove('text-slate-400');
+                    timeEl.classList.add('text-slate-500');
+                }
+                updateUnreadCount();
+            }
+            closeRowActionMenu();
+        }
+
+        function deleteRowFromMenu() {
+            if (!activeRowActionItemId) return;
+            const itemEl = document.getElementById(activeRowActionItemId);
+            if (!itemEl) return;
+            const notifId = itemEl.getAttribute('data-id');
+            if (notifId) {
+                fetch('/api/notification/' + notifId, { method: 'DELETE' }).catch(() => {});
+            }
+
+            itemEl.style.transition = 'all 0.2s ease';
+            itemEl.style.opacity = '0';
+            itemEl.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                itemEl.remove();
+                updateUnreadCount();
+                checkEmptyState();
+            }, 200);
+
+            closeRowActionMenu();
+        }
+
+        function getNotifIconHtml(type) {
+            switch (type) {
+                case 'MONTHLY_COST':
+                    return `
+                        <div class="notif-avatar-circle" style="background-color: #fef3c7; color: #d97706; border-color: #fde68a;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clock-fading preview-icon"><path d="M12 2a10 10 0 0 1 7.38 16.75"/><path d="M12 6v6l4 2"/><path d="M2.5 8.875a10 10 0 0 0-.5 3"/><path d="M2.83 16a10 10 0 0 0 2.43 3.4"/><path d="M4.636 5.235a10 10 0 0 1 .891-.857"/><path d="M8.644 21.42a10 10 0 0 0 7.631-.38"/></svg>
+                        </div>`;
+                case 'ORDER_TRACKING':
+                    return `
+                        <div class="notif-avatar-circle" style="background-color: #eff6ff; color: #2563eb; border-color: #bfdbfe;">
+                            <svg style="width: 22px; height: 22px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.25V3.75a1.125 1.125 0 0 0-1.125-1.125H3.375A1.125 1.125 0 0 0 2.25 3.75v10.5h12M16.5 7.5h3.75" />
+                            </svg>
+                        </div>`;
+                case 'STOCK_RECEIVE':
+                    return `
+                        <div class="notif-avatar-circle" style="background-color: #ecfdf5; color: #059669; border-color: #a7f3d0;">
+                            <svg style="width: 22px; height: 22px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="m20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5m8.25 3.75 2.25 2.25 4.5-4.5" />
+                            </svg>
+                        </div>`;
+                case 'STOCK_UPDATE':
+                default:
+                    return `
+                        <div class="notif-avatar-circle" style="background-color: #f3e8ff; color: #7c3aed; border-color: #ddd6fe;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-save-check preview-icon"><path d="M12.5 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h10.2a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4v4.35"/><path d="m16 19 2 2 4-4"/><path d="M17 15.13V14a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>
+                        </div>
+                        `;
+            }
+        }
+
+        function normalizeNotifItem(item) {
+            if (!item) return item;
+            if (item.title === 'หน้างานขอสั่งของจุกจิก') {
+                item.title = 'สั่งซื้อสินค้าทั่วไป';
+            }
+            if (item.targetUrl === '/MonthlyCost') {
+                item.targetUrl = '/MonthlyCost/Detail/กันยายน 2569';
+            }
+            return item;
+        }
+
+        function createNotifItemElement(item) {
+            item = normalizeNotifItem(item);
+            const isUnread = !item.isRead;
+            const div = document.createElement('div');
+            div.className = `notif-item ${isUnread ? 'unread' : ''} group animate-in fade-in duration-200`;
+            div.id = `notif-item-${item.id}`;
+            div.setAttribute('data-id', item.id);
+            div.setAttribute('data-unread', isUnread ? 'true' : 'false');
+            div.setAttribute('data-href', item.targetUrl || '');
+            div.onclick = function(e) { handleNotifItemClick(this, e); };
+
+            const timeClass = isUnread ? 'text-slate-500 font-semibold' : 'text-slate-400 font-normal';
+
+            div.innerHTML = `
+                <div class="notif-avatar-wrap">
+                    ${getNotifIconHtml(item.type)}
+                </div>
+                <div class="flex-1 min-w-0 pr-1">
+                    <p class="text-[13px] leading-snug text-slate-800 line-clamp-3">
+                        <span class="font-bold text-slate-950">${escapeHtml(item.title)}</span> ${escapeHtml(item.message)}
+                    </p>
+                    <span class="inline-block text-[12px] mt-1 notif-time ${timeClass}">${escapeHtml(item.timeAgo)}</span>
+                </div>
+                <div class="notif-right-action-wrap" onclick="event.stopPropagation()">
+                    <span class="notif-dot ${isUnread ? 'is-unread' : ''}"></span>
+                    <button type="button" 
+                            class="notif-row-action-btn" 
+                            title="ตัวเลือกเพิ่มเติม"
+                            onclick="openRowActionMenu(event, 'notif-item-${item.id}')">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                            <circle cx="5" cy="12" r="2" />
+                            <circle cx="12" cy="12" r="2" />
+                            <circle cx="19" cy="12" r="2" />
+                        </svg>
+                    </button>
+                </div>
+            `;
+            return div;
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text.replace(/[&<>"']/g, function(m) {
+                switch(m) {
+                    case '&': return '&amp;';
+                    case '<': return '&lt;';
+                    case '>': return '&gt;';
+                    case '"': return '&quot;';
+                    case "'": return '&#039;';
+                    default: return m;
+                }
+            });
+        }
+
+        function prependNotificationItem(item) {
+            const secNew = document.getElementById('notif-section-new');
+            const itemsList = document.getElementById('notif-items-list');
+            if (!secNew || !itemsList) return;
+
+            const existing = document.getElementById(`notif-item-${item.id}`);
+            if (existing) existing.remove();
+
+            const itemEl = createNotifItemElement(item);
+            const firstChild = secNew.querySelector('.notif-item');
+            if (firstChild) {
+                secNew.insertBefore(itemEl, firstChild);
+            } else {
+                secNew.appendChild(itemEl);
+            }
+
+            secNew.classList.remove('hidden');
+            const emptyEl = document.getElementById('notif-empty-state');
+            if (emptyEl) emptyEl.classList.add('hidden');
+
+            updateUnreadCount();
+        }
+
+        async function syncNotificationsFromApi() {
+            try {
+                const resp = await fetch('/api/notification');
+                if (!resp.ok) return;
+                const data = await resp.json();
+                if (data && data.success && Array.isArray(data.items) && data.items.length > 0) {
+                    const secNew = document.getElementById('notif-section-new');
+                    const secEarlier = document.getElementById('notif-section-earlier');
+                    if (secNew) {
+                        secNew.querySelectorAll('.notif-item').forEach(el => el.remove());
+                        if (secEarlier) secEarlier.querySelectorAll('.notif-item').forEach(el => el.remove());
+
+                        data.items.forEach((it, idx) => {
+                            const el = createNotifItemElement(it);
+                            if (idx < 2) {
+                                secNew.appendChild(el);
+                            } else if (secEarlier) {
+                                secEarlier.appendChild(el);
+                            } else {
+                                secNew.appendChild(el);
+                            }
+                        });
+                        updateUnreadCount();
+                    }
+                }
+            } catch (err) {
+                console.warn('[Notifications] Sync error:', err);
+            }
+        }
+
+        function initNotificationSignalR() {
+            if (typeof signalR === 'undefined') return;
+            try {
+                const hub = new signalR.HubConnectionBuilder()
+                    .withUrl("/dashboardHub")
+                    .withAutomaticReconnect([0, 2000, 5000, 10000])
+                    .build();
+
+                hub.on("ReceiveNotification", function(data) {
+                    if (data && data.item) {
+                        prependNotificationItem(data.item);
+                        if (typeof data.unreadCount === 'number') {
+                            if (notifBadge) {
+                                if (data.unreadCount > 0) {
+                                    notifBadge.textContent = data.unreadCount;
+                                    notifBadge.classList.remove('hidden');
+                                } else {
+                                    notifBadge.classList.add('hidden');
+                                }
+                            }
+                        } else {
+                            updateUnreadCount();
+                        }
+                    }
+                });
+
+                hub.start().catch(err => console.log('[SignalR Hub] Notification listener status:', err.message || err));
+            } catch (e) {
+                console.warn('[SignalR Hub] Init error:', e);
+            }
+        }
+
+        function checkEmptyState() {
+            const emptyEl = document.getElementById('notif-empty-state');
+            const unreadItems = document.querySelectorAll('.notif-item[data-unread="true"]');
+            const allItems = document.querySelectorAll('.notif-item');
+            const tabUnread = document.getElementById('notif-tab-unread');
+            const isUnreadTab = tabUnread && tabUnread.classList.contains('is-active');
+
+            if (emptyEl) {
+                if (isUnreadTab) {
+                    if (unreadItems.length === 0) {
+                        emptyEl.classList.remove('hidden');
+                    } else {
+                        emptyEl.classList.add('hidden');
+                    }
+                } else {
+                    if (allItems.length === 0) {
+                        emptyEl.classList.remove('hidden');
+                    } else {
+                        emptyEl.classList.add('hidden');
+                    }
+                }
+            }
+        }
+
+        function filterNotifsTab(mode) {
+            closeNotifMoreMenu();
+            closeRowActionMenu();
+            const tabAll = document.getElementById('notif-tab-all');
+            const tabUnread = document.getElementById('notif-tab-unread');
+            const items = document.querySelectorAll('.notif-item');
+            const secNew = document.getElementById('notif-section-new');
+            const secEarlier = document.getElementById('notif-section-earlier');
+
+            if (mode === 'ALL') {
+                if (tabAll) {
+                    tabAll.classList.add('is-active');
+                    tabAll.classList.remove('is-inactive');
+                }
+                if (tabUnread) {
+                    tabUnread.classList.add('is-inactive');
+                    tabUnread.classList.remove('is-active');
+                }
+                items.forEach(el => el.classList.remove('hidden'));
+                if (secNew) secNew.classList.remove('hidden');
+                if (secEarlier) secEarlier.classList.remove('hidden');
+                const emptyEl = document.getElementById('notif-empty-state');
+                if (emptyEl) emptyEl.classList.add('hidden');
+            } else {
+                if (tabUnread) {
+                    tabUnread.classList.add('is-active');
+                    tabUnread.classList.remove('is-inactive');
+                }
+                if (tabAll) {
+                    tabAll.classList.add('is-inactive');
+                    tabAll.classList.remove('is-active');
+                }
+                items.forEach(el => {
+                    const isUnread = el.getAttribute('data-unread') === 'true';
+                    el.classList.toggle('hidden', !isUnread);
+                });
+
+                if (secNew) {
+                    const hasNewVisible = secNew.querySelectorAll('.notif-item:not(.hidden)').length > 0;
+                    secNew.classList.toggle('hidden', !hasNewVisible);
+                }
+                if (secEarlier) {
+                    const hasEarlierVisible = secEarlier.querySelectorAll('.notif-item:not(.hidden)').length > 0;
+                    secEarlier.classList.toggle('hidden', !hasEarlierVisible);
+                }
+
+                checkEmptyState();
+            }
+        }
+
+        async function loadOlderNotifications() {
+            if (notifMoreMenu && !notifMoreMenu.classList.contains("hidden")) {
+                closeNotifMoreMenu();
+                return;
+            }
+            if (notifRowMenu && !notifRowMenu.classList.contains("hidden")) {
+                closeRowActionMenu();
+                return;
+            }
+            const notifDropdown = document.getElementById('notif-dropdown');
+            const skeletonLoader = document.getElementById('notif-skeleton-loader');
+            const footerBtn = document.getElementById('btn-load-older-notifs');
+            const listContainer = document.getElementById('notif-items-list');
+
+            if (notifDropdown) {
+                notifDropdown.classList.add('is-expanded');
+            }
+
+            if (footerBtn) {
+                footerBtn.innerHTML = `
+                    <svg class="animate-spin h-3.5 w-3.5 text-slate-500 shrink-0" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                    </svg>
+                    <span>กำลังโหลดการแจ้งเตือนก่อนหน้า...</span>
+                `;
+                footerBtn.disabled = true;
+            }
+
+            if (skeletonLoader) {
+                skeletonLoader.classList.remove('hidden');
+            }
+
+            if (listContainer) {
+                listContainer.scrollTo({ top: listContainer.scrollHeight, behavior: 'smooth' });
+            }
+
+            try {
+                // Fetch from API with small intentional delay for smooth skeleton UX
+                const [result] = await Promise.all([
+                    fetch('/api/notification?limit=50').then(res => res.json()).catch(() => null),
+                    new Promise(resolve => setTimeout(resolve, 600))
+                ]);
+
+                if (skeletonLoader) {
+                    skeletonLoader.classList.add('hidden');
+                }
+
+                injectMockHistoricalNotifs();
+
+                if (footerBtn) {
+                    footerBtn.innerHTML = `<span>แสดงประวัติการแจ้งเตือนทั้งหมดแล้ว</span>`;
+                    footerBtn.classList.add('opacity-70', 'cursor-default');
+                    footerBtn.disabled = true;
+                }
+            } catch (err) {
+                console.warn('Error loading older notifications:', err);
+                if (skeletonLoader) skeletonLoader.classList.add('hidden');
+                if (footerBtn) {
+                    footerBtn.innerHTML = `<span>ดูการแจ้งเตือนก่อนหน้า</span>`;
+                    footerBtn.disabled = false;
+                }
+            }
+        }
+
+        function injectMockHistoricalNotifs() {
+            const secEarlier = document.getElementById('notif-section-earlier');
+            if (!secEarlier) return;
+
+            const historicalItems = [
+                {
+                    id: 'hist-1',
+                    type: 'MONTHLY_COST',
+                    title: 'สรุปค่าใช้จ่ายงวดเดือนก่อน',
+                    message: 'ระบบปิดงวดบัญชีสิงหาคม 2569 เรียบร้อยแล้ว ยอดรวม 248,500 บาท',
+                    timeAgo: '3 วันที่แล้ว',
+                    href: '/MonthlyCost/Detail/สิงหาคม 2569',
+                    isUnread: false
+                },
+                {
+                    id: 'hist-2',
+                    type: 'STOCK_RECEIVE',
+                    title: 'ตรวจรับพัสดุเรียบร้อย',
+                    message: 'รับใบสั่งซื้อ PO2608-0112 อะไหล่เซนเซอร์ตรวจจับความร้อน 4 ตัว เข้าคลังหลัก',
+                    timeAgo: '5 วันที่แล้ว',
+                    href: '',
+                    isUnread: false
+                },
+                {
+                    id: 'hist-3',
+                    type: 'ORDER_TRACKING',
+                    title: 'สั่งซื้อสินค้าทั่วไป',
+                    message: 'ฝ่ายซ่อมบำรุงขอจัดซื้อสเปรย์หล่อลื่น WD-40 จำนวน 12 กระป๋อง สถานะ: อนุมัติแล้ว',
+                    timeAgo: '1 สัปดาห์ที่แล้ว',
+                    href: '/OrderTracking',
+                    isUnread: false
+                }
+            ];
+
+            historicalItems.forEach(item => {
+                if (document.getElementById('notif-item-' + item.id)) return;
+                const iconHtml = getNotifIconHtml(item.type);
+                const el = document.createElement('div');
+                el.className = 'notif-item group';
+                el.id = 'notif-item-' + item.id;
+                el.setAttribute('data-id', item.id);
+                el.setAttribute('data-unread', 'false');
+                el.setAttribute('data-href', item.href);
+                el.onclick = function(e) { handleNotifItemClick(this, e); };
+
+                el.innerHTML = `
+                    <div class="notif-avatar-wrap">${iconHtml}</div>
+                    <div class="flex-1 min-w-0 pr-1">
+                        <p class="text-[13px] leading-snug text-slate-700 line-clamp-3">
+                            <span class="font-bold text-slate-900">${item.title}</span> ${item.message}
+                        </p>
+                        <span class="inline-block text-[12px] font-normal text-slate-400 mt-1 notif-time">${item.timeAgo}</span>
+                    </div>
+                    <div class="notif-right-action-wrap" onclick="event.stopPropagation()">
+                        <span class="notif-dot"></span>
+                        <button type="button" 
+                                class="notif-row-action-btn" 
+                                title="ตัวเลือกเพิ่มเติม"
+                                onclick="openRowActionMenu(event, 'notif-item-${item.id}')">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                <circle cx="5" cy="12" r="2" />
+                                <circle cx="12" cy="12" r="2" />
+                                <circle cx="19" cy="12" r="2" />
+                            </svg>
+                        </button>
+                    </div>
+                `;
+                secEarlier.appendChild(el);
+            });
+        }
+
+        // Expose notification functions to window for inline HTML onclick handlers
+        window.openRowActionMenu = openRowActionMenu;
+        window.closeRowActionMenu = closeRowActionMenu;
+        window.toggleRowReadStatusFromMenu = toggleRowReadStatusFromMenu;
+        window.deleteRowFromMenu = deleteRowFromMenu;
+        window.handleNotifItemClick = handleNotifItemClick;
+        window.toggleNotifMoreMenu = toggleNotifMoreMenu;
+        window.closeNotifMoreMenu = closeNotifMoreMenu;
+        window.markAllNotifsAsRead = markAllNotifsAsRead;
+        window.filterNotifsTab = filterNotifsTab;
+        window.mockNotifSettings = mockNotifSettings;
+        window.loadOlderNotifications = loadOlderNotifications;
+
+        // Global capture-phase dismiss for popovers inside notification dropdown
+        document.addEventListener('click', function(e) {
+            // 1. Three-dots header menu dismiss (#notif-more-menu)
+            if (notifMoreMenu && !notifMoreMenu.classList.contains('hidden')) {
+                const moreBtn = document.getElementById('notif-more-options-btn');
+                if (!notifMoreMenu.contains(e.target) && (!moreBtn || !moreBtn.contains(e.target))) {
+                    closeNotifMoreMenu();
+                    // If clicked inside notifDropdown, prevent accidental click on items/buttons
+                    if (notifDropdown && notifDropdown.contains(e.target)) {
+                        e.stopPropagation();
+                        e.preventDefault();
+                    }
+                }
+            }
+
+            // 2. Row context menu dismiss (#notif-row-menu)
+            if (notifRowMenu && !notifRowMenu.classList.contains('hidden')) {
+                if (!notifRowMenu.contains(e.target) && !e.target.closest('.notif-row-action-btn')) {
+                    closeRowActionMenu();
+                    // If clicked inside notifDropdown, prevent accidental click on items/buttons
+                    if (notifDropdown && notifDropdown.contains(e.target)) {
+                        e.stopPropagation();
+                        e.preventDefault();
+                    }
+                }
+            }
+        }, true);
+
+        // Keyboard Escape dismiss for notification menus and dropdown
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                if (notifMoreMenu && !notifMoreMenu.classList.contains('hidden')) {
+                    closeNotifMoreMenu();
+                    return;
+                }
+                if (notifRowMenu && !notifRowMenu.classList.contains('hidden')) {
+                    closeRowActionMenu();
+                    return;
+                }
+                if (notifDropdown && !notifDropdown.classList.contains('hidden')) {
+                    notifDropdown.classList.add('hidden');
+                    if (notifDropdownBtn) notifDropdownBtn.classList.remove('is-active');
+                    closeNotifMoreMenu();
+                    closeRowActionMenu();
+                }
+            }
+        });
 
         // Desktop: Sidebar toggle logic using the chart icon
         const sidebarToggleIcon = document.getElementById("sidebar-toggle-icon");
@@ -1101,6 +2423,11 @@
                 }
             });
         }
+
+        // Initialize Notifications system on page load
+        updateUnreadCount();
+        initNotificationSignalR();
+        syncNotificationsFromApi();
     });
 </script>
 

@@ -67,6 +67,9 @@ namespace CostFlow.Data
 
             // 11. Sync Curated Stock Images and Groups from mapping JSON (81 items)
             await SyncStockImagesFromMappingJsonAsync(db, env);
+
+            // 12. Seed Initial Team Notifications
+            await SeedInitialNotificationsAsync(db);
         }
 
         private static async Task FixCategoryCodesAsync(AppDbContext db)
@@ -476,6 +479,21 @@ namespace CostFlow.Data
                     `Remarks` varchar(500) DEFAULT NULL,
                     `Timestamp` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
                     `User` varchar(255) DEFAULT NULL,
+                    PRIMARY KEY (`Id`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+
+                @"CREATE TABLE IF NOT EXISTS `Notifications` (
+                    `Id` int NOT NULL AUTO_INCREMENT,
+                    `Type` varchar(50) NOT NULL,
+                    `Title` varchar(255) NOT NULL,
+                    `Message` text NOT NULL,
+                    `TargetUrl` varchar(500) DEFAULT NULL,
+                    `IsRead` tinyint(1) NOT NULL DEFAULT 0,
+                    `Category` varchar(100) DEFAULT NULL,
+                    `ReferenceId` varchar(50) DEFAULT NULL,
+                    `ActionUser` varchar(50) DEFAULT NULL,
+                    `CreatedAt` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+                    `ReadAt` datetime(6) DEFAULT NULL,
                     PRIMARY KEY (`Id`)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;"
             };
@@ -1042,5 +1060,86 @@ namespace CostFlow.Data
                 Console.WriteLine($"[DB Init] DB sanitize warning: {dbEx.Message}");
             }
         }
+
+        private static async Task SeedInitialNotificationsAsync(AppDbContext db)
+        {
+            try
+            {
+                if (!await db.Notifications.AnyAsync())
+                {
+                    Console.WriteLine("[DB Init] Seeding initial notifications for team workflow...");
+                    var initialNotifs = new List<AppNotification>
+                    {
+                        new AppNotification
+                        {
+                            Type = "MONTHLY_COST",
+                            Title = "รับของแล้วค้างตัดจ่าย",
+                            Message = "พัสดุรับเข้าเดือน 09/2026 ครบกำหนดบันทึกตัดจ่ายงวดนี้ 3 รายการ",
+                            TargetUrl = "/MonthlyCost/Detail/กันยายน 2569",
+                            IsRead = false,
+                            Category = "finance",
+                            CreatedAt = DateTime.UtcNow.AddMinutes(-20)
+                        },
+                        new AppNotification
+                        {
+                            Type = "ORDER_TRACKING",
+                            Title = "สั่งซื้อสินค้าทั่วไป",
+                            Message = "แผนกผลิตส่งใบเบิกของด่วน: สกรู M8, ดอกสว่าน, เทปพันสายไฟ รวม 5 รายการ",
+                            TargetUrl = "/OrderTracking",
+                            IsRead = false,
+                            Category = "logistics",
+                            CreatedAt = DateTime.UtcNow.AddMinutes(-45)
+                        },
+                        new AppNotification
+                        {
+                            Type = "STOCK_RECEIVE",
+                            Title = "นำของเข้าสต็อกสำเร็จ",
+                            Message = "รับพัสดุรหัส WO2609-TEST04 ลงสต็อก 'ตุ๊กตาเพลา 40mm' จำนวน 10 ชิ้น",
+                            TargetUrl = "", // Empty -> no navigation on click
+                            IsRead = true,
+                            Category = "stock",
+                            CreatedAt = DateTime.UtcNow.AddHours(-2)
+                        },
+                        new AppNotification
+                        {
+                            Type = "STOCK_UPDATE",
+                            Title = "อัปเดตข้อมูลสต็อกสินค้า",
+                            Message = "ปรับยอดคงเหลือ 'ตุ๊กตาเพลาล่างกลางเครื่อง ( 40 mm )' เป็น 10.00 ชิ้น",
+                            TargetUrl = "/Stock?search=ตุ๊กตาเพลาล่างกลางเครื่อง",
+                            IsRead = false,
+                            Category = "stock",
+                            CreatedAt = DateTime.UtcNow.AddDays(-1)
+                        }
+                    };
+
+                    await db.Notifications.AddRangeAsync(initialNotifs);
+                    await db.SaveChangesAsync();
+                    Console.WriteLine("[DB Init] Successfully seeded initial team notifications!");
+                }
+                else
+                {
+                    // Migrate existing database notifications to new title and URL
+                    var outdatedNotifs = await db.Notifications
+                        .Where(n => n.Title == "หน้างานขอสั่งของจุกจิก" || n.TargetUrl == "/MonthlyCost")
+                        .ToListAsync();
+
+                    if (outdatedNotifs.Any())
+                    {
+                        foreach (var n in outdatedNotifs)
+                        {
+                            if (n.Title == "หน้างานขอสั่งของจุกจิก") n.Title = "สั่งซื้อสินค้าทั่วไป";
+                            if (n.TargetUrl == "/MonthlyCost") n.TargetUrl = "/MonthlyCost/Detail/กันยายน 2569";
+                        }
+                        await db.SaveChangesAsync();
+                        Console.WriteLine($"[DB Init] Migrated {outdatedNotifs.Count} existing notification records in database!");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[DB Init] Warning seeding notifications: {ex.Message}");
+            }
+        }
     }
 }
+
