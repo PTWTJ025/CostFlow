@@ -340,33 +340,15 @@
         /* Facebook-Style Notification Bell Button & Counter Badge */
         /* CostFlow Enterprise Notification Component Dedicated Styling */
         #notif-dropdown-btn {
-            position: relative !important;
-            width: 38px !important;
-            height: 38px !important;
-            min-width: 38px !important;
-            min-height: 38px !important;
-            border-radius: 8px !important;
-            background-color: #ffffff !important;
-            border: 1px solid #e2e8f0 !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            color: #334155 !important;
-            cursor: pointer !important;
-            transition: all 0.15s ease !important;
-            outline: none !important;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
-            padding: 0 !important;
-        }
-        #notif-dropdown-btn:hover {
-            background-color: #f8fafc !important;
-            border-color: #cbd5e1 !important;
-            color: #0f172a !important;
-        }
-        #notif-dropdown-btn.is-active {
-            background-color: #eff6ff !important;
-            color: #2563eb !important;
-            border-color: #bfdbfe !important;
+            position: relative;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #334155;
         }
         #notif-badge {
             position: absolute !important;
@@ -964,6 +946,7 @@
             <div class="relative">
                 <button type="button" 
                         id="notif-dropdown-btn"
+                        class="border-0 bg-transparent p-0"
                         title="การแจ้งเตือน">
                     <!-- Crisp Authentic Facebook Solid Bell Icon -->
                     <svg style="width: 20px; height: 20px;" viewBox="0 0 24 24" fill="currentColor">
