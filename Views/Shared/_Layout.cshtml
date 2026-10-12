@@ -948,12 +948,15 @@
                         id="notif-dropdown-btn"
                         class="border-0 bg-transparent p-0"
                         title="การแจ้งเตือน">
-                    <!-- Crisp Authentic Facebook Solid Bell Icon -->
-                    <svg style="width: 20px; height: 20px;" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M12 2C10.343 2 9 3.343 9 5v1.07C6.164 7.076 4 9.789 4 13v4l-1.707 1.707A1 1 0 0 0 3 20h18a1 1 0 0 0 .707-1.293L20 17v-4c0-3.211-2.164-5.924-5-6.93V5c0-1.657-1.343-3-3-3zm0 20a3 3 0 0 0 2.83-2H9.17A3 3 0 0 0 12 22z"/>
+                    <!-- Lucide Bell Ring Icon -->
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bell-ring">
+                        <path d="M10.268 21a2 2 0 0 0 3.464 0"/>
+                        <path d="M22 8c0-2.3-.8-4.3-2-6"/>
+                        <path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/>
+                        <path d="M4 2C2.8 3.7 2 5.7 2 8"/>
                     </svg>
                     <!-- Notification Red Counter Badge (Locked to Top-Right Corner) -->
-                    <span id="notif-badge">3</span>
+                    <span id="notif-badge">@(isStaff ? "2" : "3")</span>
                 </button>
 
                 <!-- Facebook-Style Notification Panel Dropdown -->
@@ -1014,45 +1017,48 @@
                                 <span class="text-xs font-bold text-slate-900 tracking-wide">ใหม่</span>
                             </div>
 
-                            <!-- Item 1: รับของแล้วค้างตัดจ่าย (Scenario 1) -->
-                            <div class="notif-item unread group"
-                                 id="notif-item-1"
-                                 data-id="1"
-                                 data-unread="true"
-                                 data-href="/MonthlyCost/Detail/กันยายน 2569"
-                                 onclick="handleNotifItemClick(this, event)">
-                                <div class="notif-avatar-wrap">
-                                    <div class="notif-avatar-circle" style="background-color: #fef3c7; color: #d97706; border-color: #fde68a;">
-                                        <svg style="width: 22px; height: 22px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                                        </svg>
+                            @if (!isStaff)
+                            {
+                                <!-- Item 1: รับของแล้วค้างตัดจ่าย (เฉพาะหัวหน้างาน/บัญชี) -->
+                                <div class="notif-item unread group"
+                                     id="notif-item-1"
+                                     data-id="1"
+                                     data-unread="true"
+                                     data-href="/MonthlyCost/Detail/กันยายน 2569"
+                                     onclick="handleNotifItemClick(this, event)">
+                                    <div class="notif-avatar-wrap">
+                                        <div class="notif-avatar-circle" style="background-color: #fef3c7; color: #d97706; border-color: #fde68a;">
+                                            <svg style="width: 22px; height: 22px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                            </svg>
+                                        </div>
+                                        <div class="notif-mini-badge" style="background-color: #f59e0b;">
+                                            <svg style="width: 11px; height: 11px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+                                            </svg>
+                                        </div>
                                     </div>
-                                    <div class="notif-mini-badge" style="background-color: #f59e0b;">
-                                        <svg style="width: 11px; height: 11px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
-                                        </svg>
+                                    <div class="flex-1 min-w-0 pr-1">
+                                        <p class="text-[13px] leading-snug text-slate-800 line-clamp-3">
+                                            <span class="font-bold text-slate-950">รับของแล้วค้างตัดจ่าย</span> พัสดุรับเข้าเดือน 09/2026 ครบกำหนดบันทึกตัดจ่ายงวดนี้ 3 รายการ
+                                        </p>
+                                        <span class="inline-block text-[12px] font-semibold text-amber-600 mt-1 notif-time">ถึงกำหนดชำระ</span>
+                                    </div>
+                                    <div class="notif-right-action-wrap" onclick="event.stopPropagation()">
+                                        <span class="notif-dot is-unread"></span>
+                                        <button type="button" 
+                                                class="notif-row-action-btn" 
+                                                title="ตัวเลือกเพิ่มเติม"
+                                                onclick="openRowActionMenu(event, 'notif-item-1')">
+                                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                                <circle cx="5" cy="12" r="2" />
+                                                <circle cx="12" cy="12" r="2" />
+                                                <circle cx="19" cy="12" r="2" />
+                                            </svg>
+                                        </button>
                                     </div>
                                 </div>
-                                <div class="flex-1 min-w-0 pr-1">
-                                    <p class="text-[13px] leading-snug text-slate-800 line-clamp-3">
-                                        <span class="font-bold text-slate-950">รับของแล้วค้างตัดจ่าย</span> พัสดุรับเข้าเดือน 09/2026 ครบกำหนดบันทึกตัดจ่ายงวดนี้ 3 รายการ
-                                    </p>
-                                    <span class="inline-block text-[12px] font-semibold text-amber-600 mt-1 notif-time">ถึงกำหนดชำระ</span>
-                                </div>
-                                <div class="notif-right-action-wrap" onclick="event.stopPropagation()">
-                                    <span class="notif-dot is-unread"></span>
-                                    <button type="button" 
-                                            class="notif-row-action-btn" 
-                                            title="ตัวเลือกเพิ่มเติม"
-                                            onclick="openRowActionMenu(event, 'notif-item-1')">
-                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                                            <circle cx="5" cy="12" r="2" />
-                                            <circle cx="12" cy="12" r="2" />
-                                            <circle cx="19" cy="12" r="2" />
-                                        </svg>
-                                    </button>
-                                </div>
-                            </div>
+                            }
 
                             <!-- Item 2: สั่งซื้อสินค้าทั่วไป (Scenario 2) -->
                             <div class="notif-item unread group"
@@ -1140,30 +1146,30 @@
                                 </div>
                             </div>
 
-                            <!-- Item 4: อัปเดตข้อมูลสต็อกสินค้า (Scenario 3B: ปรับปรุงสต็อก คลิกแล้วไปหน้าสต็อก + ไฮไลท์การ์ด) -->
+                            <!-- Item 4: รับสินค้าหน้างานเรียบร้อย (Scenario 4: ช่างกดรับของที่สั่ง) -->
                             <div class="notif-item unread group"
                                  id="notif-item-4"
                                  data-id="4"
                                  data-unread="true"
-                                 data-href="/Stock?search=ตุ๊กตาเพลาล่างกลางเครื่อง"
+                                 data-href="/OrderTracking"
                                  onclick="handleNotifItemClick(this, event)">
                                 <div class="notif-avatar-wrap">
-                                    <div class="notif-avatar-circle" style="background-color: #f3e8ff; color: #7c3aed; border-color: #ddd6fe;">
+                                    <div class="notif-avatar-circle" style="background-color: #ecfdf5; color: #059669; border-color: #a7f3d0;">
                                         <svg style="width: 22px; height: 22px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125" />
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                                         </svg>
                                     </div>
-                                    <div class="notif-mini-badge" style="background-color: #8b5cf6;">
-                                        <svg style="width: 11px; height: 11px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                                    <div class="notif-mini-badge" style="background-color: #10b981;">
+                                        <svg style="width: 11px; height: 11px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
                                         </svg>
                                     </div>
                                 </div>
                                 <div class="flex-1 min-w-0 pr-1">
                                     <p class="text-[13px] leading-snug text-slate-800 line-clamp-3">
-                                        <span class="font-bold text-slate-950">อัปเดตข้อมูลสต็อกสินค้า</span> ปรับยอดคงเหลือ 'ตุ๊กตาเพลาล่างกลางเครื่อง ( 40 mm )' เป็น 10.00 ชิ้น
+                                        <span class="font-bold text-slate-950">รับสินค้าหน้างานเรียบร้อย</span> ยืนยันรับพัสดุหน้างานแล้ว (ชุดสั่งซื้อ 'สั่งของด่วนไซต์งาน')
                                     </p>
-                                    <span class="inline-block text-[12px] font-normal text-slate-500 mt-1 notif-time">เมื่อวานนี้</span>
+                                    <span class="inline-block text-[12px] font-normal text-slate-500 mt-1 notif-time">1 ชั่วโมงที่แล้ว</span>
                                 </div>
                                 <div class="notif-right-action-wrap" onclick="event.stopPropagation()">
                                     <span class="notif-dot is-unread"></span>
@@ -1916,6 +1922,13 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.25V3.75a1.125 1.125 0 0 0-1.125-1.125H3.375A1.125 1.125 0 0 0 2.25 3.75v10.5h12M16.5 7.5h3.75" />
                             </svg>
                         </div>`;
+                case 'ORDER_RECEIVE':
+                    return `
+                        <div class="notif-avatar-circle" style="background-color: #ecfdf5; color: #059669; border-color: #a7f3d0;">
+                            <svg style="width: 22px; height: 22px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                            </svg>
+                        </div>`;
                 case 'STOCK_RECEIVE':
                     return `
                         <div class="notif-avatar-circle" style="background-color: #ecfdf5; color: #059669; border-color: #a7f3d0;">
@@ -1923,11 +1936,25 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" d="m20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5m8.25 3.75 2.25 2.25 4.5-4.5" />
                             </svg>
                         </div>`;
+                case 'STOCK_CREATE':
+                    return `
+                        <div class="notif-avatar-circle" style="background-color: #eff6ff; color: #1d4ed8; border-color: #bfdbfe;">
+                            <svg style="width: 22px; height: 22px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                            </svg>
+                        </div>`;
+                case 'PRODUCTION_PLAN':
+                    return `
+                        <div class="notif-avatar-circle" style="background-color: #f5f3ff; color: #6d28d9; border-color: #ddd6fe;">
+                            <svg style="width: 22px; height: 22px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                            </svg>
+                        </div>`;
                 case 'STOCK_UPDATE':
                 default:
                     return `
-                        <div class="notif-avatar-circle" style="background-color: #f3e8ff; color: #7c3aed; border-color: #ddd6fe;">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-save-check preview-icon"><path d="M12.5 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h10.2a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4v4.35"/><path d="m16 19 2 2 4-4"/><path d="M17 15.13V14a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>
+                        <div class="notif-avatar-circle" style="background-color: #eff6ff; color: #2563eb; border-color: #bfdbfe;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bell-ring"><path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M22 8c0-2.3-.8-4.3-2-6"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/><path d="M4 2C2.8 3.7 2 5.7 2 8"/></svg>
                         </div>
                         `;
             }
@@ -2061,6 +2088,11 @@
 
                 hub.on("ReceiveNotification", function(data) {
                     if (data && data.item) {
+                        const isStaffUser = @(isStaff ? "true" : "false");
+                        const staffAllowedTypes = ['ORDER_TRACKING', 'ORDER_RECEIVE', 'STOCK_RECEIVE', 'STOCK_CREATE'];
+                        if (isStaffUser && !staffAllowedTypes.includes(data.item.type)) {
+                            return; // Staff ignores non-relevant notifications
+                        }
                         prependNotificationItem(data.item);
                         if (typeof data.unreadCount === 'number') {
                             if (notifBadge) {

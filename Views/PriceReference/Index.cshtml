@@ -64,8 +64,8 @@
                         <th class="px-3 py-2.5 text-xs font-bold text-slate-500 uppercase tracking-wider text-left">ชื่อสินค้า / รายการอะไหล่</th>
                         <th class="px-3 py-2.5 text-xs font-bold text-slate-500 uppercase tracking-wider">หน่วย</th>
                         <th class="px-3 py-2.5 text-xs font-bold text-primary uppercase tracking-wider w-[120px]">ราคาต่อหน่วย</th>
-                        <th class="px-3 py-2.5 text-xs font-bold text-slate-500 uppercase tracking-wider">จำนวนรวมเบิก</th>
-                        <th class="px-3 py-2.5 text-xs font-bold text-slate-500 uppercase tracking-wider">มูลค่ารวมเบิก</th>
+                        @* <th class="px-3 py-2.5 text-xs font-bold text-slate-500 uppercase tracking-wider">จำนวนรวมเบิก</th>
+                        <th class="px-3 py-2.5 text-xs font-bold text-slate-500 uppercase tracking-wider">มูลค่ารวมเบิก</th> *@
                         <th class="px-3 py-2.5 text-xs font-bold text-slate-500 uppercase tracking-wider text-left max-w-[200px]">แหล่งข้อมูลประวัติสั่งซื้อ</th>
                         @if (isAdmin)
                         {
@@ -77,7 +77,7 @@
                     @if (Model == null || !Model.Any())
                     {
                         <tr>
-                            <td colspan="@(isAdmin ? 9 : 8)" class="py-lg text-slate-400 text-xs italic bg-slate-50/50">ไม่พบข้อมูลราคากลางอ้างอิงตรงกับคำค้นหา</td>
+                            <td colspan="@(isAdmin ? 7 : 6)" class="py-lg text-slate-400 text-xs italic bg-slate-50/50">ไม่พบข้อมูลราคากลางอ้างอิงตรงกับคำค้นหา</td>
                         </tr>
                     }
                     else
@@ -100,8 +100,8 @@
                                 <td class="px-3 py-2 text-left max-w-[320px] truncate" title="@item.ProductName">@item.ProductName</td>
                                 <td class="px-3 py-2 text-slate-600">@item.Unit</td>
                                 <td class="px-3 py-2 font-mono font-bold text-primary bg-primary/5">฿@item.PricePerUnit.ToString("N2")</td>
-                                <td class="px-3 py-2 font-mono">@item.TotalQty.ToString("N0")</td>
-                                <td class="px-3 py-2 font-mono">฿@item.TotalValue.ToString("N2")</td>
+                                @* <td class="px-3 py-2 font-mono">@item.TotalQty.ToString("N0")</td>
+                                <td class="px-3 py-2 font-mono">฿@item.TotalValue.ToString("N2")</td> *@
                                 <td class="px-3 py-2 text-left text-slate-500 text-[11px] truncate max-w-[200px]" title="@item.Sources">@item.Sources</td>
                                 @if (isAdmin)
                                 {
@@ -205,7 +205,10 @@
                     </div>
                 </div>
                 
-                <div class="grid grid-cols-2 gap-sm">
+                @* ซ่อนฟิลด์จำนวนรวมเบิก และ มูลค่ารวมเบิก *@
+                <input type="hidden" id="modal-qty" value="0" />
+                <input type="hidden" id="modal-val" value="0.00" />
+                @* <div class="grid grid-cols-2 gap-sm">
                     <div>
                         <label class="block text-xs font-semibold text-slate-700 mb-1">จำนวนรวมเบิก</label>
                         <input type="number" id="modal-qty" min="0" class="w-full px-3 py-2 border border-slate-200 rounded text-xs focus:ring-1 focus:ring-primary focus:border-primary outline-none" placeholder="0" value="0" />
@@ -214,7 +217,7 @@
                         <label class="block text-xs font-semibold text-slate-700 mb-1">มูลค่ารวมเบิก</label>
                         <input type="number" id="modal-val" min="0" step="0.01" class="w-full px-3 py-2 border border-slate-200 rounded text-xs focus:ring-1 focus:ring-primary focus:border-primary outline-none" placeholder="0.00" value="0.00" />
                     </div>
-                </div>
+                </div> *@
                 
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 mb-1">แหล่งข้อมูลประวัติสั่งซื้อ</label>
@@ -494,7 +497,7 @@ document.addEventListener("DOMContentLoaded", function() {
         totalCountBadge.textContent = Number(filteredProducts.length).toLocaleString('en-US');
         tableBody.innerHTML = "";
         
-        let colSpanCount = isAdmin ? 9 : 8;
+        let colSpanCount = isAdmin ? 7 : 6;
         if (filteredProducts.length === 0) {
             tableBody.innerHTML = `
                 <tr>
@@ -530,8 +533,8 @@ document.addEventListener("DOMContentLoaded", function() {
                 <td class="px-3 py-2 text-left max-w-[320px] truncate" title="${item.productName}">${item.productName}</td>
                 <td class="px-3 py-2 text-slate-600">${item.unit}</td>
                 <td class="px-3 py-2 font-mono font-bold text-primary bg-primary/5">฿${Number(item.pricePerUnit).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                <td class="px-3 py-2 font-mono">${Number(item.totalQty).toLocaleString('en-US')}</td>
-                <td class="px-3 py-2 font-mono">฿${Number(item.totalValue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                <!-- <td class="px-3 py-2 font-mono">${Number(item.totalQty).toLocaleString('en-US')}</td> -->
+                <!-- <td class="px-3 py-2 font-mono">฿${Number(item.totalValue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td> -->
                 <td class="px-3 py-2 text-left text-slate-500 text-[11px] truncate max-w-[200px]" title="${item.sources}">${item.sources || ""}</td>
                 ${actionCol}
             `;

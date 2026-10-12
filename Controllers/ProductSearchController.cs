@@ -308,6 +308,8 @@ namespace CostFlow.Controllers
                 {
                     batchName = i.BatchName,
                     createdAtStr = i.CreatedAt == default ? "-" : i.CreatedAt.ToString("dd/MM/yyyy HH:mm"),
+                    createdAtIso = i.CreatedAt == default ? "" : i.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss"),
+                    createdAtDay = i.CreatedAt == default ? "" : i.CreatedAt.ToString("yyyy-MM-dd"),
                     productCode = i.ProductCode,
                     productName = i.ProductName,
                     unit = i.Unit,

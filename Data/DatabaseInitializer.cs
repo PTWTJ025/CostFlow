@@ -1102,13 +1102,13 @@ namespace CostFlow.Data
                         },
                         new AppNotification
                         {
-                            Type = "STOCK_UPDATE",
-                            Title = "อัปเดตข้อมูลสต็อกสินค้า",
-                            Message = "ปรับยอดคงเหลือ 'ตุ๊กตาเพลาล่างกลางเครื่อง ( 40 mm )' เป็น 10.00 ชิ้น",
-                            TargetUrl = "/Stock?search=ตุ๊กตาเพลาล่างกลางเครื่อง",
+                            Type = "ORDER_RECEIVE",
+                            Title = "รับสินค้าหน้างานเรียบร้อย",
+                            Message = "ยืนยันรับพัสดุหน้างานแล้ว (ชุดสั่งซื้อ 'สั่งของด่วนไซต์งาน A') รวม 3 รายการ",
+                            TargetUrl = "/OrderTracking",
                             IsRead = false,
-                            Category = "stock",
-                            CreatedAt = DateTime.UtcNow.AddDays(-1)
+                            Category = "logistics",
+                            CreatedAt = DateTime.UtcNow.AddHours(-1)
                         }
                     };
 

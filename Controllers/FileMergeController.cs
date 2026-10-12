@@ -21,14 +21,16 @@ namespace CostFlow.Controllers
         private readonly AppDbContext _context;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly IConfiguration _configuration;
+        private readonly INotificationService _notificationService;
 
         public FileMergeController(AppDbContext context, IHttpClientFactory httpClientFactory,
-            IConfiguration configuration)
+            IConfiguration configuration, INotificationService notificationService)
         {
             _storageService = new ImportStorageService();
             _context = context;
             _httpClientFactory = httpClientFactory;
             _configuration = configuration;
+            _notificationService = notificationService;
         }
 
         public IActionResult Index()
@@ -549,6 +551,20 @@ namespace CostFlow.Controllers
                 // /* --- Temporarily disabled Google Sheets Sync ---
                 // await SyncWeeklyPlansToGoogleSheetsAsync();
                 // ------------------------------------------------ */
+
+                // ส่งแจ้งเตือนสำหรับหัวหน้างานเมื่ออัปโหลดไฟล์แผนสั่งผลิตสำเร็จ
+                var matchedTotal = allOrders.Count(o => o.Status == "Matched");
+                var currentUserName = User.Identity?.Name ?? "หัวหน้างาน";
+                await _notificationService.CreateNotificationAsync(
+                    type: "PRODUCTION_PLAN",
+                    title: "อัปโหลดไฟล์แผนสั่งผลิต",
+                    message: $"อัปโหลดแผนผลิตสำเร็จ {fileResults.Count} ไฟล์ (จับคู่แล้ว {matchedTotal} ใบสั่งผลิต)",
+                    targetUrl: "/FileMerge",
+                    category: "production",
+                    referenceId: "WeeklyPlan",
+                    actionUser: currentUserName,
+                    isRead: false
+                );
 
                 return Json(new
                 {

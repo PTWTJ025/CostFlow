@@ -4,6 +4,7 @@ using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using CostFlow.Data;
+using CostFlow.Services;
 
 namespace CostFlow.Controllers
 {
@@ -14,13 +15,15 @@ namespace CostFlow.Controllers
         private readonly TiDbContext _tiDbContext;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly IConfiguration _configuration;
+        private readonly INotificationService _notificationService;
 
-        public OrderTrackingController(AppDbContext context, TiDbContext tiDbContext, IHttpClientFactory httpClientFactory, IConfiguration configuration)
+        public OrderTrackingController(AppDbContext context, TiDbContext tiDbContext, IHttpClientFactory httpClientFactory, IConfiguration configuration, INotificationService notificationService)
         {
             _context = context;
             _tiDbContext = tiDbContext;
             _httpClientFactory = httpClientFactory;
             _configuration = configuration;
+            _notificationService = notificationService;
         }
 
         [HttpGet]
@@ -201,6 +204,19 @@ namespace CostFlow.Controllers
                         }
                     }
                     await _tiDbContext.SaveChangesAsync();
+
+                    // ส่งแจ้งเตือนเมื่อติดตามรับสินค้าสำเร็จ (สถานะเปลี่ยนเป็นรับของแล้ว)
+                    var currentUserName = User.Identity?.Name ?? "พนักงานหน้างาน";
+                    await _notificationService.CreateNotificationAsync(
+                        type: "ORDER_RECEIVE",
+                        title: "รับสินค้าหน้างานเรียบร้อย",
+                        message: $"ชุดสั่งซื้อ '{batch.BatchName}' มีการตรวจรับสินค้าแล้ว ({request.ProductCodes.Count} รายการ)",
+                        targetUrl: "/OrderTracking",
+                        category: "logistics",
+                        referenceId: batch.BatchName,
+                        actionUser: currentUserName,
+                        isRead: false
+                    );
                 }
 
                 return Json(new { success = true });
@@ -267,6 +283,20 @@ namespace CostFlow.Controllers
                 }
 
                 await _tiDbContext.SaveChangesAsync();
+
+                // ส่งแจ้งเตือนเมื่อติดตามรับสินค้าสำเร็จแบบกลุ่ม
+                var currentUserName = User.Identity?.Name ?? "พนักงานหน้างาน";
+                await _notificationService.CreateNotificationAsync(
+                    type: "ORDER_RECEIVE",
+                    title: "รับสินค้าหน้างานเรียบร้อย",
+                    message: $"ยืนยันรับสินค้าหน้างานแล้ว จำนวน {request.Items.Count} รายการ",
+                    targetUrl: "/OrderTracking",
+                    category: "logistics",
+                    referenceId: "BulkReceive",
+                    actionUser: currentUserName,
+                    isRead: false
+                );
+
                 return Json(new { success = true, count = request.Items.Count });
             }
             catch (Exception ex)

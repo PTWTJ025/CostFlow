@@ -12,7 +12,7 @@ namespace CostFlow.Services
 {
     public interface INotificationService
     {
-        Task<NotificationListResult> GetNotificationsAsync(int limit = 30);
+        Task<NotificationListResult> GetNotificationsAsync(int limit = 30, bool isStaff = false);
         Task<AppNotification> CreateNotificationAsync(
             string type,
             string title,
@@ -25,7 +25,7 @@ namespace CostFlow.Services
         Task<bool> MarkAsReadAsync(int id);
         Task<bool> MarkAllAsReadAsync();
         Task<bool> DeleteAsync(int id);
-        Task<int> GetUnreadCountAsync();
+        Task<int> GetUnreadCountAsync(bool isStaff = false);
     }
 
     public class NotificationDto
@@ -65,20 +65,61 @@ namespace CostFlow.Services
             _dateTimeProvider = dateTimeProvider;
         }
 
-        public async Task<int> GetUnreadCountAsync()
+        public async Task<int> GetUnreadCountAsync(bool isStaff = false)
         {
-            return await _db.Notifications.CountAsync(n => !n.IsRead);
+            var query = _db.Notifications.Where(n => !n.IsRead && n.Type != "STOCK_UPDATE");
+            if (isStaff)
+            {
+                query = query.Where(n => n.Type == "ORDER_TRACKING" || 
+                                         n.Type == "ORDER_RECEIVE" || 
+                                         n.Type == "STOCK_RECEIVE" || 
+                                         n.Type == "STOCK_CREATE");
+            }
+            else
+            {
+                query = query.Where(n => n.Type == "ORDER_TRACKING" || 
+                                         n.Type == "ORDER_RECEIVE" || 
+                                         n.Type == "STOCK_RECEIVE" || 
+                                         n.Type == "STOCK_CREATE" || 
+                                         n.Type == "PRODUCTION_PLAN" || 
+                                         n.Type == "MONTHLY_COST");
+            }
+            return await query.CountAsync();
         }
 
-        public async Task<NotificationListResult> GetNotificationsAsync(int limit = 30)
+        public async Task<NotificationListResult> GetNotificationsAsync(int limit = 30, bool isStaff = false)
         {
-            var notifs = await _db.Notifications
-                .AsNoTracking()
+            var query = _db.Notifications.AsNoTracking().Where(n => n.Type != "STOCK_UPDATE");
+
+            if (isStaff)
+            {
+                // ช่างหน้างาน (Staff): เห็นเฉพาะ 4 เหตุการณ์สำคัญ
+                // 1. คีย์สั่งซื้อหน้างาน (ORDER_TRACKING)
+                // 2. ติดตามรับสินค้าหน้างาน (ORDER_RECEIVE)
+                // 3. บันทึกของลงสต็อก (STOCK_RECEIVE)
+                // 4. เพิ่มสต็อกใหม่ (STOCK_CREATE)
+                query = query.Where(n => n.Type == "ORDER_TRACKING" || 
+                                         n.Type == "ORDER_RECEIVE" || 
+                                         n.Type == "STOCK_RECEIVE" || 
+                                         n.Type == "STOCK_CREATE");
+            }
+            else
+            {
+                // หัวหน้างาน (Admin/Supervisor): เห็น 4 รายการนี้ + อัปโหลดแผนสั่งผลิต (PRODUCTION_PLAN) + แจ้งเตือนรอบบัญชี (MONTHLY_COST)
+                query = query.Where(n => n.Type == "ORDER_TRACKING" || 
+                                         n.Type == "ORDER_RECEIVE" || 
+                                         n.Type == "STOCK_RECEIVE" || 
+                                         n.Type == "STOCK_CREATE" || 
+                                         n.Type == "PRODUCTION_PLAN" || 
+                                         n.Type == "MONTHLY_COST");
+            }
+
+            var notifs = await query
                 .OrderByDescending(n => n.CreatedAt)
                 .Take(limit)
                 .ToListAsync();
 
-            var unreadCount = await _db.Notifications.CountAsync(n => !n.IsRead);
+            var unreadCount = await query.CountAsync(n => !n.IsRead);
             var now = _dateTimeProvider.Now;
 
             var dtoList = notifs.Select(n => new NotificationDto

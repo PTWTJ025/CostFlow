@@ -39,47 +39,71 @@
 
     <!-- Custom Toolbar: Filters & KPI Summary Badges (Compact Style เหมือน MonthlyCost/Summary) -->
     <div class="bg-white rounded border border-outline-variant shadow-sm p-3 sm:p-3.5 custom-toolbar flex items-center justify-between gap-3 overflow-x-auto scrollbar-none shrink-0">
-        <!-- Left Side: Year & Month Dropdown Filters -->
-        <form method="get" action="/ProductSearch/SavedOrders" class="flex items-center gap-2 flex-shrink-0" id="filter-form">
-            <select name="year" id="filter-year" onchange="handleFilterChange(this)" class="w-[120px] border border-slate-200 rounded-md focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all text-xs font-medium text-slate-700 bg-white truncate cursor-pointer shadow-2xs" style="height: 34px; padding: 0 10px;">
-                <option value="">ปีทั้งหมด</option>
-                @if (ViewData["AvailableYears"] is List<int> years)
-                {
-                    foreach (var y in years)
+        <!-- Left Side: Year, Month & Date Dropdown Filters -->
+        <div class="flex items-center gap-2 flex-shrink-0 flex-wrap">
+            <form method="get" action="/ProductSearch/SavedOrders" class="flex items-center gap-2 flex-shrink-0" id="filter-form">
+                <select name="year" id="filter-year" onchange="handleFilterChange(this)" class="w-[120px] border border-slate-200 rounded-md focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all text-xs font-medium text-slate-700 bg-white truncate cursor-pointer shadow-2xs" style="height: 34px; padding: 0 10px;">
+                    <option value="">ปีทั้งหมด</option>
+                    @if (ViewData["AvailableYears"] is List<int> years)
                     {
-                        if ((int?)ViewData["SelectedYear"] == y)
+                        foreach (var y in years)
                         {
-                            <option value="@y" selected>ปี @(y + 543)</option>
-                        }
-                        else
-                        {
-                            <option value="@y">ปี @(y + 543)</option>
-                        }
-                    }
-                }
-            </select>
-            <select name="month" id="filter-month" onchange="handleFilterChange(this)" class="w-[130px] border border-slate-200 rounded-md focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all text-xs font-medium text-slate-700 bg-white truncate cursor-pointer shadow-2xs" style="height: 34px; padding: 0 10px;">
-                <option value="">เดือนทั้งหมด</option>
-                @if (ViewData["AvailableMonths"] is List<int> months)
-                {
-                    string[] monthsTh = { "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม" };
-                    foreach (var m in months)
-                    {
-                        if (m >= 1 && m <= 12)
-                        {
-                            if ((int?)ViewData["SelectedMonth"] == m)
+                            if ((int?)ViewData["SelectedYear"] == y)
                             {
-                                <option value="@m" selected>@monthsTh[m - 1]</option>
+                                <option value="@y" selected>ปี @(y + 543)</option>
                             }
                             else
                             {
-                                <option value="@m">@monthsTh[m - 1]</option>
+                                <option value="@y">ปี @(y + 543)</option>
                             }
                         }
                     }
-                }
-            </select>
-        </form>
+                </select>
+                <select name="month" id="filter-month" onchange="handleFilterChange(this)" class="w-[130px] border border-slate-200 rounded-md focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all text-xs font-medium text-slate-700 bg-white truncate cursor-pointer shadow-2xs" style="height: 34px; padding: 0 10px;">
+                    <option value="">เดือนทั้งหมด</option>
+                    @if (ViewData["AvailableMonths"] is List<int> months)
+                    {
+                        string[] monthsTh = { "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม" };
+                        foreach (var m in months)
+                        {
+                            if (m >= 1 && m <= 12)
+                            {
+                                if ((int?)ViewData["SelectedMonth"] == m)
+                                {
+                                    <option value="@m" selected>@monthsTh[m - 1]</option>
+                                }
+                                else
+                                {
+                                    <option value="@m">@monthsTh[m - 1]</option>
+                                }
+                            }
+                        }
+                    }
+                </select>
+            </form>
+
+            <!-- Date Filter (กรองวันที่) -->
+            <div class="flex items-center gap-1.5 flex-shrink-0">
+                <input type="date" id="filter-date" onchange="handleDateFilterChange(this)"
+                       class="border border-slate-200 rounded-md focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all text-xs font-medium text-slate-700 bg-white cursor-pointer shadow-2xs"
+                       style="height: 34px; padding: 0 10px;" title="กรองเฉพาะวันที่">
+                <button type="button" id="btn-clear-date" onclick="clearDateFilter()" 
+                        class="hidden px-2 text-xs font-medium text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-md transition-colors cursor-pointer"
+                        style="height: 34px;" title="ล้างการกรองวันที่">
+                    ล้างวันที่
+                </button>
+            </div>
+
+            <!-- Active Product Filter Chip (เมื่อคลิกที่ชื่อสินค้า) -->
+            <div id="active-product-filter" class="hidden items-center gap-1.5 px-2.5 text-xs font-medium rounded-md bg-blue-50 border border-blue-200 text-blue-700 select-none shadow-2xs" style="height: 34px;">
+                <span class="text-blue-600">กรองสินค้า:</span>
+                <span id="active-product-name" class="font-bold text-blue-900 truncate max-w-[160px]"></span>
+                <button type="button" onclick="clearProductFilter()" class="hover:text-rose-600 ml-1 p-0.5 rounded cursor-pointer transition-colors" title="ล้างตัวกรองสินค้า">
+                    <!-- Lucide: x -->
+                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                </button>
+            </div>
+        </div>
 
         <!-- Right Side: KPI Summary Badges (Compact Pills) -->
         <div class="custom-toolbar-right flex items-center gap-2 shrink-0 ml-auto">
@@ -126,12 +150,52 @@
             <table class="w-full text-[13px]">
                 <thead>
                 <tr class="text-[11px] font-semibold text-on-surface-variant border-b border-outline-variant">
-                    <th class="sticky top-0 bg-surface-container z-20 py-2.5 px-4 text-left">วันที่บันทึก</th>
-                    <th class="sticky top-0 bg-surface-container z-20 py-2.5 px-4 text-left">รหัสสินค้า</th>
-                    <th class="sticky top-0 bg-surface-container z-20 py-2.5 px-4 text-left">ชื่อสินค้า</th>
-                    <th class="sticky top-0 bg-surface-container z-20 py-2.5 px-4 text-right">จำนวน</th>
+                    <th class="sticky top-0 bg-surface-container z-20 py-2.5 px-4 text-left cursor-pointer hover:bg-slate-200/60 transition-colors select-none group"
+                        onclick="handleSort('date')" data-col="date" title="คลิกเพื่อเรียงลำดับวันที่ (ล่าสุด / เก่าสุด)">
+                        <div class="inline-flex items-center gap-1.5">
+                            <span>วันที่บันทึก</span>
+                            <svg class="sort-chevron sort-chevron-date w-3.5 h-3.5 text-primary transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="m6 9 6 6 6-6"/>
+                            </svg>
+                        </div>
+                    </th>
+                    <th class="sticky top-0 bg-surface-container z-20 py-2.5 px-4 text-left cursor-pointer hover:bg-slate-200/60 transition-colors select-none group"
+                        onclick="handleSort('code')" data-col="code" title="คลิกเพื่อเรียงลำดับรหัสสินค้า">
+                        <div class="inline-flex items-center gap-1.5">
+                            <span>รหัสสินค้า</span>
+                            <svg class="sort-chevron sort-chevron-code w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="m6 9 6 6 6-6"/>
+                            </svg>
+                        </div>
+                    </th>
+                    <th class="sticky top-0 bg-surface-container z-20 py-2.5 px-4 text-left cursor-pointer hover:bg-slate-200/60 transition-colors select-none group"
+                        onclick="handleSort('name')" data-col="name" title="คลิกเพื่อเรียงลำดับชื่อสินค้า">
+                        <div class="inline-flex items-center gap-1.5">
+                            <span>ชื่อสินค้า</span>
+                            <svg class="sort-chevron sort-chevron-name w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="m6 9 6 6 6-6"/>
+                            </svg>
+                        </div>
+                    </th>
+                    <th class="sticky top-0 bg-surface-container z-20 py-2.5 px-4 text-right cursor-pointer hover:bg-slate-200/60 transition-colors select-none group"
+                        onclick="handleSort('qty')" data-col="qty" title="คลิกเพื่อเรียงลำดับจำนวน">
+                        <div class="inline-flex items-center justify-end gap-1.5 w-full">
+                            <span>จำนวน</span>
+                            <svg class="sort-chevron sort-chevron-qty w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="m6 9 6 6 6-6"/>
+                            </svg>
+                        </div>
+                    </th>
                     <th class="sticky top-0 bg-surface-container z-20 py-2.5 px-4 text-right">ราคา/หน่วย</th>
-                    <th class="sticky top-0 bg-surface-container z-20 py-2.5 px-4 text-right">ราคารวม</th>
+                    <th class="sticky top-0 bg-surface-container z-20 py-2.5 px-4 text-right cursor-pointer hover:bg-slate-200/60 transition-colors select-none group"
+                        onclick="handleSort('amount')" data-col="amount" title="คลิกเพื่อเรียงลำดับราคารวม">
+                        <div class="inline-flex items-center justify-end gap-1.5 w-full">
+                            <span>ราคารวม</span>
+                            <svg class="sort-chevron sort-chevron-amount w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="m6 9 6 6 6-6"/>
+                            </svg>
+                        </div>
+                    </th>
                     <th class="sticky top-0 bg-surface-container z-20 py-2.5 px-4 text-left">หมายเหตุ</th>
                     <th class="sticky top-0 bg-surface-container z-20 py-2.5 px-4 text-center w-28">การจัดการ</th>
                 </tr>
@@ -148,15 +212,20 @@
                             data-display-name="@item.ProductName"
                             data-code="@item.ProductCode"
                             data-qty="@item.Quantity"
-                            data-amount="@item.TotalAmount">
-                            <td class="py-3 px-4 text-on-surface-variant font-mono text-xs">
+                            data-amount="@item.TotalAmount"
+                            data-date="@(item.CreatedAt == default ? "" : item.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss"))"
+                            data-day="@(item.CreatedAt == default ? "" : item.CreatedAt.ToString("yyyy-MM-dd"))">
+                            <td class="py-3 px-4 text-on-surface-variant font-mono text-xs whitespace-nowrap">
                                 @(item.CreatedAt == default ? "-" : item.CreatedAt.ToString("dd/MM/yyyy HH:mm"))
                             </td>
                             <td class="py-3 px-4 font-mono font-semibold text-on-surface">
                                 @item.ProductCode
                             </td>
-                            <td class="py-3 px-4 font-medium text-on-surface max-w-[220px] truncate" title="@item.ProductName">
-                                @item.ProductName
+                            <td class="py-3 px-4 font-medium text-on-surface max-w-[220px] truncate" title="คลิกเพื่อกรองเฉพาะสินค้านี้: @item.ProductName">
+                                <button type="button" class="text-left font-medium text-slate-800 hover:text-primary hover:underline transition-colors max-w-full truncate inline-block cursor-pointer"
+                                        onclick="filterByProduct('@item.ProductName.Replace("'", "\\'")')">
+                                    @item.ProductName
+                                </button>
                             </td>
                             <td class="py-3 px-4 text-right font-semibold text-on-surface">
                                 @(item.Quantity % 1 == 0 ? item.Quantity.ToString("N0") : item.Quantity.ToString("N2")) <span class="text-xs font-normal text-on-surface-variant">@item.Unit</span>
@@ -264,6 +333,179 @@
             tbody.innerHTML = html;
         }
 
+        // Sorting & Filtering State
+        let currentSortCol = 'date';
+        let currentSortDir = 'desc'; // default latest first
+        let activeProductQuery = '';
+        let activeDateQuery = '';
+
+        // Handle Column Header Sort
+        window.handleSort = function (col) {
+            if (currentSortCol === col) {
+                currentSortDir = currentSortDir === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSortCol = col;
+                currentSortDir = (col === 'date' || col === 'qty' || col === 'amount') ? 'desc' : 'asc';
+            }
+            updateSortChevrons();
+            applySort();
+        };
+
+        window.updateSortChevrons = function () {
+            document.querySelectorAll('.sort-chevron').forEach(chevron => {
+                chevron.classList.remove('rotate-180', 'text-primary');
+                chevron.classList.add('text-slate-400');
+            });
+
+            const activeChevron = document.querySelector(`.sort-chevron-${currentSortCol}`);
+            if (activeChevron) {
+                activeChevron.classList.remove('text-slate-400');
+                activeChevron.classList.add('text-primary');
+                if (currentSortDir === 'asc') {
+                    activeChevron.classList.add('rotate-180');
+                } else {
+                    activeChevron.classList.remove('rotate-180');
+                }
+            }
+        };
+
+        window.applySort = function () {
+            const tbody = document.getElementById('item-tbody');
+            if (!tbody) return;
+            const rows = Array.from(tbody.querySelectorAll('.item-row'));
+            if (rows.length === 0) return;
+
+            rows.sort((a, b) => {
+                let valA, valB;
+                switch (currentSortCol) {
+                    case 'date':
+                        valA = a.dataset.date || '';
+                        valB = b.dataset.date || '';
+                        return currentSortDir === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                    case 'code':
+                        valA = (a.dataset.code || '').toLowerCase();
+                        valB = (b.dataset.code || '').toLowerCase();
+                        return currentSortDir === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                    case 'name':
+                        valA = (a.dataset.displayName || a.dataset.name || '').toLowerCase();
+                        valB = (b.dataset.displayName || b.dataset.name || '').toLowerCase();
+                        return currentSortDir === 'asc' ? valA.localeCompare(valB, 'th') : valB.localeCompare(valA, 'th');
+                    case 'qty':
+                        valA = parseFloat(a.dataset.qty) || 0;
+                        valB = parseFloat(b.dataset.qty) || 0;
+                        return currentSortDir === 'asc' ? valA - valB : valB - valA;
+                    case 'amount':
+                        valA = parseFloat(a.dataset.amount) || 0;
+                        valB = parseFloat(b.dataset.amount) || 0;
+                        return currentSortDir === 'asc' ? valA - valB : valB - valA;
+                    default:
+                        return 0;
+                }
+            });
+
+            const noResultsRow = document.getElementById('no-search-results');
+            rows.forEach(row => {
+                tbody.insertBefore(row, noResultsRow);
+            });
+        };
+
+        // Filter by clicking product name
+        window.filterByProduct = function (productName) {
+            const cleanName = (productName || '').trim();
+            if (activeProductQuery && activeProductQuery === cleanName.toLowerCase()) {
+                clearProductFilter();
+                return;
+            }
+
+            activeProductQuery = cleanName.toLowerCase();
+            const filterBadge = document.getElementById('active-product-filter');
+            const filterName = document.getElementById('active-product-name');
+            if (filterBadge && filterName) {
+                filterName.textContent = cleanName;
+                filterBadge.classList.remove('hidden');
+                filterBadge.classList.add('inline-flex');
+            }
+            applyFilters();
+        };
+
+        window.clearProductFilter = function () {
+            activeProductQuery = '';
+            const filterBadge = document.getElementById('active-product-filter');
+            if (filterBadge) {
+                filterBadge.classList.add('hidden');
+                filterBadge.classList.remove('inline-flex');
+            }
+            applyFilters();
+        };
+
+        // Handle Date Filter Change
+        window.handleDateFilterChange = function (input) {
+            activeDateQuery = input.value || '';
+            const clearBtn = document.getElementById('btn-clear-date');
+            if (clearBtn) {
+                clearBtn.classList.toggle('hidden', !activeDateQuery);
+            }
+            applyFilters();
+        };
+
+        window.clearDateFilter = function () {
+            const dateInput = document.getElementById('filter-date');
+            if (dateInput) dateInput.value = '';
+            activeDateQuery = '';
+            const clearBtn = document.getElementById('btn-clear-date');
+            if (clearBtn) clearBtn.classList.add('hidden');
+            applyFilters();
+        };
+
+        // Apply combined filters (Product + Date) and update stats
+        window.applyFilters = function () {
+            const rows = Array.from(document.querySelectorAll('.item-row'));
+            const noResults = document.getElementById('no-search-results');
+            let visibleCount = 0;
+            let visibleQty = 0;
+            let visibleAmount = 0;
+
+            rows.forEach(row => {
+                let matchProduct = true;
+                if (activeProductQuery) {
+                    const rowName = (row.dataset.displayName || row.dataset.name || '').toLowerCase();
+                    matchProduct = rowName === activeProductQuery || rowName.includes(activeProductQuery);
+                }
+
+                let matchDate = true;
+                if (activeDateQuery) {
+                    matchDate = (row.dataset.day || '').startsWith(activeDateQuery);
+                }
+
+                const visible = matchProduct && matchDate;
+                row.style.display = visible ? '' : 'none';
+
+                if (visible) {
+                    visibleCount++;
+                    visibleQty += parseFloat(row.dataset.qty) || 0;
+                    visibleAmount += parseFloat(row.dataset.amount) || 0;
+                }
+            });
+
+            if (noResults) {
+                noResults.classList.toggle('hidden', visibleCount > 0 || rows.length === 0);
+            }
+
+            // Update stats
+            const statCount = document.getElementById('stat-total-count');
+            const statQty = document.getElementById('stat-total-qty');
+            const statAmount = document.getElementById('stat-total-amount');
+
+            function formatQuantity(val) {
+                const num = Number(val || 0);
+                return num % 1 === 0 ? num.toLocaleString('en-US') : num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
+
+            if (statCount) statCount.textContent = visibleCount.toLocaleString('en-US');
+            if (statQty) statQty.textContent = formatQuantity(visibleQty);
+            if (statAmount) statAmount.textContent = '฿' + (visibleAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        };
+
         // Seamless AJAX Filter Handler with Skeleton Loading
         window.handleFilterChange = async function (selectElem) {
             const form = document.getElementById('filter-form');
@@ -328,10 +570,17 @@
                         data-display-name="${item.productName}"
                         data-code="${item.productCode}"
                         data-qty="${item.quantity}"
-                        data-amount="${item.totalAmount}">
+                        data-amount="${item.totalAmount}"
+                        data-date="${item.createdAtIso || ''}"
+                        data-day="${item.createdAtDay || ''}">
                         <td class="py-3 px-4 text-on-surface-variant font-mono text-xs whitespace-nowrap">${item.createdAtStr}</td>
                         <td class="py-3 px-4 font-mono font-semibold text-on-surface">${item.productCode}</td>
-                        <td class="py-3 px-4 font-medium text-on-surface max-w-[220px] truncate" title="${item.productName}">${item.productName}</td>
+                        <td class="py-3 px-4 font-medium text-on-surface max-w-[220px] truncate" title="คลิกเพื่อกรองเฉพาะสินค้านี้: ${item.productName}">
+                            <button type="button" class="text-left font-medium text-slate-800 hover:text-primary hover:underline transition-colors max-w-full truncate inline-block cursor-pointer"
+                                    onclick="filterByProduct('${item.productName.replace(/'/g, "\\'")}')">
+                                ${item.productName}
+                            </button>
+                        </td>
                         <td class="py-3 px-4 text-right font-semibold text-on-surface">
                             ${formatQuantity(item.quantity)} <span class="text-xs font-normal text-on-surface-variant">${item.unit}</span>
                         </td>
@@ -374,128 +623,16 @@
                 });
                 tbody.innerHTML = html;
 
-                // Rebind event listeners on new buttons
+                // Re-apply sort, filter, and button events
+                updateSortChevrons();
+                applySort();
+                applyFilters();
                 bindActionEvents();
-
-                // Re-apply real-time search filter if text exists
-                const searchInput = document.getElementById('search-input');
-                if (searchInput && searchInput.value.trim() !== '') {
-                    searchInput.dispatchEvent(new Event('input'));
-                }
 
             } catch (err) {
                 console.error('Failed to fetch filtered data:', err);
             }
         };
-
-        // Real-time Search Filter (Product Name) + Autocomplete Guide List
-        function initSearchFilter() {
-            const searchInput = document.getElementById('search-input');
-            const savedDropdown = document.getElementById('saved-suggestions-dropdown');
-            if (!searchInput) return;
-
-            searchInput.addEventListener('input', () => {
-                const query = searchInput.value.trim().toLowerCase();
-                const rows = Array.from(document.querySelectorAll('.item-row'));
-                const noResults = document.getElementById('no-search-results');
-                let visibleCount = 0;
-                let visibleQty = 0;
-                let visibleAmount = 0;
-
-                rows.forEach(row => {
-                    const productName = (row.dataset.name || row.dataset.search || '').toLowerCase();
-                    const matches = productName.includes(query);
-                    row.style.display = matches ? '' : 'none';
-                    if (matches) {
-                        visibleCount++;
-                        const qtyStr = row.dataset.qty || "0";
-                        const amountStr = row.dataset.amount || "0";
-                        visibleQty += parseFloat(qtyStr) || 0;
-                        visibleAmount += parseFloat(amountStr) || 0;
-                    }
-                });
-
-                if (noResults) {
-                    noResults.classList.toggle('hidden', visibleCount > 0 || rows.length === 0);
-                }
-
-                // Update stats
-                const statCount = document.getElementById('stat-total-count');
-                const statQty = document.getElementById('stat-total-qty');
-                const statAmount = document.getElementById('stat-total-amount');
-
-                function formatQuantity(val) {
-                    const num = Number(val || 0);
-                    return num % 1 === 0 ? num.toLocaleString('en-US') : num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                }
-
-                if (statCount) statCount.textContent = visibleCount.toLocaleString('en-US');
-                if (statQty) statQty.textContent = formatQuantity(visibleQty);
-                if (statAmount) statAmount.textContent = '฿' + (visibleAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-                // Autocomplete Guide List
-                if (savedDropdown) {
-                    if (query.length < 1) {
-                        savedDropdown.classList.add('hidden');
-                        savedDropdown.innerHTML = '';
-                        return;
-                    }
-
-                    const uniqueNames = new Set();
-                    const matches = [];
-                    rows.forEach(row => {
-                        const name = (row.dataset.displayName || row.dataset.name || '').trim();
-                        const code = (row.dataset.code || '').trim();
-                        if (name && !uniqueNames.has(name) && (name.toLowerCase().includes(query) || code.toLowerCase().includes(query))) {
-                            uniqueNames.add(name);
-                            matches.push({ name, code });
-                        }
-                    });
-
-                    const topMatches = matches.slice(0, 8);
-                    if (topMatches.length > 0) {
-                        savedDropdown.innerHTML = topMatches.map(item => `
-                            <div class="saved-suggest-item px-3 py-2 hover:bg-slate-50 cursor-pointer transition-colors text-left flex flex-col gap-0.5" data-name="${item.name.replace(/"/g, '&quot;')}">
-                                ${item.code ? `<span class="font-mono text-primary font-bold text-xs">${item.code}</span>` : ''}
-                                <span class="text-slate-700 text-xs truncate">${item.name}</span>
-                            </div>
-                        `).join('');
-                        savedDropdown.classList.remove('hidden');
-
-                        savedDropdown.querySelectorAll('.saved-suggest-item').forEach(el => {
-                            el.addEventListener('click', function() {
-                                searchInput.value = this.dataset.name;
-                                savedDropdown.classList.add('hidden');
-                                searchInput.dispatchEvent(new Event('input'));
-                            });
-                        });
-                    } else {
-                        savedDropdown.classList.add('hidden');
-                        savedDropdown.innerHTML = '';
-                    }
-                }
-            });
-
-            searchInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape') {
-                    if (savedDropdown) savedDropdown.classList.add('hidden');
-                } else if (e.key === 'Enter') {
-                    const firstOpt = savedDropdown?.querySelector('.saved-suggest-item');
-                    if (firstOpt && !savedDropdown.classList.contains('hidden')) {
-                        e.preventDefault();
-                        firstOpt.click();
-                    } else {
-                        if (savedDropdown) savedDropdown.classList.add('hidden');
-                    }
-                }
-            });
-
-            document.addEventListener('click', (e) => {
-                if (savedDropdown && !searchInput.contains(e.target) && !savedDropdown.contains(e.target)) {
-                    savedDropdown.classList.add('hidden');
-                }
-            });
-        }
 
         // Bind Edit & Delete Event Listeners
         function bindActionEvents() {
@@ -751,7 +888,7 @@
 
 
         document.addEventListener('DOMContentLoaded', () => {
-            initSearchFilter();
+            updateSortChevrons();
             bindActionEvents();
             
             // โหลดข้อมูลอัตโนมัติเมื่อเปิดหน้า เพื่อแสดง Skeleton Loader ระหว่างรอข้อมูล

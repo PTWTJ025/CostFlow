@@ -20,7 +20,8 @@ namespace CostFlow.Controllers
         [HttpGet]
         public async Task<IActionResult> GetNotifications([FromQuery] int limit = 30)
         {
-            var result = await _notificationService.GetNotificationsAsync(limit);
+            var isStaff = User.IsInRole("Staff") || User.Identity?.Name?.Equals("STAFF01", System.StringComparison.OrdinalIgnoreCase) == true;
+            var result = await _notificationService.GetNotificationsAsync(limit, isStaff);
             return Ok(new
             {
                 success = true,
@@ -32,8 +33,9 @@ namespace CostFlow.Controllers
         [HttpPost("{id}/read")]
         public async Task<IActionResult> MarkAsRead(int id)
         {
+            var isStaff = User.IsInRole("Staff") || User.Identity?.Name?.Equals("STAFF01", System.StringComparison.OrdinalIgnoreCase) == true;
             var success = await _notificationService.MarkAsReadAsync(id);
-            var unreadCount = await _notificationService.GetUnreadCountAsync();
+            var unreadCount = await _notificationService.GetUnreadCountAsync(isStaff);
             return Ok(new { success, unreadCount });
         }
 
@@ -47,8 +49,9 @@ namespace CostFlow.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
+            var isStaff = User.IsInRole("Staff") || User.Identity?.Name?.Equals("STAFF01", System.StringComparison.OrdinalIgnoreCase) == true;
             var success = await _notificationService.DeleteAsync(id);
-            var unreadCount = await _notificationService.GetUnreadCountAsync();
+            var unreadCount = await _notificationService.GetUnreadCountAsync(isStaff);
             return Ok(new { success, unreadCount });
         }
     }

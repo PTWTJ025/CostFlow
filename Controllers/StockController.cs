@@ -419,9 +419,9 @@ namespace CostFlow.Controllers
 
             await _context.SaveChangesAsync();
 
-            // ส่งแจ้งเตือน Real-time เมื่อมีการเพิ่มรายการสต็อกใหม่ (Scenario 3B)
+            // ส่งแจ้งเตือน Real-time เมื่อมีการเพิ่มรายการสต็อกใหม่
             await _notificationService.CreateNotificationAsync(
-                type: "STOCK_UPDATE",
+                type: "STOCK_CREATE",
                 title: "เพิ่มรายการสต็อกใหม่",
                 message: $"เพิ่มสินค้า '{newItem.ProductName}' ({newItem.ProductCode}) ยอดคงคลัง {newItem.Quantity:N0} ชิ้น",
                 targetUrl: $"/Stock?search={Uri.EscapeDataString(newItem.ProductName)}",
@@ -541,17 +541,7 @@ namespace CostFlow.Controllers
 
             await _context.SaveChangesAsync();
 
-            // ส่งแจ้งเตือน Real-time เมื่อมีการแก้ไขข้อมูล/จำนวนสต็อก (Scenario 3B)
-            await _notificationService.CreateNotificationAsync(
-                type: "STOCK_UPDATE",
-                title: "อัปเดตข้อมูลสต็อกสินค้า",
-                message: $"ปรับปรุงข้อมูล '{item.ProductName}' ({item.ProductCode}) ยอดคงเหลือ {newQuantity:N0} ชิ้น",
-                targetUrl: $"/Stock?search={Uri.EscapeDataString(item.ProductName)}",
-                category: "stock",
-                referenceId: item.ProductCode,
-                actionUser: userId,
-                isRead: false
-            );
+            // ปิดการแจ้งเตือนตอนแก้ไขข้อมูลสินค้า (ไม่ให้ sensitive พร่ำเพรื่อตามข้อกำหนด UX)
 
             return Json(new { 
                 success = true, 
@@ -615,17 +605,7 @@ namespace CostFlow.Controllers
             _context.StockItems.Remove(item);
             await _context.SaveChangesAsync();
 
-            // ส่งแจ้งเตือน Real-time เมื่อมีการลบสินค้าสต็อก (Scenario 3B)
-            await _notificationService.CreateNotificationAsync(
-                type: "STOCK_UPDATE",
-                title: "ลบรายการสต็อกสินค้า",
-                message: $"ลบสินค้า '{productName}' ({productCode}) ออกจากระบบสต็อก",
-                targetUrl: "/Stock",
-                category: "stock",
-                referenceId: productCode,
-                actionUser: userId,
-                isRead: false
-            );
+            // ปิดการแจ้งเตือนตอนลบสินค้า (ไม่ให้ sensitive พร่ำเพรื่อตามข้อกำหนด UX)
 
             return Json(new
             {
@@ -896,7 +876,7 @@ namespace CostFlow.Controllers
 
             await _context.SaveChangesAsync();
 
-            // ส่งแจ้งเตือน Real-time เมื่อนำพัสดุเข้าสต็อกสำเร็จ (Scenario 3A: แจ้งเตือนแบบบันทึกสำเร็จ คลิกแล้วไม่มีการเปลี่ยนหน้า)
+            // ส่งแจ้งเตือน Real-time เมื่อนำพัสดุเข้าสต็อกสำเร็จ
             var woRef = !string.IsNullOrWhiteSpace(dto.ReferenceId) && dto.ReferenceId != "-" ? dto.ReferenceId : "WO";
             await _notificationService.CreateNotificationAsync(
                 type: "STOCK_RECEIVE",
@@ -906,7 +886,7 @@ namespace CostFlow.Controllers
                 category: "stock",
                 referenceId: stockItem.ProductCode,
                 actionUser: userId,
-                isRead: true
+                isRead: false
             );
 
             return Json(new
@@ -972,17 +952,7 @@ namespace CostFlow.Controllers
 
             await _context.SaveChangesAsync();
 
-            // ส่งแจ้งเตือน Real-time เมื่อมีการปรับยอดคงเหลือด่วน (Scenario 3B)
-            await _notificationService.CreateNotificationAsync(
-                type: "STOCK_UPDATE",
-                title: "อัปเดตจำนวนสต็อกสินค้า",
-                message: $"ปรับยอดคงเหลือ '{item.ProductName}' เป็น {item.Quantity:N0} ชิ้น",
-                targetUrl: $"/Stock?search={Uri.EscapeDataString(item.ProductName)}",
-                category: "stock",
-                referenceId: item.ProductCode,
-                actionUser: userId,
-                isRead: false
-            );
+            // ปิดการแจ้งเตือนตอนปรับยอดสต็อกด่วน (ไม่ให้ sensitive พร่ำเพรื่อตามข้อกำหนด UX)
 
             return Json(new
             {
