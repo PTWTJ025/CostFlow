@@ -208,6 +208,16 @@ namespace CostFlow.Services
                 notif.IsRead = true;
                 notif.ReadAt = DateTime.UtcNow;
                 await _db.SaveChangesAsync();
+
+                var staffUnread = await GetUnreadCountAsync(isStaff: true);
+                var adminUnread = await GetUnreadCountAsync(isStaff: false);
+
+                await _hubContext.Clients.All.SendAsync("ReceiveNotificationRead", new
+                {
+                    id = id,
+                    staffUnreadCount = staffUnread,
+                    adminUnreadCount = adminUnread
+                });
             }
 
             return true;
@@ -225,6 +235,11 @@ namespace CostFlow.Services
                     item.ReadAt = now;
                 }
                 await _db.SaveChangesAsync();
+
+                await _hubContext.Clients.All.SendAsync("ReceiveNotificationAllRead", new
+                {
+                    unreadCount = 0
+                });
             }
             return true;
         }
@@ -236,6 +251,17 @@ namespace CostFlow.Services
 
             _db.Notifications.Remove(notif);
             await _db.SaveChangesAsync();
+
+            var staffUnread = await GetUnreadCountAsync(isStaff: true);
+            var adminUnread = await GetUnreadCountAsync(isStaff: false);
+
+            await _hubContext.Clients.All.SendAsync("ReceiveNotificationDeleted", new
+            {
+                id = id,
+                staffUnreadCount = staffUnread,
+                adminUnreadCount = adminUnread
+            });
+
             return true;
         }
 

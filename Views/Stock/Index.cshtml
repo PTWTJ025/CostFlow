@@ -1070,9 +1070,9 @@
                     <div class="flex items-center justify-between">
                         <span class="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
                             
-                            <span>ข้อความรายการจากใบสั่งซื้อ (PO)</span>
+                            <span>ข้อความรายการจากใบสั่งซื้อ</span>
                         </span>
-                        <div id="receiveSourceBadgeContainer" class="flex items-center gap-1.5">
+                        <div id="receiveSourceBadgeContainer" class="hidden">
                             <span id="receiveSourceBadge" class="hidden text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full"></span>
                         </div>
                     </div>
@@ -2765,15 +2765,13 @@
                         }
                     }
 
-                    // 1. อัปเดต native select เพื่อความเข้ากันได้
+                    // 1. อัปเดต native select เพื่อความเข้ากันได้ (แสดงเฉพาะชื่อรายการสินค้า)
                     select.innerHTML = data.items.map(it => {
-                        const po = it.poNumber || it.PoNumber || '-';
                         const name = it.orderName || it.OrderName || '';
                         const qty = it.quantity || it.Quantity || 1;
                         const unit = it.unit || it.Unit || 'ชิ้น';
-                        const isRecon = it.isReconciled || it.IsReconciled;
-                        const statusTag = isRecon ? ' (รับเข้าสต๊อกแล้ว)' : '';
-                        return `<option value="${it.orderId || it.OrderId}">[PO: ${po}] ${name} (${qty} ${unit})${statusTag}</option>`;
+                        const info = parseOrderInfo(name);
+                        return `<option value="${it.orderId || it.OrderId}">${escapeHtml(info.cleanName)} (${qty} ${unit})</option>`;
                     }).join('');
 
                     // 2. เรนเดอร์ Custom Dropdown Options List
@@ -2877,11 +2875,11 @@
             let metaParts = [];
             
             for (const line of lines) {
-                if (/^(?:จำนวน|เป้าหมาย|แก้ไขใหม่|มีชิ้นงาน|ด่วน|หมายเหตุ)/i.test(line)) {
+                if (/^(?:จำนวน|เป้าหมาย|เป้่หมาย|เป้าหมาน|แก้ไขใหม่|มีชิ้นงาน|ด่วน|หมายเหตุ)/i.test(line)) {
                     const filtered = line.replace(/แก้ไขใหม่กรณีไม่อนุมัติ.*$/gi, '').trim();
                     if (filtered) metaParts.push(filtered);
                 } else {
-                    const match = line.match(/^(.*?)(?:\s+(?:จำนวน\s*\d+|เป้าหมาย\s*[\d\/]+|แก้ไขใหม่).*)$/i);
+                    const match = line.match(/^(.*?)(?:\s+(?:จำนวน\s*\d+|เป้าหมาย\s*[\d\/]+|เป้่หมาย\s*[\d\/]+|เป้าหมาน\s*[\d\/]+|แก้ไขใหม่).*)$/i);
                     if (match && match[1] && match[1].trim().length > 1) {
                         cleanParts.push(match[1].trim());
                         const remaining = line.substring(match[1].length).trim();
@@ -2919,17 +2917,11 @@
                 const qty = it.quantity || it.Quantity || 1;
                 const unit = it.unit || it.Unit || 'ชิ้น';
                 const isRecon = it.isReconciled || it.IsReconciled;
-                const sourceAction = it.sourceAction || it.SourceAction || 'ReceivedFull';
-                const monthYear = it.monthYear || it.MonthYear || '';
                 const isSelected = currentSelectedId && currentSelectedId == id;
                 const info = parseOrderInfo(name);
 
-                const safeTitle = `[PO: ${po || '-'}] ${name}`.replace(/"/g, '&quot;');
-                const displayText = (po && po !== '-') ? `${po} ${info.cleanName}` : info.cleanName;
-
-                const sourceBadge = sourceAction === 'Deferred'
-                    ? `<span class="text-[9px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded leading-none">ผ่อนชำระ${monthYear ? ` (${monthYear})` : ''}</span>`
-                    : '';
+                const safeTitle = (name || '-').replace(/"/g, '&quot;');
+                const displayText = info.cleanName;
 
                 return `
                     <div class="receive-order-option-item px-3 py-2 hover:bg-slate-50 cursor-pointer transition-colors text-left border-l-2 ${isSelected ? 'bg-blue-50/60 border-primary' : 'border-transparent'}" 
@@ -2939,8 +2931,6 @@
                         <div class="flex items-center justify-between gap-2 text-xs font-semibold text-slate-800 leading-snug">
                             <span class="truncate flex-1 min-w-0">${escapeHtml(displayText)}</span>
                             <div class="flex items-center gap-1.5 shrink-0 font-normal">
-                                ${sourceBadge}
-                                ${isRecon ? '<span class="text-[9px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1 py-0.5 rounded leading-none">รับแล้ว</span>' : ''}
                                 <span class="text-[11px] text-slate-500 font-sans">(${Number(qty).toLocaleString()} ${escapeHtml(unit)})</span>
                             </div>
                         </div>
@@ -2972,11 +2962,11 @@
             }
 
             const info = parseOrderInfo(name);
-            const displayText = (po && po !== '-') ? `${po} ${info.cleanName}` : info.cleanName;
+            const displayText = info.cleanName;
 
             if (triggerText) {
                 triggerText.textContent = displayText;
-                triggerText.title = `[PO: ${po || '-'}] ${name}`;
+                triggerText.title = name || '-';
             }
 
             if (triggerQty) {
@@ -3148,21 +3138,25 @@
                 rawInput.value = orderName;
             }
 
+            // กรองข้อความสำหรับแสดงผล: ตัดบรรทัด "เป้าหมาย..." และข้อความส่วนเกินออก แต่ยังคงชื่อสินค้าและบรรทัดจำนวนไว้
+            const displayLines = orderName.replace(/\r\n/g, '\n').split('\n')
+                .map(l => l.replace(/แก้ไขใหม่กรณีไม่อนุมัติ.*$/gi, '').trim())
+                .filter(l => l.length > 0 && !/^(?:เป้าหมาย|เป้่หมาย|เป้าหมาน)/i.test(l));
+            const filteredDisplay = displayLines.join('\n');
+
             const rawDisplay = document.getElementById('simulateRawTextDisplay');
             if (rawDisplay) {
-                rawDisplay.textContent = orderName || '-';
+                rawDisplay.textContent = filteredDisplay || '-';
             }
 
-            const sourceAction = item.sourceAction || item.SourceAction || 'ReceivedFull';
-            const monthYear = item.monthYear || item.MonthYear || '';
+            // ซ่อนป้ายผ่อนชำระถาวร ไม่ต้องแสดง
             const sourceBadge = document.getElementById('receiveSourceBadge');
             if (sourceBadge) {
-                if (sourceAction === 'Deferred') {
-                    sourceBadge.textContent = `ผ่อนชำระ${monthYear ? ` (งวด ${monthYear})` : ''}`;
-                    sourceBadge.classList.remove('hidden');
-                } else {
-                    sourceBadge.classList.add('hidden');
-                }
+                sourceBadge.classList.add('hidden');
+            }
+            const sourceBadgeContainer = document.getElementById('receiveSourceBadgeContainer');
+            if (sourceBadgeContainer) {
+                sourceBadgeContainer.classList.add('hidden');
             }
 
             // Always ensure PO badge and Month badge remain hidden as requested
@@ -3423,7 +3417,8 @@
 
             const qty = parseFloat(document.getElementById('simulateQuantityInput').value) || (currentLoadedOrder?.quantity || 1);
             const orderName = currentLoadedOrder?.orderName || currentSimulateData.cleanName;
-            const refId = currentLoadedPoNumber || 'RECEIVE-PO';
+            const orderId = currentLoadedOrder?.orderId || currentLoadedOrder?.OrderId || '';
+            const refId = (currentLoadedPoNumber && currentLoadedPoNumber !== '-') ? currentLoadedPoNumber : (orderId ? String(orderId) : 'RECEIVE-PO');
             await executeQuickReceive(exact.productCode, qty, orderName, `รับเข้าคลังอัตโนมัติ (100% Match จาก: ${orderName})`, refId);
         }
 
@@ -3439,7 +3434,8 @@
 
             const qty = parseFloat(document.getElementById('simulateQuantityInput').value) || (currentLoadedOrder?.quantity || 1);
             const orderName = currentLoadedOrder?.orderName || currentSimulateData.cleanName;
-            const refId = currentLoadedPoNumber || 'RECEIVE-PO';
+            const orderId = currentLoadedOrder?.orderId || currentLoadedOrder?.OrderId || '';
+            const refId = (currentLoadedPoNumber && currentLoadedPoNumber !== '-') ? currentLoadedPoNumber : (orderId ? String(orderId) : 'RECEIVE-PO');
             await executeQuickReceive(selectedCandidateCode, qty, orderName, `รับเข้าคลังผ่าน AI Matching (จับคู่จาก: ${orderName})`, refId);
         }
 

@@ -119,7 +119,6 @@ namespace CostFlow.Controllers
                 }
 
                 var pendingList = items.Where(x => !x.IsReconciled).ToList();
-                var doneList = items.Where(x => x.IsReconciled).ToList();
 
                 var finalList = new List<PendingReceiptItemDto>();
 
@@ -130,17 +129,16 @@ namespace CostFlow.Controllers
                     {
                         finalList.Add(target);
                         pendingList.RemoveAll(x => x.OrderId == specificOrderId.Value);
-                        doneList.RemoveAll(x => x.OrderId == specificOrderId.Value);
                     }
                 }
 
+                // นำเฉพาะรายการที่ยังค้างรับจริง ๆ เข้าคิว (รายการที่รับแล้วหรือกดไม่ลงสต๊อก จะหายไปจากคิวทันที)
                 finalList.AddRange(pendingList);
-                finalList.AddRange(doneList);
 
                 return Json(new
                 {
                     success = true,
-                    pendingCount = pendingList.Count + (specificOrderId.HasValue && !pendingList.Any(x => x.OrderId == specificOrderId.Value) ? 1 : 0),
+                    pendingCount = finalList.Count,
                     items = finalList
                 });
             }
@@ -794,7 +792,8 @@ namespace CostFlow.Controllers
                 stockStatus = m.StockItem.StockStatus,
                 matchPercentage = m.MatchPercentage,
                 isExactMapping = m.IsExactMapping,
-                isExactNameMatch = m.IsExactNameMatch
+                isExactNameMatch = m.IsExactNameMatch,
+                matchReason = m.MatchReason
             }).ToList();
 
             return Json(new
