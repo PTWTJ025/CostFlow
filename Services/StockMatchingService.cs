@@ -73,7 +73,7 @@ namespace CostFlow.Services
             text = Regex.Replace(text, @"^[A-Z]{3}\d{2}\s*", "", RegexOptions.IgnoreCase);
 
             // 2. สกัดตัวเลขจำนวนและหน่วยนับ เช่น "จำนวน 2 ตัว", "2 ชิ้น", "10 ชุด"
-            var qtyRegex = new Regex(@"(?:จำนวน|ยอด|รวม)?\s*(\d+(?:\.\d+)?)\s*(ตัว(?![ในนอกผู้เมียบนล่างที่])|ชิ้น|อัน|ชุด|ลูก|ม้วน|แผ่น|กล่อง|กก\.|กิโล|เมตร|เส้น|ม\.|ถุง|ถัง|กระป๋อง|ท่อ|ใบ|แกลลอน)", RegexOptions.IgnoreCase);
+            var qtyRegex = new Regex(@"(?:จำนวน|ยอด|รวม)?\s*(\d+(?:\.\d+)?)\s*(ตัว(?![ในนอกผู้เมียบนล่างที่])|ชิ้น|อัน|ชุด|ลูก|ม้วน|แผ่น|กล่อง|กก\.|กิโล|เมตร|เส้น|ม\.|ถุง|ถัง|กระป๋อง|ท่อ|ใบ|แกลลอน|หัวกรอ|หัว)", RegexOptions.IgnoreCase);
             var qtyMatch = qtyRegex.Match(text);
             if (qtyMatch.Success)
             {
@@ -107,7 +107,8 @@ namespace CostFlow.Services
             string[] adminTriggers = new[]
             {
                 "แก้ไขใหม่", "กรณีไม่อนุมัติ", "กรณีอนุมัติ", "รออนุมัติ", "ฝ่ายผลิต",
-                "ไม่อนุมัติจาก", "งานเร่งด่วน", "ยกเลิก", "งานสั่งทำ", "สั่งทำ", "สั่งซื้อด่วน"
+                "ไม่อนุมัติจาก", "งานเร่งด่วน", "ยกเลิก", "งานสั่งทำ", "สั่งทำ", "สั่งซื้อด่วน",
+                "มีชิ้นงานไปให้", "มีตัวอย่าง"
             };
 
             foreach (var trigger in adminTriggers)
@@ -129,107 +130,44 @@ namespace CostFlow.Services
         }
 
         /// <summary>
-        /// ตัวตัดคำสำหรับภาษาไทยเชิงช่าง ตัวเลข ขนาดมิล รหัสรุ่น และสเปกทางวิศวกรรม
+        /// Search Engine Standard Tokenizer (แบบเดียวกับ Lucene / Elasticsearch Standard Analyzer)
+        /// ทำงานแบบธรรมชาติ 100% โดยไม่มีการ Hardcode พจนานุกรมคำศัพท์หรือชิ้นส่วนทางวิศวกรรม
+        /// ตัดคำตามช่องว่าง, เครื่องหมายวรรคตอน, สัญลักษณ์ และรอยต่อระหว่างตัวอักษรกับตัวเลข
         /// </summary>
         public static List<string> Tokenize(string text)
         {
             if (string.IsNullOrWhiteSpace(text)) return new List<string>();
 
-            // 1. แก้ไขคำสะกดผิดที่พบบ่อยในระบบให้เป็นรูปมาตรฐาน
             string s = text.Trim().ToLowerInvariant();
-            s = s.Replace("ต้ว", "ตัว");
-            s = s.Replace("เฟีอง", "เฟือง");
-            s = s.Replace("เฟิอง", "เฟือง");
-            s = s.Replace("ชุเปอร์ลีน", "ซุปเปอร์ลีน");
-            s = s.Replace("ชุบเปอร์ลีน", "ซุปเปอร์ลีน");
-            s = s.Replace("ตุ๊กเพลา", "ตุ๊กตาเพลา");
-            s = s.Replace("แกบพูลเลย์", "แกนพูลเลย์");
-            s = s.Replace("แกนพลูเลย์", "แกนพูลเลย์");
-            s = s.Replace("พลูเล่ย์", "พูลเลย์");
-            s = s.Replace("พูลเล่ย์", "พูลเลย์");
-            s = s.Replace("2for1", "2f1");
-            s = s.Replace("ด้น", "ด้าน");
-            s = s.Replace("เครือง", "เครื่อง");
-            s = s.Replace("วงแหว ", "วงแหวน ");
 
-            // 2. แปลงเศษส่วนและขนาดนิ้วให้อยู่ในรูปเดียวกัน: 5"1/2, 5 1/2", 5.5" -> 5.5นิ้ว
+            // 1. แปลงหน่วยวัด (นิ้ว, มม.) ให้อยู่ในรูปแบบเดียวกัน
             s = Regex.Replace(s, @"(\d+)\s*[""”]\s*1/2", "$1.5นิ้ว");
             s = Regex.Replace(s, @"(\d+)\s*1/2\s*[""”]", "$1.5นิ้ว");
             s = Regex.Replace(s, @"(\d+)\s*[""”]", "$1นิ้ว");
-
-            // 3. แปลงมิลลิเมตรให้อยู่ในรูปเดียวกัน: 30 mm, 30มม, 30 มิล -> 30mm
             s = Regex.Replace(s, @"(\d+)\s*(?:มม|มิล|mm)\b", "$1mm");
 
-            // 4. กระจายรหัสรุ่นช่วง: T22-23 -> T22 T23, T37-38 -> T37 T38
-            s = Regex.Replace(s, @"\bT(\d+)-(\d+)\b", m =>
-            {
-                if (int.TryParse(m.Groups[1].Value, out int start) && int.TryParse(m.Groups[2].Value, out int end) && end > start && end - start <= 10)
-                {
-                    var list = new List<string>();
-                    for (int k = start; k <= end; k++) list.Add($"t{k}");
-                    return string.Join(" ", list);
-                }
-                return m.Value;
-            });
+            // 2. ตัดแบ่งตรงรอยต่อระหว่างตัวอักษรกับตัวเลข (เช่น "48ฟัน" -> "48 ฟัน", "รู26มิล" -> "รู 26มิล")
+            s = Regex.Replace(s, @"(?<=[\p{L}\p{M}])(?=\d)", " ");
+            s = Regex.Replace(s, @"(?<=\d)(?=[\p{L}\p{M}])", " ");
 
-            // 5. กระจายรหัสรุ่นคั่นจุลภาค: T11,15,43-45
-            s = Regex.Replace(s, @"\bT(\d+)(?:,\s*(\d+))+", m =>
-            {
-                var matches = Regex.Matches(m.Value, @"\d+");
-                return string.Join(" ", matches.Select(x => $"t{x.Value}"));
-            });
+            // 3. ตัดตามช่องว่างและเครื่องหมายวรรคตอน (Lucene / Elasticsearch Standard Tokenizer)
+            var rawTokens = Regex.Split(s, @"[^\p{L}\p{M}\p{Nd}]+");
 
             var tokens = new List<string>();
-
-            // พจนานุกรมคำศัพท์ชิ้นส่วนหลักในคลังสต็อก (Compound Terms)
-            string[] components = new[]
+            foreach (var t in rawTokens)
             {
-                "ฝาปิดน้ำมัน", "ฝาปิด", "น้ำมัน",
-                "ตัวครอบวงแหวน", "ตัวครอบ", "วงแหวน",
-                "เหล็กประกบ",
-                "แกนพูลเลย์", "พูลเลย์สายพาน", "พูลเลย์", "สายพาน",
-                "แกนล้อดึงสายพาน", "ล้อดึงสายพาน", "ล้อดึง",
-                "แกนล้อตึงสายพาน", "ล้อตึงสายพาน", "ล้อตึง",
-                "สลักล้อดึงสายพาน", "สลัก",
-                "ลูกกลิ้งทับใย", "ลูกกลิ้ง", "ทับใย",
-                "แกนเฟือง",
-                "เกลียวนอก", "เกลียวใน",
-                "หัวเครื่อง", "กลางเครื่อง", "ท้ายเครื่อง", "หน้าเครื่อง",
-                "ชุดบน", "ชุดล่าง",
-                "มีหน้าแปลน", "ไม่มีหน้าแปลน", "หน้าแปลน",
-                "แบบผ่า",
-                "เฟืองท้ายเพลาขับด้าย", "เฟืองท้าย", "เพลาขับด้าย", "ขับด้าย",
-                "เฟืองเพลาขับด้าย", "เฟืองขับเพลาล่าง", "เพลาล่าง", "เพลาลูกกลิ้ง",
-                "ซุปเปอร์ลีน",
-                "ตุ๊กตาเฟือง", "ตุ๊กตาเพลาล่าง", "ตุ๊กตาโยกเฟือง", "ตุ๊กตาเพลาขับด้าย",
-                "ตุ๊กตาล้อตึงสายพาน", "ตุ๊กตา",
-                "โยกเฟือง", "ด้าน l", "ด้าน r", "ด้านl", "ด้านr",
-                "ขนาดเล็ก", "ขนาดใหญ่",
-                "สั่งจีน", "สต๊อกคลัง",
-                "เฟืองขับ", "เฟือง", "เพลา", "ฟัน", "นิ้ว"
-            };
-
-            foreach (var comp in components)
-            {
-                if (s.Contains(comp))
+                var clean = t.Trim();
+                if (clean.Length >= 1)
                 {
-                    tokens.Add(comp.Replace(" ", ""));
+                    tokens.Add(clean);
                 }
             }
 
-            // สกัดตัวเลข, รหัสโมเดล, ขนาดมิติ และรหัสผสม (เช่น 2F1, T37, 45mm, 48, 30)
-            var specMatches = Regex.Matches(s, @"(?:\d+[a-z]+\d*|[a-z]+\d+[a-z0-9]*|\d+(?:\.\d+)?(?:mm|นิ้ว)?|\d+|[a-z]{1,4})", RegexOptions.IgnoreCase);
-            foreach (Match m in specMatches)
+            // 4. สกัดรหัสผสม Alphanumeric เช่น T37, 2F1, 45mm, T22
+            var codes = Regex.Matches(text, @"\b([a-z]\d+|\d+[a-z]+\d*|\d+(?:\.\d+)?(?:mm|นิ้ว)?)\b", RegexOptions.IgnoreCase);
+            foreach (Match m in codes)
             {
-                var val = m.Value.ToLowerInvariant();
-                tokens.Add(val);
-
-                // ถ้ามีหน่วย mm หรือ นิ้ว ให้เพิ่มตัวเลขโดดๆ ด้วย เพื่อความเข้ากันได้
-                if (val.EndsWith("mm") || val.EndsWith("นิ้ว"))
-                {
-                    var numOnly = Regex.Match(val, @"^\d+(?:\.\d+)?");
-                    if (numOnly.Success) tokens.Add(numOnly.Value);
-                }
+                tokens.Add(m.Value.ToLowerInvariant());
             }
 
             return tokens.Where(t => !string.IsNullOrWhiteSpace(t)).Distinct().ToList();
