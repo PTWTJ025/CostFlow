@@ -13,6 +13,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using CostFlow.Services;
 
 namespace CostFlow.Data
 {
@@ -70,6 +71,23 @@ namespace CostFlow.Data
 
             // 12. Seed Initial Team Notifications
             await SeedInitialNotificationsAsync(db);
+
+            // 13. Sync Cat Placeholder Images to Supabase Storage (Folder: placeholders/)
+            var supabaseStorage = scope.ServiceProvider.GetService<ISupabaseStorageService>();
+            if (supabaseStorage != null && env != null && !string.IsNullOrEmpty(env.WebRootPath))
+            {
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await supabaseStorage.SyncPlaceholdersAsync(env.WebRootPath);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[DB Init] Note on Supabase placeholder sync: {ex.Message}");
+                    }
+                });
+            }
         }
 
         private static async Task FixCategoryCodesAsync(AppDbContext db)

@@ -1437,11 +1437,22 @@
             };
             reader.readAsDataURL(fileOrBlob);
 
-            // 2. ส่งอัปโหลดไปยัง Backend เพื่อส่งต่อไปยัง Supabase Storage
+            // 2. ส่งอัปโหลดไปยัง Backend เพื่อส่งต่อไปยัง Supabase Storage (จัดเข้าโฟลเดอร์ items/{productCode}/)
             try {
                 const formData = new FormData();
                 const fileName = fileOrBlob.name || `capture_${Date.now()}.jpg`;
                 formData.append('file', fileOrBlob, fileName);
+
+                // ดึงรหัสสินค้าและกลุ่มอะไหล่ เพื่อจัดหมวดหมู่ใน Supabase Storage
+                const productCode = mode === 'edit'
+                    ? (document.getElementById('editProductCode')?.value.trim() || '')
+                    : (document.getElementById('modalProductCode')?.value.trim() || '');
+                const stockGroup = mode === 'edit'
+                    ? (document.getElementById('editStockGroup')?.value.trim() || '')
+                    : (document.getElementById('modalStockGroup')?.value.trim() || '');
+
+                if (productCode) formData.append('productCode', productCode);
+                if (stockGroup) formData.append('stockGroup', stockGroup);
 
                 const resp = await fetch('/Stock/UploadStockImage', {
                     method: 'POST',

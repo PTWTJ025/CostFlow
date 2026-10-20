@@ -34,7 +34,7 @@ namespace CostFlow.Services
             _bucket = (_configuration["Supabase:StorageBucket"] ?? "stock image").Trim();
         }
 
-        public async Task<string> UploadFileAsync(Stream fileStream, string fileName, string contentType)
+        public async Task<string> UploadFileAsync(Stream fileStream, string fileName, string contentType, string? folder = "items/general", string? prefix = null)
         {
             if (string.IsNullOrWhiteSpace(_supabaseUrl) || string.IsNullOrWhiteSpace(_secretKey))
             {
@@ -47,9 +47,24 @@ namespace CostFlow.Services
                 extension = ".jpg";
             }
 
-            var uniqueFileName = $"stock_{DateTime.UtcNow:yyyyMMdd_HHmmss}_{Guid.NewGuid().ToString("N").Substring(0, 8)}{extension}";
+            var cleanFolder = !string.IsNullOrWhiteSpace(folder) ? folder.Trim().Trim('/') : "items/general";
+            var cleanPrefix = !string.IsNullOrWhiteSpace(prefix) ? prefix.Trim() : "stock";
+            
+            string uniqueFileName;
+            if (cleanFolder.Equals("placeholders", StringComparison.OrdinalIgnoreCase))
+            {
+                uniqueFileName = $"{cleanFolder}/{fileName}";
+            }
+            else
+            {
+                uniqueFileName = $"{cleanFolder}/{cleanPrefix}_{DateTime.UtcNow:yyyyMMdd_HHmmss}_{Guid.NewGuid().ToString("N").Substring(0, 6)}{extension}";
+            }
+
             var encodedBucket = Uri.EscapeDataString(_bucket);
-            var uploadUrl = $"{_supabaseUrl}/storage/v1/object/{encodedBucket}/{uniqueFileName}";
+            var segments = uniqueFileName.Split('/').Select(Uri.EscapeDataString);
+            var pathEscaped = string.Join('/', segments);
+
+            var uploadUrl = $"{_supabaseUrl}/storage/v1/object/{encodedBucket}/{pathEscaped}";
 
             using var request = new HttpRequestMessage(HttpMethod.Post, uploadUrl);
             request.Headers.Add("apikey", _secretKey);
@@ -68,9 +83,46 @@ namespace CostFlow.Services
                 throw new HttpRequestException($"อัปโหลดรูปภาพขึ้น Supabase Storage ไม่สำเร็จ (สถานะ {response.StatusCode}): {errorBody}");
             }
 
-            var publicUrl = $"{_supabaseUrl}/storage/v1/object/public/{encodedBucket}/{uniqueFileName}";
+            var publicUrl = $"{_supabaseUrl}/storage/v1/object/public/{encodedBucket}/{pathEscaped}";
             _logger.LogInformation("Supabase Storage upload success: {PublicUrl}", publicUrl);
             return publicUrl;
+        }
+
+        public async Task SyncPlaceholdersAsync(string webRootPath)
+        {
+            if (string.IsNullOrWhiteSpace(_supabaseUrl) || string.IsNullOrWhiteSpace(_secretKey) || string.IsNullOrWhiteSpace(webRootPath))
+            {
+                return;
+            }
+
+            var imagesDir = Path.Combine(webRootPath, "images");
+            if (!Directory.Exists(imagesDir)) return;
+
+            var catFiles = new[]
+            {
+                "แมวส้มชิลในอ่างล้างหน้า.png",
+                "แมวส้มในอ่างล้างหน้า.png",
+                "แมวจอมซนกับกล่องภาพหาย.png",
+                "แมวส้มยกอุ้งเท้าปฏิเสธ.png"
+            };
+
+            foreach (var catFile in catFiles)
+            {
+                var fullPath = Path.Combine(imagesDir, catFile);
+                if (File.Exists(fullPath))
+                {
+                    try
+                    {
+                        using var fs = File.OpenRead(fullPath);
+                        var url = await UploadFileAsync(fs, catFile, "image/png", "placeholders", "cat");
+                        _logger.LogInformation("[Supabase Placeholders] Synced placeholder: {File} -> {Url}", catFile, url);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "[Supabase Placeholders] Failed to sync placeholder {File}", catFile);
+                    }
+                }
+            }
         }
 
         public async Task<bool> DeleteFileAsync(string filePathOrUrl)

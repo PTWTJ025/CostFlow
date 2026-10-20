@@ -614,7 +614,10 @@ namespace CostFlow.Controllers
 
         // อัปโหลดรูปภาพสินค้าสต๊อก (ทั้งจากคลังภาพ และภาพถ่ายจากกล้อง) ขึ้น Supabase Storage
         [HttpPost]
-        public async Task<IActionResult> UploadStockImage(IFormFile? file)
+        public async Task<IActionResult> UploadStockImage(
+            IFormFile? file,
+            [FromForm] string? productCode = null,
+            [FromForm] string? stockGroup = null)
         {
             if (file == null || file.Length == 0)
             {
@@ -633,12 +636,26 @@ namespace CostFlow.Controllers
                 return Json(new { success = false, message = "ขนาดไฟล์รูปภาพต้องไม่เกิน 10 MB" });
             }
 
+            // จัดโครงสร้างโฟลเดอร์ให้เป็นระเบียบ: items/{รหัสสินค้า}/
+            string folder = "items/general";
+            string filePrefix = "stock";
+
+            if (!string.IsNullOrWhiteSpace(productCode))
+            {
+                var cleanCode = string.Concat(productCode.Where(c => char.IsLetterOrDigit(c) || c == '-' || c == '_')).Trim();
+                if (!string.IsNullOrEmpty(cleanCode))
+                {
+                    folder = $"items/{cleanCode}";
+                    filePrefix = cleanCode;
+                }
+            }
+
             try
             {
-                // 1. อัปโหลดขึ้น Supabase Storage (คลาวด์หลัก)
+                // 1. อัปโหลดขึ้น Supabase Storage (คลาวด์หลัก) เข้าโฟลเดอร์ items/{productCode}/
                 using var stream = file.OpenReadStream();
                 var contentType = file.ContentType ?? (extension == ".png" ? "image/png" : "image/jpeg");
-                var publicUrl = await _supabaseStorage.UploadFileAsync(stream, file.FileName, contentType);
+                var publicUrl = await _supabaseStorage.UploadFileAsync(stream, file.FileName, contentType, folder, filePrefix);
 
                 return Json(new
                 {
