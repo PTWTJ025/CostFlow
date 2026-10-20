@@ -98,28 +98,28 @@ namespace CostFlow.Services
             var imagesDir = Path.Combine(webRootPath, "images");
             if (!Directory.Exists(imagesDir)) return;
 
-            var catFiles = new[]
+            var catFiles = new (string LocalFile, string TargetName)[]
             {
-                "แมวส้มชิลในอ่างล้างหน้า.png",
-                "แมวส้มในอ่างล้างหน้า.png",
-                "แมวจอมซนกับกล่องภาพหาย.png",
-                "แมวส้มยกอุ้งเท้าปฏิเสธ.png"
+                ("แมวส้มชิลในอ่างล้างหน้า.png", "cat_chill_sink.png"),
+                ("แมวส้มในอ่างล้างหน้า.png", "cat_in_sink.png"),
+                ("แมวจอมซนกับกล่องภาพหาย.png", "cat_playful_box.png"),
+                ("แมวส้มยกอุ้งเท้าปฏิเสธ.png", "cat_paw_reject.png")
             };
 
-            foreach (var catFile in catFiles)
+            foreach (var (localFile, targetName) in catFiles)
             {
-                var fullPath = Path.Combine(imagesDir, catFile);
+                var fullPath = Path.Combine(imagesDir, localFile);
                 if (File.Exists(fullPath))
                 {
                     try
                     {
                         using var fs = File.OpenRead(fullPath);
-                        var url = await UploadFileAsync(fs, catFile, "image/png", "placeholders", "cat");
-                        _logger.LogInformation("[Supabase Placeholders] Synced placeholder: {File} -> {Url}", catFile, url);
+                        var url = await UploadFileAsync(fs, targetName, "image/png", "placeholders", "cat");
+                        _logger.LogInformation("[Supabase Placeholders] Synced placeholder: {File} -> {Url}", localFile, url);
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogWarning(ex, "[Supabase Placeholders] Failed to sync placeholder {File}", catFile);
+                        _logger.LogWarning(ex, "[Supabase Placeholders] Failed to sync placeholder {File}", localFile);
                     }
                 }
             }
