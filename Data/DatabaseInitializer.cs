@@ -235,8 +235,9 @@ namespace CostFlow.Data
                 }
 
                 // 1. ล้างรูปภาพจำลอง/เฟคทั้งหมดออกจากระบบสต๊อก เพื่อเตรียมความพร้อมสำหรับรูปจริง
+                // (ล้าง URL ภายนอกทั้งหมด เช่น dreamstime, unsplash, imimg, ฯลฯ ให้เหลือเฉพาะรูปจริงที่อัปโหลดขึ้น Supabase หรือ uploads)
                 var fakeItems = await db.StockItems
-                    .Where(s => s.FilePath != null && (s.FilePath.Contains("imimg") || s.FilePath.Contains("unsplash") || s.FilePath.Contains("made-in-china")))
+                    .Where(s => s.FilePath != null && !s.FilePath.Contains("supabase.co") && !s.FilePath.StartsWith("/uploads/"))
                     .ToListAsync();
                 if (fakeItems.Any())
                 {
@@ -255,7 +256,7 @@ namespace CostFlow.Data
                     if (dbMap.TryGetValue(m.Code, out var item))
                     {
                         bool changed = false;
-                        if (!string.IsNullOrEmpty(m.ImageUrl) && !m.ImageUrl.Contains("imimg") && !m.ImageUrl.Contains("unsplash") && item.FilePath != m.ImageUrl)
+                        if (!string.IsNullOrEmpty(m.ImageUrl) && m.ImageUrl.Contains("supabase.co") && item.FilePath != m.ImageUrl)
                         {
                             item.FilePath = m.ImageUrl;
                             changed = true;

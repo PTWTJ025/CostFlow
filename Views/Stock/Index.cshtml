@@ -455,9 +455,8 @@
                 @foreach (var item in Model)
                 {
                     bool hasRealImage = !string.IsNullOrWhiteSpace(item.FilePath) 
-                        && !item.FilePath.Contains("imimg") 
-                        && !item.FilePath.Contains("unsplash") 
-                        && !item.FilePath.Contains("made-in-china");
+                        && (item.FilePath.Contains("supabase.co") || item.FilePath.StartsWith("/uploads/"))
+                        && !item.FilePath.Contains("/placeholders/");
 
                     var itemNormalizedGroup = NormalizeStockGroup(item.StockGroup, item.ProductName);
                     string groupPlaceholder = categoryPlaceholderMap.TryGetValue(itemNormalizedGroup, out var ph) ? ph : defaultPlaceholder;
