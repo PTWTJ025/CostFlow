@@ -181,7 +181,7 @@
         box-shadow: 0 6px 16px -2px rgba(0, 0, 0, 0.08), 0 2px 6px -1px rgba(0, 0, 0, 0.04);
     }
 
-    /* ทุกภาพขนาดและสัดส่วน 4:3 เท่ากัน 100% ไม่บิดเบี้ยว */
+    /* Shimmer Skeleton & Smooth Image Fade-in (ป้องกัน Layout Shift ตอนโหลดภาพ) */
     .stock-card-img-wrapper {
         position: relative;
         width: 100%;
@@ -197,16 +197,87 @@
             aspect-ratio: 4 / 3;
         }
     }
+    .stock-card-img-wrapper::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(90deg, #f1f5f9 0%, #e2e8f0 50%, #f1f5f9 100%);
+        background-size: 200% 100%;
+        animation: stockShimmer 1.5s infinite linear;
+        z-index: 1;
+        pointer-events: none;
+        transition: opacity 0.2s ease-out;
+    }
+    .stock-card-img-wrapper.loaded::before {
+        opacity: 0;
+        animation: none;
+    }
+    @@keyframes stockShimmer {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+    }
+
     .stock-card-img {
         width: 100% !important;
         height: 100% !important;
         object-fit: cover !important;
         object-position: center !important;
         display: block !important;
-        transition: transform 0.35s ease;
+        position: relative;
+        z-index: 2;
+        opacity: 0;
+        transition: opacity 150ms ease-out, transform 0.35s ease;
+        cursor: zoom-in;
     }
-    .stock-card:hover .stock-card-img {
+    .stock-card-img.loaded {
+        opacity: 1 !important;
+    }
+    .stock-card:hover .stock-card-img.loaded {
         transform: scale(1.06);
+    }
+
+    /* Success Flash เมื่อแก้ไขตัวเลขสต๊อก (Inline Edit) */
+    @@keyframes stockSuccessFlash {
+        0% {
+            box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.75);
+            background-color: #ecfdf5;
+        }
+        100% {
+            box-shadow: 0 0 0 0px rgba(52, 211, 153, 0);
+            background-color: transparent;
+        }
+    }
+    .stock-success-flash {
+        animation: stockSuccessFlash 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        border-radius: 6px;
+    }
+
+    /* Smooth Modal Transitions (150ms backdrop fade, 180ms dialog scale) */
+    .smooth-modal:not(.hidden) {
+        animation: modalBackdropFadeIn 150ms ease-out forwards;
+    }
+    .smooth-modal:not(.hidden) > div {
+        animation: modalDialogPopIn 180ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    @@keyframes modalBackdropFadeIn {
+        from {
+            opacity: 0;
+            backdrop-filter: blur(0px);
+        }
+        to {
+            opacity: 1;
+            backdrop-filter: blur(4px);
+        }
+    }
+    @@keyframes modalDialogPopIn {
+        from {
+            opacity: 0;
+            transform: scale(0.96) translateY(6px);
+        }
+        to {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+        }
     }
 
     .stock-badge-top-right {
@@ -475,14 +546,15 @@
                          data-max="@item.MaxStock"
                          data-quantity="@item.Quantity">
                         
-                        <!-- Top: Image Banner (สัดส่วน 4:3 ขนาดเท่ากัน 100% ทุกใบ) + Status Badges -->
-                        <div class="stock-card-img-wrapper" style="position: relative; width: 100%; aspect-ratio: 4 / 3; overflow: hidden; background-color: #f1f5f9; flex-shrink: 0;">
+                        <!-- Top: Image Banner (สัดส่วน 4:3 ขนาดเท่ากัน 100% ทุกใบ พร้อม Shimmer Skeleton & Fade-in) -->
+                        <div class="stock-card-img-wrapper" title="คลิกเพื่อดูรูปภาพขนาดใหญ่">
                             <img src="@imageUrl" 
                                  alt="@item.ProductName" 
                                  loading="lazy"
-                                 onerror="this.onerror=null; this.src='@groupPlaceholder';"
-                                 class="stock-card-img"
-                                 style="width: 100%; height: 100%; object-fit: cover; object-position: center; display: block;" />
+                                 onload="this.classList.add('loaded'); if(this.parentElement) this.parentElement.classList.add('loaded');"
+                                 onerror="this.onerror=null; this.src='@groupPlaceholder'; this.classList.add('loaded'); if(this.parentElement) this.parentElement.classList.add('loaded');"
+                                 onclick="openStockImageZoomModal('@imageUrl', '@item.ProductCode', '@(item.ProductName.Replace("'", "\\'"))', '@itemNormalizedGroup')"
+                                 class="stock-card-img cursor-zoom-in" />
                             
                             <!-- Status Badge overlaid top-right -->
                             <div class="stock-badge-top-right" style="position: absolute; top: 8px; right: 8px; z-index: 5;">
@@ -591,6 +663,7 @@
                                                step="1" 
                                                value="@item.Quantity.ToString("F0")" 
                                                data-original="@item.Quantity.ToString("F0")"
+                                               onkeydown="if(event.key==='Enter'){event.preventDefault();submitInlineQuantityEdit(this);}else if(event.key==='Escape'){cancelInlineQuantityEdit(this);}"
                                                class="stock-inline-qty-input w-full h-7 px-1.5 bg-blue-50/60 border border-primary/40 focus:border-primary focus:ring-1 focus:ring-primary rounded text-xs font-bold text-primary text-center outline-none shadow-2xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
                                                placeholder="0" />
                                         <span class="text-[10px] text-slate-400 shrink-0">ชิ้น</span>
@@ -625,7 +698,7 @@
         </div>
     </div>
     <!-- Modal เพิ่มสินค้าใหม่ -->
-    <div id="addStockModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 hidden">
+    <div id="addStockModal" class="smooth-modal fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 hidden">
         <div class="bg-white rounded-xl shadow-xl w-full max-w-lg border border-slate-200 overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150">
             <!-- Modal Header -->
             <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
@@ -774,7 +847,7 @@
         </div>
     </div>
     <!-- Modal แก้ไขข้อมูลสินค้า -->
-    <div id="editStockModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 hidden">
+    <div id="editStockModal" class="smooth-modal fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 hidden">
         <div class="bg-white rounded-xl shadow-xl w-full max-w-lg border border-slate-200 overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150">
             <!-- Modal Header -->
             <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
@@ -928,7 +1001,7 @@
     </div>
 
     <!-- Modal ประวัติการเบิก/จ่าย (Stock Logs) -->
-    <div id="historyStockModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-3 sm:p-4 hidden">
+    <div id="historyStockModal" class="smooth-modal fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-3 sm:p-4 hidden">
         <div class="bg-white rounded-xl shadow-xl w-full max-w-lg border border-slate-200 overflow-hidden flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 duration-150">
             <!-- Modal Header -->
             <div class="px-4 sm:px-5 py-3 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 shrink-0">
@@ -984,7 +1057,7 @@
 
     <!-- Modal จำลองรับของเข้าสต๊อก (Goods Receipt & Smart Matching) -->
     <!-- Modal: ตรวจรับสินค้าเข้าคลังและจับคู่สต๊อก (Goods Receipt Check-in with AI Matching) -->
-    <div id="simulateReceiveModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-3 sm:p-4 hidden">
+    <div id="simulateReceiveModal" class="smooth-modal fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-3 sm:p-4 hidden">
         <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-150">
             <!-- Modal Header -->
             <div class="px-6 py-3.5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 shrink-0">
@@ -1192,17 +1265,74 @@
         </div>
     </div>
 
-
+    <!-- Modal ซูมดูรูปภาพสินค้าขนาดใหญ่ (Image Zoom Modal with Smooth Transition) -->
+    <div id="stockImageZoomModal" class="smooth-modal fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-3 sm:p-4 hidden" onclick="if(event.target===this) closeStockImageZoomModal()">
+        <div class="bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden max-w-lg w-full flex flex-col">
+            <div class="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50/60 shrink-0">
+                <div class="min-w-0 pr-2">
+                    <div class="flex items-center gap-2">
+                        <span id="zoomModalCode" class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20"></span>
+                        <span id="zoomModalGroup" class="text-[10px] font-bold px-2 py-0.5 rounded text-white bg-slate-700"></span>
+                    </div>
+                    <h4 id="zoomModalTitle" class="text-xs sm:text-sm font-semibold text-slate-800 mt-1 truncate"></h4>
+                </div>
+                <button type="button" onclick="closeStockImageZoomModal()" class="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center transition-colors cursor-pointer shrink-0" title="ปิด (Esc)">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+            <div class="p-4 bg-slate-50/50 flex items-center justify-center aspect-4/3 max-h-[65vh] overflow-hidden">
+                <img id="zoomModalImg" src="" alt="ภาพสินค้าขนาดใหญ่" class="max-w-full max-h-[60vh] object-contain rounded-lg shadow-sm" />
+            </div>
+        </div>
+    </div>
 
 @section Scripts {
     <script>
         const isAdminUser = @(isAdmin ? "true" : "false");
         let isCreatedFromReceive = false;
 
+        function checkStockImagesCached() {
+            document.querySelectorAll('.stock-card-img').forEach(function(img) {
+                if (img.complete && img.naturalWidth > 0) {
+                    img.classList.add('loaded');
+                    if (img.parentElement) img.parentElement.classList.add('loaded');
+                }
+            });
+        }
+
+        function openStockImageZoomModal(imgUrl, code, name, group) {
+            const modal = document.getElementById('stockImageZoomModal');
+            if (!modal) return;
+            const imgEl = document.getElementById('zoomModalImg');
+            if (imgEl) imgEl.src = imgUrl;
+            const codeEl = document.getElementById('zoomModalCode');
+            if (codeEl) codeEl.textContent = code;
+            const titleEl = document.getElementById('zoomModalTitle');
+            if (titleEl) titleEl.textContent = name;
+            const groupEl = document.getElementById('zoomModalGroup');
+            if (groupEl) groupEl.textContent = group;
+            modal.classList.remove('hidden');
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+
+        function closeStockImageZoomModal() {
+            const modal = document.getElementById('stockImageZoomModal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeStockImageZoomModal();
+            }
+        });
+
         document.addEventListener('DOMContentLoaded', function() {
             if (typeof lucide !== 'undefined') {
                 lucide.createIcons();
             }
+
+            // ตรวจสอบรูปภาพแคชเพื่อปลด Shimmer Skeleton ทันที (ป้องกันภาพกระตุก Layout Shift)
+            checkStockImagesCached();
 
             // นำรูปภาพที่เลือกหรือถ่ายไว้แบบ Mock ใน LocalStorage มาแสดงผลบนการ์ดสินค้า
             applyLocalMockStockImages();
@@ -2542,25 +2672,30 @@
                         }
                     }
 
-                    // 4. สลับกลับหน้าแสดงผลปกติ
+                    // 4. สลับกลับหน้าแสดงผลปกติ พร้อม Success Flash ring-2 ring-emerald-400 (0.8s)
                     const normalView = card.querySelector('.stock-card-normal-view');
                     const editView = card.querySelector('.stock-card-inline-edit-view');
                     if (editView) editView.classList.add('hidden');
-                    if (normalView) normalView.classList.remove('hidden');
+                    if (normalView) {
+                        normalView.classList.remove('hidden');
+                        normalView.classList.remove('stock-success-flash');
+                        void normalView.offsetWidth; // Force DOM reflow
+                        normalView.classList.add('stock-success-flash');
+                    }
 
-                    // 5. แสดง Toast บันทึกสำเร็จ
-                    if (typeof Swal !== 'undefined') {
-                        const Toast = Swal.mixin({
-                            toast: true,
-                            position: 'top-end',
-                            showConfirmButton: false,
-                            timer: 1800,
-                            timerProgressBar: true
-                        });
-                        Toast.fire({
-                            icon: 'success',
-                            title: `ปรับยอดเป็น ${Number(newQty).toLocaleString()} ชิ้น เรียบร้อย`
-                        });
+                    // 5. แสดง Mini success badge สั้นๆ ข้างตัวเลข (ไม่เด้ง Popup บังจอ)
+                    const qtyFlex = card.querySelector('.stock-card-normal-view .flex.items-baseline');
+                    if (qtyFlex) {
+                        const oldBadge = qtyFlex.querySelector('.stock-inline-saved-badge');
+                        if (oldBadge) oldBadge.remove();
+                        const savedBadge = document.createElement('span');
+                        savedBadge.className = 'stock-inline-saved-badge text-[10px] font-bold text-emerald-600 ml-1 inline-flex items-center gap-0.5 transition-opacity duration-300';
+                        savedBadge.textContent = '✓ บันทึกแล้ว';
+                        qtyFlex.appendChild(savedBadge);
+                        setTimeout(() => {
+                            savedBadge.classList.add('opacity-0');
+                            setTimeout(() => savedBadge.remove(), 350);
+                        }, 1200);
                     }
                 } else {
                     if (typeof Swal !== 'undefined') {
