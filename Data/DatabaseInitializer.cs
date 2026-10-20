@@ -216,13 +216,28 @@ namespace CostFlow.Data
                     }
                 }
 
+                // 1. ล้างรูปภาพจำลอง/เฟคทั้งหมดออกจากระบบสต๊อก เพื่อเตรียมความพร้อมสำหรับรูปจริง
+                var fakeItems = await db.StockItems
+                    .Where(s => s.FilePath != null && (s.FilePath.Contains("imimg") || s.FilePath.Contains("unsplash") || s.FilePath.Contains("made-in-china")))
+                    .ToListAsync();
+                if (fakeItems.Any())
+                {
+                    foreach (var fi in fakeItems)
+                    {
+                        fi.FilePath = null;
+                        fi.UpdatedAt = DateTime.UtcNow;
+                    }
+                    await db.SaveChangesAsync();
+                    Console.WriteLine($"[DB Init] Successfully cleared {fakeItems.Count} fake placeholder images from StockItems.");
+                }
+
                 int updatedCount = 0;
                 foreach (var m in mappingList)
                 {
                     if (dbMap.TryGetValue(m.Code, out var item))
                     {
                         bool changed = false;
-                        if (!string.IsNullOrEmpty(m.ImageUrl) && item.FilePath != m.ImageUrl)
+                        if (!string.IsNullOrEmpty(m.ImageUrl) && !m.ImageUrl.Contains("imimg") && !m.ImageUrl.Contains("unsplash") && item.FilePath != m.ImageUrl)
                         {
                             item.FilePath = m.ImageUrl;
                             changed = true;

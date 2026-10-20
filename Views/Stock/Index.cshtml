@@ -434,22 +434,14 @@
             </div>
         </div>
 
-        <!-- Unified Hardware Catalog Cards View (Global House / Thai Watsadu Style) -->
+        <!-- ภาพตัวแทนสินค้าแมวส้ม 4 ภาพ (สุ่มกระจายสำหรับสินค้าที่ยังไม่มีภาพจริง โดยมี 'แมวส้มชิลในอ่างล้างหน้า.png' เป็นหลัก) -->
         @{
-            var mockImages = new[]
+            var catPlaceholderImages = new[]
             {
-                "https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=500&q=80", // เฟือง / เกียร์อุตสาหกรรม
-                "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=500&q=80", // ลูกปืน / ตลับลูกปืนเหล็ก
-                "https://images.unsplash.com/photo-1581092335397-9583fe92d232?auto=format&fit=crop&w=500&q=80", // เครื่องจักร / มอเตอร์
-                "https://images.unsplash.com/photo-1504917599217-d4dc5ebe6122?auto=format&fit=crop&w=500&q=80", // เพลาโลหะ / งานกลึง
-                "https://images.unsplash.com/photo-1581783342308-f792dbdd27c5?auto=format&fit=crop&w=500&q=80", // ชิ้นส่วนอะไหล่ความแม่นยำสูง
-                "https://images.unsplash.com/photo-1586864387967-d02ef85d93e8?auto=format&fit=crop&w=500&q=80", // น็อต สลักเกลียว สกรู
-                "https://images.unsplash.com/photo-1581092580497-e0d23cbdf1dc?auto=format&fit=crop&w=500&q=80", // ระบบส่งกำลัง มู่เล่ย์ สายพาน
-                "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=500&q=80", // บอร์ดคอนโทรล / วงจรอุปกรณ์
-                "https://images.unsplash.com/photo-1581092795360-fd1ca04f0952?auto=format&fit=crop&w=500&q=80", // วาล์วไฮดรอลิก / ท่อส่ง
-                "https://images.unsplash.com/photo-1563770660941-20978e870e26?auto=format&fit=crop&w=500&q=80", // อะไหล่กลไกเครื่องกล
-                "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=500&q=80", // เซ็นเซอร์และอุปกรณ์ตรวจจับ
-                "https://images.unsplash.com/photo-1581094794329-c8112a89af12?auto=format&fit=crop&w=500&q=80"  // อะไหล่สายพานลำเลียง
+                "/images/แมวส้มชิลในอ่างล้างหน้า.png",
+                "/images/แมวส้มในอ่างล้างหน้า.png",
+                "/images/แมวจอมซนกับกล่องภาพหาย.png",
+                "/images/แมวส้มยกอุ้งเท้าปฏิเสธ.png"
             };
         }
 
@@ -457,10 +449,15 @@
             <div id="stockCardsGrid" class="stock-cards-grid grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
                 @foreach (var item in Model)
                 {
-                    int imgIndex = Math.Abs((item.ProductCode ?? "").GetHashCode()) % mockImages.Length;
-                    string imageUrl = !string.IsNullOrWhiteSpace(item.FilePath)
-                        ? item.FilePath
-                        : mockImages[imgIndex];
+                    bool hasRealImage = !string.IsNullOrWhiteSpace(item.FilePath) 
+                        && !item.FilePath.Contains("imimg") 
+                        && !item.FilePath.Contains("unsplash") 
+                        && !item.FilePath.Contains("made-in-china");
+
+                    int catIndex = Math.Abs((item.ProductCode ?? item.Id.ToString()).GetHashCode()) % catPlaceholderImages.Length;
+                    string imageUrl = hasRealImage
+                        ? item.FilePath!
+                        : catPlaceholderImages[catIndex];
                     var itemNormalizedGroup = NormalizeStockGroup(item.StockGroup, item.ProductName);
 
                     <div class="stock-card bg-white border border-slate-200 hover:border-slate-300 rounded-lg shadow-2xs hover:shadow-sm transition-all overflow-hidden flex flex-col justify-between group"
@@ -469,7 +466,7 @@
                          data-name="@item.ProductName"
                          data-category="@(item.Category ?? "อะไหล่")"
                          data-group="@itemNormalizedGroup"
-                         data-image="@(item.FilePath ?? "")"
+                         data-image="@(hasRealImage ? item.FilePath : "")"
                          data-min="@item.MinStock"
                          data-max="@item.MaxStock"
                          data-quantity="@item.Quantity">
@@ -479,7 +476,7 @@
                             <img src="@imageUrl" 
                                  alt="@item.ProductName" 
                                  loading="lazy"
-                                 onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=500&q=80';"
+                                 onerror="this.onerror=null; this.src='/images/แมวส้มชิลในอ่างล้างหน้า.png';"
                                  class="stock-card-img"
                                  style="width: 100%; height: 100%; object-fit: cover; object-position: center; display: block;" />
                             
@@ -554,7 +551,7 @@
                                                     data-name="@item.ProductName"
                                                     data-category="@(item.Category ?? "อะไหล่")"
                                                     data-group="@itemNormalizedGroup"
-                                                    data-image="@(item.FilePath ?? "")"
+                                                    data-image="@(hasRealImage ? item.FilePath : "")"
                                                     data-min="@item.MinStock"
                                                     data-max="@item.MaxStock"
                                                     data-quantity="@item.Quantity"
@@ -1515,18 +1512,26 @@
                 document.querySelectorAll('.stock-card').forEach(card => {
                     const code = card.dataset.code;
                     if (!code) return;
-                    // หากการ์ดมีรูปภาพจริงจาก Cloud Storage (Supabase) หรือ URL แล้ว ไม่ต้องทับด้วย LocalStorage
+                    
+                    // ลบรูปจำลองเดิมใน LocalStorage ที่เป็นลิงก์ภายนอก เช่น imimg หรือ unsplash
+                    const localImg = localStorage.getItem('stock_img_' + code);
+                    if (localImg && (localImg.includes('imimg') || localImg.includes('unsplash') || localImg.includes('made-in-china'))) {
+                        localStorage.removeItem('stock_img_' + code);
+                    }
+
+                    // หากการ์ดมีรูปภาพจริงจาก Cloud Storage (Supabase) ไม่ต้องทับ
                     const currentImg = card.dataset.image;
-                    if (currentImg && currentImg.trim().length > 0) {
+                    if (currentImg && currentImg.trim().length > 0 && !currentImg.includes('imimg') && !currentImg.includes('unsplash')) {
                         return;
                     }
-                    const localImg = localStorage.getItem('stock_img_' + code);
-                    if (localImg) {
+                    
+                    const validLocalImg = localStorage.getItem('stock_img_' + code);
+                    if (validLocalImg) {
                         const imgEl = card.querySelector('.stock-card-img-wrapper img');
-                        if (imgEl) imgEl.src = localImg;
-                        card.dataset.image = localImg;
+                        if (imgEl) imgEl.src = validLocalImg;
+                        card.dataset.image = validLocalImg;
                         const editBtn = card.querySelector('button[onclick*="openEditModal"]');
-                        if (editBtn) editBtn.dataset.image = localImg;
+                        if (editBtn) editBtn.dataset.image = validLocalImg;
                     }
                 });
             } catch (e) {
@@ -2159,7 +2164,10 @@
             const dataset = btn.dataset;
             const code = dataset.code || '';
             const localImg = localStorage.getItem('stock_img_' + code);
-            const cloudImg = dataset.image && dataset.image.trim() ? dataset.image.trim() : null;
+            let cloudImg = dataset.image && dataset.image.trim() ? dataset.image.trim() : null;
+            if (cloudImg && (cloudImg.includes('imimg') || cloudImg.includes('unsplash') || cloudImg.includes('made-in-china'))) {
+                cloudImg = null;
+            }
 
             document.getElementById('editItemId').value = dataset.id || '';
             document.getElementById('editProductCode').value = code;
