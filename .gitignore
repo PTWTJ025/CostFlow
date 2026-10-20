@@ -61,5 +61,11 @@ desktop.ini
 skills/
 ca.pem
 .dotnet/
-
 Intern
+
+# ----- 📁 Local Prototypes & Slides -----
+Slide Flow การทำงาน/
+
+# ----- 🖼️ Local Placeholder Images (Hosted on Supabase Storage CDN) -----
+wwwroot/images/*.png
+!wwwroot/images/logo.png
