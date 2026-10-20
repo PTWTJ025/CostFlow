@@ -434,15 +434,20 @@
             </div>
         </div>
 
-        <!-- ภาพตัวแทนสินค้าแมวส้ม 4 ภาพ (สุ่มกระจายสำหรับสินค้าที่ยังไม่มีภาพจริง โดยมี 'แมวส้มชิลในอ่างล้างหน้า.png' เป็นหลัก) -->
+        <!-- ภาพตัวแทนสินค้าแมวช่าง/แมวส้มแยกตาม 8 หมวดหมู่อะไหล่ (จาก Supabase Storage Cloud CDN) -->
         @{
-            var catPlaceholderImages = new[]
+            var categoryPlaceholderMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                "/images/แมวส้มชิลในอ่างล้างหน้า.png",
-                "/images/แมวส้มในอ่างล้างหน้า.png",
-                "/images/แมวจอมซนกับกล่องภาพหาย.png",
-                "/images/แมวส้มยกอุ้งเท้าปฏิเสธ.png"
+                ["วงแหวน"] = "https://zfpytdigcinwkfiwjpwu.supabase.co/storage/v1/object/public/stock%20image/placeholders/group_ring.png",
+                ["ตัวครอบ"] = "https://zfpytdigcinwkfiwjpwu.supabase.co/storage/v1/object/public/stock%20image/placeholders/group_holder.png",
+                ["ตุ๊กตา"] = "https://zfpytdigcinwkfiwjpwu.supabase.co/storage/v1/object/public/stock%20image/placeholders/group_pillow_block.png",
+                ["แกนเฟือง"] = "https://zfpytdigcinwkfiwjpwu.supabase.co/storage/v1/object/public/stock%20image/placeholders/group_gear_shaft.png",
+                ["เฟืองขับ/ท้าย"] = "https://zfpytdigcinwkfiwjpwu.supabase.co/storage/v1/object/public/stock%20image/placeholders/group_drive_gear.png",
+                ["ซุปเปอร์ลีน"] = "https://zfpytdigcinwkfiwjpwu.supabase.co/storage/v1/object/public/stock%20image/placeholders/group_superlene.png",
+                ["พูลเลย์/สายพาน"] = "https://zfpytdigcinwkfiwjpwu.supabase.co/storage/v1/object/public/stock%20image/placeholders/group_pulley_belt.png",
+                ["เบ็ดเตล็ด"] = "https://zfpytdigcinwkfiwjpwu.supabase.co/storage/v1/object/public/stock%20image/placeholders/group_misc.png"
             };
+            string defaultPlaceholder = "https://zfpytdigcinwkfiwjpwu.supabase.co/storage/v1/object/public/stock%20image/placeholders/group_misc.png";
         }
 
         <div id="stockGridContainer" class="p-3 md:p-4 bg-slate-50/40 min-h-[400px]">
@@ -454,11 +459,11 @@
                         && !item.FilePath.Contains("unsplash") 
                         && !item.FilePath.Contains("made-in-china");
 
-                    int catIndex = Math.Abs((item.ProductCode ?? item.Id.ToString()).GetHashCode()) % catPlaceholderImages.Length;
+                    var itemNormalizedGroup = NormalizeStockGroup(item.StockGroup, item.ProductName);
+                    string groupPlaceholder = categoryPlaceholderMap.TryGetValue(itemNormalizedGroup, out var ph) ? ph : defaultPlaceholder;
                     string imageUrl = hasRealImage
                         ? item.FilePath!
-                        : catPlaceholderImages[catIndex];
-                    var itemNormalizedGroup = NormalizeStockGroup(item.StockGroup, item.ProductName);
+                        : groupPlaceholder;
 
                     <div class="stock-card bg-white border border-slate-200 hover:border-slate-300 rounded-lg shadow-2xs hover:shadow-sm transition-all overflow-hidden flex flex-col justify-between group"
                          data-id="@item.Id"
@@ -476,7 +481,7 @@
                             <img src="@imageUrl" 
                                  alt="@item.ProductName" 
                                  loading="lazy"
-                                 onerror="this.onerror=null; this.src='/images/แมวส้มชิลในอ่างล้างหน้า.png';"
+                                 onerror="this.onerror=null; this.src='@groupPlaceholder';"
                                  class="stock-card-img"
                                  style="width: 100%; height: 100%; object-fit: cover; object-position: center; display: block;" />
                             

@@ -1,0 +1,1880 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CostFlow - แคตตาล็อกอะไหล่สต็อกทั้งหมด 81 รายการ (Stock Inventory Audit)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-page: #f8fafc;
+            --bg-card: #ffffff;
+            --border-color: #e2e8f0;
+            --border-hover: #cbd5e1;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --text-subtle: #94a3b8;
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --primary-light: #eff6ff;
+            --warning-bg: #fffbeb;
+            --warning-border: #fde68a;
+            --warning-text: #b45309;
+            --danger-bg: #fef2f2;
+            --danger-border: #fecaca;
+            --danger-text: #b91c1c;
+            --success-bg: #f0fdf4;
+            --success-border: #bbf7d0;
+            --success-text: #15803d;
+            --info-bg: #f8fafc;
+            --info-border: #e2e8f0;
+            --info-text: #334155;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Sarabun', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-page);
+            color: var(--text-main);
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+            padding: 24px;
+        }
+
+        .container {
+            max-width: 1440px;
+            margin: 0 auto;
+        }
+
+        /* Header Bar */
+        .page-header {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 20px 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+
+        .title-area h1 {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .title-area p {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .btn-view-toggle {
+            display: inline-flex;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            overflow: hidden;
+            background: #fff;
+        }
+
+        .btn-view {
+            padding: 8px 14px;
+            font-size: 13px;
+            font-weight: 600;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            color: var(--text-muted);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-view.active {
+            background: var(--primary);
+            color: #fff;
+        }
+
+        /* Stats Row */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            border-top: 1px solid var(--border-color);
+            padding-top: 16px;
+        }
+
+        .stat-card {
+            background: #f8fafc;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .stat-card.alert {
+            background: var(--warning-bg);
+            border-color: var(--warning-border);
+        }
+
+        .stat-card.danger {
+            background: var(--danger-bg);
+            border-color: var(--danger-border);
+        }
+
+        .stat-label {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        .stat-card.alert .stat-label {
+            color: var(--warning-text);
+        }
+
+        .stat-card.danger .stat-label {
+            color: var(--danger-text);
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .stat-card.alert .stat-value {
+            color: var(--warning-text);
+        }
+
+        .stat-card.danger .stat-value {
+            color: var(--danger-text);
+        }
+
+        /* Controls / Filters */
+        .controls-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 16px 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .search-row {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .search-input-wrap {
+            flex: 1;
+            min-width: 280px;
+            position: relative;
+        }
+
+        .search-input {
+            width: 100%;
+            height: 38px;
+            padding: 8px 14px 8px 36px;
+            font-size: 14px;
+            font-family: inherit;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            outline: none;
+            background: #fff;
+            color: var(--text-main);
+        }
+
+        .search-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-subtle);
+            font-size: 14px;
+        }
+
+        .filter-tags {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .filter-btn {
+            padding: 6px 12px;
+            font-size: 13px;
+            font-weight: 500;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: #fff;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .filter-btn:hover {
+            border-color: var(--border-hover);
+            color: var(--text-main);
+        }
+
+        .filter-btn.active {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+        }
+
+        .filter-btn.btn-issues {
+            border-color: var(--warning-border);
+            color: var(--warning-text);
+            background: var(--warning-bg);
+            font-weight: 600;
+        }
+
+        .filter-btn.btn-issues.active {
+            background: var(--warning-text);
+            color: #fff;
+            border-color: var(--warning-text);
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+            white-space: nowrap;
+            gap: 4px;
+        }
+
+        .badge-group {
+            background: #f1f5f9;
+            color: #334155;
+            border: 1px solid #cbd5e1;
+        }
+
+        .badge-duplicate {
+            background: #fef2f2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+            font-weight: 600;
+        }
+
+        .badge-typo {
+            background: #fffbeb;
+            color: #b45309;
+            border: 1px solid #fde68a;
+        }
+
+        .badge-warning {
+            background: #fefce8;
+            color: #854d0e;
+            border: 1px solid #fef08a;
+        }
+
+        .badge-danger {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fca5a5;
+        }
+
+        .badge-code {
+            background: #f3f4f6;
+            color: #4b5563;
+            border: 1px solid #e5e7eb;
+            font-family: monospace;
+        }
+
+        /* Table View */
+        .table-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13.5px;
+            text-align: left;
+        }
+
+        thead th {
+            background: #f8fafc;
+            color: var(--text-muted);
+            font-weight: 600;
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--border-color);
+            white-space: nowrap;
+        }
+
+        thead th.text-center { text-align: center; }
+        thead th.text-right { text-align: right; }
+
+        tbody tr {
+            border-bottom: 1px solid var(--border-color);
+            transition: background-color 0.15s ease;
+        }
+
+        tbody tr:hover {
+            background-color: #f1f5f9;
+        }
+
+        tbody tr.has-issue {
+            background-color: #fffdf5;
+        }
+
+        tbody tr.has-issue:hover {
+            background-color: #fef9e7;
+        }
+
+        tbody td {
+            padding: 12px 14px;
+            vertical-align: middle;
+        }
+
+        .cell-index {
+            color: var(--text-subtle);
+            font-size: 12px;
+            width: 44px;
+            text-align: center;
+        }
+
+        .cell-code {
+            font-family: 'Inter', monospace;
+            font-weight: 600;
+            font-size: 13px;
+            color: var(--text-main);
+            white-space: nowrap;
+        }
+
+        .cell-name {
+            font-weight: 600;
+            color: var(--text-main);
+            font-size: 14px;
+        }
+
+        .cell-desc {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 3px;
+            max-width: 420px;
+            line-height: 1.4;
+        }
+
+        .cell-thumb {
+            width: 52px;
+            height: 52px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            object-fit: cover;
+            background: #fff;
+            cursor: pointer;
+            transition: transform 0.15s ease;
+            display: block;
+        }
+
+        .cell-thumb:hover {
+            transform: scale(1.08);
+            border-color: var(--primary);
+        }
+
+        .cell-notes {
+            font-size: 12px;
+            color: #b45309;
+            background: #fefce8;
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 1px solid #fef08a;
+            display: inline-block;
+            margin-top: 4px;
+            line-height: 1.3;
+        }
+
+        /* Grid View */
+        .items-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 16px;
+        }
+
+        .grid-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .grid-card:hover {
+            border-color: var(--border-hover);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .grid-card.has-issue {
+            border-color: var(--warning-border);
+            background: #fffdf8;
+        }
+
+        .grid-card-top {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+
+        .grid-img {
+            width: 72px;
+            height: 72px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            object-fit: cover;
+            background: #fff;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .grid-header {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .grid-code {
+            font-family: 'Inter', monospace;
+            font-weight: 600;
+            font-size: 13px;
+            color: var(--primary);
+        }
+
+        .grid-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-main);
+            margin-top: 2px;
+            line-height: 1.35;
+        }
+
+        .grid-desc {
+            font-size: 12px;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+
+        /* Modal Image Viewer */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            backdrop-filter: blur(2px);
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-box {
+            background: #fff;
+            border-radius: 12px;
+            max-width: 600px;
+            width: 100%;
+            overflow: hidden;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border-color);
+        }
+
+        .modal-header {
+            padding: 14px 18px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .modal-close {
+            background: transparent;
+            border: none;
+            font-size: 20px;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 0 4px;
+        }
+
+        .modal-body {
+            padding: 18px;
+            text-align: center;
+            background: #f8fafc;
+        }
+
+        .modal-img {
+            max-width: 100%;
+            max-height: 380px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: #fff;
+            object-fit: contain;
+        }
+
+        .modal-footer {
+            padding: 14px 18px;
+            border-top: 1px solid var(--border-color);
+            font-size: 13px;
+            color: var(--text-muted);
+            line-height: 1.4;
+            background: #fff;
+        }
+
+        .empty-state {
+            padding: 48px 24px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 15px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- Header -->
+    <div class="page-header">
+        <div class="header-top">
+            <div class="title-area">
+                <h1>📦 บัญชีรายชื่ออะไหล่ในสต็อกคลัง (Stock Master Inventory - 81 รายการ)</h1>
+                <p>ตรวจสอบความถูกต้องของชื่อชิ้นส่วน สเปกทางวิศวกรรม รายการชื่อซ้ำ และคำสะกดผิดที่ทำให้ AI Matching เพี้ยน</p>
+            </div>
+            <div class="header-actions">
+                <div class="btn-view-toggle">
+                    <button class="btn-view active" id="btnTableView" onclick="setViewMode('table')">
+                        <svg width="15" height="15" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2zm1 2v2h14V4H1zm0 3v2h14V7H1zm0 3v2h14v-2H1zm0 3v1a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-1H1z"/></svg>
+                        แบบตาราง
+                    </button>
+                    <button class="btn-view" id="btnGridView" onclick="setViewMode('grid')">
+                        <svg width="15" height="15" fill="currentColor" viewBox="0 0 16 16"><path d="M1 2.5A1.5 1.5 0 0 1 2.5 1h3A1.5 1.5 0 0 1 7 2.5v3A1.5 1.5 0 0 1 5.5 7h-3A1.5 1.5 0 0 1 1 5.5v-3zM2.5 2a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5h-3zm6.5.5A1.5 1.5 0 0 1 10.5 1h3A1.5 1.5 0 0 1 15 2.5v3A1.5 1.5 0 0 1 13.5 7h-3A1.5 1.5 0 0 1 9 5.5v-3zm1.5-.5a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5h-3zM1 10.5A1.5 1.5 0 0 1 2.5 9h3A1.5 1.5 0 0 1 7 10.5v3A1.5 1.5 0 0 1 5.5 15h-3A1.5 1.5 0 0 1 1 13.5v-3zm1.5-.5a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5h-3zm6.5.5A1.5 1.5 0 0 1 10.5 9h3a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5h-3A1.5 1.5 0 0 1 9 13.5v-3zm1.5-.5a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5h-3z"/></svg>
+                        แบบการ์ดรูปภาพ
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div>
+                    <div class="stat-label">อะไหล่ทั้งหมดในคลัง</div>
+                    <div class="stat-value" id="statTotal">81 รายการ</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div>
+                    <div class="stat-label">หมวดหมู่มาตรฐาน</div>
+                    <div class="stat-value">8 หมวด</div>
+                </div>
+            </div>
+            <div class="stat-card alert">
+                <div>
+                    <div class="stat-label">รายการที่พบประเด็น/ควรแก้</div>
+                    <div class="stat-value" id="statIssues">21 รายการ</div>
+                </div>
+            </div>
+            <div class="stat-card danger">
+                <div>
+                    <div class="stat-label">ชื่อซ้ำ 100% เป๊ะ</div>
+                    <div class="stat-value">1 คู่ (รหัส 045 & 10)</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters & Search -->
+    <div class="controls-card">
+        <div class="search-row">
+            <div class="search-input-wrap">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="searchInput" class="search-input" placeholder="พิมพ์ค้นหาชื่อสินค้า, รหัส (เช่น 016), สเปกฟัน (34 ฟัน), นิ้ว (6\"), หรือ 2F1..." oninput="handleSearch()">
+            </div>
+            <button class="filter-btn btn-issues" id="btnOnlyIssues" onclick="toggleOnlyIssues()">
+                ⚡ ดูเฉพาะรายการที่มีประเด็น / ต้องแก้ไข (21)
+            </button>
+        </div>
+
+        <div class="filter-tags" id="groupFilterTags">
+            <!-- Rendered by JS -->
+        </div>
+    </div>
+
+    <!-- View: Table -->
+    <div class="table-card" id="tableViewContainer">
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th class="cell-index">#</th>
+                        <th style="width: 70px; text-align: center;">รูปอะไหล่</th>
+                        <th style="width: 110px;">รหัสสินค้า</th>
+                        <th style="width: 120px;">หมวดหมู่สต็อก</th>
+                        <th>ชื่ออะไหล่ในสต็อก (Product Name)</th>
+                        <th>ข้อสังเกต / จุดที่ผิดในระบบ</th>
+                        <th>ประเภททางวิศวกรรม (Part Type)</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <!-- Rendered by JS -->
+                </tbody>
+            </table>
+        </div>
+        <div id="tableEmptyState" class="empty-state" style="display:none;">
+            ไม่พบรายการอะไหล่ที่ตรงกับเงื่อนไขการค้นหา
+        </div>
+    </div>
+
+    <!-- View: Grid -->
+    <div class="items-grid" id="gridViewContainer" style="display: none;">
+        <!-- Rendered by JS -->
+    </div>
+    <div id="gridEmptyState" class="empty-state" style="display:none;">
+        ไม่พบรายการอะไหล่ที่ตรงกับเงื่อนไขการค้นหา
+    </div>
+</div>
+
+<!-- Modal for Image Preview -->
+<div class="modal" id="imageModal" onclick="closeModal(event)">
+    <div class="modal-box" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <h3 id="modalTitle">รูปตัวอย่างอะไหล่</h3>
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <img id="modalImg" class="modal-img" src="" alt="Stock Preview">
+        </div>
+        <div class="modal-footer" id="modalDesc">
+            รายละเอียดชิ้นส่วน
+        </div>
+    </div>
+</div>
+
+<script>
+    const rawData = [
+    {
+        "Index":  1,
+        "Code":  "R002701291",
+        "Name":  "ฝาปิดน้ำมันตัวครอบวงแหวน 5 นิ้ว",
+        "StockGroup":  "เบ็ดเตล็ด",
+        "EnType":  "Lubricant Reservoir / Grease Oil Cap",
+        "ImageUrl": "",
+        "Description":  "ฝาปิดช่องน้ำมันหล่อลื่นสำหรับตัวครอบวงแหวนเครื่องปั่นด้าย ป้องกันฝุ่นละออง/เศษใยด้ายเข้าไปปนเปื้อนในระบบน้ำมัน",
+        "Tags":  "",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  2,
+        "Code":  "R002701363",
+        "Name":  "ฝาปิดน้ำมันตัวครอบวงแหวน 6.5 นิ้ว T22-23",
+        "StockGroup":  "เบ็ดเตล็ด",
+        "EnType":  "Lubricant Reservoir / Grease Oil Cap",
+        "ImageUrl": "",
+        "Description":  "ฝาปิดช่องน้ำมันหล่อลื่นสำหรับตัวครอบวงแหวนเครื่องปั่นด้าย ป้องกันฝุ่นละออง/เศษใยด้ายเข้าไปปนเปื้อนในระบบน้ำมัน",
+        "Tags":  "",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  3,
+        "Code":  "R002801741",
+        "Name":  "ฝาปิดน้ำมัน 2F1 ชุดวงแหวนใหญ่",
+        "StockGroup":  "เบ็ดเตล็ด",
+        "EnType":  "Lubricant Reservoir / Grease Oil Cap",
+        "ImageUrl": "",
+        "Description":  "ฝาปิดช่องน้ำมันหล่อลื่นสำหรับตัวครอบวงแหวนเครื่องปั่นด้าย ป้องกันฝุ่นละออง/เศษใยด้ายเข้าไปปนเปื้อนในระบบน้ำมัน",
+        "Tags":  "",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  4,
+        "Code":  "M005406001",
+        "Name":  "ตัวครอบวงแหวน 5.5 นิ้ว (T35,T36) สั่งจีน สต๊อกคลัง",
+        "StockGroup":  "ตัวครอบ",
+        "EnType":  "Spinning Ring Holder Frame",
+        "ImageUrl": "",
+        "Description":  "เบ้าโครงครอบยึดตัววงแหวนเข้ากับคานรางเครื่องปั่นด้าย (Ring Rail Holder) มีช่องล็อกและตำแหน่งเติมน้ำมันหล่อลื่น",
+        "Tags":  "",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  5,
+        "Code":  "Z492965001",
+        "Name":  "ตัวครอบวงแหวน 4 นิ้ว สั่งจีน สต๊อกคลัง",
+        "StockGroup":  "ตัวครอบ",
+        "EnType":  "Spinning Ring Holder Frame",
+        "ImageUrl": "",
+        "Description":  "เบ้าโครงครอบยึดตัววงแหวนเข้ากับคานรางเครื่องปั่นด้าย (Ring Rail Holder) มีช่องล็อกและตำแหน่งเติมน้ำมันหล่อลื่น",
+        "Tags":  "",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  6,
+        "Code":  "Z470002078",
+        "Name":  "ฝาปิดน้ำมัน T1-4,9-10",
+        "StockGroup":  "เบ็ดเตล็ด",
+        "EnType":  "Lubricant Reservoir / Grease Oil Cap",
+        "ImageUrl": "",
+        "Description":  "ฝาปิดช่องน้ำมันหล่อลื่นสำหรับตัวครอบวงแหวนเครื่องปั่นด้าย ป้องกันฝุ่นละออง/เศษใยด้ายเข้าไปปนเปื้อนในระบบน้ำมัน",
+        "Tags":  "",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  7,
+        "Code":  "R002892192",
+        "Name":  "เหล็กประกบเพลาขับด้าย 4 นิ้ว",
+        "StockGroup":  "เบ็ดเตล็ด",
+        "EnType":  "Textile Drafting Pressure Roller",
+        "ImageUrl": "",
+        "Description":  "ลูกกลิ้งกดทับเส้นใยด้าย (Pressure Roller) และเหล็กประกบเพลา สำหรับกดประคองเส้นใยในชุดป้อนด้าย",
+        "Tags":  "\u003cspan class=\u0027badge badge-warning\u0027\u003e⚡ ชิ้นส่วนหลักในเบ็ดเตล็ด\u003c/span\u003e",
+        "Notes":  "เป็น \u0027เหล็กประกบ\u0027 แต่ถูกจัดอยู่ในหมวดเบ็ดเตล็ด ทำให้ Engine ชนกับเพลาขับด้าย",
+        "HasIssue":  true
+    },
+    {
+        "Index":  8,
+        "Code":  "R002703123",
+        "Name":  "ฝาปิดน้ำมันตัวครอบวงแหวน T17",
+        "StockGroup":  "เบ็ดเตล็ด",
+        "EnType":  "Lubricant Reservoir / Grease Oil Cap",
+        "ImageUrl": "",
+        "Description":  "ฝาปิดช่องน้ำมันหล่อลื่นสำหรับตัวครอบวงแหวนเครื่องปั่นด้าย ป้องกันฝุ่นละออง/เศษใยด้ายเข้าไปปนเปื้อนในระบบน้ำมัน",
+        "Tags":  "",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  9,
+        "Code":  "R002703120",
+        "Name":  "ตัวครอบวงแหวน 3.5 นิ้ว T59-60",
+        "StockGroup":  "ตัวครอบ",
+        "EnType":  "Spinning Ring Holder Frame",
+        "ImageUrl": "",
+        "Description":  "เบ้าโครงครอบยึดตัววงแหวนเข้ากับคานรางเครื่องปั่นด้าย (Ring Rail Holder) มีช่องล็อกและตำแหน่งเติมน้ำมันหล่อลื่น",
+        "Tags":  "",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  10,
+        "Code":  "M002702020",
+        "Name":  "ตัวครอบวงแหวน 6 นิ้ว T11,15",
+        "StockGroup":  "ตัวครอบ",
+        "EnType":  "Spinning Ring Holder Frame",
+        "ImageUrl": "",
+        "Description":  "เบ้าโครงครอบยึดตัววงแหวนเข้ากับคานรางเครื่องปั่นด้าย (Ring Rail Holder) มีช่องล็อกและตำแหน่งเติมน้ำมันหล่อลื่น",
+        "Tags":  "",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  11,
+        "Code":  "T000101019",
+        "Name":  "พลูเล่ย์สายพาน T3-T9-T10(แบบผ่า)",
+        "StockGroup":  "พูลเลย์/สายพาน",
+        "EnType":  "V-Belt Pulley \u0026 Idler Tensioner Pulley",
+        "ImageUrl": "",
+        "Description":  "มู่เล่ย์สายพานร่องวี และล้อลูกรอกปรับความตึงสายพาน (Tensioner Pulley) พร้อมชุดสลักแกนยึดสำหรับเครื่องตีด้าย",
+        "Tags":  "",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  12,
+        "Code":  "T100300003",
+        "Name":  "แกนล้อดึงสายพาน 2F1 กลางเครื่อง มีหน้าแปลน",
+        "StockGroup":  "เบ็ดเตล็ด",
+        "EnType":  "V-Belt Pulley \u0026 Idler Tensioner Pulley",
+        "ImageUrl": "",
+        "Description":  "มู่เล่ย์สายพานร่องวี และล้อลูกรอกปรับความตึงสายพาน (Tensioner Pulley) พร้อมชุดสลักแกนยึดสำหรับเครื่องตีด้าย",
+        "Tags":  "\u003cspan class=\u0027badge badge-warning\u0027\u003e⚡ ชิ้นส่วนพูลเลย์ในเบ็ดเตล็ด\u003c/span\u003e",
+        "Notes":  "ควรอยู่หมวด พูลเลย์/สายพาน",
+        "HasIssue":  true
+    },
+    {
+        "Index":  13,
+        "Code":  "T100300002",
+        "Name":  "แกนล้อตึงสายพาน 2F1 ชุดบน มีหน้าแปลน",
+        "StockGroup":  "เบ็ดเตล็ด",
+        "EnType":  "V-Belt Pulley \u0026 Idler Tensioner Pulley",
+        "ImageUrl": "",
+        "Description":  "มู่เล่ย์สายพานร่องวี และล้อลูกรอกปรับความตึงสายพาน (Tensioner Pulley) พร้อมชุดสลักแกนยึดสำหรับเครื่องตีด้าย",
+        "Tags":  "\u003cspan class=\u0027badge badge-warning\u0027\u003e⚡ ชิ้นส่วนพูลเลย์ในเบ็ดเตล็ด\u003c/span\u003e",
+        "Notes":  "ควรอยู่หมวด พูลเลย์/สายพาน",
+        "HasIssue":  true
+    },
+    {
+        "Index":  14,
+        "Code":  "T100300004",
+        "Name":  "แกนล้อดึงสายพาน 2F1 กลางเครื่อง ไม่มีหน้าแปลน",
+        "StockGroup":  "เบ็ดเตล็ด",
+        "EnType":  "V-Belt Pulley \u0026 Idler Tensioner Pulley",
+        "ImageUrl": "",
+        "Description":  "มู่เล่ย์สายพานร่องวี และล้อลูกรอกปรับความตึงสายพาน (Tensioner Pulley) พร้อมชุดสลักแกนยึดสำหรับเครื่องตีด้าย",
+        "Tags":  "\u003cspan class=\u0027badge badge-warning\u0027\u003e⚡ ชิ้นส่วนพูลเลย์ในเบ็ดเตล็ด\u003c/span\u003e",
+        "Notes":  "ควรอยู่หมวด พูลเลย์/สายพาน",
+        "HasIssue":  true
+    },
+    {
+        "Index":  15,
+        "Code":  "R002819018",
+        "Name":  "ล้อดึงสายพาน(วงแหวน) สต๊อกคลัง",
+        "StockGroup":  "พูลเลย์/สายพาน",
+        "EnType":  "Ring Spinning / Twister Flange Ring",
+        "ImageUrl": "",
+        "Description":  "วงแหวนเหล็กขัดเงาสำหรับเครื่องตีด้าย/ทอผ้า (Flange Ring) มีรางรอบสำหรับนักวิ่ง (Traveler) หมุนส่งกำลังตีเกลียวเส้นด้าย",
+        "Tags":  "",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  16,
+        "Code":  "R002703032",
+        "Name":  "สลักล้อดึงสายพาน(วงแหวน)",
+        "StockGroup":  "เบ็ดเตล็ด",
+        "EnType":  "Ring Spinning / Twister Flange Ring",
+        "ImageUrl": "",
+        "Description":  "วงแหวนเหล็กขัดเงาสำหรับเครื่องตีด้าย/ทอผ้า (Flange Ring) มีรางรอบสำหรับนักวิ่ง (Traveler) หมุนส่งกำลังตีเกลียวเส้นด้าย",
+        "Tags":  "\u003cspan class=\u0027badge badge-warning\u0027\u003e⚡ ชิ้นส่วนพูลเลย์ในเบ็ดเตล็ด\u003c/span\u003e",
+        "Notes":  "ควรอยู่หมวด พูลเลย์/สายพาน",
+        "HasIssue":  true
+    },
+    {
+        "Index":  17,
+        "Code":  "1111111111",
+        "Name":  "ตัวครอบวงแหวน 8นิ้ว",
+        "StockGroup":  "ตัวครอบ",
+        "EnType":  "Spinning Ring Holder Frame",
+        "ImageUrl": "",
+        "Description":  "เบ้าโครงครอบยึดตัววงแหวนเข้ากับคานรางเครื่องปั่นด้าย (Ring Rail Holder) มีช่องล็อกและตำแหน่งเติมน้ำมันหล่อลื่น",
+        "Tags":  "\u003cspan class=\u0027badge badge-code\u0027\u003e🏷️ รหัสสั้น/ชั่วคราว\u003c/span\u003e",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  18,
+        "Code":  "R002703033",
+        "Name":  "ตัวครอบวงแหวน 10 นิ้ว ( T50,51 )",
+        "StockGroup":  "ตัวครอบ",
+        "EnType":  "Spinning Ring Holder Frame",
+        "ImageUrl": "",
+        "Description":  "เบ้าโครงครอบยึดตัววงแหวนเข้ากับคานรางเครื่องปั่นด้าย (Ring Rail Holder) มีช่องล็อกและตำแหน่งเติมน้ำมันหล่อลื่น",
+        "Tags":  "",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  19,
+        "Code":  "11",
+        "Name":  "ลูกกลิ้งทับใย 4\"",
+        "StockGroup":  "เบ็ดเตล็ด",
+        "EnType":  "Textile Drafting Pressure Roller",
+        "ImageUrl": "",
+        "Description":  "ลูกกลิ้งกดทับเส้นใยด้าย (Pressure Roller) และเหล็กประกบเพลา สำหรับกดประคองเส้นใยในชุดป้อนด้าย",
+        "Tags":  "\u003cspan class=\u0027badge badge-code\u0027\u003e🏷️ รหัสสั้น/ชั่วคราว\u003c/span\u003e",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  20,
+        "Code":  "0",
+        "Name":  "ตัวครอบวงแหว 5\"",
+        "StockGroup":  "ตัวครอบ",
+        "EnType":  "Spinning Ring Holder Frame",
+        "ImageUrl": "",
+        "Description":  "เบ้าโครงครอบยึดตัววงแหวนเข้ากับคานรางเครื่องปั่นด้าย (Ring Rail Holder) มีช่องล็อกและตำแหน่งเติมน้ำมันหล่อลื่น",
+        "Tags":  "\u003cspan class=\u0027badge badge-typo\u0027\u003e✏️ พิมพ์ตก (ขาด \u0027น\u0027)\u003c/span\u003e \u003cspan class=\u0027badge badge-code\u0027\u003e🏷️ รหัสสั้น/ชั่วคราว\u003c/span\u003e",
+        "Notes":  "ควรแก้เป็น \u0027ตัวครอบวงแหวน\u0027",
+        "HasIssue":  true
+    },
+    {
+        "Index":  21,
+        "Code":  "1",
+        "Name":  "ต้วครอบวงแหวน 4 1/2\" ( T24 )",
+        "StockGroup":  "ตัวครอบ",
+        "EnType":  "Spinning Ring Holder Frame",
+        "ImageUrl": "",
+        "Description":  "เบ้าโครงครอบยึดตัววงแหวนเข้ากับคานรางเครื่องปั่นด้าย (Ring Rail Holder) มีช่องล็อกและตำแหน่งเติมน้ำมันหล่อลื่น",
+        "Tags":  "\u003cspan class=\u0027badge badge-typo\u0027\u003e✏️ สระผิด (ไม้โท)\u003c/span\u003e \u003cspan class=\u0027badge badge-code\u0027\u003e🏷️ รหัสสั้น/ชั่วคราว\u003c/span\u003e",
+        "Notes":  "ควรแก้เป็น \u0027ตัวครอบ\u0027",
+        "HasIssue":  true
+    },
+    {
+        "Index":  22,
+        "Code":  "2",
+        "Name":  "ตัวครอบวงแหวน 6 1/2\" ( T22,23 )",
+        "StockGroup":  "ตัวครอบ",
+        "EnType":  "Spinning Ring Holder Frame",
+        "ImageUrl": "",
+        "Description":  "เบ้าโครงครอบยึดตัววงแหวนเข้ากับคานรางเครื่องปั่นด้าย (Ring Rail Holder) มีช่องล็อกและตำแหน่งเติมน้ำมันหล่อลื่น",
+        "Tags":  "\u003cspan class=\u0027badge badge-code\u0027\u003e🏷️ รหัสสั้น/ชั่วคราว\u003c/span\u003e",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  23,
+        "Code":  "3",
+        "Name":  "ต้วครอบวงแหวน 7\" (T21)",
+        "StockGroup":  "ตัวครอบ",
+        "EnType":  "Spinning Ring Holder Frame",
+        "ImageUrl": "",
+        "Description":  "เบ้าโครงครอบยึดตัววงแหวนเข้ากับคานรางเครื่องปั่นด้าย (Ring Rail Holder) มีช่องล็อกและตำแหน่งเติมน้ำมันหล่อลื่น",
+        "Tags":  "\u003cspan class=\u0027badge badge-typo\u0027\u003e✏️ สระผิด (ไม้โท)\u003c/span\u003e \u003cspan class=\u0027badge badge-code\u0027\u003e🏷️ รหัสสั้น/ชั่วคราว\u003c/span\u003e",
+        "Notes":  "ควรแก้เป็น \u0027ตัวครอบ\u0027",
+        "HasIssue":  true
+    },
+    {
+        "Index":  24,
+        "Code":  "4",
+        "Name":  "ต้วครอบวงแหวน 10\" ( T18 )",
+        "StockGroup":  "ตัวครอบ",
+        "EnType":  "Spinning Ring Holder Frame",
+        "ImageUrl": "",
+        "Description":  "เบ้าโครงครอบยึดตัววงแหวนเข้ากับคานรางเครื่องปั่นด้าย (Ring Rail Holder) มีช่องล็อกและตำแหน่งเติมน้ำมันหล่อลื่น",
+        "Tags":  "\u003cspan class=\u0027badge badge-typo\u0027\u003e✏️ สระผิด (ไม้โท)\u003c/span\u003e \u003cspan class=\u0027badge badge-code\u0027\u003e🏷️ รหัสสั้น/ชั่วคราว\u003c/span\u003e",
+        "Notes":  "ควรแก้เป็น \u0027ตัวครอบ\u0027",
+        "HasIssue":  true
+    },
+    {
+        "Index":  25,
+        "Code":  "5",
+        "Name":  "วงแหวน 3\"1/2 ( T59,60 )",
+        "StockGroup":  "วงแหวน",
+        "EnType":  "Ring Spinning / Twister Flange Ring",
+        "ImageUrl": "",
+        "Description":  "วงแหวนเหล็กขัดเงาสำหรับเครื่องตีด้าย/ทอผ้า (Flange Ring) มีรางรอบสำหรับนักวิ่ง (Traveler) หมุนส่งกำลังตีเกลียวเส้นด้าย",
+        "Tags":  "",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  26,
+        "Code":  "6",
+        "Name":  "วงแหวน 4\" ( T3,9,34 )",
+        "StockGroup":  "วงแหวน",
+        "EnType":  "Ring Spinning / Twister Flange Ring",
+        "ImageUrl": "",
+        "Description":  "วงแหวนเหล็กขัดเงาสำหรับเครื่องตีด้าย/ทอผ้า (Flange Ring) มีรางรอบสำหรับนักวิ่ง (Traveler) หมุนส่งกำลังตีเกลียวเส้นด้าย",
+        "Tags":  "",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  27,
+        "Code":  "7",
+        "Name":  "วงแหวน 4\"1/2 (T25 )",
+        "StockGroup":  "วงแหวน",
+        "EnType":  "Ring Spinning / Twister Flange Ring",
+        "ImageUrl": "",
+        "Description":  "วงแหวนเหล็กขัดเงาสำหรับเครื่องตีด้าย/ทอผ้า (Flange Ring) มีรางรอบสำหรับนักวิ่ง (Traveler) หมุนส่งกำลังตีเกลียวเส้นด้าย",
+        "Tags":  "",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  28,
+        "Code":  "8",
+        "Name":  "วงแหวน 5\" ( T6,7,8,13,14 )",
+        "StockGroup":  "วงแหวน",
+        "EnType":  "Ring Spinning / Twister Flange Ring",
+        "ImageUrl": "",
+        "Description":  "วงแหวนเหล็กขัดเงาสำหรับเครื่องตีด้าย/ทอผ้า (Flange Ring) มีรางรอบสำหรับนักวิ่ง (Traveler) หมุนส่งกำลังตีเกลียวเส้นด้าย",
+        "Tags":  "",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  29,
+        "Code":  "9",
+        "Name":  "วงแหวน 5\"1/2 (T35,36,57,58)",
+        "StockGroup":  "วงแหวน",
+        "EnType":  "Ring Spinning / Twister Flange Ring",
+        "ImageUrl": "",
+        "Description":  "วงแหวนเหล็กขัดเงาสำหรับเครื่องตีด้าย/ทอผ้า (Flange Ring) มีรางรอบสำหรับนักวิ่ง (Traveler) หมุนส่งกำลังตีเกลียวเส้นด้าย",
+        "Tags":  "",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  30,
+        "Code":  "10",
+        "Name":  "วงแหวน 5\"1/2 (2f1 )",
+        "StockGroup":  "วงแหวน",
+        "EnType":  "Ring Spinning / Twister Flange Ring",
+        "ImageUrl": "",
+        "Description":  "วงแหวนเหล็กขัดเงาสำหรับเครื่องตีด้าย/ทอผ้า (Flange Ring) มีรางรอบสำหรับนักวิ่ง (Traveler) หมุนส่งกำลังตีเกลียวเส้นด้าย",
+        "Tags":  "",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  31,
+        "Code":  "12",
+        "Name":  "วงแหวน 6\" ( T11,15,43,44,45 )",
+        "StockGroup":  "วงแหวน",
+        "EnType":  "Ring Spinning / Twister Flange Ring",
+        "ImageUrl": "",
+        "Description":  "วงแหวนเหล็กขัดเงาสำหรับเครื่องตีด้าย/ทอผ้า (Flange Ring) มีรางรอบสำหรับนักวิ่ง (Traveler) หมุนส่งกำลังตีเกลียวเส้นด้าย",
+        "Tags":  "",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  32,
+        "Code":  "13",
+        "Name":  "วงแหวน 6\"1/2 (  T22,23 )",
+        "StockGroup":  "วงแหวน",
+        "EnType":  "Ring Spinning / Twister Flange Ring",
+        "ImageUrl": "",
+        "Description":  "วงแหวนเหล็กขัดเงาสำหรับเครื่องตีด้าย/ทอผ้า (Flange Ring) มีรางรอบสำหรับนักวิ่ง (Traveler) หมุนส่งกำลังตีเกลียวเส้นด้าย",
+        "Tags":  "",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  33,
+        "Code":  "14",
+        "Name":  "วงแหวน 7\" ( T21 )",
+        "StockGroup":  "วงแหวน",
+        "EnType":  "Ring Spinning / Twister Flange Ring",
+        "ImageUrl": "",
+        "Description":  "วงแหวนเหล็กขัดเงาสำหรับเครื่องตีด้าย/ทอผ้า (Flange Ring) มีรางรอบสำหรับนักวิ่ง (Traveler) หมุนส่งกำลังตีเกลียวเส้นด้าย",
+        "Tags":  "",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  34,
+        "Code":  "15",
+        "Name":  "วงแหวน 8\" ( T46,47,48,49,63,64 )",
+        "StockGroup":  "วงแหวน",
+        "EnType":  "Ring Spinning / Twister Flange Ring",
+        "ImageUrl": "",
+        "Description":  "วงแหวนเหล็กขัดเงาสำหรับเครื่องตีด้าย/ทอผ้า (Flange Ring) มีรางรอบสำหรับนักวิ่ง (Traveler) หมุนส่งกำลังตีเกลียวเส้นด้าย",
+        "Tags":  "",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  35,
+        "Code":  "16",
+        "Name":  "วงแหวน 10\" ( 18,50,51 )",
+        "StockGroup":  "วงแหวน",
+        "EnType":  "Ring Spinning / Twister Flange Ring",
+        "ImageUrl": "",
+        "Description":  "วงแหวนเหล็กขัดเงาสำหรับเครื่องตีด้าย/ทอผ้า (Flange Ring) มีรางรอบสำหรับนักวิ่ง (Traveler) หมุนส่งกำลังตีเกลียวเส้นด้าย",
+        "Tags":  "",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  36,
+        "Code":  "01",
+        "Name":  "แกนเฟือง A (  30 mm ×126 mm",
+        "StockGroup":  "แกนเฟือง",
+        "EnType":  "Precision Ground Pinion \u0026 Gear Shaft",
+        "ImageUrl": "",
+        "Description":  "แกนเพลาเฟืองเหล็กกล้ากลึงกลมเจียรนัยผิว มีช่วงบ่ารับตลับลูกปืน ร่องลิ่ม หรือเกลียวนอก/เกลียวในตามสเปกเครื่อง",
+        "Tags":  "",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  37,
+        "Code":  "02",
+        "Name":  "แกนเฟือง. BC (30 mm ×160  mm )",
+        "StockGroup":  "แกนเฟือง",
+        "EnType":  "Precision Ground Pinion \u0026 Gear Shaft",
+        "ImageUrl": "",
+        "Description":  "แกนเพลาเฟืองเหล็กกล้ากลึงกลมเจียรนัยผิว มีช่วงบ่ารับตลับลูกปืน ร่องลิ่ม หรือเกลียวนอก/เกลียวในตามสเปกเครื่อง",
+        "Tags":  "",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  38,
+        "Code":  "03",
+        "Name":  "แกนเฟือง BC ( 30mm ×190 mm)",
+        "StockGroup":  "แกนเฟือง",
+        "EnType":  "Precision Ground Pinion \u0026 Gear Shaft",
+        "ImageUrl": "",
+        "Description":  "แกนเพลาเฟืองเหล็กกล้ากลึงกลมเจียรนัยผิว มีช่วงบ่ารับตลับลูกปืน ร่องลิ่ม หรือเกลียวนอก/เกลียวในตามสเปกเครื่อง",
+        "Tags":  "",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  39,
+        "Code":  "04",
+        "Name":  "แกนเฟือง 90 ฟัน ( 30mm×160mm )",
+        "StockGroup":  "แกนเฟือง",
+        "EnType":  "Precision Ground Pinion \u0026 Gear Shaft",
+        "ImageUrl": "",
+        "Description":  "แกนเพลาเฟืองเหล็กกล้ากลึงกลมเจียรนัยผิว มีช่วงบ่ารับตลับลูกปืน ร่องลิ่ม หรือเกลียวนอก/เกลียวในตามสเปกเครื่อง",
+        "Tags":  "",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  40,
+        "Code":  "05",
+        "Name":  "แกนเฟืองเกลียวนอก",
+        "StockGroup":  "แกนเฟือง",
+        "EnType":  "Precision Ground Pinion \u0026 Gear Shaft",
+        "ImageUrl": "",
+        "Description":  "แกนเพลาเฟืองเหล็กกล้ากลึงกลมเจียรนัยผิว มีช่วงบ่ารับตลับลูกปืน ร่องลิ่ม หรือเกลียวนอก/เกลียวในตามสเปกเครื่อง",
+        "Tags":  "",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  41,
+        "Code":  "06",
+        "Name":  "แกนเฟืองเกลียวใน",
+        "StockGroup":  "แกนเฟือง",
+        "EnType":  "Precision Ground Pinion \u0026 Gear Shaft",
+        "ImageUrl": "",
+        "Description":  "แกนเพลาเฟืองเหล็กกล้ากลึงกลมเจียรนัยผิว มีช่วงบ่ารับตลับลูกปืน ร่องลิ่ม หรือเกลียวนอก/เกลียวในตามสเปกเครื่อง",
+        "Tags":  "",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  42,
+        "Code":  "07",
+        "Name":  "แกนเฟือง B ( T24,25 )",
+        "StockGroup":  "แกนเฟือง",
+        "EnType":  "Precision Ground Pinion \u0026 Gear Shaft",
+        "ImageUrl": "",
+        "Description":  "แกนเพลาเฟืองเหล็กกล้ากลึงกลมเจียรนัยผิว มีช่วงบ่ารับตลับลูกปืน ร่องลิ่ม หรือเกลียวนอก/เกลียวในตามสเปกเครื่อง",
+        "Tags":  "",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  43,
+        "Code":  "08",
+        "Name":  "แกนเฟือง 120 ฟัน ( 6\" )",
+        "StockGroup":  "แกนเฟือง",
+        "EnType":  "Precision Ground Pinion \u0026 Gear Shaft",
+        "ImageUrl": "",
+        "Description":  "แกนเพลาเฟืองเหล็กกล้ากลึงกลมเจียรนัยผิว มีช่วงบ่ารับตลับลูกปืน ร่องลิ่ม หรือเกลียวนอก/เกลียวในตามสเปกเครื่อง",
+        "Tags":  "",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  44,
+        "Code":  "09",
+        "Name":  "แกนเฟือง. B ( 6\" )",
+        "StockGroup":  "แกนเฟือง",
+        "EnType":  "Precision Ground Pinion \u0026 Gear Shaft",
+        "ImageUrl": "",
+        "Description":  "แกนเพลาเฟืองเหล็กกล้ากลึงกลมเจียรนัยผิว มีช่วงบ่ารับตลับลูกปืน ร่องลิ่ม หรือเกลียวนอก/เกลียวในตามสเปกเครื่อง",
+        "Tags":  "",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  45,
+        "Code":  "010",
+        "Name":  "แกบพูลเลย์หัวเครื่อง(  2f1 ) ชุดบน",
+        "StockGroup":  "พูลเลย์/สายพาน",
+        "EnType":  "Precision Ground Pinion \u0026 Gear Shaft",
+        "ImageUrl": "",
+        "Description":  "แกนเพลาเฟืองเหล็กกล้ากลึงกลมเจียรนัยผิว มีช่วงบ่ารับตลับลูกปืน ร่องลิ่ม หรือเกลียวนอก/เกลียวในตามสเปกเครื่อง",
+        "Tags":  "\u003cspan class=\u0027badge badge-typo\u0027\u003e✏️ พิมพ์ผิด (บ ใบไม้)\u003c/span\u003e",
+        "Notes":  "ควรแก้เป็น \u0027แกนพูลเลย์\u0027",
+        "HasIssue":  true
+    },
+    {
+        "Index":  46,
+        "Code":  "011",
+        "Name":  "แกนพลูเลย์หัวเครื่อง ( 2f1 ) ล่าง",
+        "StockGroup":  "พูลเลย์/สายพาน",
+        "EnType":  "Precision Ground Pinion \u0026 Gear Shaft",
+        "ImageUrl": "",
+        "Description":  "แกนเพลาเฟืองเหล็กกล้ากลึงกลมเจียรนัยผิว มีช่วงบ่ารับตลับลูกปืน ร่องลิ่ม หรือเกลียวนอก/เกลียวในตามสเปกเครื่อง",
+        "Tags":  "",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  47,
+        "Code":  "012",
+        "Name":  "แกนเฟือง A  ( 2f1 T37,38 )",
+        "StockGroup":  "แกนเฟือง",
+        "EnType":  "Precision Ground Pinion \u0026 Gear Shaft",
+        "ImageUrl": "",
+        "Description":  "แกนเพลาเฟืองเหล็กกล้ากลึงกลมเจียรนัยผิว มีช่วงบ่ารับตลับลูกปืน ร่องลิ่ม หรือเกลียวนอก/เกลียวในตามสเปกเครื่อง",
+        "Tags":  "",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  48,
+        "Code":  "013",
+        "Name":  "แกนเฟือง BC ( 2f1 T37,38 )",
+        "StockGroup":  "แกนเฟือง",
+        "EnType":  "Precision Ground Pinion \u0026 Gear Shaft",
+        "ImageUrl": "",
+        "Description":  "แกนเพลาเฟืองเหล็กกล้ากลึงกลมเจียรนัยผิว มีช่วงบ่ารับตลับลูกปืน ร่องลิ่ม หรือเกลียวนอก/เกลียวในตามสเปกเครื่อง",
+        "Tags":  "",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  49,
+        "Code":  "014",
+        "Name":  "เฟืองท้ายเพลาขับด้าย 30 ฟัน",
+        "StockGroup":  "เฟืองขับ/ท้าย",
+        "EnType":  "Industrial Carbon Steel Spur Gear",
+        "ImageUrl": "",
+        "Description":  "เฟืองฟันตรงเหล็กกล้าชุบแข็งสำหรับเพลาขับด้ายและเพลาท้ายเครื่อง มีรูกลางพร้อมร่องลิ่มสวมเพลาเครื่องจักร",
+        "Tags":  "",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  50,
+        "Code":  "015",
+        "Name":  "เฟีองท้ายเพลาขับด้าย 30 ( ขนาดเล็ก)",
+        "StockGroup":  "เฟืองขับ/ท้าย",
+        "EnType":  "Industrial Carbon Steel Spur Gear",
+        "ImageUrl": "",
+        "Description":  "เฟืองฟันตรงเหล็กกล้าชุบแข็งสำหรับเพลาขับด้ายและเพลาท้ายเครื่อง มีรูกลางพร้อมร่องลิ่มสวมเพลาเครื่องจักร",
+        "Tags":  "\u003cspan class=\u0027badge badge-typo\u0027\u003e✏️ สะกดผิด (สระเอีย/เอิ)\u003c/span\u003e",
+        "Notes":  "ควรแก้เป็น \u0027เฟือง\u0027",
+        "HasIssue":  true
+    },
+    {
+        "Index":  51,
+        "Code":  "016",
+        "Name":  "เฟืองเพลาขับด้าย 34 ฟัน",
+        "StockGroup":  "เฟืองขับ/ท้าย",
+        "EnType":  "Industrial Carbon Steel Spur Gear",
+        "ImageUrl": "",
+        "Description":  "เฟืองฟันตรงเหล็กกล้าชุบแข็งสำหรับเพลาขับด้ายและเพลาท้ายเครื่อง มีรูกลางพร้อมร่องลิ่มสวมเพลาเครื่องจักร",
+        "Tags":  "",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  52,
+        "Code":  "017",
+        "Name":  "เฟืองเพลาขับด้าย 26 ฟัน",
+        "StockGroup":  "เฟืองขับ/ท้าย",
+        "EnType":  "Industrial Carbon Steel Spur Gear",
+        "ImageUrl": "",
+        "Description":  "เฟืองฟันตรงเหล็กกล้าชุบแข็งสำหรับเพลาขับด้ายและเพลาท้ายเครื่อง มีรูกลางพร้อมร่องลิ่มสวมเพลาเครื่องจักร",
+        "Tags":  "",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  53,
+        "Code":  "018",
+        "Name":  "เฟืองขับเพลาล่าง 34  ฟัน ( T17 )",
+        "StockGroup":  "เฟืองขับ/ท้าย",
+        "EnType":  "Industrial Carbon Steel Spur Gear",
+        "ImageUrl": "",
+        "Description":  "เฟืองฟันตรงเหล็กกล้าชุบแข็งสำหรับเพลาขับด้ายและเพลาท้ายเครื่อง มีรูกลางพร้อมร่องลิ่มสวมเพลาเครื่องจักร",
+        "Tags":  "",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  54,
+        "Code":  "019",
+        "Name":  "เฟืองชุเปอร์ลีน 30 ฟัน ( ขนาดเล็ก )",
+        "StockGroup":  "ซุปเปอร์ลีน",
+        "EnType":  "Superlene / POM / Nylon Spur Gear",
+        "ImageUrl": "",
+        "Description":  "เฟืองพลาสติกวิศวกรรมซุปเปอร์ลีน (Superlene / Nylon) สีขาวขุ่น ทนทานต่อการเสียดสีสูง ลดเสียงรบกวนในระบบส่งกำลัง",
+        "Tags":  "\u003cspan class=\u0027badge badge-typo\u0027\u003e✏️ สะกดผิด (ช ช้าง)\u003c/span\u003e",
+        "Notes":  "ควรแก้เป็น \u0027ซุปเปอร์ลีน\u0027",
+        "HasIssue":  true
+    },
+    {
+        "Index":  55,
+        "Code":  "020",
+        "Name":  "เฟืองชุบเปอร์ลีน ( ขนาดใหญ่ )",
+        "StockGroup":  "ซุปเปอร์ลีน",
+        "EnType":  "Superlene / POM / Nylon Spur Gear",
+        "ImageUrl": "",
+        "Description":  "เฟืองพลาสติกวิศวกรรมซุปเปอร์ลีน (Superlene / Nylon) สีขาวขุ่น ทนทานต่อการเสียดสีสูง ลดเสียงรบกวนในระบบส่งกำลัง",
+        "Tags":  "\u003cspan class=\u0027badge badge-typo\u0027\u003e✏️ สะกดผิด (ช ช้าง)\u003c/span\u003e",
+        "Notes":  "ควรแก้เป็น \u0027ซุปเปอร์ลีน\u0027",
+        "HasIssue":  true
+    },
+    {
+        "Index":  56,
+        "Code":  "021",
+        "Name":  "เฟืองชุบเปอร์ลีน 40 ฟัน",
+        "StockGroup":  "ซุปเปอร์ลีน",
+        "EnType":  "Superlene / POM / Nylon Spur Gear",
+        "ImageUrl": "",
+        "Description":  "เฟืองพลาสติกวิศวกรรมซุปเปอร์ลีน (Superlene / Nylon) สีขาวขุ่น ทนทานต่อการเสียดสีสูง ลดเสียงรบกวนในระบบส่งกำลัง",
+        "Tags":  "\u003cspan class=\u0027badge badge-typo\u0027\u003e✏️ สะกดผิด (ช ช้าง)\u003c/span\u003e",
+        "Notes":  "ควรแก้เป็น \u0027ซุปเปอร์ลีน\u0027",
+        "HasIssue":  true
+    },
+    {
+        "Index":  57,
+        "Code":  "022",
+        "Name":  "เฟิองชุบเปอร์ลีน 47 ฟัน",
+        "StockGroup":  "ซุปเปอร์ลีน",
+        "EnType":  "Superlene / POM / Nylon Spur Gear",
+        "ImageUrl": "",
+        "Description":  "เฟืองพลาสติกวิศวกรรมซุปเปอร์ลีน (Superlene / Nylon) สีขาวขุ่น ทนทานต่อการเสียดสีสูง ลดเสียงรบกวนในระบบส่งกำลัง",
+        "Tags":  "\u003cspan class=\u0027badge badge-typo\u0027\u003e✏️ สะกดผิด (สระเอีย/เอิ)\u003c/span\u003e \u003cspan class=\u0027badge badge-typo\u0027\u003e✏️ สะกดผิด (ช ช้าง)\u003c/span\u003e",
+        "Notes":  "ควรแก้เป็น \u0027เฟือง\u0027 | ควรแก้เป็น \u0027ซุปเปอร์ลีน\u0027",
+        "HasIssue":  true
+    },
+    {
+        "Index":  58,
+        "Code":  "02÷",
+        "Name":  "เฟืองชุบเปอร์ลีน 34 ฟัน ( เพลา 45 mm )",
+        "StockGroup":  "ซุปเปอร์ลีน",
+        "EnType":  "Superlene / POM / Nylon Spur Gear",
+        "ImageUrl": "",
+        "Description":  "เฟืองพลาสติกวิศวกรรมซุปเปอร์ลีน (Superlene / Nylon) สีขาวขุ่น ทนทานต่อการเสียดสีสูง ลดเสียงรบกวนในระบบส่งกำลัง",
+        "Tags":  "\u003cspan class=\u0027badge badge-typo\u0027\u003e✏️ สะกดผิด (ช ช้าง)\u003c/span\u003e \u003cspan class=\u0027badge badge-danger\u0027\u003e❌ รหัสเพี้ยน (02÷)\u003c/span\u003e",
+        "Notes":  "ควรแก้เป็น \u0027ซุปเปอร์ลีน\u0027 | รหัสสินค้าติดเครื่องหมายหาร (ควรเป็น 023)",
+        "HasIssue":  true
+    },
+    {
+        "Index":  59,
+        "Code":  "024",
+        "Name":  "เฟืองชุบเปอร์ลีน 34 ฟัน ( เพลา 25 mm )",
+        "StockGroup":  "ซุปเปอร์ลีน",
+        "EnType":  "Superlene / POM / Nylon Spur Gear",
+        "ImageUrl": "",
+        "Description":  "เฟืองพลาสติกวิศวกรรมซุปเปอร์ลีน (Superlene / Nylon) สีขาวขุ่น ทนทานต่อการเสียดสีสูง ลดเสียงรบกวนในระบบส่งกำลัง",
+        "Tags":  "\u003cspan class=\u0027badge badge-typo\u0027\u003e✏️ สะกดผิด (ช ช้าง)\u003c/span\u003e",
+        "Notes":  "ควรแก้เป็น \u0027ซุปเปอร์ลีน\u0027",
+        "HasIssue":  true
+    },
+    {
+        "Index":  60,
+        "Code":  "025",
+        "Name":  "ตุ๊กตาเฟือง 70 ฟัน",
+        "StockGroup":  "ตุ๊กตา",
+        "EnType":  "Split Plummer Block / Pillow Block Bearing Housing",
+        "ImageUrl": "",
+        "Description":  "เสื้อตลับลูกปืนแบบผ่าสองซีก (Plummer Block) และตุ๊กตาโยกเฟือง สำหรับยึดประคองเพลาขับด้ายและเพลาล่างเครื่องตีด้าย",
+        "Tags":  "",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  61,
+        "Code":  "026",
+        "Name":  "ตุ๊กตาเฟืองเกลียวนอก -ใน",
+        "StockGroup":  "ตุ๊กตา",
+        "EnType":  "Split Plummer Block / Pillow Block Bearing Housing",
+        "ImageUrl": "",
+        "Description":  "เสื้อตลับลูกปืนแบบผ่าสองซีก (Plummer Block) และตุ๊กตาโยกเฟือง สำหรับยึดประคองเพลาขับด้ายและเพลาล่างเครื่องตีด้าย",
+        "Tags":  "",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  62,
+        "Code":  "027",
+        "Name":  "ตุ๊กตาเฟือง A",
+        "StockGroup":  "ตุ๊กตา",
+        "EnType":  "Split Plummer Block / Pillow Block Bearing Housing",
+        "ImageUrl": "",
+        "Description":  "เสื้อตลับลูกปืนแบบผ่าสองซีก (Plummer Block) และตุ๊กตาโยกเฟือง สำหรับยึดประคองเพลาขับด้ายและเพลาล่างเครื่องตีด้าย",
+        "Tags":  "",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  63,
+        "Code":  "028",
+        "Name":  "ตุ๊กตาเฟืองชุบเปอร์ลีนเครือง 6\"",
+        "StockGroup":  "ตุ๊กตา",
+        "EnType":  "Superlene / POM / Nylon Spur Gear",
+        "ImageUrl": "",
+        "Description":  "เฟืองพลาสติกวิศวกรรมซุปเปอร์ลีน (Superlene / Nylon) สีขาวขุ่น ทนทานต่อการเสียดสีสูง ลดเสียงรบกวนในระบบส่งกำลัง",
+        "Tags":  "\u003cspan class=\u0027badge badge-typo\u0027\u003e✏️ สะกดผิด (ช ช้าง)\u003c/span\u003e",
+        "Notes":  "ควรแก้เป็น \u0027ซุปเปอร์ลีน\u0027",
+        "HasIssue":  true
+    },
+    {
+        "Index":  64,
+        "Code":  "029",
+        "Name":  "ตุ๊กตาเฟืองชุบเปอร์ลีน T17,18",
+        "StockGroup":  "ตุ๊กตา",
+        "EnType":  "Superlene / POM / Nylon Spur Gear",
+        "ImageUrl": "",
+        "Description":  "เฟืองพลาสติกวิศวกรรมซุปเปอร์ลีน (Superlene / Nylon) สีขาวขุ่น ทนทานต่อการเสียดสีสูง ลดเสียงรบกวนในระบบส่งกำลัง",
+        "Tags":  "\u003cspan class=\u0027badge badge-typo\u0027\u003e✏️ สะกดผิด (ช ช้าง)\u003c/span\u003e",
+        "Notes":  "ควรแก้เป็น \u0027ซุปเปอร์ลีน\u0027",
+        "HasIssue":  true
+    },
+    {
+        "Index":  65,
+        "Code":  "030",
+        "Name":  "ตุ๊กตาเฟือง X ( เครื่อง 6\" )",
+        "StockGroup":  "ตุ๊กตา",
+        "EnType":  "Split Plummer Block / Pillow Block Bearing Housing",
+        "ImageUrl": "",
+        "Description":  "เสื้อตลับลูกปืนแบบผ่าสองซีก (Plummer Block) และตุ๊กตาโยกเฟือง สำหรับยึดประคองเพลาขับด้ายและเพลาล่างเครื่องตีด้าย",
+        "Tags":  "",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  66,
+        "Code":  "031",
+        "Name":  "ตุ๊กตาเพลาล่างท้ายเครื่อง ( 4\",5\" )",
+        "StockGroup":  "ตุ๊กตา",
+        "EnType":  "Split Plummer Block / Pillow Block Bearing Housing",
+        "ImageUrl": "",
+        "Description":  "เสื้อตลับลูกปืนแบบผ่าสองซีก (Plummer Block) และตุ๊กตาโยกเฟือง สำหรับยึดประคองเพลาขับด้ายและเพลาล่างเครื่องตีด้าย",
+        "Tags":  "",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  67,
+        "Code":  "032",
+        "Name":  "ตุ๊กเพลาล่างเฟืองชุบเปอร์ลีน",
+        "StockGroup":  "ตุ๊กตา",
+        "EnType":  "Superlene / POM / Nylon Spur Gear",
+        "ImageUrl": "",
+        "Description":  "เฟืองพลาสติกวิศวกรรมซุปเปอร์ลีน (Superlene / Nylon) สีขาวขุ่น ทนทานต่อการเสียดสีสูง ลดเสียงรบกวนในระบบส่งกำลัง",
+        "Tags":  "\u003cspan class=\u0027badge badge-typo\u0027\u003e✏️ สะกดผิด (ช ช้าง)\u003c/span\u003e \u003cspan class=\u0027badge badge-typo\u0027\u003e✏️ พิมพ์ตก (ขาด \u0027ตา\u0027)\u003c/span\u003e",
+        "Notes":  "ควรแก้เป็น \u0027ซุปเปอร์ลีน\u0027 | ควรแก้เป็น \u0027ตุ๊กตาเพลาล่าง\u0027",
+        "HasIssue":  true
+    },
+    {
+        "Index":  68,
+        "Code":  "034",
+        "Name":  "ตุ๊กตาเพลาล่างกลางเครื่อง ( 40 mm )",
+        "StockGroup":  "ตุ๊กตา",
+        "EnType":  "Split Plummer Block / Pillow Block Bearing Housing",
+        "ImageUrl": "",
+        "Description":  "เสื้อตลับลูกปืนแบบผ่าสองซีก (Plummer Block) และตุ๊กตาโยกเฟือง สำหรับยึดประคองเพลาขับด้ายและเพลาล่างเครื่องตีด้าย",
+        "Tags":  "",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  69,
+        "Code":  "035",
+        "Name":  "ตุ๊กตาโยกเฟืองด้าน L   ( T9,13,14,29,30 )",
+        "StockGroup":  "ตุ๊กตา",
+        "EnType":  "Split Plummer Block / Pillow Block Bearing Housing",
+        "ImageUrl": "",
+        "Description":  "เสื้อตลับลูกปืนแบบผ่าสองซีก (Plummer Block) และตุ๊กตาโยกเฟือง สำหรับยึดประคองเพลาขับด้ายและเพลาล่างเครื่องตีด้าย",
+        "Tags":  "",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  70,
+        "Code":  "036",
+        "Name":  "ตุ๊กตาโยกเฟืองด้าน R  ( T9,13,14,29,30 )",
+        "StockGroup":  "ตุ๊กตา",
+        "EnType":  "Split Plummer Block / Pillow Block Bearing Housing",
+        "ImageUrl": "",
+        "Description":  "เสื้อตลับลูกปืนแบบผ่าสองซีก (Plummer Block) และตุ๊กตาโยกเฟือง สำหรับยึดประคองเพลาขับด้ายและเพลาล่างเครื่องตีด้าย",
+        "Tags":  "",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  71,
+        "Code":  "037",
+        "Name":  "ตุ๊กตาโยกเฟือง ( T3,6,7,8,46-51 )",
+        "StockGroup":  "ตุ๊กตา",
+        "EnType":  "Split Plummer Block / Pillow Block Bearing Housing",
+        "ImageUrl": "",
+        "Description":  "เสื้อตลับลูกปืนแบบผ่าสองซีก (Plummer Block) และตุ๊กตาโยกเฟือง สำหรับยึดประคองเพลาขับด้ายและเพลาล่างเครื่องตีด้าย",
+        "Tags":  "",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  72,
+        "Code":  "038",
+        "Name":  "ตุ๊กตาโยกเฟือง 6\" ( T11,15,43-45 )",
+        "StockGroup":  "ตุ๊กตา",
+        "EnType":  "Split Plummer Block / Pillow Block Bearing Housing",
+        "ImageUrl": "",
+        "Description":  "เสื้อตลับลูกปืนแบบผ่าสองซีก (Plummer Block) และตุ๊กตาโยกเฟือง สำหรับยึดประคองเพลาขับด้ายและเพลาล่างเครื่องตีด้าย",
+        "Tags":  "",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  73,
+        "Code":  "039",
+        "Name":  "ตุ๊กตาโยกเฟืองด้าน L  ( 4\"1/2,6\"1/2 , 7\" )",
+        "StockGroup":  "ตุ๊กตา",
+        "EnType":  "Split Plummer Block / Pillow Block Bearing Housing",
+        "ImageUrl": "",
+        "Description":  "เสื้อตลับลูกปืนแบบผ่าสองซีก (Plummer Block) และตุ๊กตาโยกเฟือง สำหรับยึดประคองเพลาขับด้ายและเพลาล่างเครื่องตีด้าย",
+        "Tags":  "",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  74,
+        "Code":  "040",
+        "Name":  "ตุ๊กตาโยกเฟืองด้น R ( 4\"1/2 ; 6\"1/2 , 7\" )",
+        "StockGroup":  "ตุ๊กตา",
+        "EnType":  "Split Plummer Block / Pillow Block Bearing Housing",
+        "ImageUrl": "",
+        "Description":  "เสื้อตลับลูกปืนแบบผ่าสองซีก (Plummer Block) และตุ๊กตาโยกเฟือง สำหรับยึดประคองเพลาขับด้ายและเพลาล่างเครื่องตีด้าย",
+        "Tags":  "\u003cspan class=\u0027badge badge-typo\u0027\u003e✏️ พิมพ์ตก (สระอา)\u003c/span\u003e",
+        "Notes":  "ควรแก้เป็น \u0027ด้าน R\u0027",
+        "HasIssue":  true
+    },
+    {
+        "Index":  75,
+        "Code":  "041",
+        "Name":  "ตุ๊กตาเพลาขับด้ายแบบผ่า ( 4\",5\",8\",10\" )",
+        "StockGroup":  "ตุ๊กตา",
+        "EnType":  "Split Plummer Block / Pillow Block Bearing Housing",
+        "ImageUrl": "",
+        "Description":  "เสื้อตลับลูกปืนแบบผ่าสองซีก (Plummer Block) และตุ๊กตาโยกเฟือง สำหรับยึดประคองเพลาขับด้ายและเพลาล่างเครื่องตีด้าย",
+        "Tags":  "",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  76,
+        "Code":  "042",
+        "Name":  "ตุ๊กตาเพลาขับด้ายแบบผ่า ( 4\"1/2 ,6\"1/2 , 7\" )",
+        "StockGroup":  "ตุ๊กตา",
+        "EnType":  "Split Plummer Block / Pillow Block Bearing Housing",
+        "ImageUrl": "",
+        "Description":  "เสื้อตลับลูกปืนแบบผ่าสองซีก (Plummer Block) และตุ๊กตาโยกเฟือง สำหรับยึดประคองเพลาขับด้ายและเพลาล่างเครื่องตีด้าย",
+        "Tags":  "",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  77,
+        "Code":  "043",
+        "Name":  "ตุ๊กตาเพลาขับด้ายแบบผ่า 6\"",
+        "StockGroup":  "ตุ๊กตา",
+        "EnType":  "Split Plummer Block / Pillow Block Bearing Housing",
+        "ImageUrl": "",
+        "Description":  "เสื้อตลับลูกปืนแบบผ่าสองซีก (Plummer Block) และตุ๊กตาโยกเฟือง สำหรับยึดประคองเพลาขับด้ายและเพลาล่างเครื่องตีด้าย",
+        "Tags":  "",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  78,
+        "Code":  "044",
+        "Name":  "ตุ๊กตาล้อตึงสายพานเครื่องวงแหวน",
+        "StockGroup":  "ตุ๊กตา",
+        "EnType":  "Ring Spinning / Twister Flange Ring",
+        "ImageUrl": "",
+        "Description":  "วงแหวนเหล็กขัดเงาสำหรับเครื่องตีด้าย/ทอผ้า (Flange Ring) มีรางรอบสำหรับนักวิ่ง (Traveler) หมุนส่งกำลังตีเกลียวเส้นด้าย",
+        "Tags":  "",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  79,
+        "Code":  "045",
+        "Name":  "วงแหวน 5\"1/2 ( 2f1 )",
+        "StockGroup":  "วงแหวน",
+        "EnType":  "Ring Spinning / Twister Flange Ring",
+        "ImageUrl": "",
+        "Description":  "วงแหวนเหล็กขัดเงาสำหรับเครื่องตีด้าย/ทอผ้า (Flange Ring) มีรางรอบสำหรับนักวิ่ง (Traveler) หมุนส่งกำลังตีเกลียวเส้นด้าย",
+        "Tags":  "",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  80,
+        "Code":  "046",
+        "Name":  "ล้อตึงสายพานล่าง ( 2f1 )",
+        "StockGroup":  "พูลเลย์/สายพาน",
+        "EnType":  "V-Belt Pulley \u0026 Idler Tensioner Pulley",
+        "ImageUrl": "",
+        "Description":  "มู่เล่ย์สายพานร่องวี และล้อลูกรอกปรับความตึงสายพาน (Tensioner Pulley) พร้อมชุดสลักแกนยึดสำหรับเครื่องตีด้าย",
+        "Tags":  "",
+        "Notes":  "",
+        "HasIssue":  false
+    },
+    {
+        "Index":  81,
+        "Code":  "20",
+        "Name":  "วงแหวน 5\"1/2 (T61,62)",
+        "StockGroup":  "วงแหวน",
+        "EnType":  "Ring Spinning / Twister Flange Ring",
+        "ImageUrl": "",
+        "Description":  "วงแหวนเหล็กขัดเงาสำหรับเครื่องตีด้าย/ทอผ้า (Flange Ring) มีรางรอบสำหรับนักวิ่ง (Traveler) หมุนส่งกำลังตีเกลียวเส้นด้าย",
+        "Tags":  "",
+        "Notes":  "",
+        "HasIssue":  false
+    }
+]
+;
+
+    let currentGroup = 'ALL';
+    let onlyIssues = false;
+    let searchQuery = '';
+    let currentView = 'table';
+
+    const groupCounts = {};
+    rawData.forEach(item => {
+        groupCounts[item.StockGroup] = (groupCounts[item.StockGroup] || 0) + 1;
+    });
+
+    function initFilters() {
+        const container = document.getElementById('groupFilterTags');
+        let html = '<button class="filter-btn active" onclick="setGroup(\'ALL\', this)">ทั้งหมด (' + rawData.length + ')</button>';
+        
+        const sortedGroups = Object.keys(groupCounts).sort((a, b) => groupCounts[b] - groupCounts[a]);
+        sortedGroups.forEach(grp => {
+            html += '<button class="filter-btn" onclick="setGroup(\'' + grp + '\', this)">' + grp + ' (' + groupCounts[grp] + ')</button>';
+        });
+        container.innerHTML = html;
+    }
+
+    function setGroup(grp, btn) {
+        currentGroup = grp;
+        document.querySelectorAll('#groupFilterTags .filter-btn').forEach(b => b.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+        render();
+    }
+
+    function toggleOnlyIssues() {
+        onlyIssues = !onlyIssues;
+        const btn = document.getElementById('btnOnlyIssues');
+        if (onlyIssues) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+        render();
+    }
+
+    function handleSearch() {
+        searchQuery = document.getElementById('searchInput').value.trim().toLowerCase();
+        render();
+    }
+
+    function setViewMode(mode) {
+        currentView = mode;
+        const btnTable = document.getElementById('btnTableView');
+        const btnGrid = document.getElementById('btnGridView');
+        const containerTable = document.getElementById('tableViewContainer');
+        const containerGrid = document.getElementById('gridViewContainer');
+
+        if (mode === 'table') {
+            btnTable.classList.add('active');
+            btnGrid.classList.remove('active');
+            containerTable.style.display = 'block';
+            containerGrid.style.display = 'none';
+        } else {
+            btnGrid.classList.add('active');
+            btnTable.classList.remove('active');
+            containerTable.style.display = 'none';
+            containerGrid.style.display = 'grid';
+        }
+        render();
+    }
+
+    function getFilteredItems() {
+        return rawData.filter(item => {
+            if (currentGroup !== 'ALL' && item.StockGroup !== currentGroup) return false;
+            if (onlyIssues && !item.HasIssue) return false;
+            if (searchQuery) {
+                const hay = (item.Code + ' ' + item.Name + ' ' + item.StockGroup + ' ' + item.EnType + ' ' + item.Description + ' ' + item.Notes).toLowerCase();
+                if (!hay.includes(searchQuery)) return false;
+            }
+            return true;
+        });
+    }
+
+    function render() {
+        const items = getFilteredItems();
+        
+        const categoryPlaceholderMap = {
+            "วงแหวน": "https://zfpytdigcinwkfiwjpwu.supabase.co/storage/v1/object/public/stock%20image/placeholders/group_ring.png",
+            "ตัวครอบ": "https://zfpytdigcinwkfiwjpwu.supabase.co/storage/v1/object/public/stock%20image/placeholders/group_holder.png",
+            "ตุ๊กตา": "https://zfpytdigcinwkfiwjpwu.supabase.co/storage/v1/object/public/stock%20image/placeholders/group_pillow_block.png",
+            "แกนเฟือง": "https://zfpytdigcinwkfiwjpwu.supabase.co/storage/v1/object/public/stock%20image/placeholders/group_gear_shaft.png",
+            "เฟืองขับ/ท้าย": "https://zfpytdigcinwkfiwjpwu.supabase.co/storage/v1/object/public/stock%20image/placeholders/group_drive_gear.png",
+            "ซุปเปอร์ลีน": "https://zfpytdigcinwkfiwjpwu.supabase.co/storage/v1/object/public/stock%20image/placeholders/group_superlene.png",
+            "พูลเลย์/สายพาน": "https://zfpytdigcinwkfiwjpwu.supabase.co/storage/v1/object/public/stock%20image/placeholders/group_pulley_belt.png",
+            "เบ็ดเตล็ด": "https://zfpytdigcinwkfiwjpwu.supabase.co/storage/v1/object/public/stock%20image/placeholders/group_misc.png"
+        };
+        const defaultCatPlaceholder = "https://zfpytdigcinwkfiwjpwu.supabase.co/storage/v1/object/public/stock%20image/placeholders/group_misc.png";
+        function getItemImg(it) {
+            if (it.ImageUrl && it.ImageUrl.trim() && !it.ImageUrl.includes('imimg') && !it.ImageUrl.includes('dreamstime')) {
+                return it.ImageUrl;
+            }
+            return categoryPlaceholderMap[it.StockGroup] || defaultCatPlaceholder;
+        }
+
+        // Table Render
+        const tbody = document.getElementById('tableBody');
+        const tableEmpty = document.getElementById('tableEmptyState');
+        if (items.length === 0) {
+            tbody.innerHTML = '';
+            tableEmpty.style.display = 'block';
+        } else {
+            tableEmpty.style.display = 'none';
+            tbody.innerHTML = items.map((it, idx) => {
+                const safeName = (it.Name || '').replace(/'/g, "\\'");
+                const safeDesc = (it.Description || '').replace(/'/g, "\\'");
+                const issueClass = it.HasIssue ? ' class="has-issue"' : '';
+                const tagHtml = it.Tags ? it.Tags : '<span style="color:#94a3b8; font-size:12px;">- ปกติ -</span>';
+                const notesHtml = it.Notes ? '<div class="cell-notes">📌 ' + it.Notes + '</div>' : '';
+                const imgPath = getItemImg(it, idx);
+                return '<tr' + issueClass + '>' +
+                    '<td class="cell-index">' + it.Index + '</td>' +
+                    '<td style="text-align: center;">' +
+                        '<img src="' + imgPath + '" class="cell-thumb" alt="thumb" onerror="this.src=\'https://zfpytdigcinwkfiwjpwu.supabase.co/storage/v1/object/public/stock%20image/placeholders/cat_chill_sink.png\'" onclick="openModal(\'' + imgPath + '\', \'' + it.Code + ' - ' + safeName + '\', \'' + safeDesc + '\')">' +
+                    '</td>' +
+                    '<td class="cell-code">' + it.Code + '</td>' +
+                    '<td><span class="badge badge-group">' + it.StockGroup + '</span></td>' +
+                    '<td>' +
+                        '<div class="cell-name">' + it.Name + '</div>' +
+                        '<div class="cell-desc">' + (it.Description ? it.Description : '-') + '</div>' +
+                    '</td>' +
+                    '<td>' +
+                        '<div>' + tagHtml + '</div>' +
+                        notesHtml +
+                    '</td>' +
+                    '<td style="font-size: 12px; color: var(--text-muted);">' + (it.EnType ? it.EnType : '-') + '</td>' +
+                '</tr>';
+            }).join('');
+        }
+
+        // Grid Render
+        const gridContainer = document.getElementById('gridViewContainer');
+        const gridEmpty = document.getElementById('gridEmptyState');
+        if (items.length === 0) {
+            gridContainer.innerHTML = '';
+            gridEmpty.style.display = 'block';
+        } else {
+            gridEmpty.style.display = 'none';
+            gridContainer.innerHTML = items.map((it, idx) => {
+                const safeName = (it.Name || '').replace(/'/g, "\\'");
+                const safeDesc = (it.Description || '').replace(/'/g, "\\'");
+                const issueClass = it.HasIssue ? ' has-issue' : '';
+                const tagHtml = it.Tags ? '<div>' + it.Tags + '</div>' : '';
+                const notesHtml = it.Notes ? '<div class="cell-notes" style="margin-top:6px;">📌 ' + it.Notes + '</div>' : '';
+                const imgPath = getItemImg(it, idx);
+                return '<div class="grid-card' + issueClass + '">' +
+                    '<div class="grid-card-top">' +
+                        '<img src="' + imgPath + '" class="grid-img" alt="thumb" onerror="this.src=\'https://zfpytdigcinwkfiwjpwu.supabase.co/storage/v1/object/public/stock%20image/placeholders/cat_chill_sink.png\'" onclick="openModal(\'' + imgPath + '\', \'' + it.Code + ' - ' + safeName + '\', \'' + safeDesc + '\')">' +
+                        '<div class="grid-header">' +
+                            '<div style="display: flex; justify-content: space-between; align-items: center;">' +
+                                '<span class="grid-code">' + it.Code + '</span>' +
+                                '<span class="badge badge-group">' + it.StockGroup + '</span>' +
+                            '</div>' +
+                            '<div class="grid-title">' + it.Name + '</div>' +
+                        '</div>' +
+                    '</div>' +
+                    '<div>' +
+                        tagHtml +
+                        notesHtml +
+                    '</div>' +
+                    '<div class="grid-desc">' + (it.Description ? it.Description : '') + '</div>' +
+                '</div>';
+            }).join('');
+        }
+    }
+
+    function openModal(imgUrl, title, desc) {
+        document.getElementById('modalImg').src = imgUrl;
+        document.getElementById('modalTitle').innerText = title;
+        document.getElementById('modalDesc').innerText = desc;
+        document.getElementById('imageModal').classList.add('active');
+    }
+
+    function closeModal(e) {
+        document.getElementById('imageModal').classList.remove('active');
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeModal();
+    });
+
+    initFilters();
+    render();
+</script>
+
+</body>
+</html>
