@@ -242,7 +242,7 @@ namespace CostFlow.Controllers
                         else
                         {
                             deferredCount++;
-                            deferredAmount += kvp.Value.ActionPrice;
+                            deferredAmount += (kvp.Value.ActionPrice > 0 ? kvp.Value.ActionPrice : amt);
                             carryOverPlannedAmount += (kvp.Value.ActionPrice > 0 ? kvp.Value.ActionPrice : amt);
                         }
                     }
@@ -488,7 +488,7 @@ namespace CostFlow.Controllers
                         else
                         {
                             deferredCount++;
-                            deferredAmount += kvp.Value.ActionPrice;
+                            deferredAmount += (kvp.Value.ActionPrice > 0 ? kvp.Value.ActionPrice : amt);
                             carryOverPlannedAmount += (kvp.Value.ActionPrice > 0 ? kvp.Value.ActionPrice : amt);
                         }
                     }
