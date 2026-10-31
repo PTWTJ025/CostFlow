@@ -113,7 +113,7 @@ namespace CostFlow.Controllers
                 .Select(o => new { o.Id, o.Amount, o.ApprovedDate })
                 .ToListAsync();
 
-            // กำหนดเดือนที่จะแสดงป้าย "มูลค่ารวมจ่ายสะสม" ให้เป็นเดือนปัจจุบันเสมอสำหรับปีปัจจุบัน
+            // กำหนดเดือนที่จะแสดงป้าย "ยอดรวมยังไม่ชำระ" ให้เป็นเดือนปัจจุบันเสมอสำหรับปีปัจจุบัน
             int latestMonthWithData = selectedYear == now.Year
                 ? now.Month
                 : (selectedYear < now.Year ? 12 : 1);
