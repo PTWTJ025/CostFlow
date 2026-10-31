@@ -113,7 +113,7 @@ namespace CostFlow.Controllers
                 .Select(o => new { o.Id, o.Amount, o.ApprovedDate })
                 .ToListAsync();
 
-            // กำหนดเดือนที่จะแสดงป้าย "มูลค่ารวมสะสม" ให้เป็นเดือนปัจจุบันเสมอสำหรับปีปัจจุบัน
+            // กำหนดเดือนที่จะแสดงป้าย "มูลค่ารวมจ่ายสะสม" ให้เป็นเดือนปัจจุบันเสมอสำหรับปีปัจจุบัน
             int latestMonthWithData = selectedYear == now.Year
                 ? now.Month
                 : (selectedYear < now.Year ? 12 : 1);
@@ -125,6 +125,8 @@ namespace CostFlow.Controllers
             var cards = new List<MonthlyCardViewModel>();
 
             // คำนวณยอดรวมสั่งผลิตสะสมของปีก่อนหน้าทั้งหมด (ก่อนปีที่เลือก) เป็นฐานเริ่มต้น
+            // คำนวณยอดที่ยังไม่จ่ายตังค์รวม (ราคาที่ยังไม่ได้รับสินค้า + ราคาที่รับแล้วยังไม่จ่าย) ตามตรรกะเดียวกับหน้า Summary
+            decimal totalUnpaidAmount = await GetTotalUnpaidAmountAsync(selectedYear, now);
             decimal runningPlannedAmount = allOrders
                 .Where(o =>
                 {
@@ -342,9 +344,10 @@ namespace CostFlow.Controllers
                     DeferredCarryOver = deferredCarryOver,
                     SkippedCarryOver = skippedCarryOver,
                     MonthAmount = monthBasePlannedAmount,
-                    TotalAmount = (month == latestMonthWithData && runningPlannedAmount > 0)
-                        ? runningPlannedAmount
-                        : (monthOrdersInMonth.Count == 0 && monthActions.Count == 0 ? 0m : runningPlannedAmount),
+                    TotalAmount = (month == latestMonthWithData) ? totalUnpaidAmount : 0m,
+
+
+
                     IsLatestWithData = (month == latestMonthWithData),
                     IsPastYearDecember = (selectedYear < now.Year && month == 12)
                 });
@@ -387,6 +390,8 @@ namespace CostFlow.Controllers
 
             var result = new List<object>();
             // คำนวณยอดรวมสั่งผลิตสะสมของปีก่อนหน้าทั้งหมด (ก่อนปีที่เลือก) เป็นฐานเริ่มต้น
+            // คำนวณยอดที่ยังไม่จ่ายตังค์รวม (ราคาที่ยังไม่ได้รับสินค้า + ราคาที่รับแล้วยังไม่จ่าย) ตามตรรกะเดียวกับหน้า Summary
+            decimal totalUnpaidAmount = await GetTotalUnpaidAmountAsync(selectedYear, now);
             decimal runningPlannedAmount = allOrders
                 .Where(o =>
                 {
@@ -523,9 +528,9 @@ namespace CostFlow.Controllers
                     skippedCount,
                     skippedAmount,
                     monthAmount = monthBasePlannedAmount,
-                    totalAmount = (month == latestMonthWithData && runningPlannedAmount > 0)
-                        ? runningPlannedAmount
-                        : (monthOrdersInMonth.Count == 0 && monthActions.Count == 0 ? 0m : runningPlannedAmount),
+                    totalAmount = (month == latestMonthWithData) ? totalUnpaidAmount : 0m,
+
+
                     paidAmount = receivedAmount,
                     isPastYearDecember = (selectedYear < now.Year && month == 12)
                 });
@@ -2199,6 +2204,125 @@ namespace CostFlow.Controllers
             };
 
             return View(vm);
+        }
+
+        /// <summary>
+        /// คำนวณราคายอดสั่งผลิตที่ยังไม่จ่ายตังค์เลย (รวมราคาที่ยังไม่ได้รับสินค้า Skipped + ราคาที่รับแล้วยังไม่จ่าย Deferred)
+        /// ตามตรรกะและสถานะของปีที่เลือก แบบเดียวกับหน้า Summary
+        /// </summary>
+        private async Task<decimal> GetTotalUnpaidAmountAsync(int selectedYear, DateTime now)
+        {
+            var allOrders = await _context.OrderTrackingMasters
+                .Select(o => new { o.Id, o.Amount, o.ApprovedDate })
+                .ToListAsync();
+
+            var allActions = await _context.MonthlyOrderActions
+                .Select(a => new { a.Id, a.OrderTrackingMasterId, a.MonthYear, a.Action, a.ActionPrice, a.CreatedAt })
+                .ToListAsync();
+
+            var actionsByOrder = allActions
+                .GroupBy(a => a.OrderTrackingMasterId)
+                .ToDictionary(g => g.Key, g => g.ToList());
+
+            var currentMonthDate = new DateTime(now.Year, now.Month, 1);
+
+            DateTime ParseMonthYear(string my)
+            {
+                if (string.IsNullOrWhiteSpace(my)) return DateTime.MinValue;
+                var parts = my.Split('-');
+                if (parts.Length >= 2 && int.TryParse(parts[0], out var y) && int.TryParse(parts[1], out var m))
+                {
+                    if (m >= 1 && m <= 12)
+                    {
+                        return new DateTime(y, m, 1);
+                    }
+                }
+                return DateTime.MinValue;
+            }
+
+            decimal totalUnpaid = 0m;
+
+            foreach (var otm in allOrders)
+            {
+                var approvedDt = ParseThaiDate(otm.ApprovedDate);
+                var orderActions = actionsByOrder.ContainsKey(otm.Id) ? actionsByOrder[otm.Id] : null;
+
+                var latestAct = orderActions?
+                    .OrderByDescending(a => ParseMonthYear(a.MonthYear))
+                    .ThenByDescending(a => a.CreatedAt)
+                    .FirstOrDefault();
+
+                int effectiveYear = approvedDt?.Year ?? now.Year;
+                int effectiveMonth = approvedDt?.Month ?? now.Month;
+                string finalAction = "Skipped";
+
+                if (latestAct != null)
+                {
+                    var normalizedKey = latestAct.MonthYear.Length > 7 ? latestAct.MonthYear.Substring(0, 7) : latestAct.MonthYear;
+                    var keyParts = normalizedKey.Split('-');
+                    if (keyParts.Length == 2 && int.TryParse(keyParts[0], out var aYear) && int.TryParse(keyParts[1], out var aMonth))
+                    {
+                        if (latestAct.Action == "Deferred")
+                        {
+                            var nextMonthDate = new DateTime(aYear, aMonth, 1).AddMonths(1);
+                            effectiveYear = nextMonthDate.Year;
+                            effectiveMonth = nextMonthDate.Month;
+                            var effectiveDate = new DateTime(effectiveYear, effectiveMonth, 1);
+
+                            if (effectiveDate < currentMonthDate)
+                            {
+                                finalAction = "Skipped";
+                            }
+                            else
+                            {
+                                finalAction = "Deferred";
+                            }
+                        }
+                        else if (latestAct.Action == "ReceivedFull")
+                        {
+                            effectiveYear = aYear;
+                            effectiveMonth = aMonth;
+                            finalAction = "ReceivedFull";
+                        }
+                        else
+                        {
+                            effectiveYear = aYear;
+                            effectiveMonth = aMonth;
+                            finalAction = "Skipped";
+                        }
+                    }
+                }
+                else
+                {
+                    if (approvedDt.HasValue)
+                    {
+                        effectiveYear = approvedDt.Value.Year;
+                        effectiveMonth = approvedDt.Value.Month;
+                        finalAction = "Skipped";
+                    }
+                }
+
+                // กรองให้อยู่ในปีที่เลือก
+                if (effectiveYear != selectedYear && (approvedDt == null || approvedDt.Value.Year != selectedYear))
+                    continue;
+
+                // รวมเฉพาะยอดที่ยังไม่จ่ายตังค์เลย (ยังไม่ได้รับสินค้า Skipped + รับสินค้ายังไม่ชำระ Deferred)
+                if (finalAction == "Skipped" || finalAction == "Deferred")
+                {
+                    decimal amount = 0m;
+                    if (latestAct != null && latestAct.ActionPrice > 0)
+                    {
+                        amount = latestAct.ActionPrice;
+                    }
+                    else if (!string.IsNullOrEmpty(otm.Amount) && decimal.TryParse(otm.Amount, out var parsed))
+                    {
+                        amount = parsed;
+                    }
+                    totalUnpaid += amount;
+                }
+            }
+
+            return totalUnpaid;
         }
 
         private DateTime? ParseThaiDate(string? thaiDateStr)
