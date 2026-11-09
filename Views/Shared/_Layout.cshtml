@@ -386,12 +386,15 @@
             overflow: hidden !important;
             transition: max-height 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
         }
-        #notif-dropdown.is-expanded {
+        #notif-dropdown.hidden {
+            display: none !important;
+        }
+        #notif-dropdown.is-expanded:not(.hidden) {
             max-height: calc(100vh - 80px) !important;
             display: flex !important;
             flex-direction: column !important;
         }
-        #notif-dropdown.is-expanded #notif-items-list {
+        #notif-dropdown.is-expanded:not(.hidden) #notif-items-list {
             max-height: calc(100vh - 165px) !important;
             flex: 1 1 auto !important;
             overflow-y: auto !important;
@@ -401,10 +404,10 @@
                 width: calc(100vw - 16px) !important;
                 right: -48px !important;
             }
-            #notif-dropdown.is-expanded {
+            #notif-dropdown.is-expanded:not(.hidden) {
                 max-height: calc(100dvh - 75px) !important;
             }
-            #notif-dropdown.is-expanded #notif-items-list {
+            #notif-dropdown.is-expanded:not(.hidden) #notif-items-list {
                 max-height: calc(100dvh - 150px) !important;
             }
         }
@@ -968,17 +971,25 @@
                         <div class="flex items-center justify-between mb-2.5">
                             <h3 class="text-xl font-extrabold text-slate-900 tracking-tight">การแจ้งเตือน</h3>
                             
-                            <!-- Three-dots option menu -->
-                            <div class="relative">
+                            <!-- Three-dots option menu & Close button -->
+                            <div class="relative flex items-center gap-1">
                                 <button type="button" 
                                         id="notif-more-options-btn"
                                         onclick="toggleNotifMoreMenu(event)"
-                                        class="w-8 h-8 flex items-center justify-center text-slate-600 transition-colors cursor-pointer"
+                                        class="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-600 transition-colors cursor-pointer"
                                         title="ตัวเลือกการแจ้งเตือน">
                                     <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                                         <circle cx="5" cy="12" r="2" />
                                         <circle cx="12" cy="12" r="2" />
                                         <circle cx="19" cy="12" r="2" />
+                                    </svg>
+                                </button>
+                                <button type="button"
+                                        onclick="closeNotifDropdown(event)"
+                                        class="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
+                                        title="ปิดการแจ้งเตือน">
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
                                     </svg>
                                 </button>
 
@@ -1502,6 +1513,19 @@
         const notifBadge = document.getElementById("notif-badge");
         const notifMoreMenu = document.getElementById("notif-more-menu");
 
+        function closeNotifDropdown(e) {
+            if (e) e.stopPropagation();
+            if (notifDropdown) {
+                notifDropdown.classList.add("hidden");
+            }
+            if (notifDropdownBtn) {
+                notifDropdownBtn.classList.remove("is-active");
+            }
+            closeNotifMoreMenu();
+            closeRowActionMenu();
+        }
+        window.closeNotifDropdown = closeNotifDropdown;
+
         if (notifDropdownBtn && notifDropdown) {
             notifDropdownBtn.addEventListener("click", function (e) {
                 e.stopPropagation();
@@ -1515,10 +1539,7 @@
 
             document.addEventListener("click", function (e) {
                 if (!notifDropdownBtn.contains(e.target) && !notifDropdown.contains(e.target)) {
-                    notifDropdown.classList.add("hidden");
-                    notifDropdownBtn.classList.remove("is-active");
-                    closeNotifMoreMenu();
-                    closeRowActionMenu();
+                    closeNotifDropdown();
                 }
             });
         }
