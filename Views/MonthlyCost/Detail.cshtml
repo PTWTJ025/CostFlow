@@ -397,13 +397,13 @@
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 0 1-.659 1.591l-5.432 5.432a2.25 2.25 0 0 0-.659 1.591v2.927a2.25 2.25 0 0 1-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 0 0-.659-1.591L3.659 7.409A2.25 2.25 0 0 1 3 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0 1 12 3Z"/>
                 </svg>
                 <select id="saved-action-select" onchange="applySavedFilters()"
-                        class="bg-transparent text-slate-700 font-bold outline-none cursor-pointer text-xs focus:ring-0 p-0 m-0 h-full w-[125px]"
+                        class="bg-transparent text-slate-700 font-bold outline-none cursor-pointer text-xs focus:ring-0 p-0 m-0 h-full w-[175px]"
                         style="border: none !important; box-shadow: none !important;">
                     <option value="all">สถานะทั้งหมด</option>
                     <option value="ReceivedFull">ชำระแล้ว</option>
                     <option value="Deferred">ยังไม่ชำระ</option>
-                    <option value="Requested">ต้องการรับ</option>
                     <option value="Skipped">ยังไม่รับ</option>
+                    <option value="PriorReceived">ประวัติที่รับแล้วจากเดือนก่อน</option>
                 </select>
             </div>
         </div>
@@ -668,16 +668,20 @@
                 fwdBadge = $"<span class=\"ml-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-purple-100 text-purple-700\" title=\"{tooltipText}\">ค้างยกยอดมา</span>";
             }
 
+            var effectiveSavedPrice = (saved.Action == "ReceivedFull" || saved.Action == "Deferred") ? saved.ActionPrice : saved.TotalPrice;
             <div class="saved-card border border-slate-200 rounded-lg p-3 bg-white hover:border-slate-300 transition-all shadow-2xs"
                  data-action-id="@saved.ActionId"
                  data-po-number="@saved.PoNumber"
                  data-order-name="@saved.OrderName"
-                 data-action="@saved.Action">
+                 data-action="@saved.Action"
+                 data-price="@effectiveSavedPrice"
+                 data-prior-received="false">
                 <div class="flex items-start gap-3">
                     <input type="checkbox"
                            class="saved-card-checkbox mt-1 rounded border-slate-300 text-rose-600 focus:ring-rose-500 shrink-0 cursor-pointer"
                            data-action-id="@saved.ActionId"
                            data-po-number="@saved.PoNumber"
+                           data-prior-received="false"
                            onchange="onSavedCardCheckboxChange()"/>
 
                     <div class="flex-1 min-w-0">
@@ -773,7 +777,7 @@
                     @if (saved.ActionId != Guid.Empty)
                     {
                         <button type="button"
-                                onclick="cancelSavedAction('@saved.ActionId', '@saved.PoNumber')"
+                                onclick="cancelSavedAction('@saved.ActionId', '@saved.PoNumber', false, '')"
                                 class="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 border border-rose-200 transition-all cursor-pointer">
                             ยกเลิกบันทึก
                         </button>
@@ -788,15 +792,82 @@
             </div>
         }
     }
-    else
+
+    @if (Model.PriorReceivedOrders != null && Model.PriorReceivedOrders.Any())
     {
-        <div class="flex flex-col items-center justify-center py-16 text-slate-300">
-            <svg class="w-10 h-10 mb-2" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
-            </svg>
-            <p class="text-sm font-medium text-slate-400">ยังไม่มีรายการที่บันทึก</p>
-        </div>
+        foreach (var prior in Model.PriorReceivedOrders)
+        {
+            <div class="saved-card border border-indigo-200 rounded-lg p-3 bg-indigo-50/20 hover:border-indigo-300 transition-all shadow-2xs"
+                 style="display:none;"
+                 data-action-id="@prior.ActionId"
+                 data-po-number="@prior.PoNumber"
+                 data-order-name="@prior.OrderName"
+                 data-action="ReceivedFull"
+                 data-price="@prior.ActionPrice"
+                 data-prior-received="true"
+                 data-received-month="@prior.ReceivedMonthDisplay">
+                <div class="flex items-start gap-3">
+                    <input type="checkbox"
+                           class="saved-card-checkbox mt-1 rounded border-slate-300 text-rose-600 focus:ring-rose-500 shrink-0 cursor-pointer"
+                           data-action-id="@prior.ActionId"
+                           data-po-number="@prior.PoNumber"
+                           data-prior-received="true"
+                           onchange="onSavedCardCheckboxChange()"/>
+
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center flex-wrap gap-1 mb-0.5">
+                            <span class="font-bold text-[13px] text-slate-800">@prior.PoNumber</span>
+                            <span class="ml-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-indigo-100 text-indigo-700">ประวัติเดือนก่อน</span>
+                        </div>
+                        <p class="text-xs text-slate-500 leading-snug line-clamp-2">@prior.OrderName</p>
+
+                        <div class="mt-1.5 mb-1.5 text-[11px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-md px-2.5 py-1 inline-flex items-center gap-1.5">
+                            <span>📌 รับและชำระแล้วเมื่อ: @prior.ReceivedMonthDisplay (฿@prior.ActionPrice.ToString("N2"))</span>
+                        </div>
+
+                        <div class="flex items-center flex-wrap gap-x-2.5 mt-1.5 text-[11px] leading-none">
+                            <span class="inline-flex items-center gap-1 font-medium text-indigo-600 leading-none">
+                                <span>จำนวน:</span>
+                                <span class="font-bold leading-none">@prior.Quantity.ToString("N0")</span>
+                                <span>ชิ้น</span>
+                            </span>
+                            <span class="text-slate-300 leading-none select-none inline-flex items-center">•</span>
+                            <div class="inline-flex items-center gap-1.5 leading-none ml-3">
+                                <svg class="w-3.5 h-3.5 text-slate-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"/>
+                                </svg>
+                                <span class="text-slate-400 leading-none">เป้าหมายส่งมอบ: <span class="font-medium text-indigo-600">@(prior.DeliveryTarget != "-" ? prior.DeliveryTarget : "ไม่ระบุ")</span></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="shrink-0 flex flex-col items-end gap-1.5">
+                        <span class="font-bold text-sm text-slate-700">฿@prior.ActionPrice.ToString("N2")</span>
+                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold border bg-emerald-50 border-emerald-200 text-emerald-700">
+                            รับแล้ว (@prior.ReceivedMonthDisplay)
+                        </span>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between gap-2 mt-2 pt-2 border-t border-indigo-100 text-xs">
+                    <span class="text-[10px] text-slate-400">
+                        บันทึกเมื่อ: @prior.CreatedAt.ToString("dd/MM/yyyy HH:mm")
+                    </span>
+                    <button type="button"
+                            onclick="cancelSavedAction('@prior.ActionId', '@prior.PoNumber', true, '@prior.ReceivedMonthDisplay')"
+                            class="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 border border-rose-200 bg-white transition-all cursor-pointer">
+                        ↩ ยกเลิกการรับของ (ดึงกลับมาเดือนนี้)
+                    </button>
+                </div>
+            </div>
+        }
     }
+
+    <div id="saved-empty-state" class="flex flex-col items-center justify-center py-16 text-slate-300" style="display:@(Model.SavedOrders.Any() ? "none" : "flex");">
+        <svg class="w-10 h-10 mb-2" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+        </svg>
+        <p class="text-sm font-medium text-slate-400">ไม่พบรายการที่บันทึก</p>
+    </div>
 </div>
 </div>
 
@@ -1074,7 +1145,10 @@
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script type="text/javascript">
         // ─── Tab switching ────────────────────────────────────────────────────────────
+        let activeTab = 'pending';
+
         function switchTab(tab) {
+            activeTab = tab;
             const pendingPanel = document.getElementById('panel-pending');
             const savedPanel = document.getElementById('panel-saved');
             const searchWrap = document.getElementById('search-wrap');
@@ -1096,12 +1170,8 @@
                 btnSaved.style.cssText = 'background:#f8fafc;border-color:#e2e8f0;color:#94a3b8;';
                 badgePending.style.cssText = 'background:#fbbf24;color:#78350f;';
                 badgeSaved.style.cssText = 'background:#e2e8f0;color:#475569;';
-                // Reset pending sort & search, then re-apply filter
-                const pendingSort = document.getElementById('pending-sort-select');
-                if (pendingSort) pendingSort.value = 'default';
-                const searchPending = document.getElementById('search-pending');
-                if (searchPending) searchPending.value = '';
-                toggleClearSearchBtn();
+                // คงคำค้นหาเดิมไว้เวลาสลับแท็บ และอัปเดตทั้ง 2 แท็บให้ตัวเลขไม่ค้าง
+                applySavedFilters();
                 applyPendingFilters();
             } else {
                 savedPanel.classList.remove('hidden');
@@ -1114,12 +1184,8 @@
                 btnPending.style.cssText = 'background:#f8fafc;border-color:#e2e8f0;color:#94a3b8;';
                 badgeSaved.style.cssText = 'background:#34d399;color:#064e3b;';
                 badgePending.style.cssText = 'background:#e2e8f0;color:#475569;';
-                // Reset saved action filter to "all" & search, then re-apply filter
-                const savedSelect = document.getElementById('saved-action-select');
-                if (savedSelect) savedSelect.value = 'all';
-                const searchSaved = document.getElementById('search-pending');
-                if (searchSaved) searchSaved.value = '';
-                toggleClearSearchBtn();
+                // คงคำค้นหาเดิมไว้เวลาสลับแท็บ และอัปเดตทั้ง 2 แท็บให้ตัวเลขไม่ค้าง
+                applyPendingFilters();
                 applySavedFilters();
             }
         }
@@ -1141,6 +1207,7 @@
             forwardedStatus = o.ForwardedStatus,
             forwardedFrom = o.ForwardedFromMonth,
             originalMonth = o.OriginalMonth,
+            priorDeferredActionId = o.PriorDeferredActionId,
             action = "ReceivedFull",
             actionPrice = o.TotalPrice,
             isStockReceived = true,
@@ -1164,6 +1231,7 @@
                             if (LOCKED_DEFERRED_ORDERS.some(l => l.orderId === orderId)) return;
 
                             const item = parsed[orderId];
+                            if (item && item.isLocked) return;
                             const card = document.querySelector(`.order-card[data-order-id="${orderId}"]`);
                             if (card && card.style.display !== 'none' && !card.classList.contains('in-cart')) {
                                 if (!item.quantity && card.dataset.quantity) {
@@ -1329,12 +1397,6 @@
             }
         }
 
-        // ─── Lifecycle ────────────────────────────────────────────────────────────────
-        document.addEventListener('DOMContentLoaded', function () {
-            loadCartFromStorage();
-            updateSummary();
-        });
-
         function addToCart(btn) {
             addToCartWithAction(btn, 'ReceivedFull');
         }
@@ -1357,6 +1419,9 @@
 
         // ─── Render one cart item ─────────────────────────────────────────────────────
         function renderCartItem(orderId) {
+            const existingEl = document.getElementById('ci-' + orderId);
+            if (existingEl) existingEl.remove();
+
             const item = cart[orderId];
             const el = document.createElement('div');
             el.className = 'cart-item border border-slate-200 rounded-lg bg-white';
@@ -1391,10 +1456,17 @@
                             </div>
                         </div>
 
-                        <p class="text-[11px] text-amber-700 mt-1 font-medium flex items-center gap-1">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6.5A2.5 2.5 0 0 0 4 4.5v15"/><path d="M17 2v6"/><path d="M17 4h2"/><path d="M20 15.2V21a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20"/><circle cx="17" cy="10" r="2"/></svg>
-                            <span>${fromMonthText}</span>
-                        </p>
+                        <div class="flex items-center justify-between gap-2 mt-1.5 pt-1.5 border-t border-amber-100/80 flex-wrap">
+                            <p class="text-[11px] text-amber-700 font-medium flex items-center gap-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6.5A2.5 2.5 0 0 0 4 4.5v15"/><path d="M17 2v6"/><path d="M17 4h2"/><path d="M20 15.2V21a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20"/><circle cx="17" cy="10" r="2"/></svg>
+                                <span>${fromMonthText}</span>
+                            </p>
+                            <button type="button"
+                                    onclick="cancelPriorDeferredOrder('${item.priorDeferredActionId || ''}', '${item.orderId}', '${item.poNumber}', '${fromMonth || ''}')"
+                                    class="inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 border border-rose-200 bg-white transition-all cursor-pointer shrink-0">
+                                ↩ ยกเลิกการรับของเดือนก่อน
+                            </button>
+                        </div>
 
                     </div>
                 `;
@@ -1658,15 +1730,22 @@
         }
 
         async function bulkCancelSavedActions() {
-            const checkedBoxes = Array.from(document.querySelectorAll('.saved-card-checkbox')).filter(cb => cb.checked);
+            const checkedBoxes = Array.from(document.querySelectorAll('.saved-card-checkbox')).filter(cb => {
+                const card = cb.closest('.saved-card');
+                return cb.checked && card && card.style.display !== 'none';
+            });
             if (!checkedBoxes.length) return;
 
-            const actionIds = checkedBoxes.map(cb => cb.dataset.actionId);
+            const actionIds = checkedBoxes.map(cb => cb.dataset.actionId).filter(id => id && id !== '00000000-0000-0000-0000-000000000000');
+            if (!actionIds.length) return;
             const count = actionIds.length;
+            const hasPrior = checkedBoxes.some(cb => cb.dataset.priorReceived === 'true');
 
-            const noticeText = isCurrentMonthPage
-                ? `* รายการเหล่านี้จะถูกย้ายกลับไปอยู่ในหน้า <b>"รอดำเนินการ"</b> ในเดือนนี้ เพื่อให้คุณสามารถเลือกจัดการใหม่ได้`
-                : `* เนื่องจากเป็นงวดอดีต รายการเหล่านี้จะถูกย้ายไปอยู่ในหน้า <b>"รอดำเนินการ" ในเดือนปัจจุบัน</b> เพื่อให้คุณเลือกจัดการใหม่ได้`;
+            const noticeText = hasPrior
+                ? `* ระบบจะยกเลิกการรับของในเดือนก่อน หักยอดเงินเดือนเก่าคืน คืนยอดสต็อก (ถ้ามี) และดึงรายการกลับมาอยู่ในแท็บ <b>"รอดำเนินการ"</b> ของเดือนนี้`
+                : (isCurrentMonthPage
+                    ? `* รายการเหล่านี้จะถูกย้ายกลับไปอยู่ในหน้า <b>"รอดำเนินการ"</b> ในเดือนนี้ เพื่อให้คุณสามารถเลือกจัดการใหม่ได้`
+                    : `* รายการเหล่านี้จะถูกย้ายกลับไปอยู่ในหน้า <b>"รอดำเนินการ"</b> เพื่อให้คุณเลือกจัดการใหม่ได้`);
 
             const result = await Swal.fire({
                 title: `ยกเลิกการบันทึก ${count} รายการที่เลือก?`,
@@ -1698,14 +1777,14 @@
                 const resp = await fetch('/MonthlyCost/BulkCancelActions', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ actionIds: actionIds })
+                    body: JSON.stringify({ actionIds: actionIds, currentMonthYear: MONTH_YEAR })
                 });
 
                 const data = await resp.json();
                 if (data.success) {
-                    const successMsg = isCurrentMonthPage
-                        ? `ย้าย ${data.count || count} รายการกลับไปที่รอดำเนินการเรียบร้อยแล้ว`
-                        : `ย้าย ${data.count || count} รายการไปที่รอดำเนินการในเดือนปัจจุบันเรียบร้อยแล้ว`;
+                    const successMsg = hasPrior
+                        ? `ดึง ${data.count || count} รายการกลับมาที่รอดำเนินการของเดือนนี้เรียบร้อยแล้ว`
+                        : `ย้าย ${data.count || count} รายการกลับไปที่รอดำเนินการเรียบร้อยแล้ว`;
 
                     await Swal.fire({
                         icon: 'success',
@@ -1793,21 +1872,23 @@
             const countEl = document.getElementById('tab-pending-count');
             if (countEl) countEl.textContent = visible;
 
-            const totalAmountEl = document.getElementById('filtered-total-amount');
-            const totalContainerEl = document.getElementById('filtered-total-container');
-            if (totalAmountEl && totalContainerEl) {
-                totalAmountEl.textContent = new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB', minimumFractionDigits: 2 }).format(totalAmount);
-                
-                totalContainerEl.className = 'flex items-center gap-1.5 px-2.5 py-1 rounded-md border shadow-sm transition-colors duration-300';
-                
-                if (filterType === 'deferred') {
-                    totalContainerEl.classList.add('bg-amber-50', 'text-amber-700', 'border-amber-100');
-                } else if (filterType === 'requested') {
-                    totalContainerEl.classList.add('bg-blue-50', 'text-blue-700', 'border-blue-100');
-                } else if (filterType === 'skipped') {
-                    totalContainerEl.classList.add('bg-purple-50', 'text-purple-700', 'border-purple-100');
-                } else {
-                    totalContainerEl.classList.add('bg-emerald-50', 'text-emerald-700', 'border-emerald-100');
+            if (activeTab === 'pending') {
+                const totalAmountEl = document.getElementById('filtered-total-amount');
+                const totalContainerEl = document.getElementById('filtered-total-container');
+                if (totalAmountEl && totalContainerEl) {
+                    totalAmountEl.textContent = new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB', minimumFractionDigits: 2 }).format(totalAmount);
+                    
+                    totalContainerEl.className = 'flex items-center gap-1.5 px-2.5 py-1 rounded-md border shadow-sm transition-colors duration-300';
+                    
+                    if (filterType === 'deferred') {
+                        totalContainerEl.classList.add('bg-amber-50', 'text-amber-700', 'border-amber-100');
+                    } else if (filterType === 'requested') {
+                        totalContainerEl.classList.add('bg-blue-50', 'text-blue-700', 'border-blue-100');
+                    } else if (filterType === 'skipped') {
+                        totalContainerEl.classList.add('bg-purple-50', 'text-purple-700', 'border-purple-100');
+                    } else {
+                        totalContainerEl.classList.add('bg-emerald-50', 'text-emerald-700', 'border-emerald-100');
+                    }
                 }
             }
             onCardCheckboxChange();
@@ -1819,28 +1900,86 @@
             const keywords = getSearchKeywords();
 
             let visible = 0;
+            let thisMonthTotalCount = 0;
+            let totalAmount = 0;
+
             document.querySelectorAll('.saved-card').forEach(card => {
                 const po = card.dataset.poNumber ? card.dataset.poNumber.toLowerCase() : '';
                 const name = card.dataset.orderName ? card.dataset.orderName.toLowerCase() : '';
-                
+                const isPrior = card.dataset.priorReceived === 'true';
+
+                if (!isPrior) {
+                    thisMonthTotalCount++;
+                }
+
                 // Multi-keyword OR search: ถ้าตรงกับเลขใดเลขหนึ่งที่ค้นหา
                 const matchSearch = keywords.length === 0 || keywords.some(k => po.includes(k) || name.includes(k));
 
                 const action = card.dataset.action || '';
-                let matchAction = true;
-                if (filterAction !== 'all') {
-                    matchAction = (action === filterAction);
+                let matchAction = false;
+
+                if (filterAction === 'PriorReceived') {
+                    // แสดงเฉพาะรายการที่รับและชำระแล้วจากเดือนก่อน
+                    matchAction = isPrior;
+                } else if (filterAction === 'all') {
+                    // ถ้าไม่ได้เลือกตัวกรองพิเศษ:
+                    // - ตอนไม่พิมพ์ค้นหา: แสดงเฉพาะรายการของเดือนนี้ (ซ่อนเดือนก่อนไว้ไม่ให้กวนสายตา)
+                    // - ตอนพิมพ์ค้นหาในแท็บบันทึกแล้ว: แสดงทั้งของเดือนนี้และเดือนก่อนที่ตรงกับคำค้นหา!
+                    if (keywords.length > 0 && activeTab === 'saved') {
+                        matchAction = true;
+                    } else {
+                        matchAction = !isPrior;
+                    }
+                } else {
+                    // กรองตามสถานะของเดือนนี้ (ReceivedFull, Deferred, Skipped)
+                    matchAction = !isPrior && (action === filterAction);
                 }
 
                 if (matchSearch && matchAction) {
                     card.style.display = '';
                     visible++;
+                    const price = parseFloat(card.dataset.price) || 0;
+                    totalAmount += price;
                 } else {
                     card.style.display = 'none';
+                    const cb = card.querySelector('.saved-card-checkbox');
+                    if (cb) cb.checked = false;
                 }
             });
+
+            // ป้ายหัวแท็บ 'บันทึกแล้ว (X)' นับเฉพาะของเดือนนี้เมื่อไม่ได้กรองค้นหา แต่ถ้ากำลังค้นหาให้แสดงจำนวนที่ค้นเจอจริง
             const countEl = document.getElementById('tab-saved-count');
-            if (countEl) countEl.textContent = visible;
+            if (countEl) {
+                if (keywords.length === 0 && filterAction === 'all') {
+                    countEl.textContent = thisMonthTotalCount;
+                } else {
+                    countEl.textContent = visible;
+                }
+            }
+
+            const emptyEl = document.getElementById('saved-empty-state');
+            if (emptyEl) {
+                emptyEl.style.display = visible === 0 ? 'flex' : 'none';
+            }
+
+            if (activeTab === 'saved') {
+                const totalAmountEl = document.getElementById('filtered-total-amount');
+                const totalContainerEl = document.getElementById('filtered-total-container');
+                if (totalAmountEl && totalContainerEl) {
+                    totalAmountEl.textContent = new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB', minimumFractionDigits: 2 }).format(totalAmount);
+                    totalContainerEl.className = 'flex items-center gap-1.5 px-2.5 py-1 rounded-md border shadow-sm transition-colors duration-300';
+                    if (filterAction === 'Deferred') {
+                        totalContainerEl.classList.add('bg-amber-50', 'text-amber-700', 'border-amber-100');
+                    } else if (filterAction === 'Skipped') {
+                        totalContainerEl.classList.add('bg-purple-50', 'text-purple-700', 'border-purple-100');
+                    } else if (filterAction === 'PriorReceived') {
+                        totalContainerEl.classList.add('bg-indigo-50', 'text-indigo-700', 'border-indigo-100');
+                    } else {
+                        totalContainerEl.classList.add('bg-emerald-50', 'text-emerald-700', 'border-emerald-100');
+                    }
+                }
+            }
+
             onSavedCardCheckboxChange();
         }
 
@@ -1872,21 +2011,13 @@
             if (checkedBoxes.length > 0) {
                 targetCards = checkedBoxes.map(cb => cb.closest('.order-card'));
             } else {
+                // ถ้านำเมาส์ไปกดปุ่ม ชำระแล้ว/ยังไม่ชำระ/ต้องการรับ/ยังไม่รับ โดยไม่ได้ติ๊กถูก
+                // ให้นำรายการที่แสดงผลอยู่ทั้งหมดในขณะนั้น (ที่ยังไม่ถูกล็อก) เข้าตะกร้าด้วยสถานะนั้นทันที
                 targetCards = Array.from(document.querySelectorAll('.order-card')).filter(card => {
                     if (card.style.display === 'none' || card.classList.contains('in-cart')) return false;
-
-                    const fwdStatus = card.getAttribute('data-forwarded-status') || '';
-
-                    if (action === 'Deferred') {
-                        return fwdStatus === 'Deferred';
-                    } else if (action === 'Skipped') {
-                        return fwdStatus === 'Skipped';
-                    } else if (action === 'Requested') {
-                        return fwdStatus === 'Requested';
-                    } else {
-                        // ReceivedFull เอาทั้งหมดที่มองเห็นอยู่ ยกเว้น Requested ที่ถูกล็อกรอใบตอบกลับ
-                        return fwdStatus !== 'Requested';
-                    }
+                    if (card.classList.contains('is-locked-deferred')) return false;
+                    if (card.classList.contains('is-locked-requested') && !card.querySelector('.add-btn')) return false;
+                    return true;
                 });
             }
 
@@ -2054,17 +2185,23 @@
             }
         }
 
-        async function cancelSavedAction(actionId, poNumber) {
-            const noticeText = isCurrentMonthPage
-                ? `* รายการจะกลับไปที่หน้า <b>"รอดำเนินการ"</b> ในเดือนนี้เพื่อให้คุณจัดการใหม่`
-                : `* รายการจะย้ายไปที่หน้า <b>"รอดำเนินการ" ในเดือนปัจจุบัน</b> เพื่อให้คุณจัดการใหม่`;
+        async function cancelSavedAction(actionId, poNumber, isPriorReceived = false, priorMonthDisplay = '') {
+            const titleText = isPriorReceived
+                ? `ยกเลิกการรับของ ${poNumber} (จาก ${priorMonthDisplay})?`
+                : `ยกเลิกการบันทึก ${poNumber}?`;
+
+            const noticeText = isPriorReceived
+                ? `* ระบบจะยกเลิกสถานะรับของในงวด <b>${priorMonthDisplay}</b> (เปลี่ยนเป็นยังไม่รับสินค้า ฿0.00), คืนยอดสต็อก (ถ้ามี) และดึงรายการนี้กลับมาอยู่ในแท็บ <b>"รอดำเนินการ"</b> ของเดือนนี้ทันที`
+                : (isCurrentMonthPage
+                    ? `* รายการจะกลับไปที่หน้า <b>"รอดำเนินการ"</b> ในเดือนนี้เพื่อให้คุณจัดการใหม่`
+                    : `* รายการจะถูกปรับสถานะและย้ายไปที่หน้า <b>"รอดำเนินการ"</b> เพื่อให้คุณจัดการใหม่`);
 
             const result = await Swal.fire({
-                title: `ยกเลิกการบันทึก ${poNumber}?`,
+                title: titleText,
                 html: `ต้องการยกเลิกการบันทึกรายการนี้ใช่หรือไม่?<br><br><span class="text-xs text-slate-500">${noticeText}</span>`,
                 icon: 'question',
                 showCancelButton: true,
-                confirmButtonText: 'ยืนยันยกเลิกบันทึก',
+                confirmButtonText: isPriorReceived ? 'ยืนยันดึงกลับมาเดือนนี้' : 'ยืนยันยกเลิกบันทึก',
                 cancelButtonText: 'ปิด',
                 confirmButtonColor: '#e11d48',
                 cancelButtonColor: '#64748b',
@@ -2089,19 +2226,86 @@
                 const resp = await fetch('/MonthlyCost/CancelAction', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ actionId: actionId })
+                    body: JSON.stringify({ actionId: actionId, currentMonthYear: MONTH_YEAR })
                 });
 
                 const data = await resp.json();
                 if (data.success) {
-                    const successMsg = isCurrentMonthPage
-                        ? 'ย้ายรายการกลับไปที่รอดำเนินการเรียบร้อยแล้ว'
-                        : 'ย้ายรายการไปที่รอดำเนินการในเดือนปัจจุบันเรียบร้อยแล้ว';
+                    const successMsg = isPriorReceived
+                        ? `ยกเลิกการรับของจาก ${priorMonthDisplay} และดึงกลับมาที่รอดำเนินการเดือนนี้เรียบร้อยแล้ว`
+                        : 'ย้ายรายการกลับไปที่รอดำเนินการเรียบร้อยแล้ว';
 
                     await Swal.fire({
                         icon: 'success',
                         title: 'ยกเลิกสำเร็จ!',
                         text: successMsg,
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                    location.reload();
+                } else {
+                    await Swal.fire({
+                        icon: 'error',
+                        title: 'เกิดข้อผิดพลาด',
+                        text: data.error || 'ไม่สามารถยกเลิกรายการได้'
+                    });
+                }
+            } catch (e) {
+                await Swal.fire({
+                    icon: 'error',
+                    title: 'เกิดข้อผิดพลาด',
+                    text: 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์'
+                });
+            }
+        }
+
+        async function cancelPriorDeferredOrder(actionId, orderId, poNumber, fromMonthDisplay) {
+            const monthLabel = fromMonthDisplay || 'เดือนก่อน';
+            const result = await Swal.fire({
+                title: `ยกเลิกการรับของ ${poNumber}?`,
+                html: `รายการนี้ถูกบันทึก <b>"รับสินค้า (ยังไม่ชำระ)"</b> มาจาก <b>${monthLabel}</b><br><br><span class="text-xs text-slate-500">* เมื่อยืนยัน ระบบจะเปลี่ยนสถานะใน ${monthLabel} เป็น "ยังไม่รับสินค้า (฿0.00)", คืนยอดสต็อก (ถ้ามี), ปลดล็อกจากตะกร้าขวา และให้กลับมาอยู่ในแท็บ <b>"รอดำเนินการ"</b> ของเดือนนี้ตามปกติ</span>`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'ยืนยันยกเลิกการรับของเดือนก่อน',
+                cancelButtonText: 'ปิด',
+                confirmButtonColor: '#e11d48',
+                cancelButtonColor: '#64748b',
+                customClass: {
+                    popup: 'rounded-xl'
+                }
+            });
+
+            if (!result.isConfirmed) return;
+
+            Swal.fire({
+                title: 'กำลังยกเลิกการรับของเดือนก่อน...',
+                html: '<div class="py-2"><p class="text-sm text-slate-600 mb-1">ระบบกำลังปลดล็อกรายการและอัปเดตฐานข้อมูล</p><p class="text-xs text-slate-400">กรุณารอสักครู่...</p></div>',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                customClass: { popup: 'rounded-xl' },
+                didOpen: () => { Swal.showLoading(); }
+            });
+
+            try {
+                const payload = {
+                    actionId: actionId || '00000000-0000-0000-0000-000000000000',
+                    orderId: orderId,
+                    currentMonthYear: MONTH_YEAR
+                };
+                const resp = await fetch('/MonthlyCost/CancelAction', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await resp.json();
+                if (data.success) {
+                    try { localStorage.removeItem(CART_STORAGE_KEY); } catch (e) {}
+                    await Swal.fire({
+                        icon: 'success',
+                        title: 'ปลดล็อกและยกเลิกสำเร็จ!',
+                        text: `รายการ ${poNumber} กลับมาอยู่ในรอดำเนินการของเดือนนี้เรียบร้อยแล้ว`,
                         timer: 1500,
                         showConfirmButton: false
                     });

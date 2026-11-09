@@ -52,6 +52,7 @@ namespace CostFlow.Models
         public List<PendingOrderItem> PendingOrders { get; set; } = new();
         public MonthlyStats Stats { get; set; } = new();
         public List<SavedOrderItem> SavedOrders { get; set; } = new();
+        public List<SavedOrderItem> PriorReceivedOrders { get; set; } = new();
 
         public bool IsCurrentMonth { get; set; }
         public bool IsFutureMonth { get; set; }
@@ -75,6 +76,7 @@ namespace CostFlow.Models
         public string ForwardedFromMonth { get; set; } = string.Empty; // e.g. "กรกฎาคม 2569"
         public string OriginalReportName { get; set; } = string.Empty; // e.g. "รายงานสั่งผลิต_13_ก.ค._2569"
         public string OriginalMonth { get; set; } = string.Empty; // เดือนต้นทางที่สินค้าถูกสร้างครั้งแรก (เช่น "มิถุนายน 2569")
+        public Guid? PriorDeferredActionId { get; set; }
     }
 
     public class SavedOrderItem
@@ -93,6 +95,9 @@ namespace CostFlow.Models
         public string ForwardedStatus { get; set; } = string.Empty; 
         public string ForwardedFromMonth { get; set; } = string.Empty;
         public string OriginalMonth { get; set; } = string.Empty;
+        public bool IsPriorMonthReceived { get; set; } = false;
+        public string ReceivedMonthDisplay { get; set; } = string.Empty;
+        public string ReceivedMonthKey { get; set; } = string.Empty;
     }
 
     public class MonthlyStats

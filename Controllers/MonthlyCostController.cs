@@ -573,7 +573,7 @@ namespace CostFlow.Controllers
         {
             await AutoClosePriorMonthsAsync();
             await CleanupMockRequestedOrdersAsync();
-            await SyncWO26070249StatusAsync();
+            // await SyncWO26070249StatusAsync(); // ปิดการบังคับเขียนทับสถานะ WO26070249 ในเดือน 10
 
             if (string.IsNullOrEmpty(id))
             {
@@ -611,6 +611,9 @@ namespace CostFlow.Controllers
 
             // Get all prior actions strictly earlier than this monthYearKey
             var priorActions = await _context.MonthlyOrderActions
+                .Include(moa => moa.OrderTrackingMaster)
+                .ThenInclude(otm => otm.MatchedInWeeklyPlans)
+                .ThenInclude(wpd => wpd.WeeklyPlan)
                 .Where(moa => string.Compare(moa.MonthYear, monthYearKey) < 0)
                 .OrderByDescending(moa => moa.MonthYear)
                 .ThenByDescending(moa => moa.CreatedAt)
@@ -824,6 +827,65 @@ namespace CostFlow.Controllers
                 })
                 .ToList();
 
+            // ดึงรายการที่เคยรับและชำระแล้ว (ReceivedFull) ในเดือนก่อนๆ เพื่อแสดงในตัวกรอง "ประวัติที่รับแล้วจากเดือนก่อน"
+            var priorReceivedItems = latestPriorActionMap.Values
+                .Where(pa => pa.Action == "ReceivedFull" && !existingActionIds.Contains(pa.OrderTrackingMasterId))
+                .OrderByDescending(pa => pa.MonthYear)
+                .ThenBy(pa => pa.OrderTrackingMaster?.PoNumber)
+                .Select(moa =>
+                {
+                    var otm = moa.OrderTrackingMaster;
+                    var quantity = 1;
+                    if (!string.IsNullOrEmpty(otm?.RemarksQuantity) && int.TryParse(otm.RemarksQuantity, out var qty))
+                    {
+                        quantity = qty;
+                    }
+
+                    var amount = 0m;
+                    if (!string.IsNullOrEmpty(otm?.Amount) && decimal.TryParse(otm.Amount, out var amt))
+                    {
+                        amount = amt;
+                    }
+
+                    var productName = otm?.Remarks ?? "ไม่ระบุ";
+
+                    var latestMatchedPlan = otm?.MatchedInWeeklyPlans
+                        .OrderByDescending(w => w.WeeklyPlan.UploadedAt)
+                        .FirstOrDefault();
+
+                    var targetDelivery = !string.IsNullOrWhiteSpace(latestMatchedPlan?.DeliveryTarget)
+                        ? latestMatchedPlan.DeliveryTarget
+                        : "-";
+                    var department = !string.IsNullOrEmpty(latestMatchedPlan?.Department)
+                        ? latestMatchedPlan.Department
+                        : (!string.IsNullOrEmpty(otm?.Urgency) ? otm.Urgency : "-");
+
+                    var parsedApprDate = ParseThaiDate(otm?.ApprovedDate);
+                    var originalMonth = parsedApprDate.HasValue
+                        ? ConvertKeyToThaiMonth($"{parsedApprDate.Value.Year:0000}-{parsedApprDate.Value.Month:00}")
+                        : string.Empty;
+
+                    return new SavedOrderItem
+                    {
+                        ActionId = moa.Id,
+                        OrderId = moa.OrderTrackingMasterId,
+                        PoNumber = otm?.PoNumber ?? "N/A",
+                        OrderName = productName,
+                        Quantity = quantity,
+                        TotalPrice = amount,
+                        ActionPrice = moa.ActionPrice > 0 ? moa.ActionPrice : amount,
+                        Action = "ReceivedFull",
+                        DeliveryTarget = targetDelivery,
+                        Department = department,
+                        CreatedAt = moa.CreatedAt,
+                        OriginalMonth = originalMonth,
+                        IsPriorMonthReceived = true,
+                        ReceivedMonthKey = moa.MonthYear,
+                        ReceivedMonthDisplay = ConvertKeyToThaiMonth(moa.MonthYear)
+                    };
+                })
+                .ToList();
+
             var isPastMonth = string.Compare(monthYearKey, currentMonthKey) < 0;
 
             // Transform to PendingOrderItem with cross-month forwarding logic
@@ -853,6 +915,7 @@ namespace CostFlow.Controllers
 
                 var forwardedStatus = string.Empty;
                 var forwardedFromMonth = string.Empty;
+                Guid? priorDeferredActionId = null;
 
                 // ตรวจสอบสถานะ: หากในงวดเดือนปัจจุบันเคยกด Requested ไว้ ให้แสดงสถานะ Requested ทันที
                 var thisMonthRequested = existingActions.FirstOrDefault(ea => ea.OrderTrackingMasterId == otm.Id && ea.Action == "Requested");
@@ -877,6 +940,7 @@ namespace CostFlow.Controllers
                     if (priorAction.Action == "Deferred" && isExactPrevMonth)
                     {
                         forwardedStatus = "Deferred";
+                        priorDeferredActionId = priorAction.Id;
                         // แสดงเดือนที่กดผ่อนล่าสุด (priorAction.MonthYear)
                         forwardedFromMonth = ConvertKeyToThaiMonth(priorAction.MonthYear);
                         if (priorAction.ActionPrice > 0)
@@ -992,7 +1056,8 @@ namespace CostFlow.Controllers
                         ForwardedStatus = forwardedStatus,
                         ForwardedFromMonth = forwardedFromMonth,
                         OriginalReportName = otm.Report?.ReportName ?? "N/A",
-                        OriginalMonth = originalMonth
+                        OriginalMonth = originalMonth,
+                        PriorDeferredActionId = priorDeferredActionId
                     });
                 }
             }
@@ -1046,6 +1111,7 @@ namespace CostFlow.Controllers
                 MonthYear = displayMonthThai,
                 PendingOrders = pendingItems,
                 SavedOrders = savedItems,
+                PriorReceivedOrders = priorReceivedItems,
                 Stats = stats,
                 IsCurrentMonth = (monthYearKey == currentMonthKey),
                 IsFutureMonth = string.Compare(monthYearKey, currentMonthKey) > 0
@@ -1781,71 +1847,173 @@ namespace CostFlow.Controllers
             }
         }
 
+        private async Task RevertStockForOrderAsync(Guid orderId)
+        {
+            var otm = await _context.OrderTrackingMasters
+                .AsNoTracking()
+                .FirstOrDefaultAsync(o => o.Id == orderId);
+            if (otm == null || string.IsNullOrWhiteSpace(otm.PoNumber)) return;
+
+            var activeStockLogs = await _context.StockLogs
+                .Where(l => l.ReferenceId == otm.PoNumber && (l.Action == "IN_WO" || l.Action == "SKIP_STOCK"))
+                .ToListAsync();
+
+            if (!activeStockLogs.Any()) return;
+
+            var userId = User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "System";
+
+            foreach (var log in activeStockLogs)
+            {
+                if (log.Action == "IN_WO" && log.QuantityChanged > 0 && !string.IsNullOrEmpty(log.StockItemCode))
+                {
+                    var stockItem = await _context.StockItems
+                        .FirstOrDefaultAsync(s => s.ProductCode == log.StockItemCode);
+                    if (stockItem != null)
+                    {
+                        stockItem.Quantity = Math.Max(0, stockItem.Quantity - log.QuantityChanged);
+                        stockItem.UpdatedAt = DateTime.UtcNow;
+
+                        _context.StockLogs.Add(new StockLog
+                        {
+                            StockItemCode = stockItem.ProductCode,
+                            Action = "REVERT_WO",
+                            QuantityChanged = -log.QuantityChanged,
+                            User = userId,
+                            ReferenceId = otm.PoNumber,
+                            Remarks = $"ยกเลิกการรับสินค้าจาก WO ({otm.PoNumber})",
+                            Timestamp = DateTime.UtcNow
+                        });
+                    }
+                }
+                log.Action = log.Action == "IN_WO" ? "IN_WO_REVERTED" : "SKIP_STOCK_REVERTED";
+            }
+        }
+
+        private async Task RevertSingleOrderActionCoreAsync(MonthlyOrderAction action, string targetMonthKey)
+        {
+            var orderId = action.OrderTrackingMasterId;
+
+            if (action.Action == "ReceivedFull" || action.Action == "Deferred" || action.IsStockReceived)
+            {
+                await RevertStockForOrderAsync(orderId);
+            }
+
+            if (string.Compare(action.MonthYear, targetMonthKey) < 0)
+            {
+                // ยกเลิกการรับของจากเดือนก่อน แล้วดึงกลับมาเป็นรอดำเนินการในเดือน targetMonthKey
+                action.Action = "Skipped";
+                action.ActionPrice = 0;
+                action.IsStockReceived = false;
+                action.IsForcedPayment = false;
+                action.DeferredFromMonth = null;
+                action.UpdatedAt = DateTime.UtcNow;
+
+                // เชื่อมสะพานเดือนระหว่าง action.MonthYear ถึงก่อนหน้า targetMonthKey ให้เป็น Skipped ทั้งหมด
+                var ap = action.MonthYear.Split('-');
+                var tp = targetMonthKey.Split('-');
+                if (ap.Length == 2 && tp.Length == 2 &&
+                    int.TryParse(ap[0], out var aY) && int.TryParse(ap[1], out var aM) &&
+                    int.TryParse(tp[0], out var tY) && int.TryParse(tp[1], out var tM))
+                {
+                    var loopDt = new DateTime(aY, aM, 1).AddMonths(1);
+                    var targetDt = new DateTime(tY, tM, 1);
+                    while (loopDt < targetDt)
+                    {
+                        var midKey = $"{loopDt.Year:0000}-{loopDt.Month:00}";
+                        var midAction = await _context.MonthlyOrderActions
+                            .FirstOrDefaultAsync(a => a.OrderTrackingMasterId == orderId && a.MonthYear == midKey);
+                        if (midAction == null)
+                        {
+                            _context.MonthlyOrderActions.Add(new MonthlyOrderAction
+                            {
+                                Id = Guid.NewGuid(),
+                                OrderTrackingMasterId = orderId,
+                                MonthYear = midKey,
+                                Action = "Skipped",
+                                ActionPrice = 0,
+                                IsForcedPayment = false,
+                                IsStockReceived = false,
+                                DeferredFromMonth = null,
+                                CreatedAt = DateTime.UtcNow,
+                                UpdatedAt = DateTime.UtcNow
+                            });
+                        }
+                        else
+                        {
+                            midAction.Action = "Skipped";
+                            midAction.ActionPrice = 0;
+                            midAction.IsForcedPayment = false;
+                            midAction.IsStockReceived = false;
+                            midAction.DeferredFromMonth = null;
+                            midAction.UpdatedAt = DateTime.UtcNow;
+                        }
+                        loopDt = loopDt.AddMonths(1);
+                    }
+                }
+
+                // ลบ action ของเดือนปัจจุบัน (targetMonthKey) หรือหลังจากนั้นออก เพื่อให้โผล่ในแท็บรอดำเนินการของเดือนนี้
+                var currentOrFutureActions = await _context.MonthlyOrderActions
+                    .Where(a => a.OrderTrackingMasterId == orderId && string.Compare(a.MonthYear, targetMonthKey) >= 0)
+                    .ToListAsync();
+                if (currentOrFutureActions.Any())
+                {
+                    _context.MonthlyOrderActions.RemoveRange(currentOrFutureActions);
+                }
+            }
+            else
+            {
+                // ยกเลิกรายการในเดือนปัจจุบันเอง
+                if (action.IsForcedPayment && !string.IsNullOrEmpty(action.DeferredFromMonth))
+                {
+                    var priorDef = await _context.MonthlyOrderActions
+                        .FirstOrDefaultAsync(a => a.OrderTrackingMasterId == orderId && a.MonthYear == action.DeferredFromMonth && a.Action == "Deferred");
+                    if (priorDef != null)
+                    {
+                        priorDef.Action = "Skipped";
+                        priorDef.ActionPrice = 0;
+                        priorDef.IsStockReceived = false;
+                        priorDef.IsForcedPayment = false;
+                        priorDef.DeferredFromMonth = null;
+                        priorDef.UpdatedAt = DateTime.UtcNow;
+                    }
+                }
+                _context.MonthlyOrderActions.Remove(action);
+            }
+        }
+
         [HttpPost]
         public async Task<IActionResult> RevertAction([FromBody] RevertActionRequest request)
         {
             try
             {
-                var action = await _context.MonthlyOrderActions.FindAsync(request.ActionId);
+                var targetMonthKey = !string.IsNullOrWhiteSpace(request.CurrentMonthYear)
+                    ? ConvertThaiMonthToKey(request.CurrentMonthYear)
+                    : _dateTimeProvider.Now.ToString("yyyy-MM");
+
+                MonthlyOrderAction? action = null;
+                if (request.ActionId != Guid.Empty)
+                {
+                    action = await _context.MonthlyOrderActions.FindAsync(request.ActionId);
+                }
+                else if (request.OrderId.HasValue && request.OrderId.Value != Guid.Empty)
+                {
+                    action = await _context.MonthlyOrderActions
+                        .Where(a => a.OrderTrackingMasterId == request.OrderId.Value &&
+                                    string.Compare(a.MonthYear, targetMonthKey) < 0 &&
+                                    (a.Action == "Deferred" || a.Action == "ReceivedFull"))
+                        .OrderByDescending(a => a.MonthYear)
+                        .ThenByDescending(a => a.CreatedAt)
+                        .FirstOrDefaultAsync();
+                }
+
                 if (action != null)
                 {
-                    var now = _dateTimeProvider.Now;
-                    var currentMonthKey = now.ToString("yyyy-MM");
-                    if (action.MonthYear != currentMonthKey)
-                    {
-                        var totalActionsInMonth =
-                            await _context.MonthlyOrderActions.CountAsync(moa => moa.MonthYear == action.MonthYear);
-                        var priorReceivedCount = await _context.MonthlyOrderActions
-                            .Where(moa =>
-                                string.Compare(moa.MonthYear, action.MonthYear) < 0 && moa.Action == "ReceivedFull")
-                            .Select(moa => moa.OrderTrackingMasterId)
-                            .Distinct()
-                            .CountAsync();
-                        var totalOrdersEver = await _context.OrderTrackingMasters.CountAsync();
-                        if (totalOrdersEver - priorReceivedCount - totalActionsInMonth <= 0)
-                        {
-                            return BadRequest(new
-                            {
-                                success = false,
-                                error = "งวดบัญชีนี้ปิดยอด (Completed) เรียบร้อยแล้ว ไม่สามารถย้อนคืนค่าได้"
-                            });
-                        }
-                    }
+                    var targetKey = !string.IsNullOrWhiteSpace(request.CurrentMonthYear)
+                        ? targetMonthKey
+                        : action.MonthYear;
 
-                    _context.MonthlyOrderActions.Remove(action);
+                    await RevertSingleOrderActionCoreAsync(action, targetKey);
                     await _context.SaveChangesAsync();
-
-                    /* ==========================================
-                    // ส่วนที่เพิ่ม: ส่งข้อมูลแจ้งลบ/ยกเลิก (Revert) ไปยัง Google Sheets
-                    // ==========================================
-                    try
-                    {
-                        string? appScriptUrl = _configuration["GoogleSheets:MonthlyCostAppScriptUrl"];
-                        if (!string.IsNullOrWhiteSpace(appScriptUrl) && !appScriptUrl.Contains("_placeholder"))
-                        {
-                            var sheetPayload = new
-                            {
-                                ActionType = "Revert", // บอกสคริปต์ว่านี่คือการยกเลิก
-                                Timestamp = DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"),
-                                RevertedActionId = action.Id,
-                                OrderId = action.OrderTrackingMasterId,
-                                MonthYear = action.MonthYear
-                            };
-
-                            var client = _httpClientFactory.CreateClient();
-                            client.Timeout = TimeSpan.FromSeconds(30);
-                            var jsonString = System.Text.Json.JsonSerializer.Serialize(sheetPayload);
-                            var content = new System.Net.Http.StringContent(jsonString, System.Text.Encoding.UTF8, "application/json");
-
-                            await client.PostAsync(appScriptUrl, content);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"Error sending Revert to Google Sheets: {ex.Message}");
-                    }
-                    // ==========================================
-                    */
                     await _hubContext.Clients.All.SendAsync("ReceiveMonthlyCostUpdate");
                 }
 
@@ -1870,63 +2038,16 @@ namespace CostFlow.Controllers
 
                     if (actions.Any())
                     {
-                        var firstMonth = actions.First().MonthYear;
-                        var now = _dateTimeProvider.Now;
-                        var currentMonthKey = now.ToString("yyyy-MM");
-                        if (firstMonth != currentMonthKey)
+                        var targetMonthKey = !string.IsNullOrWhiteSpace(request.CurrentMonthYear)
+                            ? ConvertThaiMonthToKey(request.CurrentMonthYear)
+                            : actions.First().MonthYear;
+
+                        foreach (var act in actions)
                         {
-                            var totalActionsInMonth =
-                                await _context.MonthlyOrderActions.CountAsync(moa => moa.MonthYear == firstMonth);
-                            var priorReceivedCount = await _context.MonthlyOrderActions
-                                .Where(moa =>
-                                    string.Compare(moa.MonthYear, firstMonth) < 0 && moa.Action == "ReceivedFull")
-                                .Select(moa => moa.OrderTrackingMasterId)
-                                .Distinct()
-                                .CountAsync();
-                            var totalOrdersEver = await _context.OrderTrackingMasters.CountAsync();
-                            if (totalOrdersEver - priorReceivedCount - totalActionsInMonth <= 0)
-                            {
-                                return BadRequest(new
-                                {
-                                    success = false,
-                                    error = "งวดบัญชีนี้ปิดยอด (Completed) เรียบร้อยแล้ว ไม่สามารถย้อนคืนค่าได้"
-                                });
-                            }
+                            await RevertSingleOrderActionCoreAsync(act, targetMonthKey);
                         }
 
-                        _context.MonthlyOrderActions.RemoveRange(actions);
                         await _context.SaveChangesAsync();
-
-                        /* ==========================================
-                        // ส่วนที่เพิ่ม: ส่งข้อมูลแจ้งลบ/ยกเลิกแบบกลุ่ม (BulkRevert) ไปยัง Google Sheets
-                        // ==========================================
-                        try
-                        {
-                            string? appScriptUrl = _configuration["GoogleSheets:MonthlyCostAppScriptUrl"];
-                            if (!string.IsNullOrWhiteSpace(appScriptUrl) && !appScriptUrl.Contains("_placeholder"))
-                            {
-                                var sheetPayload = new
-                                {
-                                    ActionType = "BulkRevert", // บอกสคริปต์ว่านี่คือการยกเลิกแบบกลุ่ม
-                                    Timestamp = DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"),
-                                    RevertedActionIds = actions.Select(a => a.Id).ToList(),
-                                    OrderIds = actions.Select(a => a.OrderTrackingMasterId).ToList()
-                                };
-
-                                var client = _httpClientFactory.CreateClient();
-                                client.Timeout = TimeSpan.FromSeconds(30);
-                                var jsonString = System.Text.Json.JsonSerializer.Serialize(sheetPayload);
-                                var content = new System.Net.Http.StringContent(jsonString, System.Text.Encoding.UTF8, "application/json");
-
-                                await client.PostAsync(appScriptUrl, content);
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine($"Error sending BulkRevert to Google Sheets: {ex.Message}");
-                        }
-                        // ==========================================
-                        */
                         await _hubContext.Clients.All.SendAsync("ReceiveMonthlyCostUpdate");
                     }
                 }
@@ -3811,11 +3932,14 @@ namespace CostFlow.Controllers
     public class RevertActionRequest
     {
         public Guid ActionId { get; set; }
+        public Guid? OrderId { get; set; }
+        public string? CurrentMonthYear { get; set; }
     }
 
     public class BulkRevertActionRequest
     {
         public List<Guid> ActionIds { get; set; } = new();
+        public string? CurrentMonthYear { get; set; }
     }
 
     public class SaveActionsRequest
